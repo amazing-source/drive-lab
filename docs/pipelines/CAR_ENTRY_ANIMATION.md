@@ -220,6 +220,15 @@ In game the angle is openness times the open angle, linear (agent B's `Rules/Hin
 - each sole's slide while it is within 0.025 of the ground, measured at the sole's centre so a foot
   turning on the spot is not a slide; more than 0.6 studs/s fails.
 
+**Named contacts decided on 2026-10-28** (each at its measured depth, rounded up to the next
+0.001, written by `car_entry_allow.py`; studs at scale 1):
+
+| Contact | Where | Depth | Why it is not avoidable | Decided by |
+|---|---|---|---|---|
+| Thighs resting on the cabin wall's top while sliding over it | GetIn f186-202, GetOut f66-92 | 0.253 in, 0.398 out | a rigid R6 thigh hinged at its top edge reaches about a stud below the hip, and the hips cross the wall barely above its top (seat height T and the #9 edge hold put them there) | coordinator, on captures at the worst frames |
+| Thighs over the sill's lip and edge (one allowance, entry and exit) | GetIn f160-184, GetOut f88-118 | 0.149 | the same rigid thigh while the legs swing over the lip | lead (rigid-thigh class); the first agent's 0.22 tightened |
+| Upper arm resting on the door card while reaching the release bar | InsideOpen f6-11 | 0.094 (measured) | leaning in to the bar puts the upper arm on the card | lead |
+
 It exits 1 on any failure, and with `--json` records what it checked (SHA-256 of the bake, the
 scene and the allow list, the frame range, any mutation, pass or fail). **Shown failing on
 purpose:** the bake with the body lowered by 10 cm while it sits on the sill turns it red on the
