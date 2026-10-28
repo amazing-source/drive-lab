@@ -11,6 +11,7 @@
 	wheels' welds are moved by the driver's client only, and every client sees the chassis move.
 ]]
 local CollectionService = game:GetService("CollectionService")
+local ContentProvider = game:GetService("ContentProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -65,10 +66,14 @@ local function destroy(owned: { Instance })
 	end
 end
 
-local function pieceSet(name: string): Instance?
+local function pieceRoot(): Instance?
 	local assets = ReplicatedStorage:FindFirstChild("DriveLabAssets")
-	local blur = assets and assets:FindFirstChild(Config.ASSETS_FOLDER)
-	return blur and blur:FindFirstChild(name)
+	return assets and assets:FindFirstChild(Config.ASSETS_FOLDER)
+end
+
+local function pieceSet(name: string): Instance?
+	local root = pieceRoot()
+	return root and root:FindFirstChild(name)
 end
 
 -- The car's pieces, or nil while its rig or its assets have not streamed in. A car with no
@@ -216,6 +221,11 @@ function RimBlurController.preview(model: Model, share: number): () -> ()
 end
 
 function RimBlurController.start()
+	local templates = pieceRoot()
+	if templates then
+		-- A disc's maps otherwise load the first time it shows, and it is white until they do.
+		task.spawn(ContentProvider.PreloadAsync, ContentProvider, { templates })
+	end
 	for _, instance in CollectionService:GetTagged(CarRig.TAG) do
 		if instance:IsA("Model") then
 			try(instance)
