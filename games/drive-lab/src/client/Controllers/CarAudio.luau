@@ -18,7 +18,9 @@ local Workspace = game:GetService("Workspace")
 
 local CarAudio = require(ReplicatedStorage.Shared.Config.CarAudio)
 local CarAudioEvents = require(ReplicatedStorage.Shared.Rules.CarAudioEvents)
+local CarEntry = require(ReplicatedStorage.Shared.Rules.CarEntry)
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
+local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local EngineSound = require(ReplicatedStorage.Shared.Rules.EngineSound)
 local Types = require(ReplicatedStorage.Shared.Config.Cars.Types)
 local Units = require(ReplicatedStorage.Shared.Units)
@@ -61,6 +63,8 @@ type Session = {
 local localPlayer = Players.LocalPlayer
 local random = Random.new()
 local session: Session? = nil
+-- The car the local player sits in; its engine sounds only once started (Rules/CarEntry).
+local seated: Model? = nil
 
 local function readNumber(model: Model, name: string, default: number): number
 	local value = model:GetAttribute(name)
@@ -325,7 +329,7 @@ local function stop()
 	end)
 end
 
-local function start(model: Model)
+local function start(model: Model, sincePress: number)
 	local chassis = model:FindFirstChild("Chassis")
 	if chassis == nil or not chassis:IsA("BasePart") then
 		return
@@ -378,14 +382,34 @@ local function start(model: Model)
 	}
 	current.far.PlaybackSpeed = CarAudio.FAR.speed
 	session = current
+	-- Joined late in the start-up, the recording picks up where the engine is.
+	local startup = current.startup
+	if startup and sincePress > 0 then
+		startup.TimePosition = CarAudio.STARTUP.region.from + sincePress
+	end
+end
+
+-- The engine sounds from the moment START is pressed until it is switched off.
+local function follow()
+	local model = seated
+	if model == nil then
+		return
+	end
+	local startup = CarEntry.startup(CarState.read(model), Workspace:GetServerTimeNow())
+	if session == nil and startup.sincePress then
+		start(model, startup.sincePress)
+	elseif session and startup.stage == "Off" then
+		stop()
+	end
 end
 
 local function onSeat(humanoid: Humanoid)
 	stop()
+	seated = nil
 	local seat = humanoid.SeatPart
 	local model = seat and seat.Parent
 	if seat and seat:IsA("Seat") and model and model:IsA("Model") and model:HasTag(CarRig.TAG) then
-		start(model)
+		seated = model
 	end
 end
 
@@ -404,6 +428,7 @@ local Controller = {}
 
 function Controller.start()
 	RunService.Heartbeat:Connect(function(dt: number)
+		follow()
 		if session then
 			update(session, dt)
 		end

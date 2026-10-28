@@ -15,7 +15,9 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
+local CarEntry = require(ReplicatedStorage.Shared.Rules.CarEntry)
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
+local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local ClusterRules = require(ReplicatedStorage.Shared.Rules.Cluster)
 local Config = require(ReplicatedStorage.Shared.Config.Hud)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
@@ -271,7 +273,7 @@ local function arrange(current: Ui)
 end
 
 local function refresh(current: Ui, model: Model)
-	local rpm = number(model, "Rpm")
+	local rpm = CarEntry.shownRpm(CarState.read(model), Workspace:GetServerTimeNow(), number(model, "Rpm"))
 	local manual = model:GetAttribute("GearboxMode") == "manual"
 	local flash = Rules.shiftFlash(rpm, Config.REDLINE_RPM, manual, os.clock(), Config.FLASH_HZ)
 	for index, segment in current.segments do
@@ -317,7 +319,12 @@ local function update(dt: number)
 	if current == nil then
 		return
 	end
-	local model = drivenModel()
+	local driven = drivenModel()
+	-- Not while getting in or out (Rules/CarEntry).
+	local model = if driven
+			and CarEntry.phase(CarState.read(driven), Workspace:GetServerTimeNow()) == "Seated"
+		then driven
+		else nil
 	current.gui.Enabled = model ~= nil and hudMode ~= "Off"
 	if model == nil or hudMode == "Off" then
 		return

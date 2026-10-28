@@ -25,6 +25,8 @@ local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local Rules = require(ReplicatedStorage.Shared.Rules.CarCamera)
 local Units = require(ReplicatedStorage.Shared.Units)
 
+local EntryView = require(script.Parent.EntryView)
+
 type Drive = { model: Model, chassis: BasePart, bodyRaise: number }
 
 local localPlayer = Players.LocalPlayer
@@ -185,10 +187,13 @@ local function update(dt: number)
 	easeLook(dt)
 	local view = CarCamera.VIEWS[viewIndex]
 	hideHead(view == "Cockpit")
-	local placed = if view == "Chase"
-		then chase(drive)
-		elseif view == "Cockpit" then cockpit(drive)
-		else hood(drive)
+	-- Getting in or out, EntryView follows the body and eases into or out of the view.
+	local placed = EntryView.place(
+		view,
+		drive.model,
+		if view == "Chase" then chase(drive) elseif view == "Cockpit" then cockpit(drive) else hood(drive),
+		camera.CFrame
+	)
 	local model = drive.model
 	local speed = number(model, "SpeedKmh")
 	local mode = model:GetAttribute("DrivingMode")
