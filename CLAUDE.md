@@ -6,6 +6,11 @@ owner; **read `docs/engineering/AGENTIC_WORKFLOW.md` before your first change.**
 
 ## The rules that matter most
 
+- **Own your mistakes.** Mistakes are expected. When a check fails, a measurement contradicts
+  the plan, or you need to deviate from a recorded decision, say so at once (to your lead or the
+  coordinator, and in the PR's provenance), explain why, then fix it. Never work around a failing
+  check, loosen a test or change a decided behaviour silently to get the gates green: a green gate
+  over a hidden problem is the worst thing we can ship. Nobody is blamed for an honest report.
 - Plan first. Anything new is planned and approved by the owner before code.
 - Every change: an issue, a branch `agent/<area>-<slug>` in its own worktree under `.worktrees/`,
   a PR with the template filled, your own self-review comment, CI green. The coordinator merges.
