@@ -160,21 +160,49 @@ def limb_frame(parent, joint, rot):
     return parent @ pivot @ anim_matrix(rot) @ c0_rot @ np.linalg.inv(c1)
 
 
-def aim(pose, limb, target, part_point, root=None, twist=0.0, guess=(0.0, 0.0), weights=None):
+def aim(pose, limb, target, part_point, root=None, twist=0.0, guess=(0.0, 0.0), weights=None, torso=None):
     """Swing X and spread Z of `limb` so its `part_point` lands on `target` (Roblox space).
-    Returns (x, y, z) degrees and the miss distance; a rigid limb cannot always reach."""
+    Returns (x, y, z) degrees and the miss distance; a rigid limb cannot always reach. `torso`
+    (the Torso part's frame) may be given instead of the pose's RootJoint."""
     joint = LIMB_JOINT[limb]
-    torso = pose_parts({"RootJoint": pose["RootJoint"]}, root)["Torso"]
+    if torso is None:
+        torso = pose_parts({"RootJoint": pose["RootJoint"]}, root)["Torso"]
     local = np.asarray(part_point, dtype=float)
 
     def miss(angles):
         m = limb_frame(torso, joint, (angles[0], twist, angles[1]))
         return m[:3, :3] @ local + m[:3, 3] - target
 
-    # One branch of the Euler angles only: (X, Z) and (X + 180, Z + 180) pose a box the same way,
-    # and keys that hop between them make Blender swing the limb the long way round.
-    lo, hi = LIMITS["leg" if limb.endswith("leg") else "arm"]
-    start = np.clip(np.asarray(guess, dtype=float), np.array(lo) + 1e-6, np.array(hi) - 1e-6)
-    best = least_squares(miss, x0=start, method="trf", bounds=(lo, hi))
-    x, z = best.x
-    return (float(x), float(twist), float(z)), float(np.linalg.norm(miss(best.x)))
+    # One branch of the Euler angles only: two (X, Z) pairs can put the palm on the same point with
+    # the limb turned differently about its length, and keys that hop between them make Blender
+    # swing the limb the long way round. Within the bounds a solve started from the last frame's
+    # angles can stall against a bound (a leg pinned sideways at Z = 85, 5 studs off its foot), so a
+    # miss restarts from neutral starts. A restart replaces the solve from the last frame only when
+    # it lands clearly closer (by RESTART_GAIN), so an out-of-reach target does not hop branches.
+    lo, hi = (np.array(v) for v in LIMITS["leg" if limb.endswith("leg") else "arm"])
+
+    def solve(start):
+        start = np.clip(np.asarray(start, dtype=float), lo + 1e-6, hi - 1e-6)
+        found = least_squares(miss, x0=start, method="trf", bounds=(lo, hi))
+        return found.x, float(np.linalg.norm(miss(found.x)))
+
+    best = solve(guess)
+    if best[1] > RESTART_ABOVE:
+        for start in RESTARTS:
+            found = solve(start)
+            if found[1] < best[1] - RESTART_GAIN:
+                best = found
+    x, z = best[0]
+    return (float(x), float(twist), float(z)), best[1]
+
+
+# Where aim restarts when a solve from the previous frame's angles misses (degrees, X then Z),
+# and how much closer (studs) a restart must land to replace it.
+RESTARTS = [(0.0, 0.0), (60.0, 0.0), (-60.0, 0.0), (120.0, 0.0), (0.0, 60.0), (0.0, -60.0), (150.0, 40.0), (150.0, -40.0)]
+RESTART_GAIN = 0.05
+# A miss below this is a target slightly out of reach, not a stalled solve: no restart (speed).
+RESTART_ABOVE = 0.12
+
+
+# Where aim restarts when a solve from the previous frame's angles misses (degrees, X then Z).
+RESTARTS = [(0.0, 0.0), (60.0, 0.0), (-60.0, 0.0), (120.0, 0.0), (0.0, 60.0), (0.0, -60.0), (150.0, 40.0), (150.0, -40.0)]
