@@ -64,15 +64,11 @@ function CarEntry.sample(curve: Config.Curve, t: number): number
 	return values[#values]
 end
 
--- `lastUntil` ends the last clip early, at that many seconds into it.
-local function chain(names: { Config.ClipName }, lastUntil: number?): { Step }
+local function chain(names: { Config.ClipName }): { Step }
 	local steps: { Step } = table.create(#names)
 	local start = 0
-	for index, name: Config.ClipName in names do
+	for _, name: Config.ClipName in names do
 		local duration = Config.CLIPS[name].duration
-		if index == #names and lastUntil then
-			duration = math.min(duration, lastUntil)
-		end
 		local step: Step = { clip = name, start = start, duration = duration }
 		table.insert(steps, step)
 		start += duration
@@ -81,12 +77,12 @@ local function chain(names: { Config.ClipName }, lastUntil: number?): { Step }
 end
 
 -- The clips a sequence plays in order; it skips opening a door that is already open. Getting in
--- closes the door within GetIn itself; getting out ends in OutsideClose's stance clear of the car.
+-- closes the door within GetIn itself.
 function CarEntry.steps(kind: EntryKind, doorOpen: boolean): { Step }
 	if kind == "Enter" then
 		return chain(if doorOpen then ENTER_OPEN else ENTER_SHUT)
 	elseif kind == "Exit" then
-		return chain(if doorOpen then EXIT_OPEN else EXIT_SHUT, Config.EXIT_END.at)
+		return chain(if doorOpen then EXIT_OPEN else EXIT_SHUT)
 	end
 	return {}
 end
@@ -298,41 +294,10 @@ function CarEntry.outsideRequest(state: State, now: number, askedAt: number): Ou
 	return { clip = nil, into = 0, finished = now - askedAt > Config.REFUSED_SECONDS }
 end
 
--- The server time an entry starts: when the client asked it to (the end of its settle at the
--- mark), never in the past and at most ENTRY_LEAD ahead; now if it asked nothing usable.
-function CarEntry.entryStart(now: number, asked: unknown): number
-	if typeof(asked) ~= "number" or asked ~= asked or math.abs(asked) == math.huge then
-		return now
-	end
-	return math.clamp(asked, now, now + Config.ENTRY_LEAD)
-end
-
--- Whether the walk to the mark first lines up in front of it: from anywhere outside the corridor
--- straight out from the mark. `lateral` and `outward` are studs in the mark's frame, outward away
--- from the car.
-function CarEntry.linesUpFirst(lateral: number, outward: number): boolean
-	return outward <= 0 or math.abs(lateral) > outward * math.tan(Config.APPROACH.lineUpAngle)
-end
-
--- Seconds to place the body exactly on the mark from `distance` studs and `turn` radians away.
-function CarEntry.settleSeconds(distance: number, turn: number): number
-	local approach = Config.APPROACH
-	local seconds = math.max(distance / approach.settleSpeed, math.abs(turn) / approach.turnSpeed)
-	return math.min(seconds, approach.settleSeconds)
-end
-
--- How far through the settle the body is, 0 to 1, eased at both ends.
-function CarEntry.settleShare(elapsed: number, seconds: number): number
-	if seconds <= 0 then
-		return 1
-	end
-	local share = math.clamp(elapsed / seconds, 0, 1)
-	return share * share * (3 - 2 * share)
-end
-
--- A held exit key gets out once held this long; a shorter tap stays a gear change.
-function CarEntry.exitHeld(heldFor: number): boolean
-	return heldFor >= Config.EXIT_HOLD_SECONDS
+-- The body's scale `elapsed` seconds into a change from `from` to `to`, eased at both ends.
+function CarEntry.scale(from: number, to: number, elapsed: number): number
+	local share = math.clamp(elapsed / Config.SCALE_SECONDS, 0, 1)
+	return from + (to - from) * share * share * (3 - 2 * share)
 end
 
 function CarEntry.parseAction(payload: unknown): Action?

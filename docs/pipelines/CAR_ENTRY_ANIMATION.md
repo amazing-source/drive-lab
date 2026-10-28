@@ -88,19 +88,6 @@ so each seated clip is the authored motion re-expressed against the seated root:
 the idle stance at the mark, so the moment the root moves between the mark and the seat shows
 nothing.
 
-**Getting out ends before OutsideClose does** (#40). After the door shuts, OutsideClose walks
-back in to the mark, where the car's collision box is 0.659 studs in front of the root: a body
-standing there clears it only while facing the car, and turning away pushes the torso into it.
-So the exit sequence stops at a frame of that walk back where the body stands as at rest, far
-enough out (`Config.EXIT_END`: the time into the clip, and where the server puts the root, in
-metres like `MARK`); opening or shutting the door from outside still plays the whole clip.
-Re-run after any re-bake of the exit timeline and paste its line over `EXIT_END`:
-
-    python tools/anim/car_entry_exit_end.py <exit.baked.json> --mark <right,forward>
-
-For the SVJ it picks frame 271 (3.433 s): every part within 0.093 studs of the rest pose, 1.132
-studs further out than the mark, clear of the box at any heading.
-
 ## 3. One continuous timeline per direction
 
 Timelines cut into clips at fixed frames (30 fps), so consecutive clips meet on the same pose by

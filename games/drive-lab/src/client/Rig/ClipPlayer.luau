@@ -36,9 +36,8 @@ local function load(self: ClipPlayer, id: string, looped: boolean): AnimationTra
 	return track
 end
 
--- An empty or nil `id` stops the clip. `into` nil plays a loop left to run on its own. `holdAt`
--- holds the clip at that time instead of its last frame (a sequence ending it early).
-function ClipPlayer.set(self: ClipPlayer, id: string?, into: number?, fade: number, holdAt: number?)
+-- An empty or nil `id` stops the clip. `into` nil plays a loop left to run on its own.
+function ClipPlayer.set(self: ClipPlayer, id: string?, into: number?, fade: number)
 	if id == nil or id == "" then
 		if self.playing then
 			self.playing:Stop(fade)
@@ -60,9 +59,8 @@ function ClipPlayer.set(self: ClipPlayer, id: string?, into: number?, fade: numb
 	if into == nil or length <= 0 then
 		return
 	end
-	local hold = math.min(holdAt or length, length - LAST_FRAME)
-	local holding = into >= hold
-	local target = if holding then hold else into
+	local holding = into >= length - LAST_FRAME
+	local target = if holding then length - LAST_FRAME else into
 	track:AdjustSpeed(if holding then 0 else 1)
 	if holding or math.abs(track.TimePosition - target) > DRIFT then
 		track.TimePosition = target
