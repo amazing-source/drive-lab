@@ -143,8 +143,9 @@ local function shifts(samples: { Sample }, window: number)
 end
 
 -- Car width as a share of the frame height scales with 1 / (distance * tan(fov / 2)); at rest
--- it is 1 by definition. The distance is to the car's widest section, `depth` metres ahead of
--- the eye at rest.
+-- it is 1 by definition. The distance is to the car's widest section (the wing's tips), `depth`
+-- metres ahead of the eye along the view at rest: 2.74 at 3.3 m and 1.2 m, solved from the
+-- edit-mode projection of the model (0.5702 cruising, 0.4948 at 65.52 degrees and 0.092 m back).
 local function shrink(fov: number, back: number, depth: number): number
 	local base = CarCamera.FOV.Chase.base
 	return depth * math.tan(math.rad(base / 2)) / ((depth + back) * math.tan(math.rad(fov / 2)))
@@ -152,7 +153,7 @@ end
 
 local function steady(samples: { Sample }, depth: number)
 	print(`\n(a) Steady full throttle, {mode}: g, chase field of view, lean back, car size against cruising`)
-	print(`(widest section {depth} m ahead of the eye at rest; Studio measures it on the model)`)
+	print(`(widest section {depth} m ahead of the eye; multiply by the cruising width Studio measures)`)
 	print("km/h | gear | g | fov | lean m | size")
 	local marks = { 60, 100, 140, 170, 200, 250 }
 	local next = 1
@@ -177,20 +178,25 @@ end
 local function turn()
 	local chase = CarCamera.CHASE
 	local axleForward = Rules.rearAxle(SVJ)
-	print("\n(c) Steady 1 g turn, lean settled, rigid yaw: where the car sits off the frame's centre")
-	print("km/h | yaw rate deg/s | eye shift m | aim turn deg | rear axle deg | centre of mass deg")
+	print("\n(c) Steady 1 g turn, lean settled, rigid yaw: the camera's swing round the car's centre, and")
+	print("where the car then sits off the frame's centre (the aim turns with the eye)")
+	print(
+		"km/h | yaw rate deg/s | eye shift m | swing deg | aim turn deg | rear axle deg | centre of mass deg"
+	)
 	for _, kmh in { 60, 100, 150 } do
 		local lean = Rules.leanTarget(0, 1, kmh)
 		local shift = -lean.right
 		local aim = math.atan(shift / (chase.distance + chase.lookAhead))
 		local axle = math.atan(shift / chase.distance) - aim
-		local centre = math.atan(shift / (chase.distance - axleForward)) - aim
+		local swing = math.atan(shift / (chase.distance - axleForward))
+		local centre = swing - aim
 		local yawRate = World.GRAVITY_MPS2 / (kmh / 3.6)
 		print(
-			("%3d | %4.1f | %.2f | %.2f | %.2f | %.2f"):format(
+			("%3d | %4.1f | %.2f | %.2f | %.2f | %.2f | %.2f"):format(
 				kmh,
 				math.deg(yawRate),
 				shift,
+				math.deg(swing),
 				math.deg(aim),
 				math.deg(axle),
 				math.deg(centre)
@@ -244,6 +250,6 @@ if frames then
 	return
 end
 shifts(samples, 0.6)
-steady(samples, tonumber(process.env.CHASE_DEPTH) or 3.0)
+steady(samples, tonumber(process.env.CHASE_DEPTH) or 2.74)
 turn()
 aspects()

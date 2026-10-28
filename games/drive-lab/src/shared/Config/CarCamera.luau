@@ -58,24 +58,30 @@ export type CarCamera = {
 local VIEWS: { View } = { "Chase", "Cockpit", "Hood" }
 
 -- No speed term: in the owner's reference the view stays put while cruising and widens only as
--- the car pulls (2026-10-28). Chase 60 and cockpit 56 are Assetto Corsa's defaults. The cockpit
--- takes an eighth of the kick (1.5 degrees per g, what it had before) and the hood a quarter (3
--- per g), or the dashboard and the bonnet visibly zoom.
+-- the car pulls (2026-10-28). Chase 60 is Assetto Corsa's default. The cockpit is 4 degrees
+-- wider than Assetto Corsa's 56: from the default seat the cluster's screen then ends at 95 % of
+-- the frame's height with its bezel in view, where at 56 it touched the frame's bottom edge
+-- (edit-mode captures, 2026-10-28). The cockpit takes an eighth of the kick (1.5 degrees per g,
+-- what it had before) and the hood a quarter (3 per g), or the dashboard and the bonnet zoom.
 local FOV: { [View]: ViewFov } = {
 	Chase = table.freeze({ base = 60, kickShare = 1 }),
-	Cockpit = table.freeze({ base = 56, kickShare = 0.125 }),
+	Cockpit = table.freeze({ base = 60, kickShare = 0.125 }),
 	Hood = table.freeze({ base = 70, kickShare = 0.25 }),
 }
 
 local CarCamera: CarCamera = table.freeze({
 	VIEWS = VIEWS,
-	-- Assetto Corsa's first chase camera as shipped (system/cfg/chase_cam.ini, 3.0 m, 1.4 m,
-	-- 0.0349 rad; read off rustyAC's port of CameraDrivableManager::updateChase), chosen by the
-	-- owner against the SVJ reference frames (2026-10-28). Its yaw is rigid, it never rolls, it
-	-- rides the body's pitch, and its only smoothing is this lean.
+	-- Assetto Corsa's first chase camera (system/cfg/chase_cam.ini ships 3.0 m, 1.4 m, 0.0349
+	-- rad; read off rustyAC's port of CameraDrivableManager::updateChase), chosen by the owner
+	-- against the SVJ reference frames (2026-10-28). Its yaw is rigid, it never rolls, it rides
+	-- the body's pitch, and its only smoothing is this lean. Distance and height are set to the
+	-- reference's framing, measured on our model in edit mode: at 3.0 m and 1.4 m the car came
+	-- out 0.632 frame heights wide against the reference's 0.58; at 3.3 m and 1.2 m (1.55 m
+	-- above the road, the reference's own camera height) it is 0.570 cruising, 0.495 under full
+	-- throttle at 170 km/h (reference 0.49).
 	CHASE = table.freeze({
-		distance = 3.0,
-		height = 1.4,
+		distance = 3.3,
+		height = 1.2,
 		lookAhead = 4.0,
 		pitch = math.rad(2),
 		lean = table.freeze({
@@ -86,7 +92,7 @@ local CarCamera: CarCamera = table.freeze({
 			fadeKmh = 10,
 		}),
 		-- Off: Assetto Corsa's yaw is rigid. On, it soaks up yaw chatter and trails a steady
-		-- turn by 2 * yaw rate / (2 pi hz): 1.1 degrees at 30 degrees a second and 5 Hz.
+		-- turn by 2 * yaw rate / (2 pi hz): 1.9 degrees at 30 degrees a second and 5 Hz.
 		yawSpring = table.freeze({ enabled = false, hz = 5 }),
 	}),
 	-- From the centre of mass, along the car: just ahead of the windscreen, above the bonnet.
