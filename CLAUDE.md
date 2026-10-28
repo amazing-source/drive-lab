@@ -43,7 +43,9 @@ owner; **read `docs/engineering/AGENTIC_WORKFLOW.md` before your first change.**
       return require(m).sync("games/drive-lab")
 
   A worktree syncs with its own path, e.g. `sync(".worktrees/<slug>/games/drive-lab")`.
-- `get_studio_mode` before every action; edit mode only; the `.studio-lock` (with an owner file)
+- Before every Studio action, `get_studio_mode` AND `get_connected_instances`: act only when there
+  are no server or client peers. `get_studio_mode` alone has answered "stop" during the owner's
+  playtest (2026-10-28). Edit mode only; the `.studio-lock` (with an owner file)
   for captures, camera moves and temporary objects; restore everything.
 - List every change stored in the place in your PR: only the owner saves the place.
 
