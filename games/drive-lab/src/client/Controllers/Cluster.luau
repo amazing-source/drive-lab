@@ -15,6 +15,8 @@ local RunService = game:GetService("RunService")
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local Cluster = require(ReplicatedStorage.Shared.Config.Cluster)
 local ClusterTheme = require(ReplicatedStorage.Shared.Config.ClusterTheme)
+local DriverAssists = require(ReplicatedStorage.Shared.Rules.DriverAssists)
+local DriverAssistsConfig = require(ReplicatedStorage.Shared.Config.DriverAssists)
 local Rules = require(ReplicatedStorage.Shared.Rules.Cluster)
 
 type Display = {
@@ -23,6 +25,7 @@ type Display = {
 	lit: ImageLabel,
 	red: ImageLabel,
 	wipes: { UIGradient },
+	esc: TextLabel,
 	gear: TextLabel,
 	speed: TextLabel,
 	mode: TextLabel,
@@ -110,6 +113,8 @@ local function build(model: Model, screen: BasePart): Display
 	local lit, litWipe = litLayer(face, Cluster.LIT_IMAGE)
 	local red, redWipe = litLayer(face, Cluster.RED_IMAGE)
 	local centred = Vector2.new(0.5, 0.5)
+	local esc = label(face, Cluster.ESC, "", centred)
+	esc.TextColor3 = ClusterTheme.WARNING
 
 	gui.Parent = screen
 	return {
@@ -118,6 +123,7 @@ local function build(model: Model, screen: BasePart): Display
 		lit = lit,
 		red = red,
 		wipes = { litWipe, redWipe },
+		esc = esc,
 		gear = label(face, Cluster.GEAR, "N", centred),
 		speed = label(face, Cluster.SPEED, "0", Vector2.new(1, 0.5)),
 		mode = label(face, Cluster.MODE, "STRADA", centred),
@@ -171,6 +177,16 @@ local function refresh(current: Display)
 	current.speed.Text = tostring(math.round(number(model, "SpeedKmh")))
 	current.tc.TextColor3 = if read(model, "TcActive") == true then ClusterTheme.WARNING else theme.dim
 	current.abs.TextColor3 = if read(model, "AbsActive") == true then ClusterTheme.WARNING else theme.dim
+	local lamp = DriverAssists.escLamp(
+		read(model, "EscOff") == true,
+		read(model, "EscActive") == true,
+		now,
+		DriverAssistsConfig
+	)
+	local escText = if lamp == "EscOff" then "ESC OFF" elseif lamp == "Esc" then "ESC" else ""
+	if current.esc.Text ~= escText then
+		current.esc.Text = escText
+	end
 end
 
 local function drivenModel(): Model?

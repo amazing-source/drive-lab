@@ -12,6 +12,8 @@ local UserInputService = game:GetService("UserInputService")
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
+local DriverAssists = require(ReplicatedStorage.Shared.Rules.DriverAssists)
+local DriverAssistsConfig = require(ReplicatedStorage.Shared.Config.DriverAssists)
 local InputHelp = require(ReplicatedStorage.Shared.Config.InputHelp)
 local Interface = require(ReplicatedStorage.Shared.Vehicle.Interface)
 local TyreSmoke = require(ReplicatedStorage.Shared.Rules.TyreSmoke)
@@ -27,6 +29,7 @@ local connection: RBXScriptConnection? = nil
 local pressed = { shiftUp = false, shiftDown = false }
 local gearboxMode: "auto" | "manual" = "auto"
 local modeIndex = 1
+local escSwitch = DriverAssists.newSwitch()
 local tyreReadings: { TyreSmoke.Wheel } = {}
 
 local function held(keys: { Enum.KeyCode }): boolean
@@ -66,6 +69,7 @@ end
 local function readInput(): Interface.DriverInput
 	local padThrottle, padBrake, padSteer = gamepadAxes()
 	local keySteer = (if held(Controls.RIGHT) then 1 else 0) - (if held(Controls.LEFT) then 1 else 0)
+	DriverAssists.updateSwitch(escSwitch, held(Controls.ESC_OFF), os.clock(), DriverAssistsConfig)
 	local input: Interface.DriverInput = {
 		throttle = math.max(if held(Controls.THROTTLE) then 1 else 0, padThrottle),
 		brake = math.max(if held(Controls.BRAKE) then 1 else 0, padBrake),
@@ -75,7 +79,7 @@ local function readInput(): Interface.DriverInput
 		shiftDown = pressed.shiftDown,
 		gearboxMode = gearboxMode,
 		drivingMode = MODES[modeIndex],
-		assists = { abs = true, tc = true, esc = true },
+		assists = DriverAssists.assists(escSwitch.off, DriverAssistsConfig),
 	}
 	pressed.shiftUp, pressed.shiftDown = false, false
 	return input
@@ -98,6 +102,8 @@ local function publish(model: Model, result: Interface.StepResult, current: Vehi
 	model:SetAttribute("Clutch", telemetry.clutch)
 	model:SetAttribute("AbsActive", telemetry.absActive)
 	model:SetAttribute("TcActive", telemetry.tcActive)
+	model:SetAttribute("EscActive", telemetry.escActive)
+	model:SetAttribute("EscOff", escSwitch.off)
 	-- Per tyre, for the smoke: read from the model, never written back.
 	for wheel, reading in TyreSmoke.measure(current.state, result.wheels, tyreReadings) do
 		model:SetAttribute(TyreSmokeConfig.SLIP_ATTRIBUTES[wheel], reading.slip)
@@ -106,6 +112,8 @@ local function publish(model: Model, result: Interface.StepResult, current: Vehi
 end
 
 local function stop()
+	-- ESC is back on for the next drive, as at a new ignition cycle (Config/DriverAssists).
+	escSwitch = DriverAssists.newSwitch()
 	if connection then
 		connection:Disconnect()
 		connection = nil
