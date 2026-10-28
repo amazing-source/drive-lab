@@ -1,7 +1,9 @@
 --!strict
 local AirDebris = require("../src/shared/Rules/AirDebris")
+local CameraRules = require("../src/shared/Rules/CarCamera")
 local CarCamera = require("../src/shared/Config/CarCamera")
 local Config = require("../src/shared/Config/AirDebris")
+local SVJ = require("../src/shared/Config/Cars/SVJ")
 local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect
@@ -85,9 +87,12 @@ describe("AirDebris settings", function()
 	end)
 
 	it("lives until the chase camera has passed it, at the slowest speed it shows", function()
-		-- The slabs are laid from the car's middle; the chase camera sits CHASE_DISTANCE behind it.
+		-- The slabs are laid from the car's middle; the chase camera hangs behind the rear axle,
+		-- itself behind the middle, and leans back a little more under acceleration.
+		local chase = CarCamera.CHASE
+		local behind = chase.distance + chase.lean.max - (CameraRules.rearAxle(SVJ))
 		local slowest = Config.SPEEDS.from / 3.6
-		local passed = Config.REGION.lead[2] + CarCamera.CHASE_DISTANCE / slowest
+		local passed = Config.REGION.lead[2] + behind / slowest
 		expect(Config.LIFETIME[1] * (1 - Config.FADE[2]) > passed).toBe(true)
 	end)
 end)

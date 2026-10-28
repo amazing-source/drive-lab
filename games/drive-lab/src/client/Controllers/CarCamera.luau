@@ -1,13 +1,13 @@
 --!strict
 --[[
-	The driving cameras, while the local player drives: Chase (low and close behind, locked to the
-	car's heading), Cockpit (the driver's eyes, fixed in the car:
+	The driving cameras, while the local player drives: Chase (behind, hung off the rear axle:
+	ChaseView), Cockpit (the driver's eyes, fixed in the car:
 	the owner wants the head still while driving, 2026-10-27) and Hood. V or the right stick's click cycles them; the right mouse
 	button or the right stick looks around, easing back on release. The current view is published
 	on the camera as "DriveLabView" for the weather effects, "OnFoot" when not driving. On top
 	of each view's placement: the vibrations of Rules/CarShake, noise around the place computed
-	this frame (never a lag), and the field of view widening with speed and, briefly, with
-	acceleration.
+	this frame (never a lag), and each view's field of view widening under acceleration, held
+	through a gear change.
 ]]
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -16,11 +16,13 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
+local CameraFeel = require(ReplicatedStorage.Shared.Config.CameraFeel)
 local CarCamera = require(ReplicatedStorage.Shared.Config.CarCamera)
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local CarShake = require(ReplicatedStorage.Shared.Rules.CarShake)
 local CarShakeConfig = require(ReplicatedStorage.Shared.Config.CarShake)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
+local ChaseView = require(script.Parent.ChaseView)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local Rules = require(ReplicatedStorage.Shared.Rules.CarCamera)
 local Units = require(ReplicatedStorage.Shared.Units)
@@ -36,7 +38,8 @@ local lookYaw, lookPitch = 0, 0
 local eyeForward, eyeUp = CarCamera.EYE_FORWARD, CarCamera.EYE_UP
 local hidden: { BasePart } = {}
 local shake = CarShake.new()
-local fovKick = 0
+local kick = Rules.newKick()
+local chaseState = ChaseView.new()
 
 local function studs(metres: number): number
 	return Units.metresToStuds(metres)
@@ -105,7 +108,7 @@ local function release(camera: Camera)
 	end
 	active, looking = false, false
 	lookYaw, lookPitch = 0, 0
-	shake, fovKick = CarShake.new(), 0
+	shake, kick, chaseState = CarShake.new(), Rules.newKick(), ChaseView.new()
 	hideHead(false)
 	UserInputService.MouseBehavior = Enum.MouseBehavior.Default
 	local humanoid = localPlayer.Character and localPlayer.Character:FindFirstChildOfClass("Humanoid")
@@ -113,27 +116,12 @@ local function release(camera: Camera)
 	if humanoid then
 		camera.CameraSubject = humanoid
 	end
-	camera.FieldOfView = CarCamera.BASE_FOV
+	camera.FieldOfView = CameraFeel.BASE_FOV
 	camera:SetAttribute("DriveLabView", "OnFoot")
 end
 
-local function headingYaw(chassis: BasePart): number
-	local look = chassis.CFrame.LookVector
-	return math.atan2(-look.X, -look.Z)
-end
-
 local function chase(drive: Drive): CFrame
-	local total = headingYaw(drive.chassis) + lookYaw
-	local direction = Vector3.new(-math.sin(total), 0, -math.cos(total))
-	local centre = drive.chassis.Position
-	local distance = studs(CarCamera.CHASE_DISTANCE)
-	local position = centre
-		- direction * distance * math.cos(lookPitch)
-		+ Vector3.yAxis * (studs(CarCamera.CHASE_HEIGHT) + distance * math.sin(lookPitch))
-	local focus = centre
-		+ direction * studs(CarCamera.CHASE_LOOK_AHEAD)
-		+ Vector3.yAxis * studs(CarCamera.CHASE_LOOK_HEIGHT)
-	return CFrame.lookAt(position, focus)
+	return ChaseView.place(chaseState, drive.chassis.CFrame, lookYaw, lookPitch)
 end
 
 local function cockpit(drive: Drive): CFrame
@@ -170,6 +158,13 @@ local function easeLook(dt: number)
 	end
 end
 
+-- Every frame in every view, getting in and out included, so neither the chase nor the kick is
+-- stale when it shows.
+local function follow(drive: Drive, dt: number)
+	ChaseView.step(chaseState, drive.model, drive.chassis.CFrame, dt)
+	Rules.stepKick(kick, Rules.kickTarget(number(drive.model, "LongitudinalG")), dt)
+end
+
 local function update(dt: number)
 	local camera = Workspace.CurrentCamera
 	if camera == nil then
@@ -182,8 +177,9 @@ local function update(dt: number)
 	end
 	active = true
 	camera.CameraType = Enum.CameraType.Scriptable
+	follow(drive, dt)
 	easeLook(dt)
-	local view = CarCamera.VIEWS[viewIndex]
+	local view: CarCamera.View = CarCamera.VIEWS[viewIndex]
 	hideHead(view == "Cockpit")
 	local placed = if view == "Chase"
 		then chase(drive)
@@ -202,9 +198,7 @@ local function update(dt: number)
 	}, dt, CarShakeConfig)
 	camera.CFrame = placed * CFrame.Angles(offset.pitch, offset.yaw, offset.roll)
 		+ placed.UpVector * studs(offset.lift)
-	local kickShare = if view == "Cockpit" then CarCamera.FOV_KICK.cockpit else 1
-	fovKick = Rules.easeKick(fovKick, Rules.kickTarget(number(model, "LongitudinalG")) * kickShare, dt)
-	camera.FieldOfView = Rules.fieldOfView(speed) + fovKick
+	camera.FieldOfView = Rules.fieldOfView(view, kick.degrees)
 	camera:SetAttribute("DriveLabView", view)
 end
 
