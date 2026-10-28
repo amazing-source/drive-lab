@@ -4,13 +4,15 @@
 	start-up's keyed reach (Rules/StartupArms) to the START flap and the button, and on to the
 	wheel. Each side has the grip hand Controllers/DriverArms already draws plus two more posed
 	meshes, Rest and Point, and a sleeve cuff for them, kept in the place at
-	ReplicatedStorage.DriveLabAssets.Hands; one shows at a time. Everything is placed from a
-	wrist frame (z up the forearm, y out of the back of the hand), the frame the arm reaches.
+	ReplicatedStorage.DriveLabAssets.Hands; one shows at a time, dressed as Rig/Gloves says.
+	Everything is placed from a wrist frame (z up the forearm, y out of the back of the hand), the
+	frame the arm reaches.
 ]]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DriverArms = require(ReplicatedStorage.Shared.Config.DriverArms)
 local DriverStartup = require(ReplicatedStorage.Shared.Config.DriverStartup)
+local Gloves = require(script.Parent.Gloves)
 local StartupArms = require(ReplicatedStorage.Shared.Rules.StartupArms)
 local Units = require(ReplicatedStorage.Shared.Units)
 
@@ -44,14 +46,7 @@ local function asset(name: string): BasePart?
 	return if found and found:IsA("BasePart") then found else nil
 end
 
-local function tinted(template: BasePart, color: Color3, folder: Instance): BasePart
-	local part = template:Clone()
-	local skin = part:FindFirstChildOfClass("SurfaceAppearance")
-	if skin then
-		skin.Color = color
-	else
-		part.Color = color
-	end
+local function hidden(part: BasePart, folder: Instance): BasePart
 	part.Transparency = 1
 	part.Parent = folder
 	return part
@@ -116,12 +111,11 @@ function StartupHands.build(
 		cuffOffset = offset(DriverStartup.CUFF),
 	}
 	if rest and point and cuff then
-		hands.shapes = { Rest = tinted(rest, color, folder), Point = tinted(point, color, folder) }
-		local sleeve = cuff:Clone()
-		sleeve.Color = DriverArms.SLEEVE_COLOR
-		sleeve.Transparency = 1
-		sleeve.Parent = folder
-		hands.cuff = sleeve
+		hands.shapes = {
+			Rest = hidden(Gloves.hand(rest, color), folder),
+			Point = hidden(Gloves.hand(point, color), folder),
+		}
+		hands.cuff = hidden(Gloves.cuff(cuff), folder)
 	end
 	return hands
 end

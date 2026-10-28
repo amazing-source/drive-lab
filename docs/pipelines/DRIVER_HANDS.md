@@ -178,6 +178,30 @@ restore the camera and destroy the copy and the controllers' folders afterwards.
 fingertip fix: the index at the lifted flap's edge at 0.9 s and on START at 1.5 s). Studio must
 be visible: minimized, it renders no frame, so `RenderStepped` and captures both stop.
 
+## 9. Gloves, and only the gloves in the cockpit view
+
+The seated driver wears racing gloves in every view (`Config/DriverArms.GLOVES`, `Rig/Gloves`):
+the same hand meshes, their near-white skin detail map tinted `GLOVE_COLOR` instead of the
+avatar's arm colour, so the knuckles and creases shape the glove; the wrist cuffs (`Cuff_*`,
+`WristCuff_*`, already closed oval tubes 9 cm long) take the glove's colour and read as the
+gauntlet, which FIA 8856-2018 gloves (Alpinestars' Tech-1 Race, for one) run over the suit's
+sleeve. `GLOVES = false` brings back the skin-tinted hands and sleeve-coloured cuffs; nothing
+else changes.
+
+In the cockpit view the local driver sees only the gloves, as in a racing sim (Assetto Corsa's
+SVJ cockpit, the owner's reference frame in
+`drive-lab-assets/references/assetto_svj_camera/01_cockpit_gloves_only.png`): `Rules/ArmPieces`
+hides the upper arms, elbows and forearms when the camera's `DriveLabView` is `Cockpit` and the
+driver is the local player's character (`COCKPIT_GLOVES_ONLY`). Every other view, and every other
+driver seen from the cockpit, keeps the full arms. The hidden sleeves are still posed, so
+switching views never shows them a frame late.
+
+Checking it in edit mode needs a stand-in for the local player (edit mode has none): point the
+synced controller's `own` at the probe's dummy, and set the camera's `DriveLabView` by hand.
+Captures of 2026-10-28: `drive-lab-assets/driver/captures_v4_gloves/` (the start-up from the
+cockpit eye at rest, 0.9 s and 1.5 s, the driving grip, the full arms from outside in the Chase
+view, and two sheets beside the reference).
+
 ## Owner decisions
 
 | Date | Decision |
@@ -186,3 +210,4 @@ be visible: minimized, it renders no frame, so `RenderStepped` and captures both
 | 2026-10-27 | Hands follow the wheel up to 110 degrees each way, then the wheel slides through them. Kept for now. |
 | 2026-10-27 | The forearms and sleeves follow the shape of the hands; the cockpit view is moved back from the wheel. |
 | 2026-10-27 | Models are made by us when that fits better than an import (the owner's reminder). |
+| 2026-10-28 | Racing gloves in every view while seated; in the cockpit view, for the local driver only, only the gloved hands show, as in Assetto Corsa (#28). |
