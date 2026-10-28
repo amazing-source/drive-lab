@@ -40,7 +40,17 @@ middle and every lamp stood half underground). Parts:
   the road, and clears them with the chunk.
 - `Controllers/StreetLights` (each client): lit from 18:00 to 06:30 of `Lighting.ClockTime`,
   each lamp switching at its own moment within 2.5 s; lights enabled within 250 m of the camera;
-  only the 6 nearest downlights cast shadows.
+  only the 6 nearest downlights cast shadows. The game streams: a lamp model reaches the client
+  before its parts, and its parts stream out and back in as new instances, so each lamp keeps
+  its lights and bulb as they come and go (`DescendantAdded`/`DescendantRemoving`), and a lamp
+  whose parts are not in counts as dark. Read once on arrival, every lamp stayed dark in Play
+  while its glints were drawn (#44: measured in a Play session; edit mode does not stream, which
+  is why the first check passed).
+- Glints (`Effects/LampGlints`): each flare and wet-road streak fades out along its length to
+  nothing at both ends (`Rules/LampGlints.taper`), drawn in 12 beam segments since a Beam samples
+  its transparency only at its segments' ends; the flare texture is a long streak that fades only
+  in its last sixteenth, and drawn at one opacity it read as a flat grey bar (#44). Neither kind
+  draws until its image has loaded (ContentProvider).
 
 Checked in edit mode, no playtest: two lamps beside the car at 21:30, lanterns glowing, pools
 with the posts' shadows on the ground.
