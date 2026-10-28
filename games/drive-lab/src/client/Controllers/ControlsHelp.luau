@@ -113,7 +113,7 @@ end
 
 local function viewport(): Vector2
 	local camera = Workspace.CurrentCamera
-	return if camera then camera.ViewportSize else Vector2.new(1280, 720)
+	return if camera then camera.ViewportSize else Vector2.zero
 end
 
 local function setOpen(value: boolean)
