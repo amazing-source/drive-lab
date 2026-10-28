@@ -172,8 +172,10 @@ python -I tools/assets/rim_blur_maps.py <build dir> <maps dir>
 A game model's door is rarely its own object, but it is usually whole mesh islands: cut it out by
 islands, never by faces, and it keeps its shading and UVs. Four scripts, each with its usage in its
 header, carry one tag through the whole job: a face attribute `door_part` (0 body, 1 door, 2 the
-START flap, 3 the opening's new parts) written into the source meshes. Nothing is separated until
-the export, so every step reads the same selection.
+START flap, 3 the opening's new parts, 4 and 5 the throttle and brake pedals) written into the
+source meshes. Nothing is separated until the export, so every step reads the same selection. The
+pedals are tagged on a copy of the door blend by `tools/blender/footwell.py --save`
+(`DRIVER_LEGS.md` §4), which also prints their hinges.
 
 ```
 car.blend ─► hero_car_door.py ─► svj_door.blend (tagged) + sill + button ─► hero_car_door_hinge.py ─► hinge.json
@@ -250,6 +252,8 @@ its top about 12 degrees outboard (front view), measured on Commons photos (see 
   raise, like `seat`). `CarRig` hangs the door on one Weld to an invisible `DoorHinge` part whose
   C0's X is the axis (door parts weld rigidly to it) and the flap on a `FlapHinge` Weld;
   `Controllers/CarDoor` sets `C0 = RestC0 * CFrame.Angles(angle, 0, 0)` from the car's entry state.
+  `pedals = { { part, pivot, axis } }` the same way: each pedal on a Weld named after it, turned
+  by `Controllers/DriverLegs`. A binding without pedals rigs as before.
 - Door sounds: one uploaded pack (`tools/audio/pack_door.py`), each sound a region; start them a
   little ahead of the door's own timeline so the shut's thump lands as it closes.
 
