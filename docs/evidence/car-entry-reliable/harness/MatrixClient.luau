@@ -30,6 +30,7 @@ type Frame = {
 	scale: number,
 	entryClip: boolean,
 	exitClip: boolean,
+	doorClip: boolean,
 	character: Model,
 }
 
@@ -40,6 +41,12 @@ local sawReservation = false
 local SEATED_CASES = { CloseInside = true, OpenInside = true, ExitShut = true, ExitOpen = true }
 local OPEN_DOOR = { CloseOutside = true, EnterOpen = true, CloseInside = true, ExitOpen = true }
 local ENTRY_IDS = { [Config.CLIPS.OutsideOpen.seated] = true, [Config.CLIPS.GetIn.seated] = true }
+local DOOR_IDS = {
+	[Config.CLIPS.OutsideOpen.standing or ""] = true,
+	[Config.CLIPS.OutsideClose.standing or ""] = true,
+	[Config.CLIPS.InsideOpen.seated] = true,
+	[Config.CLIPS.InsideClose.seated] = true,
+}
 local EXIT_IDS = {
 	[Config.CLIPS.InsideOpen.seated] = true,
 	[Config.CLIPS.GetOut.seated] = true,
@@ -174,6 +181,7 @@ local function record(): ({ Frame }, () -> ())
 			scale = character:GetScale(),
 			entryClip = playing(animator, ENTRY_IDS),
 			exitClip = playing(animator, EXIT_IDS),
+			doorClip = playing(animator, DOOR_IDS),
 			character = character,
 		})
 	end)
@@ -211,10 +219,29 @@ local function handOverJump(frames: { Frame }): number
 	for index = 2, #frames do
 		local a, b = frames[index - 1], frames[index]
 		if a.seated ~= b.seated and a.character == b.character then
-			worst = math.max(worst, (Vector3.new(b.torso.X, 0, b.torso.Z) - Vector3.new(a.torso.X, 0, a.torso.Z)).Magnitude)
+			worst =
+				math.max(worst, (Vector3.new(b.torso.X, 0, b.torso.Z) - Vector3.new(a.torso.X, 0, a.torso.Z)).Magnitude)
 		end
 	end
 	return worst
+end
+
+-- Where getting out ends: the branch's exit frame, or the mark on main (which has none).
+local function exitSpot(): CFrame
+	local exitFrame = (DoorMark :: any).exitFrame
+	return if exitFrame then exitFrame(seat()) else DoorMark.frame(seat())
+end
+
+-- How far the root moved, standing, from the first frame off the seat to the last frame: what
+-- the car's collision box pushing the body would show.
+local function drift(frames: { Frame }): number
+	for index = 2, #frames do
+		if frames[index - 1].seated and not frames[index].seated then
+			local a, b = frames[index].root, frames[#frames].root
+			return (Vector3.new(b.X, 0, b.Z) - Vector3.new(a.X, 0, a.Z)).Magnitude
+		end
+	end
+	return 0
 end
 
 local function hullOverlap(character: Model): boolean
@@ -300,6 +327,11 @@ local function abuse(scenario: Scenario, frames: { Frame })
 	end
 end
 
+-- The body is still being walked or held by the entry's own code.
+local function walkingOrHeld(humanoid: Humanoid): boolean
+	return not humanoid.AutoRotate
+end
+
 local function finished(scenario: Scenario): boolean
 	local _, humanoid, root = body()
 	local state, at = CarState.read(car()), now()
@@ -313,7 +345,15 @@ local function finished(scenario: Scenario): boolean
 	elseif case == "ExitShut" or case == "ExitOpen" then
 		return humanoid.SeatPart == nil and state.entry == "None"
 	end
-	return Rules.doorIdle(state, at) and not root.Anchored and car():GetAttribute("ReservedBy") == 0
+	-- A door case ends once the door rests where it was asked to go and the body is free.
+	local open = Rules.doorOpenness(state, at)
+	local wantOpen = case == "OpenOutside" or case == "OpenInside"
+	local reached = if wantOpen then open >= 0.999 else open <= 0.001
+	return reached
+		and Rules.doorIdle(state, at)
+		and not root.Anchored
+		and car():GetAttribute("ReservedBy") == 0
+		and (case == "CloseInside" or case == "OpenInside" or not walkingOrHeld(humanoid))
 end
 
 local function check(scenario: Scenario, frames: { Frame }, log: { any }, notes: { string }): boolean
@@ -353,8 +393,10 @@ local function check(scenario: Scenario, frames: { Frame }, log: { any }, notes:
 		end
 		expect(handOverJump(frames) <= 0.4, string.format("hand-over jump %.2f studs", handOverJump(frames)))
 	elseif case == "ExitShut" or case == "ExitOpen" then
-		local goal = DoorMark.exitFrame(seat())
-		local off = (Vector3.new(root.Position.X, 0, root.Position.Z) - Vector3.new(goal.Position.X, 0, goal.Position.Z)).Magnitude
+		local goal = exitSpot()
+		local off = (
+			Vector3.new(root.Position.X, 0, root.Position.Z) - Vector3.new(goal.Position.X, 0, goal.Position.Z)
+		).Magnitude
 		expect(humanoid.SeatPart == nil, "still seated")
 		expect(off <= 0.35, string.format("%.2f studs from where getting out ends", off))
 		expect(math.abs(character:GetScale() - 1) < 1e-3, "not at full size")
@@ -363,6 +405,7 @@ local function check(scenario: Scenario, frames: { Frame }, log: { any }, notes:
 		expect(Rules.doorClosed(state, at), "door not shut")
 		expect(humanoid.AutoRotate, "AutoRotate left off")
 		expect(handOverJump(frames) <= 0.35, string.format("hand-over jump %.2f studs", handOverJump(frames)))
+		expect(drift(frames) <= 0.1, string.format("pushed %.2f studs after getting out", drift(frames)))
 	elseif case == "OpenOutside" or case == "CloseOutside" or case == "CloseInside" or case == "OpenInside" then
 		local open = Rules.doorOpenness(state, at)
 		local wantOpen = case == "OpenOutside" or case == "OpenInside"
@@ -388,8 +431,21 @@ local function timings(frames: { Frame }): { [string]: number }
 			and (Vector3.new(frame.root.X, 0, frame.root.Z) - Vector3.new(mark.X, 0, mark.Z)).Magnitude <= 0.05
 	end)
 	local clip = first(frames, function(frame: Frame): boolean
-		return frame.entryClip or frame.exitClip
+		return frame.entryClip or frame.exitClip or frame.doorClip
 	end)
+	local lastExit = nil
+	for _, frame in frames do
+		if frame.exitClip then
+			lastExit = frame.t
+		end
+	end
+	local standing = nil
+	for index = 2, #frames do
+		if frames[index - 1].seated and not frames[index].seated then
+			standing = frames[index].t
+		end
+	end
+	out.exitEndToStanding = if lastExit and standing then standing - lastExit else -1
 	local seated = first(frames, function(frame: Frame): boolean
 		return frame.seated
 	end)
@@ -422,6 +478,15 @@ function Client.run(scenario: Scenario): { [string]: any }
 	if not setUp(scenario) then
 		table.insert(result.notes, "FAIL set-up: the prompt or the seat never became available")
 		return result
+	end
+	if scenario.abuse == "WalkAway" then
+		-- Driven from outside: the movement key is a real key press sent with the go.
+		shared.PacingGo = false
+		shared.PacingReady = true
+		waitFor(function(): boolean
+			return shared.PacingGo == true
+		end, 90)
+		shared.PacingReady = false
 	end
 	local frames, stop = record()
 	local serverStart = now()
@@ -459,6 +524,12 @@ function Client.run(scenario: Scenario): { [string]: any }
 	result.standingJump = standingJump(frames)
 	result.handOverJump = handOverJump(frames)
 	result.requests = #log
+	local seen = {}
+	for _, entry in log do
+		table.insert(seen, string.format("%s at %.2f", entry.action, entry.dist))
+	end
+	result.serverSaw = table.concat(seen, ", ")
+	result.drift = drift(frames)
 	result.frames = #frames
 	return result
 end

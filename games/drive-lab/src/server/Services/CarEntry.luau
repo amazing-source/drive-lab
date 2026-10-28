@@ -222,16 +222,27 @@ local function seat(car: Car, player: Player, startedAt: number)
 	if state.entry ~= "Enter" or state.entryAt ~= startedAt then
 		return
 	end
-	local character, humanoid = body(player)
-	if character == nil or humanoid == nil or humanoid.SeatPart ~= nil or car.seat.Occupant ~= nil then
+	local character, humanoid, root = body(player)
+	if
+		character == nil
+		or humanoid == nil
+		or root == nil
+		or humanoid.SeatPart ~= nil
+		or car.seat.Occupant ~= nil
+	then
 		cutShort(car, now())
 		return
 	end
-	-- The seat weld places the root in the same step, so this server's late view of where the
-	-- body stood does not matter here.
+	-- The client has stopped the body on the mark, where this server's view of it may still be
+	-- a little behind (measured: 0.45 studs), and scaling writes the root from that view back to
+	-- the client. So the root is put on the mark exactly before and after the size changes, all
+	-- in the same step as the seat weld.
+	local mark = DoorMark.frame(car.seat)
+	placeRoot(character, root, standingFrame(car, mark, character:GetScale()))
 	if math.abs(character:GetScale() - Driving.DRIVER_SCALE) > SCALE_EPSILON then
 		character:ScaleTo(Driving.DRIVER_SCALE)
 	end
+	placeRoot(character, root, standingFrame(car, mark, Driving.DRIVER_SCALE))
 	car.seat:Sit(humanoid)
 end
 

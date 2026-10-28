@@ -91,8 +91,19 @@ local HANDLERS: { [string]: (Player, any) -> any } = {
 		if math.abs(character:GetScale() - Driving.DRIVER_SCALE) > 1e-3 then
 			character:ScaleTo(Driving.DRIVER_SCALE)
 		end
-		seat():Sit(humanoid)
-		return true
+		-- The seat frees a moment after the last occupant leaves; Sit before that fails.
+		for _ = 1, 30 do
+			if seat().Occupant == humanoid then
+				return true
+			end
+			if seat().Occupant == nil then
+				pcall(function()
+					seat():Sit(humanoid)
+				end)
+			end
+			task.wait(0.1)
+		end
+		return seat().Occupant == humanoid
 	end,
 	kill = function(player: Player)
 		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
