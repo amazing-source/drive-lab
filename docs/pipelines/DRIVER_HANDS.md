@@ -123,7 +123,7 @@ hand's palm on its thigh 45 % of the way from hip to knee (thighs from `Config/D
 right foot on the throttle, the left on the footrest), pitched so palm and fingertips both lie on
 the cloth. `REST_POSE.json` also gives, for the entry animation's blocky arms, the palm's centre
 and where an R6 arm aimed at it ends. Shoulders are 0.82 + 0.77 studs from the hand: the hands
-cannot reach the knees on real-length legs. Its leg numbers (lengths, `KNEE_OUT`, the pedals'
+cannot reach the knees on real-length legs. Its leg numbers (lengths, `KNEE_TOWARD`, the pedals'
 heel and ball points) are copies of `Config/DriverLegs`; change them together.
 
 ### 8c. Keyed paths

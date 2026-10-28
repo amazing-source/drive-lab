@@ -590,7 +590,7 @@ def driver_body(seat_weld, startup):
             heel = brake["heel"]
         else:
             heel, ball = rest_pose.FOOTREST["heel"], rest_pose.FOOTREST["ball"]
-        knee, ankle = rest_pose.leg(hip, heel, ball, sign)
+        knee, ankle = rest_pose.leg(hip, heel, ball, rest_pose.KNEE_TOWARD[sign])
         hip_v, knee_v, ankle_v = Vector(hip) * STUDS, Vector(knee) * STUDS, Vector(ankle) * STUDS
         limb(f"Thigh{sign}", hip_v, knee_v, 0.075 * STUDS)
         limb(f"Shin{sign}", knee_v, ankle_v, 0.057 * STUDS)

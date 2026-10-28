@@ -23,7 +23,9 @@ import sys
 STUDS_PER_METRE = 1.5 / 0.28
 DRIVER_SCALE = 1.5 / 1.75
 # Config/DriverLegs.
-THIGH, SHIN, KNEE_OUT = 0.46, 0.45, 1.0
+THIGH, SHIN = 0.46, 0.45
+# Where each knee bends toward (KNEE_TOWARD).
+KNEE_TOWARD = {1: (0.17, 0.15, -0.4), -1: (-0.58, 0.62, 0.008)}
 HIP = (0.5, -1.05, 0.05)
 ANKLE_ALONG, ANKLE_UP = 0.075, 0.085
 THROTTLE = {"heel": (0.1761, -0.2275, -0.8354), "ball": (0.2044, -0.0482, -0.924)}
@@ -74,7 +76,7 @@ def turned(hinge, point, angle):
     return add(hinge, (o[0], o[1] * c - o[2] * s, o[1] * s + o[2] * c))
 
 
-def leg(hip, heel, ball, outward):
+def leg(hip, heel, ball, toward):
     """The knee and the ankle reached (Rules/DriverLegs' leg)."""
     forward = unit(sub(ball, heel))
     up = unit(cross((1, 0, 0), forward))
@@ -84,7 +86,7 @@ def leg(hip, heel, ball, outward):
     reach = min(max(dist, abs(THIGH - SHIN) + 1e-6), THIGH + SHIN - 1e-6)
     bend = math.acos(max(-1, min(1, (THIGH * THIGH + reach * reach - SHIN * SHIN) / (2 * THIGH * reach))))
     along = unit(d)
-    pole = (outward * KNEE_OUT, 1, 0)
+    pole = sub(toward, hip)
     perp = unit(sub(pole, mul(along, dot(pole, along))))
     knee = add(hip, add(mul(along, THIGH * math.cos(bend)), mul(perp, THIGH * math.sin(bend))))
     return knee, add(hip, mul(along, reach))
@@ -112,7 +114,7 @@ def rest_side(seat_weld, shape, sign):
     hip_studs = add(torso, mul((sign * HIP[0], HIP[1], HIP[2]), DRIVER_SCALE))
     hip = mul(hip_studs, 1 / STUDS_PER_METRE)
     feet = THROTTLE if sign > 0 else FOOTREST
-    knee, _ = leg(hip, feet["heel"], feet["ball"], sign)
+    knee, _ = leg(hip, feet["heel"], feet["ball"], KNEE_TOWARD[sign])
     thigh_dir = unit(sub(knee, hip))
     centre = add(hip, mul(sub(knee, hip), ALONG_THIGH))
     up = unit(sub((0, 1, 0), mul(thigh_dir, dot((0, 1, 0), thigh_dir))))
