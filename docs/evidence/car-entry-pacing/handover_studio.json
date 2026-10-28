@@ -1,0 +1,36 @@
+{
+  "what": "Studio edit mode, 2026-10-28 22:12-22:22, this branch synced (from 127.0.0.1:8772), main re-synced after (7 written, then 0). A rigged, anchored copy of CarImport offset 100 studs; R6 dummies from a default HumanoidDescription at Driving.DRIVER_SCALE, their roots placed explicitly; uploaded clips posed with Animator:StepAnimations. Gap = the largest distance between matching corners of the six body parts. Everything destroyed (leftover 0, no stray SeatWeld). Script: handover_check.luau (hand-overs, scale, the as-built exit end); the stand-up run is the same set-up with the fixed client's call order.",
+  "hand_overs": [
+    { "case": "entry start, door shut: OutsideOpen t=0 seated vs the body standing on the mark", "largestCornerGap": 0.0015 },
+    { "case": "entry start, door open: GetIn t=0 seated vs the body standing on the mark", "largestCornerGap": 0.0014 },
+    { "case": "exit end BEFORE: OutsideClose last frame vs standing on the mark", "largestCornerGap": 0.0170 },
+    { "case": "exit end AFTER: OutsideClose at EXIT_END.at vs standing at EXIT_END", "largestCornerGap": 0.0931, "part": "Head" }
+  ],
+  "scale_with_feet_kept": [
+    { "from": 1, "to": 0.8571, "feetBefore": 0, "feetAfterScaleToAlone": 0.6429, "feetAfterSetScale": -1.8e-7 },
+    { "from": 0.8571, "to": 1, "feetBefore": 7.7e-7, "feetAfterScaleToAlone": -0.6429, "feetAfterSetScale": 9.5e-7 }
+  ],
+  "exit_end_as_built_before_the_fix": {
+    "note": "Locomotion's sit (Movement priority) under the exit clip; the clip stopped with no fade; sit then fades out over Movement.FADE as idle fades in. Gap from the clip's held stance.",
+    "frames": [
+      { "t": "first frame after the clip stops", "gap": 2.5107, "part": "Left Leg" },
+      { "t": "+3/60 s", "gap": 1.9348 },
+      { "t": "+6/60 s", "gap": 1.2157 },
+      { "t": "+9/60 s", "gap": 0.4512 },
+      { "t": "+12/60 s", "gap": 0.1062 }
+    ],
+    "control_no_track_playing_first_frame": { "gap": 8.287, "note": "with sit stopped and nothing playing, the joints keep the clip's pose against the moved root: stopping everything is worse" }
+  },
+  "exit_end_with_the_fix": {
+    "note": "Controllers/CarEntry.standUp: the first frame off the seat stops sit and holds the body with a copy of the idle (Action); Locomotion's idle starts at Heartbeat; the next frame fades the copy out over Movement.FADE.",
+    "frames": [
+      { "t": "first frame off the seat", "gap": 0.0942 },
+      { "t": "+1/60 s", "gap": 0.0951, "copy": 0.907, "locomotionIdle": 0.093 },
+      { "t": "+3/60 s", "gap": 0.0968, "copy": 0.722, "locomotionIdle": 0.278 },
+      { "t": "+6/60 s", "gap": 0.0993, "copy": 0.444, "locomotionIdle": 0.556 },
+      { "t": "+9/60 s", "gap": 0.1037, "copy": 0.167, "locomotionIdle": 0.833 },
+      { "t": "+12/60 s", "gap": 0.1062, "copy": 0, "locomotionIdle": 1 },
+      { "t": "+15/60 s", "gap": 0.1107 }
+    ]
+  }
+}

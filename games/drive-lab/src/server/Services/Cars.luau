@@ -89,7 +89,7 @@ local function carry(car: Car, character: Model?)
 	end
 end
 
--- Services/CarEntry seats the driver, and eases their size down before and back after.
+-- Services/CarEntry seats the driver, and sets their size down before and back after.
 local function park(car: Car)
 	carry(car, nil)
 	car.driver = nil
