@@ -1,0 +1,34 @@
+{
+ "OutsideOpen": {
+  "seated": "rbxassetid://105348915995074",
+  "standing": "rbxassetid://116794100117562"
+ },
+ "_source": {
+  "OutsideOpen": "c87d988c6d6c3b2b4e68f7ebbb319213c885ee9debd667294c4bd7340d842588",
+  "GetIn": "c87d988c6d6c3b2b4e68f7ebbb319213c885ee9debd667294c4bd7340d842588",
+  "InsideOpen": "b49f73d623fdd736edf375143a8e29aca54d32371f158f080de61a574f4e3405",
+  "GetOut": "b49f73d623fdd736edf375143a8e29aca54d32371f158f080de61a574f4e3405",
+  "OutsideClose": "b49f73d623fdd736edf375143a8e29aca54d32371f158f080de61a574f4e3405",
+  "InsideClose": "a0a07820ae09c5db8de6ab26009570cce6353bc49bfcc1756e4d8f1de642694a",
+  "SeatedPose": "6ff702707f1ed2318a9600ed820dc75b12fa08ab8b395592b3cbd7a0c61b3ff5"
+ },
+ "GetIn": {
+  "seated": "rbxassetid://88140349551789"
+ },
+ "InsideOpen": {
+  "seated": "rbxassetid://93977108041759"
+ },
+ "GetOut": {
+  "seated": "rbxassetid://82829724490644"
+ },
+ "OutsideClose": {
+  "seated": "rbxassetid://112948852391762",
+  "standing": "rbxassetid://116154715049025"
+ },
+ "InsideClose": {
+  "seated": "rbxassetid://86043343714462"
+ },
+ "SeatedPose": {
+  "seated": "rbxassetid://77930295624365"
+ }
+}

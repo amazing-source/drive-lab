@@ -1,0 +1,38 @@
+Upload guard (tools/anim/car_entry_upload.py), shown refusing and accepting, 2026-10-28.
+Every run below is the real command; a refusal exits 2 before anything is built or uploaded.
+
+1. The first animation agent's last entry bake (17:03), checked with its own allow list:
+   python -I tools/anim/car_entry_check.py guard_demo/entry.baked.json scene.npz --allow allow_entry.json --json guard_demo/check_entry.json
+   -> FAILURES 70, exit 1
+   python -I tools/anim/car_entry_export.py guard_demo/entry.baked.json scene.npz guard_demo/export_entry
+   python -I tools/anim/car_entry_upload.py 2746107833 "guard_demo/export_entry=guard_demo/check_entry.json" --ids guard_demo/ids.json
+
+   REFUSED .../guard_demo/export_entry:
+     - the contact check FAILED: 70 failures
+   Nothing uploaded. Fix the timeline and re-run the check, or pass --override with the owner's decision.
+   (exit 2)
+
+2. Positive control: the seated bake, whose check passes over every frame (dry run, uploads nothing):
+   built 1 clips from .../guard_demo/export_seated (bake af23b377539f)
+   (exit 0)
+
+3. A passing check of part of the timeline (--from 0 --to 10):
+   REFUSED .../guard_demo/export_seated:
+     - the check covered only frames [0, 10], not the whole timeline
+   (exit 2)
+
+4. A passing check of a different bake (the close timeline) against the seated export:
+   REFUSED .../guard_demo/export_seated:
+     - the check ran on a different bake from the one this export was cut from
+   (exit 2)
+
+5. An exported file edited after the export (one Neck value of SeatedPose.seated.json):
+   REFUSED .../guard_demo/export_seated:
+     - SeatedPose.seated.json changed after the export
+   (exit 2)
+   Restored byte for byte: accepted again (exit 0).
+
+6. The override path (dry run; the text is a test, no owner decision exists):
+   OVERRIDDEN .../guard_demo/export_entry: TEST of the override path only, no owner decision exists
+   upload_overrides.log: {"at": "2026-10-28T16:25:34+00:00", "override": "TEST of the override path only, no owner decision exists", "reasons": ["the contact check FAILED: 70 failures"]}
+   (the log was deleted after the test)

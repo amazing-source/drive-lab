@@ -1,0 +1,33 @@
+Bake 4 upload, 2026-10-28 (tools/anim/car_entry_upload.py).
+
+1. Without the override (exit 2, nothing uploaded):
+   REFUSED drive-lab-assets/anim/car_entry/v4/export/entry:
+     - the contact check FAILED: 2 failures
+   REFUSED drive-lab-assets/anim/car_entry/v4/export/exit:
+     - the contact check FAILED: 16 failures
+   Nothing uploaded. Fix the timeline and re-run the check, or pass --override with the owner's decision.
+
+2. With the coordinator's decision as the override:
+   REFUSED drive-lab-assets/anim/car_entry/v4/export/entry:
+     - the contact check FAILED: 2 failures
+   REFUSED drive-lab-assets/anim/car_entry/v4/export/exit:
+     - the contact check FAILED: 16 failures
+   OVERRIDDEN drive-lab-assets/anim/car_entry/v4/export/entry: coordinator decision 2026-10-28, delegated by the owner; the owner judges them in Play (#6)
+   OVERRIDDEN drive-lab-assets/anim/car_entry/v4/export/exit: coordinator decision 2026-10-28, delegated by the owner; the owner judges them in Play (#6)
+   built 3 clips from drive-lab-assets/anim/car_entry/v4/export/entry (bake c87d988c6d6c)
+     OutsideOpen seated: rbxassetid://105348915995074
+     OutsideOpen standing: rbxassetid://116794100117562
+     GetIn seated: rbxassetid://88140349551789
+   built 4 clips from drive-lab-assets/anim/car_entry/v4/export/exit (bake b49f73d623fd)
+     InsideOpen seated: rbxassetid://93977108041759
+     GetOut seated: rbxassetid://82829724490644
+     OutsideClose seated: rbxassetid://112948852391762
+     OutsideClose standing: rbxassetid://116154715049025
+   built 1 clips from drive-lab-assets/anim/car_entry/v4/export/close (bake a0a07820ae09)
+     InsideClose seated: rbxassetid://86043343714462
+   built 1 clips from drive-lab-assets/anim/car_entry/v4/export/seated (bake 6ff702707f1e)
+     SeatedPose seated: rbxassetid://77930295624365
+
+upload_overrides.log (entry, exit):
+   {"at": "2026-10-28T20:03:16+00:00", "override": "coordinator decision 2026-10-28, delegated by the owner; the owner judges them in Play (#6)", "reasons": ["the contact check FAILED: 2 failures"]}
+   {"at": "2026-10-28T20:03:16+00:00", "override": "coordinator decision 2026-10-28, delegated by the owner; the owner judges them in Play (#6)", "reasons": ["the contact check FAILED: 16 failures"]}

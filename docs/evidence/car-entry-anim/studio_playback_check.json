@@ -1,0 +1,14 @@
+{
+ "about": "Edit-mode playback of the nine uploaded clips (bake 4) in the Drive Lab place, 2026-10-28, branch agent/car-entry-anim synced (two syncs: 26 written / 27 removed, then 0 written). tools/anim/car_entry_studio_check.py: a rigged copy of CarImport, an R6 dummy at Driving.DRIVER_SCALE seated through Seat:Sit (or its root placed at the mark for a standing variant), each clip stepped with Animator:StepAnimations at five times; every part's position in the seat frame against Blender's (seatparts.json), game studs. The last sample is taken 1/60 s before the clip's end (ClipPlayer holds the last frame a frame early), so it sits between the last two frames. The standing variants leave the neck at rest (HeadLook turns the head in game), so their head is reported apart. leftover 0: everything the check made was destroyed.",
+ "results": [
+  {"clip": "OutsideOpen", "variant": "seated", "seated": true, "root_in_seat": "0.000,1.557,0.000", "samples": "0.00:0.0001 0.83:0.0002 1.67:0.0003 2.50:0.0004 3.32:0.0100", "worst": 0.0100},
+  {"clip": "OutsideOpen", "variant": "standing", "root_in_seat": "-4.714,0.541,0.000", "samples": "0.00:0.0004 0.83:0.0004 1.67:0.0004 2.50:0.0004 3.32:0.0101", "worst": 0.0101, "head_worst": 0.2312},
+  {"clip": "GetIn", "variant": "seated", "seated": true, "root_in_seat": "0.000,1.557,0.000", "samples": "0.00:0.0001 1.07:0.0002 2.13:0.0004 3.20:0.0002 4.25:0.0205", "worst": 0.0205},
+  {"clip": "InsideOpen", "variant": "seated", "seated": true, "root_in_seat": "0.000,1.557,0.000", "samples": "0.00:0.0001 0.40:0.0001 0.80:0.0001 1.20:0.0001 1.58:0.0054", "worst": 0.0054},
+  {"clip": "GetOut", "variant": "seated", "seated": true, "root_in_seat": "0.000,1.557,0.000", "samples": "0.00:0.0001 1.00:0.0002 2.00:0.0002 3.00:0.0003 3.98:0.0027", "worst": 0.0027},
+  {"clip": "OutsideClose", "variant": "seated", "seated": true, "root_in_seat": "0.000,1.557,0.000", "samples": "0.00:0.0001 1.13:0.0003 2.30:0.0003 3.47:0.0003 4.58:0.0054", "worst": 0.0054},
+  {"clip": "OutsideClose", "variant": "standing", "root_in_seat": "-4.714,0.541,0.000", "samples": "0.00:0.0004 1.13:0.0005 2.30:0.0004 3.47:0.0005 4.58:0.0054", "worst": 0.0054, "head_worst": 0.2762},
+  {"clip": "InsideClose", "variant": "seated", "seated": true, "root_in_seat": "0.000,1.557,0.000", "samples": "0.00:0.0001 0.47:0.0001 0.90:0.0001 1.33:0.0001 1.78:0.0206", "worst": 0.0206},
+  {"clip": "SeatedPose", "variant": "seated", "seated": true, "root_in_seat": "0.000,1.557,0.000", "samples": "0.00:0.0001 0.27:0.0001 0.50:0.0001 0.73:0.0001 0.98:0.0001", "worst": 0.0001}
+ ]
+}
