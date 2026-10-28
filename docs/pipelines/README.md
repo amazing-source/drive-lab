@@ -11,6 +11,7 @@ decisions on feel, which numbers alone did not predict.
 | [Flipbook effects](VFX_FLIPBOOK.md) | drawn particle effects fired from animation markers |
 | [Driver hands](DRIVER_HANDS.md) | rigged hands posed around a car's steering-wheel rim, tinted per player |
 | [Street lamp](STREET_LAMP.md) | a prop modelled from a photo, lit, and scattered along the road |
+| [Roadside](ROADSIDE.md) | road furniture modelled from the rules, road-surface decals, their placement, and the night look (reflectors, lamp flares, wet streaks) |
 | [Driving HUD](DRIVING_HUD.md) | a HUD design delivered as a picture, cut into a frame and live parts drawn over it |
 
 Shared rules:
