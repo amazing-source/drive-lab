@@ -179,8 +179,9 @@ class Car:
                 pts = cloud[idx]
                 shell = pts[np.linalg.norm(pts - shoulder, axis=1) > END_REACH - 0.03]
                 if len(shell):
-                    # The nearest landing points to the target, kept only if the whole arm gets
-                    # there without passing through the car (its end face may press in a little).
+                    # Twelve landing points spread over those nearest the target, the first kept
+                    # whose whole arm gets there without passing through the car (its end face may
+                    # press in a little, HAND_PRESS).
                     best = None
                     for p in shell[np.argsort(np.linalg.norm(shell - target, axis=1))[:: max(1, len(shell) // 400)][:12]]:
                         palm = shoulder + ARM_REACH * (p - shoulder) / np.linalg.norm(p - shoulder)
