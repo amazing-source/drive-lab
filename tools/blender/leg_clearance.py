@@ -16,6 +16,15 @@ cabin surface is found, and the tube's own radius toward it is taken off: a nega
 deep inside the cabin. The tube's ends are left out: the thigh's first 30 % lies on the seat, the
 shin's last 20 % is the shoe's collar over the pedals. Prints one line per pose and the worst
 per side and part.
+
+The nearest surface can be the column or the console beside the knee as well as the dash above
+it, and the mesh name does not tell them apart (one cabin object holds all three). So each line
+also gives the knee's room straight above it, `above`: the shortest hit of rays fanned within
+ABOVE_CONE degrees of the seat's up, less the knee's radius. That is the knee against the dash.
+
+And `under`: the air below the thigh tube (rays straight down from its centre line, less its
+depth), the shortest and the longest along the thigh's first 70 %: the room the trousers' seat
+(tools/blender/seat_fill.py) fills down to the cushion.
 """
 
 import json
@@ -29,6 +38,7 @@ from mathutils.bvhtree import BVHTree
 
 KNEE_RADIUS = 0.06
 SEAT_UP = Vector((0, 0, 1))
+ABOVE_CONE = 40
 
 
 def option(args, name, default):
@@ -78,6 +88,37 @@ def nearest(trees, point):
     return best
 
 
+def room_above(trees, point):
+    best = 9.0
+    for ring in range(5):
+        tilt = math.radians(ABOVE_CONE * ring / 4)
+        for step in range(1 if ring == 0 else 12):
+            turn = 2 * math.pi * step / 12
+            direction = Vector((math.sin(tilt) * math.cos(turn), math.sin(tilt) * math.sin(turn), math.cos(tilt)))
+            for _, tree in trees:
+                hit = tree.ray_cast(point, direction, 1.0)
+                if hit[0] is not None and hit[3] < best:
+                    best = hit[3]
+    return best - KNEE_RADIUS
+
+
+def drop(trees, point):
+    best = 9.0
+    for _, tree in trees:
+        hit = tree.ray_cast(point, -SEAT_UP, 1.0)
+        if hit[0] is not None and hit[3] < best:
+            best = hit[3]
+    return best
+
+
+def under_thigh(trees, hip, knee):
+    gaps = []
+    for i in range(8):
+        t = 0.7 * i / 7
+        gaps.append(drop(trees, hip.lerp(knee, t)) - thigh_radius(t)[1])
+    return min(gaps), max(gaps)
+
+
 def tube_gap(trees, start, end, radius_at, ts):
     axis = (end - start).normalized()
     across = axis.cross(SEAT_UP).normalized()
@@ -109,17 +150,22 @@ def main(args):
 
     summary = {}
     for pose in poses:
+        if pose["side"] == "seat":
+            continue
         hip, knee, ankle = blend(pose["hip"]), blend(pose["knee"]), blend(pose["ankle"])
         name, _, distance = nearest(trees, knee)
         gaps = {
             "knee": (name, distance - KNEE_RADIUS),
             "thigh": tube_gap(trees, hip, knee, thigh_radius, [0.3 + 0.65 * i / 8 for i in range(9)]),
             "shin": tube_gap(trees, knee, ankle, shin_radius, [0.8 * i / 8 for i in range(9)]),
+            "above": ("dash", room_above(trees, knee)),
         }
         line = "  ".join(f"{part} {gap * 100:5.1f} cm ({mesh})" for part, (mesh, gap) in gaps.items())
-        print(f"POSE {pose['side']:5s} {pose['name']:13s} {line}")
+        low, high = under_thigh(trees, hip, knee)
+        print(f"POSE {pose['side']:5s} {pose['name']:13s} {line}  under {low * 100:5.1f}..{high * 100:5.1f} cm")
         on_pedal = pose["side"] == "left" or not pose["name"].startswith("across") or pose["name"] in ("across 0.00", "across 1.00")
         group = f"{pose['side']} {'on a pedal' if on_pedal else 'across'}"
+        gaps["under"] = ("cushion", low)
         for part, (mesh, gap) in gaps.items():
             key = (group, part)
             if key not in summary or gap < summary[key][1]:
