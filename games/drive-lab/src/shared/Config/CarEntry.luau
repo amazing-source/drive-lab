@@ -66,25 +66,6 @@ export type CarEntry = {
 	-- Where the character stands to use the door, from the driver's seat in the car frame
 	-- (metres, right and forward), facing the seat.
 	MARK: { right: number, forward: number },
-	-- Getting out ends `at` seconds into OutsideClose, before its last steps back in to the mark:
-	-- there its walk back passes a stance with the feet together, facing the car, clear of the
-	-- car's collision box at any heading. The root is put there (metres, as MARK), facing as at
-	-- the mark. Opening or shutting the door from outside still plays the whole clip.
-	EXIT_END: { at: number, right: number, forward: number },
-	-- The walk to the mark, in studs, radians and seconds. From outside a corridor in front of
-	-- the mark (`lineUpAngle` either side of straight out) the body first walks to `lineUp`
-	-- studs in front of it, so it turns clear of the car and walks in facing it, never along
-	-- its side. Within `arrived` of the mark, or stopped within `reach`, it is placed exactly:
-	-- moved and turned at `settleSpeed` and `turnSpeed`, eased, over at most `settleSeconds`.
-	APPROACH: {
-		lineUp: number,
-		lineUpAngle: number,
-		arrived: number,
-		reach: number,
-		settleSpeed: number,
-		turnSpeed: number,
-		settleSeconds: number,
-	},
 	-- Studs: how close to the mark the server accepts a character, and how close it must be
 	-- to the door to be offered the prompts.
 	MARK_TOLERANCE: number,
@@ -97,9 +78,8 @@ export type CarEntry = {
 	-- skew allowed between the client's request time and the server's start of the motion.
 	REFUSED_SECONDS: number,
 	REQUEST_SLACK: number,
-	-- Seconds ahead of the server's clock an entry may be asked to start: the client asks as its
-	-- settle at the mark begins, for the moment it ends, so the round trip runs alongside it.
-	ENTRY_LEAD: number,
+	-- Seconds over which the body changes between its own size and the seated size.
+	SCALE_SECONDS: number,
 	-- Speeds (km/h) at or below which one may get out, or open or shut the door from inside.
 	EXIT_MAX_KMH: number,
 	DOOR_MAX_KMH: number,
@@ -229,29 +209,16 @@ local CarEntry: CarEntry = {
 		brake = 0.6,
 	}),
 	MARK = table.freeze({ right = -0.88, forward = 0 }),
-	-- OutsideClose's bake frame 271, from tools/anim/car_entry_exit_end.py: the torso at standing
-	-- height, every part within 0.093 studs of the rest pose, 1.132 studs further out than the
-	-- mark (docs/evidence/car-entry-pacing/).
-	EXIT_END = table.freeze({ at = 3.433, right = -1.0913, forward = 0.5492 }),
-	APPROACH = table.freeze({
-		lineUp = 1.2,
-		lineUpAngle = math.rad(30),
-		arrived = 0.2,
-		reach = 0.6,
-		settleSpeed = 12.5,
-		turnSpeed = math.rad(600),
-		settleSeconds = 0.2,
-	}),
 	MARK_TOLERANCE = 2,
 	PROMPT_DISTANCE = 6,
 	RESERVE_SECONDS = 4,
 	APPROACH_SECONDS = 3,
 	REFUSED_SECONDS = 1.5,
 	REQUEST_SLACK = 1,
-	ENTRY_LEAD = 0.3,
+	SCALE_SECONDS = 0.8,
 	EXIT_MAX_KMH = 3,
 	DOOR_MAX_KMH = 5,
-	EXIT_HOLD_SECONDS = 0.35,
+	EXIT_HOLD_SECONDS = 0.6,
 }
 
 return table.freeze(CarEntry)

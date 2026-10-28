@@ -1,9 +1,0 @@
-OutsideClose frames 168-306, door shut from frame 253
-  frame 271: 3.4333 s, pose 0.0928, outward 1.1321
-  frame 287: 3.9667 s, pose 0.0754, outward 0.5586
-  frame 303: 4.5000 s, pose 0.0704, outward -0.0039
-  frame 304: 4.5333 s, pose 0.0559, outward 0.0000
-  frame 305: 4.5667 s, pose 0.0354, outward 0.0000
-  frame 306: 4.6000 s, pose 0.0000, outward 0.0000
-chosen frame 271: pose 0.0928 studs off rest, torso height 3.0051 (rest 3)
-	EXIT_END = table.freeze({ at = 3.433, right = -1.0913, forward = 0.5492 }),

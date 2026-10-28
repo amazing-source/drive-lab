@@ -278,87 +278,17 @@ describe("Door from outside", function()
 	end)
 end)
 
-describe("Getting out", function()
-	it("ends in OutsideClose's stance clear of the car, before its walk back in to the mark", function()
-		local close, finish = Config.CLIPS.OutsideClose, Config.EXIT_END.at
-		expect(finish < close.duration).toBe(true)
-		for _, doorOpen in { false, true } do
-			local steps = Rules.steps("Exit", doorOpen)
-			local last = steps[#steps]
-			expect(last.clip).toBe("OutsideClose")
-			expect(last.duration).toBeNear(finish, 1e-9)
-			expect(Rules.length(steps)).toBeNear(last.start + finish, 1e-9)
-			local held, into = Rules.stepAt(steps, 1000)
-			expect(held and held.clip).toBe("OutsideClose")
-			expect(into).toBeNear(finish, 1e-9)
-		end
-		expect(Rules.length(Rules.steps("Exit", false))).toBeNear(
-			Config.CLIPS.InsideOpen.duration + Config.CLIPS.GetOut.duration + finish,
-			1e-9
-		)
-	end)
-
-	it("has shut the door before it ends, and stands further out than the mark", function()
-		local curve = Config.CLIPS.OutsideClose.door
-		assert(curve, "OutsideClose has no door curve")
-		expect(curve.times[#curve.times] <= Config.EXIT_END.at).toBe(true)
-		local exiting = state({ entry = "Exit", entryAt = 0 })
-		expect(Rules.doorOpenness(exiting, Rules.length(Rules.steps("Exit", false)) - 1e-3)).toBe(0)
-		expect(Config.EXIT_END.right < Config.MARK.right).toBe(true)
-	end)
-
-	it("needs the exit key held, so a tap stays a gear change", function()
-		expect(Rules.exitHeld(0.2)).toBe(false)
-		expect(Rules.exitHeld(0.34)).toBe(false)
-		expect(Rules.exitHeld(0.35)).toBe(true)
-		expect(Rules.exitHeld(2)).toBe(true)
-	end)
-end)
-
-describe("Walking to the mark", function()
-	it("lines up in front of the mark unless already in the corridor straight out from it", function()
-		local slope = math.tan(Config.APPROACH.lineUpAngle)
-		expect(Rules.linesUpFirst(0, 3)).toBe(false)
-		expect(Rules.linesUpFirst(3 * slope * 0.9, 3)).toBe(false)
-		expect(Rules.linesUpFirst(3 * slope * 1.1, 3)).toBe(true)
-		expect(Rules.linesUpFirst(-3 * slope * 1.1, 3)).toBe(true)
-		expect(Rules.linesUpFirst(4, 0.2)).toBe(true)
-		expect(Rules.linesUpFirst(0, -0.3)).toBe(true)
-	end)
-
-	it("places the body on the mark at walking and turning pace, never longer than the cap", function()
-		local approach = Config.APPROACH
-		expect(Rules.settleSeconds(0, 0)).toBe(0)
-		expect(Rules.settleSeconds(0.1, 0)).toBeNear(0.1 / approach.settleSpeed, 1e-9)
-		expect(Rules.settleSeconds(0, math.rad(20))).toBeNear(math.rad(20) / approach.turnSpeed, 1e-9)
-		expect(Rules.settleSeconds(0, -math.rad(20))).toBeNear(math.rad(20) / approach.turnSpeed, 1e-9)
-		expect(Rules.settleSeconds(approach.reach, math.pi)).toBe(approach.settleSeconds)
-		expect(approach.settleSeconds <= 0.2).toBe(true)
-	end)
-
-	it("eases the placing from its start to the mark", function()
-		expect(Rules.settleShare(0, 0.2)).toBe(0)
-		expect(Rules.settleShare(0.05, 0.2)).toBeNear(0.15625, 1e-9)
-		expect(Rules.settleShare(0.1, 0.2)).toBeNear(0.5, 1e-9)
-		expect(Rules.settleShare(0.2, 0.2)).toBe(1)
-		expect(Rules.settleShare(5, 0.2)).toBe(1)
-		expect(Rules.settleShare(0, 0)).toBe(1)
-		local previous = 0
+describe("Driver scale", function()
+	it("eases from one size to the other over the configured time", function()
+		expect(Rules.scale(1, 0.8, 0)).toBe(1)
+		expect(Rules.scale(1, 0.8, Config.SCALE_SECONDS / 2)).toBeNear(0.9, 1e-9)
+		expect(Rules.scale(1, 0.8, Config.SCALE_SECONDS)).toBeNear(0.8, 1e-9)
+		expect(Rules.scale(1, 0.8, Config.SCALE_SECONDS * 3)).toBeNear(0.8, 1e-9)
+		local previous = 1
 		for step = 1, 20 do
-			local value = Rules.settleShare(0.2 * step / 20, 0.2)
-			expect(value >= previous).toBe(true)
+			local value = Rules.scale(1, 0.8, Config.SCALE_SECONDS * step / 20)
+			expect(value <= previous).toBe(true)
 			previous = value
 		end
-	end)
-
-	it("starts an entry when the client asked, never in the past nor too far ahead", function()
-		expect(Rules.entryStart(10, 10.1)).toBeNear(10.1, 1e-9)
-		expect(Rules.entryStart(10, 9)).toBe(10)
-		expect(Rules.entryStart(10, 50)).toBeNear(10 + Config.ENTRY_LEAD, 1e-9)
-		expect(Rules.entryStart(10, 0 / 0)).toBe(10)
-		expect(Rules.entryStart(10, math.huge)).toBe(10)
-		expect(Rules.entryStart(10, "soon")).toBe(10)
-		expect(Rules.entryStart(10, nil)).toBe(10)
-		expect(Config.ENTRY_LEAD >= Config.APPROACH.settleSeconds).toBe(true)
 	end)
 end)
