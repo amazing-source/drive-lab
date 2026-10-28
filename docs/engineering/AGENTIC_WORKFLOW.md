@@ -98,6 +98,11 @@ agents. They share politely and talk to each other directly.
 - One branch per workstream, `agent/<area>-<slug>`, worked in its own worktree under
   `.worktrees/` (ignored), so agents never share a working directory.
 - Commits are small and say why. Never force-push, never rewrite history, never `--no-verify`.
+- Each agent is the **author** of its commits, under its role name at
+  `<role>@agents.drive-lab.invalid` (a reserved, non-routable domain); the committer stays the
+  repository's configured identity, the owner's. No Co-Authored-By trailers.
+- Agents are spawned under purpose-named agent types (e.g. `drive-lab-vfx`,
+  `drive-lab-animator`), never a generic one, and each spawn's description names its workstream.
 - The PR template's **Agentic provenance** section records who built it (role), from which issue
   and brief, the decisions taken on the way and by whom.
 - The coordinator merges after CI is green and the review is done.
