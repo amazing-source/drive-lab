@@ -19,6 +19,8 @@ export type Controls = {
 	DOOR: { Enum.KeyCode },
 	START_ENGINE: { Enum.KeyCode },
 	EXIT: { Enum.KeyCode },
+	-- Opens and closes the controls screen (Config/ControlsHelp).
+	CONTROLS_HELP: { Enum.KeyCode },
 	-- Analog sticks below this count as centred.
 	STICK_DEADZONE: number,
 }
@@ -49,6 +51,9 @@ local Controls: Controls = table.freeze({
 	DOOR = { Enum.KeyCode.F, Enum.KeyCode.ButtonL3 },
 	START_ENGINE = { Enum.KeyCode.R, Enum.KeyCode.ButtonA },
 	EXIT = { Enum.KeyCode.E, Enum.KeyCode.ButtonB },
+	-- K sits in the same place on QWERTY and AZERTY and is bound to nothing else. The pad has no
+	-- button left, so a tap of B opens it (ControlsHelp.TAP_SECONDS) and B's hold stays the exit.
+	CONTROLS_HELP = { Enum.KeyCode.K, Enum.KeyCode.ButtonB },
 	STICK_DEADZONE = 0.12,
 })
 
