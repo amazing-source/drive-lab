@@ -1,0 +1,187 @@
+[
+ {
+  "why": "left hand on the release bar, pulling it and pushing the door up; the left arm against the door card as the body leans in to it",
+  "from": 6,
+  "to": 26,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "door",
+   "interior",
+   "carbon",
+   "trim"
+  ],
+  "depth": 0.12
+ },
+ {
+  "why": "hands on the cabin wall and the lip through the hoist out",
+  "from": 58,
+  "to": 116,
+  "parts": [
+   "Right Arm",
+   "Left Arm"
+  ],
+  "groups": [
+   "sill",
+   "paint",
+   "interior",
+   "carbon",
+   "trim"
+  ],
+  "depth": 0.15
+ },
+ {
+  "why": "DECIDED (#9 thread): thighs resting on the cabin wall's top while sliding over it (a rigid R6 thigh hinged at its top edge)",
+  "from": 66,
+  "to": 92,
+  "parts": [
+   "Right Leg",
+   "Left Leg"
+  ],
+  "groups": [
+   "interior",
+   "trim",
+   "carbon",
+   "sill"
+  ],
+  "depth": 0.398
+ },
+ {
+  "why": "INHERITED, TIGHTENED to its measured depth: thighs over the sill's edge while swinging out and perched",
+  "from": 88,
+  "to": 118,
+  "parts": [
+   "Right Leg",
+   "Left Leg"
+  ],
+  "groups": [
+   "sill",
+   "paint"
+  ],
+  "depth": 0.148
+ },
+ {
+  "why": "bottom on the lip",
+  "from": 102,
+  "to": 120,
+  "parts": [
+   "Torso"
+  ],
+  "groups": [
+   "sill",
+   "paint"
+  ],
+  "depth": 0.1
+ },
+ {
+  "why": "right hand on the door's lower front corner pulling it down",
+  "from": 228,
+  "to": 250,
+  "parts": [
+   "Right Arm"
+  ],
+  "groups": [
+   "door",
+   "paint",
+   "carbon",
+   "trim"
+  ],
+  "depth": 0.15
+ },
+ {
+  "why": "left hand on the release bar: must touch",
+  "from": 14,
+  "to": 24,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "door",
+   "interior",
+   "carbon",
+   "trim"
+  ],
+  "touch": 0.1
+ },
+ {
+  "why": "GetOut right hand on the cabin wall: must touch (within reach)",
+  "from": 63,
+  "to": 67,
+  "parts": [
+   "Right Arm"
+  ],
+  "groups": [
+   "sill",
+   "paint",
+   "interior",
+   "carbon",
+   "trim"
+  ],
+  "touch": 0.1
+ },
+ {
+  "why": "GetOut right hand on the cabin wall: must touch (within reach)",
+  "from": 78,
+  "to": 79,
+  "parts": [
+   "Right Arm"
+  ],
+  "groups": [
+   "sill",
+   "paint",
+   "interior",
+   "carbon",
+   "trim"
+  ],
+  "touch": 0.1
+ },
+ {
+  "why": "GetOut right hand on the cabin wall: must touch (within reach)",
+  "from": 81,
+  "to": 81,
+  "parts": [
+   "Right Arm"
+  ],
+  "groups": [
+   "sill",
+   "paint",
+   "interior",
+   "carbon",
+   "trim"
+  ],
+  "touch": 0.1
+ },
+ {
+  "why": "GetOut right hand on the cabin wall: must touch (within reach)",
+  "from": 85,
+  "to": 89,
+  "parts": [
+   "Right Arm"
+  ],
+  "groups": [
+   "sill",
+   "paint",
+   "interior",
+   "carbon",
+   "trim"
+  ],
+  "touch": 0.1
+ },
+ {
+  "why": "GetOut left hand on the lip: must touch (within reach)",
+  "from": 61,
+  "to": 68,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "sill",
+   "paint",
+   "interior",
+   "carbon",
+   "trim"
+  ],
+  "touch": 0.1
+ }
+]
