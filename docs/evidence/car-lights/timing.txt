@@ -1,0 +1,19 @@
+Per-frame cost of one car's lights (issue #41), Studio edit mode, 2026-10-28.
+
+Method: a rigged copy of CarImport (CarRig.build at the world scale), the lights code synced into
+the place; one call per render step bound at Camera+3, timed with os.clock() around it, 3 s per
+run (about 180 frames at 60 FPS), sorted. The driven-car path each frame: StreetLamps.isNight,
+Rules.daylight, CarState.read + CarEntry.startup, Rules.decide, CarLamps.apply, the three HUD
+attributes; the left indicator running and the brake switching every 0.5 s, so the lamps and
+lights change state through the run. "old" is main's decide + show() on the unsplit clusters,
+with its own change guards (capture_probe.luau, Probe.time).
+
+                         p50 ms   p95 ms   max ms
+empty slot               0.0006   0.0011   0.0134
+old, NightRain           0.0508   0.1481   0.2951
+old, NightRain (again)   0.0505   0.1528   0.2408
+new, NightRain           0.0476   0.1342   0.2725
+new, NightRain (again)   0.0548   0.1405   0.2685
+new, ClearDay            0.0618   0.1592   0.2527
+
+Other cars (not driven) run the same decide + apply without the attributes. Not profiled in Play.

@@ -3,7 +3,7 @@
 	Exhaust flames for a car: a jet and a fireball out of each outlet and a flash of light,
 	fired by Controllers/CarAudio with every pop it plays, so sight and sound land together. The
 	emitters are built on a car's first pop, on its rear light clusters (the outlets are placed
-	from them, Config/ExhaustFlames), and go with the car.
+	from the clusters' whole boxes, Config/ExhaustFlames), and go with the car.
 ]]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -36,6 +36,22 @@ local function emitter(parent: Attachment, texture: string): ParticleEmitter
 	return particles
 end
 
+-- A rear light cluster is cut into its lamps (tools/blender/split_lights.py): Light_RearLeft is
+-- its housing and Light_RearLeft_<Lamp> the rest. The outlets were measured from the whole
+-- cluster's box, the union of its pieces, in the housing's axes (all pieces share them).
+local function clusterCentre(model: Model, housing: BasePart): Vector3
+	local prefix = housing.Name .. "_"
+	local low, high = Vector3.one * math.huge, -Vector3.one * math.huge
+	for _, piece in model:GetDescendants() do
+		if piece:IsA("BasePart") and (piece == housing or string.sub(piece.Name, 1, #prefix) == prefix) then
+			local centre = housing.CFrame:PointToObjectSpace(piece.Position)
+			low = low:Min(centre - piece.Size / 2)
+			high = high:Max(centre + piece.Size / 2)
+		end
+	end
+	return housing.CFrame:PointToWorldSpace((low + high) / 2)
+end
+
 local function build(model: Model): { Outlet }?
 	local left = model:FindFirstChild("Light_RearLeft", true)
 	local right = model:FindFirstChild("Light_RearRight", true)
@@ -43,7 +59,7 @@ local function build(model: Model): { Outlet }?
 		return nil
 	end
 	local axes = left.CFrame
-	local middle = (left.Position + right.Position) / 2
+	local middle = (clusterCentre(model, left) + clusterCentre(model, right)) / 2
 	local spot = Config.OUTLETS
 	local direction = (-axes.LookVector + axes.UpVector * Config.RISE).Unit
 	local outlets = {}

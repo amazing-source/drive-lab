@@ -76,6 +76,9 @@ export type CarModel = {
 			axis: { forward: number, right: number, up: number },
 		}
 	}?,
+	-- The cabin light (Controllers/CarLights): where the lamp in the roof console sits, from the
+	-- centre of mass in the car frame (metres, before bodyRaise). Optional.
+	cabinLight: { forward: number, right: number, up: number }?,
 }
 
 local SVJModel: CarModel = table.freeze({
@@ -207,6 +210,10 @@ local SVJModel: CarModel = table.freeze({
 			axis = table.freeze({ forward = 0, right = 1, up = 0 }),
 		}),
 	}),
+	-- Measured on the export's cabin mesh (2026-10-28, issue #41): the lens in the roof console
+	-- between the sun visors faces down, 0.48 to 0.51 m up, its centre 0.69 m ahead on the centre
+	-- line; the lamp sits a centimetre under it.
+	cabinLight = table.freeze({ forward = 0.689, right = 0, up = 0.471 }),
 })
 
 return SVJModel
