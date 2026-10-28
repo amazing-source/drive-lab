@@ -34,7 +34,11 @@ DOOR = 1
 # Faces cut out of the pieces by their `door_part` value: door faces go to one part per kind
 # (DOOR_PARTS), any other value to the one part named here, with that place part's look. Value 3
 # is hero_car_door.py's opening (NEW_PARTS, exported whole); add values from 4 for more cuts.
-CUTS = {2: ("StartFlap", "Interior_InteriorA_Material_1")}
+CUTS = {
+    2: ("StartFlap", "Interior_InteriorA_Material_1"),
+    4: ("Pedal_Throttle", "Interior_InteriorA_Material_3"),
+    5: ("Pedal_Brake", "Interior_InteriorA_Material_3"),
+}
 # Door faces by the piece they come from: the part they go to and the place part whose look
 # (SurfaceAppearance, or glass settings) it copies.
 DOOR_PARTS = [
