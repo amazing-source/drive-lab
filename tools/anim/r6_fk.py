@@ -160,10 +160,11 @@ def limb_frame(parent, joint, rot):
     return parent @ pivot @ anim_matrix(rot) @ c0_rot @ np.linalg.inv(c1)
 
 
-def aim(pose, limb, target, part_point, root=None, twist=0.0, guess=(0.0, 0.0), weights=None, torso=None):
+def aim(pose, limb, target, part_point, root=None, twist=0.0, guess=(0.0, 0.0), weights=None, torso=None, restart=True):
     """Swing X and spread Z of `limb` so its `part_point` lands on `target` (Roblox space).
     Returns (x, y, z) degrees and the miss distance; a rigid limb cannot always reach. `torso`
-    (the Torso part's frame) may be given instead of the pose's RootJoint."""
+    (the Torso part's frame) may be given instead of the pose's RootJoint. `restart=False` skips the
+    restarts, for callers that probe out-of-reach targets on purpose (a height bisection)."""
     joint = LIMB_JOINT[limb]
     if torso is None:
         torso = pose_parts({"RootJoint": pose["RootJoint"]}, root)["Torso"]
@@ -182,12 +183,17 @@ def aim(pose, limb, target, part_point, root=None, twist=0.0, guess=(0.0, 0.0), 
     lo, hi = (np.array(v) for v in LIMITS["leg" if limb.endswith("leg") else "arm"])
 
     def solve(start):
+        # Unbounded first (Levenberg-Marquardt is ~20 times faster than the bounded solver); only
+        # an answer off the branch is solved again within the bounds.
         start = np.clip(np.asarray(start, dtype=float), lo + 1e-6, hi - 1e-6)
+        found = least_squares(miss, x0=start, method="lm")
+        if np.all(found.x > lo) and np.all(found.x < hi):
+            return found.x, float(np.linalg.norm(miss(found.x)))
         found = least_squares(miss, x0=start, method="trf", bounds=(lo, hi))
         return found.x, float(np.linalg.norm(miss(found.x)))
 
     best = solve(guess)
-    if best[1] > RESTART_ABOVE:
+    if restart and best[1] > RESTART_ABOVE:
         for start in RESTARTS:
             found = solve(start)
             if found[1] < best[1] - RESTART_GAIN:

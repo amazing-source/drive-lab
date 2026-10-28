@@ -103,7 +103,7 @@ class Body:
                 pose = {"RootJoint": (rot, tuple(loc))}
                 # From a neutral start as well as the last frame's: a planted leg's best aim must
                 # not depend on where the previous frame's swing left it.
-                tries = [r6_fk.aim(pose, limb, spot, self.points[limb], guess=g) for g in (guess[limb], (0.0, 0.0))]
+                tries = [r6_fk.aim(pose, limb, spot, self.points[limb], guess=g, restart=False) for g in (guess[limb], (0.0, 0.0))]
                 angles, _ = min(tries, key=lambda t: t[1])
                 pose[joint] = (angles, (0, 0, 0))
                 leg = r6_fk.pose_parts(pose)[part]
