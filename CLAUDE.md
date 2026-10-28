@@ -52,5 +52,10 @@ owner; **read `docs/engineering/AGENTIC_WORKFLOW.md` before your first change.**
 
 ## Git identity and attribution
 
-Commits are authored as `Dilan <dilandjematene@gmail.com>` with no Co-Authored-By trailers (the
-owner's convention). Which agent did what lives in the PR's provenance section and the issue.
+Every agent authors its own commits under its role name, at a reserved non-routable address:
+
+    git commit --author "Roadside agent <roadside@agents.drive-lab.invalid>" -m "..."
+
+The committer stays the repository's configured identity (the owner's), so the history shows
+who wrote a change and who let it in. No Co-Authored-By trailers. Never rewrite history to change
+a past author. The PR's provenance section and the issue carry the rest of the story.
