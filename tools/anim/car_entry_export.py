@@ -23,6 +23,9 @@ import sys
 
 import numpy as np
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from car_entry_check import file_sha256  # noqa: E402
+
 ROOT_ROT = np.array([[-1, 0, 0], [0, 0, 1], [0, 1, 0]], dtype=float)
 
 
@@ -136,6 +139,19 @@ def main(argv):
         summary[name] = entry
     with open(os.path.join(args.out_dir, "clips.json"), "w", encoding="utf-8", newline="\n") as h:
         json.dump(summary, h, indent=1)
+    # What this export was cut from, and what it wrote: car_entry_upload.py matches the bake's
+    # hash against a passing contact check and refuses files changed since.
+    written = sorted(f for f in os.listdir(args.out_dir) if f.endswith(".json") and f != "source.json")
+    source = {
+        "baked": args.baked,
+        "baked_sha256": file_sha256(args.baked),
+        "scene_sha256": file_sha256(args.scene),
+        "clips": [clip["name"] for clip in baked["clips"]],
+        "standing": sorted(standing & {clip["name"] for clip in baked["clips"]}),
+        "files": {f: file_sha256(os.path.join(args.out_dir, f)) for f in written},
+    }
+    with open(os.path.join(args.out_dir, "source.json"), "w", encoding="utf-8", newline="\n") as h:
+        json.dump(source, h, indent=1)
     for name, entry in summary.items():
         door = entry.get("door")
         print(f"{name}: {entry['duration']} s, {entry['frames']} frames" + (f", door {len(door['times'])} points" if door else ""))

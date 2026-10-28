@@ -14,8 +14,13 @@ the driver's scale for game studs).
 allow.json: [{"from", "to", "parts": [...], "groups": [...], "depth"}] = intended contacts (a bottom
 on the sill, a hand on the door) may go that deep; everything else fails above --tol. Exit code 1
 on any failure, so a deliberate mutation (--mutate) must turn the run red.
+
+--json also records what was checked: the SHA-256 of the baked timeline, the scene and the allow
+list, the frame range and any mutation, and whether it passed. car_entry_upload.py refuses to
+upload a clip unless such a record says its exact timeline passed over every frame, unmutated.
 """
 import argparse
+import hashlib
 import json
 import sys
 
@@ -213,9 +218,33 @@ def main(argv):
     for fr, part, group, d in failures[:60]:
         print(f"  f{fr:<4} {part:10s} {group:10s} {d}")
     if args.json:
+        record = {
+            "baked": args.baked,
+            "baked_sha256": file_sha256(args.baked),
+            "scene_sha256": file_sha256(args.scene),
+            "allow_sha256": file_sha256(args.allow) if args.allow else None,
+            "allow": allow,
+            "range": None if args.start is None and args.end is None else [args.start, args.end],
+            "mutate": args.mutate,
+            "tol": args.tol,
+            "slide": args.slide,
+            "spacing": args.spacing,
+            "frames": len(frames),
+            "passed": not failures,
+            "failures": failures,
+            "rows": rows,
+        }
         with open(args.json, "w", encoding="utf-8", newline="\n") as handle:
-            json.dump({"failures": failures, "rows": rows}, handle)
+            json.dump(record, handle)
     return 1 if failures else 0
+
+
+def file_sha256(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for block in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 if __name__ == "__main__":
