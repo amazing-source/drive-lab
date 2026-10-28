@@ -457,8 +457,9 @@ def inside_open(b, car, s, e, seat):
     b.door.at(s + 30, (0.25,)).at(s + 38, (0.7,)).at(s + 44, (0.95,)).at(s + 47, (1.0,))
     b.neck.at(s + 6, (-2, 12, 0)).at(grip, (6, 8, 0)).at(pushed, (14, 12, 0)).at(s + 40, (10, 6, 0))
     # Turning toward the door rolls the blocky legs about their length: the right one lower and
-    # outboard, clear of the column above it, the left one up off the floor.
-    clear_r, clear_l = targets["right_leg"] + (0.0, -0.3, 0.3), targets["left_leg"] + (0.0, 0.2, 0.0)
+    # outboard, clear of the column above it, the left one up off the floor and inboard of the door
+    # side (searched against the solved torso of every frame: clear from f4 to f43).
+    clear_r, clear_l = targets["right_leg"] + (0.0, -0.3, 0.3), targets["left_leg"] + (0.0, 0.1, -0.15)
     b.targets["right_leg"].at(s + 6, clear_r).at(s + 38, clear_r)
     b.targets["left_leg"].at(s + 6, clear_l).at(s + 38, clear_l)
     b.torso.at(s + 6, (-12, SEATED_YAW + 2, 2))
@@ -551,7 +552,7 @@ def get_in(b, car, s, e, seat):
     right0, left0 = IDLE["right_leg"] * V([1, 0, 1]), IDLE["left_leg"] * V([1, 0, 1])
     pivot_r = V([0.45, 0.0, -0.05])
     left_a = V([0.35, 0.0, -0.95])
-    b.support += [(s, s + 9, both), (s + 10, s + 18, ["right_leg"]), (s + 19, s + 23, both)]
+    b.support += [(s, s + 9, both), (s + 10, s + 18, ["right_leg"]), (s + 19, s + 21, both)]
     b.targets["right_leg"].at(s + 8, right0).at(s + 20, pivot_r)
     b.targets["left_leg"].at(s + 9, left0).at(s + 10, left0 + (0, 0.06, 0))
     b.targets["left_leg"].at(s + 12, left0 * 0.7 + left_a * 0.3 + (0, 0.14, 0))
@@ -560,9 +561,9 @@ def get_in(b, car, s, e, seat):
     b.torso.at(s + 10, (0, -30, -2)).at(s + 14, (-1, -55, -5)).at(s + 20, (-2, -90, 0))
     b.neck.at(s + 20, (-12, -38, 0))
     # Step B: pivot on the left foot to face out; the right hip hikes, the right foot comes round.
-    b.support += [(s + 24, s + 31, ["left_leg"]), (s + 32, s + 32, both)]
+    b.support += [(s + 22, s + 31, ["left_leg"]), (s + 32, s + 32, both)]
     b.targets["left_leg"].at(s + 32, left_a)
-    b.targets["right_leg"].at(s + 23, pivot_r).at(s + 24, pivot_r + (0, 0.06, 0))
+    b.targets["right_leg"].at(s + 21, pivot_r).at(s + 22, pivot_r + (0, 0.06, 0))
     b.targets["right_leg"].at(s + 26, pivot_r * 0.7 + feet["right_leg"] * 0.3 + (0, 0.14, 0))
     b.targets["right_leg"].at(s + 29, pivot_r * 0.2 + feet["right_leg"] * 0.8 + (0, 0.12, 0)).at(s + 32, feet["right_leg"])
     b.pelvis.at(s + 27, (0.3, 2.0, -0.4)).at(s + 33, (PERCH_X + 0.1, 2.0, -0.25))
@@ -645,7 +646,7 @@ def get_in(b, car, s, e, seat):
     car.holds.append((meet, handover, "edge"))
     b.targets["right_leg"].at(s + 88, (PERCH_X - 2.2, 2.95, -3.8))
     b.targets["left_leg"].at(s + 88, (PERCH_X - 2.3, 3.05, -2.8))
-    b.targets["right_arm"].at(s + 94, wall_r + (0.1, 0.2, -0.6)).at(s + 99, targets["right_arm"] + (0.2, 1.0, 0.45))
+    b.targets["right_arm"].at(s + 94, wall_r + (0.1, 0.2, -0.6)).at(s + 99, targets["right_arm"] + (0.45, 0.6, 0.3))
     b.targets["right_leg"].at(s + 96, (PERCH_X - 2.3, 2.15, -5.6)).at(s + 101, (PERCH_X - 2.2, 2.4, -5.75))
     b.targets["left_leg"].at(s + 96, (PERCH_X - 2.4, 2.95, -4.3)).at(s + 101, (PERCH_X - 2.3, 2.6, -4.9))
     b.neck.at(s + 92, (16, 20, 0))
@@ -735,11 +736,11 @@ def get_out(b, car, s, e, seat):
     b.targets["left_arm"].attach(s + 13, s + 50, car.on_surface(b, "left_arm", lip_l, "GetOut left hand on the lip"))
     b.torso.at(s + 10, (-6, SEATED_YAW, 0))
     b.targets["right_leg"].at(s + 8, targets["right_leg"] + (0.0, -0.3, 0.3)).at(s + 18, targets["right_leg"] + (-0.2, -0.35, 0.5))
-    b.targets["left_leg"].at(s + 8, targets["left_leg"] + (0.0, 0.2, 0.0))
+    b.targets["left_leg"].at(s + 8, targets["left_leg"] + (0.0, 0.1, -0.15))
     # Hoist out: up off the seat, over the wall, the right hand walking to the wall top.
     b.pelvis.at(s + 18, car.seated_pelvis + (0.05, 0.0, 0.3))
     b.torso.at(s + 18, (-16, SEATED_YAW + 2, 0))
-    b.pelvis.at(s + 26, (0.0, 2.8, -4.15))
+    b.pelvis.at(s + 22, (0.03, 2.9, -4.65)).at(s + 26, (0.0, 2.8, -4.15))
     b.torso.at(s + 26, (-18, SEATED_YAW + 4, 0))
     b.targets["right_leg"].at(s + 22, (PERCH_X - 2.3, 2.5, -5.6))
     b.targets["left_leg"].at(s + 22, (PERCH_X - 2.4, 2.6, -4.3))
@@ -762,8 +763,8 @@ def get_out(b, car, s, e, seat):
     b.pelvis.at(s + 55, perch + (0, 0.42, -0.12)).at(s + 58, perch + (0, 0.06, -0.02)).at(s + 59, perch)
     b.torso.at(s + 55, (4, -184, 0)).at(s + 58, (0, FACING_OUT, 0))
     for limb in feet:
-        b.targets[limb].at(s + 54, feet[limb] + (0, 0.55, -0.15)).at(s + 58, feet[limb] + (0, 0.12, 0))
-        b.targets[limb].at(s + 60, feet[limb] + (0, 0.04, 0)).at(s + 62, feet[limb])
+        b.targets[limb].at(s + 54, feet[limb] + (0, 0.55, -0.15)).at(s + 57, feet[limb] + (0, 0.2, 0))
+        b.targets[limb].at(s + 58, feet[limb] + (0, 0.08, 0)).at(s + 59, feet[limb])
     hand_y = SILL_TOP + 0.18
     sill_r, sill_l = V([PERCH_X - 1.1, hand_y, -2.65]), V([PERCH_X + 0.6, hand_y, -2.75])
     b.targets["right_arm"].at(s + 54, sill_r + (0.1, 0.3, 0.1))
@@ -772,7 +773,7 @@ def get_out(b, car, s, e, seat):
     b.targets["left_arm"].attach(s + 57, s + 66, car.on_surface(b, "left_arm", sill_l, "GetOut left hand on the sill"))
     b.contact.append((s + 10, s + 66))
     # Push off: weight forward over the feet, the hips arc up and forward to standing.
-    b.support += [(s + 62, s + 84, both)]
+    b.support += [(s + 59, s + 84, both)]
     stand = V([PERCH_X, 2.0, feet["right_leg"][2]])
     b.torso.at(s + 64, (-16, FACING_OUT, 0))
     for frac, f in ((0.0, s + 62), (0.35, s + 66), (0.7, s + 70), (1.0, s + 74)):
