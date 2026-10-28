@@ -122,17 +122,44 @@ positions of the live readouts (gear, speed, mode, tell-tales) in pixels of the 
 
 ## 8. Lights the game can drive
 
-A model often bakes every lamp into one light mesh with one emissive map, so brake lights cannot
-brighten without the headlights. `blender -b --factory-startup -P tools/blender/split_lights.py --
-<car.glb> <light object> <out dir>` cuts it into four clusters by face centre (front or rear of
-the middle, left or right of the centre line), keeping positions and UVs. Upload them, give each
-the original's SurfaceAppearance, and place them in the model at the original's CFrame shifted by
-(new import position - old import position); keep the uncut part aside (ServerStorage) rather
-than deleting it. `Controllers/CarLights` then drives each cluster's EmissiveStrength and
-EmissiveTint (the SVJ's rear clusters glow white in the map, so they are tinted red) and adds
-the Roblox lights: headlight beams from the front end of each front cluster, red glow, amber
-blinks and a reversing light. Colours and relative strengths come from the Assetto Corsa mod's
-`data/lights.ini` and `extension/ext_config.ini`.
+A model often bakes every lamp into one light mesh with one emissive map, so the brake lights
+cannot brighten without the headlights and an indicator cannot blink on its own.
+
+```
+blender -b --factory-startup -P tools/blender/split_lights.py -- <car.glb> <light emissive.png> <light colour.png> <out dir>
+```
+
+- **Cutting.** The script cuts the light mesh into its four corners by face centre, then each
+  corner into its lamps. A lamp is a connected group of faces, with vertices welded by position
+  so a UV seam does not cut one. Each group is named after what it is on the real car, read off
+  the model and the lens meshes over it:
+  - **front:** the Y running light, the projector (its faces textured from the atlas's lens disc),
+    the seven-cell indicator and the side marker;
+  - **rear:** the Y tail and brake lamps (the emissive groups), the indicator cells under the
+    amber lens, the clear reversing chevron, the fog lamp (the part of the chevron under the red
+    lens), the high stop strip, the plate lamp and the side marker.
+
+  What is left of a corner is its housing, which keeps the corner's old name. Every count is
+  asserted, so another car's export stops there and its rules are written for it rather than
+  mislabelling a lamp.
+- **The lamps' glass.** On the SVJ the window glass mesh also formed every lamp's cover
+  (near-black Glass at 0.55: a lamp behind it showed about half its light). The script moves each
+  window group that overlaps a lamp's box into `LampGlass`, which is made clear; the windows keep
+  their look.
+- **Output.** `lights.glb`, uploaded as one model with `tools/assets/upload_images.py`, and
+  `lights.json`: each piece's box, and the boxes of the parts it was cut from.
+- **Into the place.** Back up the parts you change into ServerStorage (`CarImport_lights_backup`).
+  Each piece goes at its source part's CFrame moved by the piece's box centre minus the source's.
+  Housings and windows are swapped with `ApplyMesh`, then `Size` and `CFrame` are set (ApplyMesh
+  sets neither). New lamp pieces copy their corner's SurfaceAppearance with a uniform white
+  emissive mask, so a lamp glows over its whole surface, shaded by its colour map. Check that each
+  corner's pieces rebuild its old box.
+- **In game.** `Controllers/CarLights` decides (`Rules/CarLights`) and `Effects/CarLamps` drives
+  each piece's EmissiveStrength and tint, with the Roblox lights: headlight beams from the
+  projectors, red tail glow, amber indicator glow, a reversing light and the cabin light in the
+  roof console (`SVJModel.cabinLight`). The roles, the rhythm and the sources per lamp are in
+  `Config/CarLights.luau`. `Effects/ExhaustFlames` places its outlets from the union of each rear
+  corner's pieces, which is the old cluster box.
 
 ## 9. Exhaust flames
 
