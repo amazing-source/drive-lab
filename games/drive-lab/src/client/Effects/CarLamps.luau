@@ -15,7 +15,8 @@ local Rules = require(ReplicatedStorage.Shared.Rules.CarLights)
 local Units = require(ReplicatedStorage.Shared.Units)
 
 type Glow = { look: SurfaceAppearance, spec: Config.Glow, strength: number }
-type Switch = { light: Light, on: boolean }
+-- A light that switches with a lamp; `base` is its brightness at night.
+type Switch = { light: Light, base: number, on: boolean, brightness: number }
 
 export type Lamps = {
 	drlLeft: { Glow },
@@ -34,6 +35,7 @@ export type Lamps = {
 	reversing: Switch,
 	cabin: Switch?,
 	tailShown: number,
+	nightShown: number,
 	shadows: boolean?,
 }
 
@@ -105,6 +107,10 @@ local function glows(model: Model, names: { string }, spec: Config.Glow): { Glow
 		if look then
 			look.EmissiveTint = colour(spec.tint)
 			look.EmissiveStrength = 0
+			local filter = spec.filter
+			if filter then
+				look.Color = colour(filter)
+			end
 			table.insert(found, { look = look, spec = spec, strength = 0 })
 		end
 	end
@@ -123,6 +129,10 @@ end
 
 local function sides(pattern: string): { string }
 	return { string.format(pattern, "Left"), string.format(pattern, "Right") }
+end
+
+local function switchFor(light: Light): Switch
+	return { light = light, base = light.Brightness, on = false, brightness = light.Brightness }
 end
 
 -- The roof console's lamp, from the binding's point (metres from the centre of mass, before the
@@ -147,13 +157,23 @@ local function cabinLight(model: Model): Switch?
 		settings.range,
 		settings.color
 	)
-	return { light = spot :: Light, on = false }
+	return switchFor(spot)
 end
 
-local function set(switch: Switch?, on: boolean)
-	if switch and switch.on ~= on then
-		switch.on = on
-		switch.light.Enabled = on
+-- On while its lamp is lit and the scene has any night in it, at its brightness times `night`.
+local function set(switch: Switch?, on: boolean, night: number)
+	if switch == nil then
+		return
+	end
+	local shown = on and night > 0.01
+	if switch.on ~= shown then
+		switch.on = shown
+		switch.light.Enabled = shown
+	end
+	local brightness = switch.base * night
+	if shown and math.abs(brightness - switch.brightness) > 1e-3 then
+		switch.brightness = brightness
+		switch.light.Brightness = brightness
 	end
 end
 
@@ -203,14 +223,14 @@ local function addSources(lamps: Lamps, parts: { [string]: BasePart })
 			headlight.range,
 			headlight.color
 		)
-		table.insert(lamps.beams, { light = spot :: Light, on = false })
+		table.insert(lamps.beams, switchFor(spot))
 		local tail = attach(parts[`Light_Rear{side}_Tail`], "TailGlow", CFrame.identity)
 		table.insert(lamps.tailGlows, pointLight(tail, 0, 0, Config.TAIL.color))
 		local blinks = if side == "Left" then lamps.blinksLeft else lamps.blinksRight
 		for _, name in { `Light_Front{side}_Modules`, `Light_Rear{side}_Indicator` } do
 			local glow = attach(parts[name], "IndicatorGlow", CFrame.identity)
 			local light = pointLight(glow, indicator.brightness, indicator.range, indicator.color)
-			table.insert(blinks, { light = light :: Light, on = false })
+			table.insert(blinks, switchFor(light))
 		end
 	end
 end
@@ -223,7 +243,7 @@ local function reversingLight(parts: { [string]: BasePart }): Switch
 	local at = attach(left, "ReverseLight", CFrame.new(middle))
 	local spot =
 		spotLight(at, Enum.NormalId.Back, settings.angle, settings.brightness, settings.range, settings.color)
-	return { light = spot :: Light, on = false }
+	return switchFor(spot)
 end
 
 local CarLamps = {}
@@ -269,6 +289,7 @@ function CarLamps.build(model: Model): Lamps?
 		reversing = reversingLight(parts),
 		cabin = cabinLight(model),
 		tailShown = -1,
+		nightShown = -1,
 		shadows = nil,
 	}
 	addSources(lamps, parts)
@@ -290,26 +311,28 @@ function CarLamps.apply(lamps: Lamps, lit: Rules.Lit, daylight: number, shadows:
 	show(lamps.reverse, levels.reverse, daylight)
 	local tail = levels.tail
 
+	local night = 1 - daylight
 	for _, switch in lamps.beams do
-		set(switch, lit.headlights)
+		set(switch, lit.headlights, night)
 	end
-	if tail ~= lamps.tailShown then
+	if tail ~= lamps.tailShown or night ~= lamps.nightShown then
 		lamps.tailShown = tail
+		lamps.nightShown = night
 		local settings = Config.TAIL
 		for _, glow in lamps.tailGlows do
-			glow.Enabled = tail > 0
+			glow.Enabled = tail > 0 and night > 0.01
 			glow.Range = if lit.brake then settings.brakeRange else settings.range
-			glow.Brightness = if lit.brake then settings.brakeBrightness else settings.brightness
+			glow.Brightness = night * (if lit.brake then settings.brakeBrightness else settings.brightness)
 		end
 	end
 	for _, switch in lamps.blinksLeft do
-		set(switch, lit.left)
+		set(switch, lit.left, night)
 	end
 	for _, switch in lamps.blinksRight do
-		set(switch, lit.right)
+		set(switch, lit.right, night)
 	end
-	set(lamps.reversing, lit.reverse)
-	set(lamps.cabin, lit.cabin)
+	set(lamps.reversing, lit.reverse, night)
+	set(lamps.cabin, lit.cabin, night)
 	if shadows ~= lamps.shadows then
 		lamps.shadows = shadows
 		for _, switch in lamps.beams do

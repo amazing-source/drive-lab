@@ -26,8 +26,10 @@ local CarLights = require("../Rules/CarLights")
 export type Rgb = { r: number, g: number, b: number }
 
 -- A lamp's glow: its SurfaceAppearance's EmissiveTint, and EmissiveStrength at full output by
--- day and at night (blended by Rules/CarLights.daylight).
-export type Glow = { tint: Rgb, day: number, night: number }
+-- day and at night (blended by Rules/CarLights.daylight). `filter`, for a lamp behind a coloured
+-- lens, tints the lamp itself (SurfaceAppearance.Color): Roblox's Glass blends with what is
+-- behind it rather than filtering it, so a red lens over a white lamp face showed it pink.
+export type Glow = { tint: Rgb, day: number, night: number, filter: Rgb? }
 
 export type CarLightsConfig = {
 	TUNING: CarLights.Tuning,
@@ -62,8 +64,10 @@ local function rgb(r: number, g: number, b: number): Rgb
 end
 
 local WHITE = rgb(255, 255, 255)
-local AMBER = rgb(255, 130, 10)
-local RED = rgb(255, 22, 8)
+local AMBER = rgb(255, 112, 0)
+local RED = rgb(255, 10, 0)
+local RED_LENS = rgb(214, 36, 30)
+local AMBER_LENS = rgb(236, 138, 40)
 
 local Config: CarLightsConfig = table.freeze({
 	-- Headlights come on by themselves at night or in rain this heavy; a brake pedal past this
@@ -88,16 +92,18 @@ local Config: CarLightsConfig = table.freeze({
 	GLOW = table.freeze({
 		drl = table.freeze({ tint = rgb(235, 242, 255), day = 9, night = 3.2 }),
 		projector = table.freeze({ tint = rgb(240, 244, 255), day = 6, night = 2.4 }),
-		frontIndicator = table.freeze({ tint = AMBER, day = 14, night = 5 }),
+		frontIndicator = table.freeze({ tint = AMBER, day = 14, night = 6 }),
 		frontMarker = table.freeze({ tint = AMBER, day = 3, night = 1.4 }),
-		tail = table.freeze({ tint = RED, day = 12, night = 5 }),
-		rearIndicator = table.freeze({ tint = AMBER, day = 12, night = 4.5 }),
+		tail = table.freeze({ tint = RED, day = 7, night = 10, filter = RED_LENS }),
+		rearIndicator = table.freeze({ tint = AMBER, day = 14, night = 6, filter = AMBER_LENS }),
 		reverse = table.freeze({ tint = WHITE, day = 8, night = 3 }),
 		fog = table.freeze({ tint = RED, day = 10, night = 4 }),
-		stop = table.freeze({ tint = RED, day = 10, night = 4 }),
+		stop = table.freeze({ tint = RED, day = 6, night = 6, filter = RED_LENS }),
 		plate = table.freeze({ tint = WHITE, day = 1.5, night = 0.8 }),
-		rearMarker = table.freeze({ tint = RED, day = 3, night = 1.4 }),
+		rearMarker = table.freeze({ tint = RED, day = 3, night = 1.4, filter = RED_LENS }),
 	}),
+	-- Roblox lights below are a night effect: each is scaled by 1 - daylight, as a real lamp's light
+	-- is lost in the sun's. Ranges in studs, as Roblox's lights take them (60 is their maximum).
 	-- One beam per projector, from its lens: range at Roblox's 60-stud maximum, dipped a little
 	-- (radians); colour after the Assetto Corsa mod's own (1500, 1500, 1540).
 	HEADLIGHT = table.freeze({
@@ -108,18 +114,18 @@ local Config: CarLightsConfig = table.freeze({
 		pitch = math.rad(-3),
 	}),
 	TAIL = table.freeze({
-		range = 4,
-		brightness = 0.4,
-		brakeRange = 8,
-		brakeBrightness = 2.2,
+		range = 3,
+		brightness = 0.25,
+		brakeRange = 6,
+		brakeBrightness = 0.9,
 		color = rgb(255, 25, 0),
 	}),
-	INDICATOR = table.freeze({ range = 5, brightness = 1.2, color = AMBER }),
+	INDICATOR = table.freeze({ range = 3, brightness = 0.5, color = AMBER }),
 	-- Between the two reversing lamps, facing back.
 	REVERSE = table.freeze({ range = 24, angle = 100, brightness = 2, color = rgb(255, 255, 250) }),
 	-- The roof console's lamp (the binding's cabinLight), facing down over both seats. Its colour
 	-- is not documented; a warm white like most reading lamps.
-	CABIN = table.freeze({ range = 9, angle = 140, brightness = 1.2, color = rgb(255, 226, 190) }),
+	CABIN = table.freeze({ range = 10, angle = 150, brightness = 2, color = rgb(255, 226, 190) }),
 })
 
 return Config
