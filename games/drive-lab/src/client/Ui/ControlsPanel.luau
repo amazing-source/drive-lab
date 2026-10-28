@@ -166,13 +166,15 @@ local function row(
 	parent: Instance,
 	entry: Rules.Row,
 	bindings: Rules.Bindings,
-	values: { [string]: string }
+	values: { [string]: string },
+	order: number
 )
 	local frame = Instance.new("Frame")
 	frame.Name = entry.label
 	frame.BackgroundTransparency = 1
 	frame.AutomaticSize = Enum.AutomaticSize.Y
 	frame.Size = UDim2.new(1, 0, 0, Config.ROW_HEIGHT)
+	frame.LayoutOrder = order
 	frame.Parent = parent
 	local keyboard, gamepad = Rules.inputs(entry, bindings, Config.HELP.keyNames)
 	local shares = Config.SHARES
@@ -307,13 +309,18 @@ function ControlsPanel.build(
 		column.Parent = body
 		list(column, Enum.FillDirection.Vertical, 2)
 		captions(column)
+		-- Below the captions (order 0), each group's title then its rows, in the config's order.
+		local order = 0
 		for _, member in members do
 			local group = groups[member]
+			order += 1
 			local title = label(column, escape(group.title), BOLD, Config.GROUP_SIZE, Hud.YELLOW)
 			title.Size = UDim2.new(1, 0, 0, Config.ROW_HEIGHT + 4)
 			title.TextYAlignment = Enum.TextYAlignment.Bottom
+			title.LayoutOrder = order
 			for _, entry in group.rows do
-				row(panel, column, entry, bindings, values)
+				order += 1
+				row(panel, column, entry, bindings, values, order)
 			end
 		end
 	end
