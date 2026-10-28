@@ -43,8 +43,8 @@ local OUTSIDE_CLIPS: { [string]: Config.ClipName } =
 	{ OutsideOpen = "OutsideOpen", OutsideClose = "OutsideClose" }
 
 -- The clips of each sequence, from a shut or an open door.
-local ENTER_SHUT: { Config.ClipName } = { "OutsideOpen", "GetIn", "InsideClose" }
-local ENTER_OPEN: { Config.ClipName } = { "GetIn", "InsideClose" }
+local ENTER_SHUT: { Config.ClipName } = { "OutsideOpen", "GetIn" }
+local ENTER_OPEN: { Config.ClipName } = { "GetIn" }
 local EXIT_SHUT: { Config.ClipName } = { "InsideOpen", "GetOut", "OutsideClose" }
 local EXIT_OPEN: { Config.ClipName } = { "GetOut", "OutsideClose" }
 
@@ -76,7 +76,8 @@ local function chain(names: { Config.ClipName }): { Step }
 	return steps
 end
 
--- The clips a sequence plays in order; it skips opening a door that is already open.
+-- The clips a sequence plays in order; it skips opening a door that is already open. Getting in
+-- closes the door within GetIn itself.
 function CarEntry.steps(kind: EntryKind, doorOpen: boolean): { Step }
 	if kind == "Enter" then
 		return chain(if doorOpen then ENTER_OPEN else ENTER_SHUT)

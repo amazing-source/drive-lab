@@ -42,8 +42,8 @@ end
 
 describe("Car entry sequences", function()
 	it("opens a shut door first and skips that when it already stands open", function()
-		expect(names(Rules.steps("Enter", false))).toBe("OutsideOpen,GetIn,InsideClose")
-		expect(names(Rules.steps("Enter", true))).toBe("GetIn,InsideClose")
+		expect(names(Rules.steps("Enter", false))).toBe("OutsideOpen,GetIn")
+		expect(names(Rules.steps("Enter", true))).toBe("GetIn")
 		expect(names(Rules.steps("Exit", false))).toBe("InsideOpen,GetOut,OutsideClose")
 		expect(names(Rules.steps("Exit", true))).toBe("GetOut,OutsideClose")
 		expect(#Rules.steps("None", false)).toBe(0)
@@ -55,9 +55,7 @@ describe("Car entry sequences", function()
 			expect(steps[index].start).toBeNear(steps[index - 1].start + steps[index - 1].duration, 1e-9)
 		end
 		expect(Rules.length(steps)).toBeNear(
-			Config.CLIPS.OutsideOpen.duration
-				+ Config.CLIPS.GetIn.duration
-				+ Config.CLIPS.InsideClose.duration,
+			Config.CLIPS.OutsideOpen.duration + Config.CLIPS.GetIn.duration,
 			1e-9
 		)
 	end)
@@ -68,8 +66,8 @@ describe("Car entry sequences", function()
 		expect(step and step.clip).toBe("GetIn")
 		expect(into).toBeNear(0.5, 1e-9)
 		local last, held = Rules.stepAt(steps, 1000)
-		expect(last and last.clip).toBe("InsideClose")
-		expect(held).toBeNear(Config.CLIPS.InsideClose.duration, 1e-9)
+		expect(last and last.clip).toBe("GetIn")
+		expect(held).toBeNear(Config.CLIPS.GetIn.duration, 1e-9)
 	end)
 
 	it("is entering until the sequence ends, then seated; exiting until the server lets go", function()
@@ -83,7 +81,7 @@ describe("Car entry sequences", function()
 end)
 
 describe("Car door", function()
-	it("opens, stays open while getting in, and is shut when the entry ends", function()
+	it("opens, stays open while sliding in, and is pulled shut by the end of the entry", function()
 		local entering = state({ entry = "Enter", entryAt = 0, door = "Closed", doorAt = 0 })
 		local open, getIn = Config.CLIPS.OutsideOpen, Config.CLIPS.GetIn
 		expect(Rules.doorOpenness(entering, 0)).toBe(0)
@@ -120,6 +118,7 @@ describe("Car door", function()
 	it("has curves that start and end where the clips need them", function()
 		local ends: { [string]: { number } } = {
 			OutsideOpen = { 0, 1 },
+			GetIn = { 1, 0 },
 			InsideOpen = { 0, 1 },
 			InsideClose = { 1, 0 },
 			OutsideClose = { 1, 0 },

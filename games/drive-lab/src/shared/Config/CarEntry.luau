@@ -108,7 +108,13 @@ local CarEntry: CarEntry = {
 			duration = 2.2,
 			door = table.freeze({ times = { 0.7, 1.0, 1.6, 2.0 }, values = { 0, 0.08, 0.75, 1 } }),
 		}),
-		GetIn = table.freeze({ seated = "", duration = 3.6 }),
+		-- The entry closes the door from the sill as the body slides in and settles, the hand on its
+		-- inner edge or strap (decided 2026-10-28, #9); InsideClose is the seated close alone.
+		GetIn = table.freeze({
+			seated = "",
+			duration = 4.4,
+			door = table.freeze({ times = { 2.6, 3.4, 4.2 }, values = { 1, 0.4, 0 } }),
+		}),
 		InsideClose = table.freeze({
 			seated = "",
 			duration = 1.6,
