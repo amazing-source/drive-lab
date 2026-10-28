@@ -12,6 +12,8 @@ export type Controls = {
 	ESC_OFF: { Enum.KeyCode },
 	CAMERA_VIEW: { Enum.KeyCode },
 	HEADLIGHTS: { Enum.KeyCode },
+	CABIN_LIGHT: { Enum.KeyCode },
+	LIGHTS_PAD: { Enum.KeyCode },
 	INDICATOR_LEFT: { Enum.KeyCode },
 	INDICATOR_RIGHT: { Enum.KeyCode },
 	HUD_MODE: { Enum.KeyCode },
@@ -37,8 +39,12 @@ local Controls: Controls = table.freeze({
 	-- same place on QWERTY and AZERTY; View is the one gamepad button free while driving.
 	ESC_OFF = { Enum.KeyCode.G, Enum.KeyCode.ButtonSelect },
 	CAMERA_VIEW = { Enum.KeyCode.V, Enum.KeyCode.ButtonR3 },
-	-- H, X and C sit in the same place on QWERTY and AZERTY.
-	HEADLIGHTS = { Enum.KeyCode.H, Enum.KeyCode.DPadDown },
+	-- H, X, C and L sit in the same place on QWERTY and AZERTY. The pad has no button left while
+	-- driving: D-pad down cycles the headlights on a tap and switches the cabin light on a hold
+	-- (Config/CarLights.PAD_HOLD_SECONDS).
+	HEADLIGHTS = { Enum.KeyCode.H },
+	CABIN_LIGHT = { Enum.KeyCode.L },
+	LIGHTS_PAD = { Enum.KeyCode.DPadDown },
 	INDICATOR_LEFT = { Enum.KeyCode.X, Enum.KeyCode.DPadLeft },
 	INDICATOR_RIGHT = { Enum.KeyCode.C, Enum.KeyCode.DPadRight },
 	-- The driving HUD: full, minimal, off.
