@@ -198,6 +198,23 @@ local function hingedParts(model: Model, binding: SVJModel.CarModel): ({ BasePar
 	return door, if flap and flap:IsA("BasePart") then flap else nil
 end
 
+-- The pedals the binding names and the model has, each with its hinge frame. Each hangs on its
+-- own Weld named after it, which Controllers/DriverLegs turns about X.
+local function pedalParts(model: Model, binding: SVJModel.CarModel): { [BasePart]: CFrame }
+	local found: { [BasePart]: CFrame } = {}
+	local pedals = binding.pedals
+	if pedals == nil then
+		return found
+	end
+	for _, pedal in pedals do
+		local part = model:FindFirstChild(pedal.part, true)
+		if part and part:IsA("BasePart") then
+			found[part] = hingeFrame(pedal.pivot, pedal.axis, binding.bodyRaise)
+		end
+	end
+	return found
+end
+
 -- The door hangs on one Weld to an invisible part at its hinge, its parts welded rigidly to that
 -- part; the flap hangs on its own Weld. Turning either Weld's C0 about X opens it.
 local function hang(
@@ -377,6 +394,10 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: SVJModel.CarM
 	if flapPart then
 		hinged[flapPart] = true
 	end
+	local pedals = pedalParts(model, binding)
+	for part in pedals do
+		hinged[part] = true
+	end
 	for _, part in model:GetDescendants() do
 		if part:IsA("BasePart") and part ~= chassis then
 			part.Massless = true
@@ -394,6 +415,9 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: SVJModel.CarM
 		end
 	end
 	hang(model, chassis, binding, doorParts, flapPart)
+	for part, hinge in pedals do
+		hingeWeld(part.Name, chassis, part, hinge)
+	end
 	addHull(model, chassis, ground, binding.hullClearance)
 	addSeat(model, chassis, binding)
 	addClusterScreen(model, chassis, binding)

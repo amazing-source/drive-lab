@@ -48,6 +48,15 @@ export type CarModel = {
 		pivot: { forward: number, right: number, up: number },
 		axis: { forward: number, right: number, up: number },
 	}?,
+	-- The pedals that turn, each on a hinge like the flap's; Controllers/DriverLegs turns them.
+	-- Optional.
+	pedals: {
+		{
+			part: string,
+			pivot: { forward: number, right: number, up: number },
+			axis: { forward: number, right: number, up: number },
+		}
+	}?,
 }
 
 local SVJModel: CarModel = table.freeze({
@@ -123,6 +132,21 @@ local SVJModel: CarModel = table.freeze({
 		part = "StartFlap",
 		pivot = table.freeze({ forward = 0.6318, right = 0, up = 0.017 }),
 		axis = table.freeze({ forward = 0, right = -1, up = 0 }),
+	}),
+	-- Measured by tools/blender/footwell.py (2026-10-28): the organ throttle hinged on the floor at
+	-- its plate's foot, the brake hanging from under the dash, both turning across the car.
+	-- Config/DriverLegs holds the same hinges in the seat frame and each pedal's signed travel.
+	pedals = table.freeze({
+		table.freeze({
+			part = "Pedal_Throttle",
+			pivot = table.freeze({ forward = 1.1754, right = -0.2039, up = -0.3864 }),
+			axis = table.freeze({ forward = 0, right = 1, up = 0 }),
+		}),
+		table.freeze({
+			part = "Pedal_Brake",
+			pivot = table.freeze({ forward = 1.3392, right = -0.3496, up = -0.0544 }),
+			axis = table.freeze({ forward = 0, right = 1, up = 0 }),
+		}),
 	}),
 })
 
