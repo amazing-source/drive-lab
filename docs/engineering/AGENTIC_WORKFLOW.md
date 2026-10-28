@@ -101,8 +101,10 @@ agents. They share politely and talk to each other directly.
 - Each agent is the **author** of its commits, under its role name at
   `<role>@agents.drive-lab.invalid` (a reserved, non-routable domain); the committer stays the
   repository's configured identity, the owner's. No Co-Authored-By trailers.
-- Agents are spawned under purpose-named agent types (e.g. `drive-lab-vfx`,
-  `drive-lab-animator`), never a generic one, and each spawn's description names its workstream.
+- Agents are spawned under purpose-named agent types, never a generic one, and each spawn's
+  description names its workstream. The types are versioned in `.claude/agents/`
+  (`drive-lab-systems`, `-vfx`, `-audio`, `-3d-artist`, `-animator`, `-researcher`, `-reviewer`);
+  a session started outside this repo needs them copied to `~/.claude/agents/`.
 - The PR template's **Agentic provenance** section records who built it (role), from which issue
   and brief, the decisions taken on the way and by whom.
 - The coordinator merges after CI is green and the review is done.
