@@ -6,6 +6,7 @@
 	round. Asphalt on the road and grass on the verges: the tyres feel the difference through
 	Config/Surfaces. Lane lines are thin parts on top, and street lamps stand on both verges
 	(Rules/StreetLamps), laid and cleared with their chunk; Controllers/StreetLights lights them.
+	The rest of the furniture and the marks on the asphalt come from the server's Roadside.
 
 	It starts under the car, so it runs before Cars rigs it; the baseplate is replaced by a
 	concrete pad in the same terrain, since a part and terrain at one height flicker.
@@ -17,6 +18,7 @@ local Workspace = game:GetService("Workspace")
 
 local Driving = require(ReplicatedStorage.Shared.Config.Driving)
 local Log = require(ReplicatedStorage.Kit.Log)
+local Roadside = require(script.Parent.Parent.Roadside)
 local Track = require(ReplicatedStorage.Shared.Config.Track)
 local StreetLamps = require(ReplicatedStorage.Shared.Rules.StreetLamps)
 local TrackPath = require(ReplicatedStorage.Shared.Rules.TrackPath)
@@ -93,31 +95,38 @@ local function lampModel(): Model?
 	return nil
 end
 
+-- The road at arc length s (metres) in a chunk: its centreline on the surface, in studs, and the
+-- unit direction along it. Past the chunk's last point the road runs straight on, so a piece
+-- starting near the end can reach into the next chunk.
+local function frameAt(chunk: Chunk, s: number): (Vector3, Vector3)
+	local lift = Vector3.new(0, surfaceLift, 0)
+	local previous = chunk.from
+	for _, point in chunk.points do
+		if point.s >= s then
+			local share = math.clamp((s - previous.s) / math.max(point.s - previous.s, 1e-6), 0, 1)
+			local along = Vector3.new(point.x - previous.x, 0, point.z - previous.z).Unit
+			return toWorld(previous):Lerp(toWorld(point), share) + lift, along
+		end
+		previous = point
+	end
+	local along = Vector3.new(previous.dirX, 0, previous.dirZ).Unit
+	return toWorld(previous) + along * studs(s - previous.s) + lift, along
+end
+
 -- The chunk's lamps, on the verges at the spots Rules/StreetLamps gives its stretch of road,
--- arms along the road.
+-- arms along the road. RoadSide tells the client's glints which way the road is.
 local function placeLamps(chunk: Chunk, parent: Folder)
 	local template = lampModel()
 	if template == nil then
 		return
 	end
-	local points = chunk.points
-	local spots = StreetLamps.spots(chunk.from.s, points[#points].s, Track.SEED, Track.LAMPS)
-	local index = 1
-	local previous = chunk.from
+	local spots = StreetLamps.spots(chunk.from.s, chunk.points[#chunk.points].s, Track.SEED, Track.LAMPS)
 	for _, spot in spots do
-		while index < #points and points[index].s < spot.s do
-			previous = points[index]
-			index += 1
-		end
-		local nextPoint = points[index]
-		local share = math.clamp((spot.s - previous.s) / math.max(nextPoint.s - previous.s, 1e-6), 0, 1)
-		local at = toWorld(previous):Lerp(toWorld(nextPoint), share)
-		local along = Vector3.new(nextPoint.x - previous.x, 0, nextPoint.z - previous.z).Unit
+		local centre, along = frameAt(chunk, spot.s)
 		local right = Vector3.new(-along.Z, 0, along.X)
-		local position = at
-			+ right * (spot.side * studs(Track.ROAD_WIDTH / 2 + Track.LAMP_SETBACK))
-			+ Vector3.new(0, surfaceLift, 0)
+		local position = centre + right * (spot.side * studs(Track.ROAD_WIDTH / 2 + Track.LAMP_SETBACK))
 		local lamp = template:Clone()
+		lamp:SetAttribute("RoadSide", spot.side)
 		lamp:PivotTo(CFrame.fromMatrix(position, along, Vector3.yAxis))
 		lamp.Parent = parent
 	end
@@ -147,6 +156,9 @@ local function lay(chunk: Chunk)
 	end
 	placeLamps(chunk, lines)
 	lines.Parent = Workspace
+	Roadside.lay(function(s: number): (Vector3, Vector3)
+		return frameAt(chunk, s)
+	end, chunk.from.s, chunk.points[#chunk.points].s, Track.SEED, lines)
 	chunk.lines = lines
 	chunk.laid = true
 end

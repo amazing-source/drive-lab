@@ -21,6 +21,7 @@ local START_ORDER = {
 	Controllers.StreetLights,
 	Controllers.CarLights,
 	Controllers.RimBlur,
+	Controllers.Reflectors,
 	Controllers.Hud,
 	script.Parent.Atmosphere,
 	Controllers.WeatherAudio,
