@@ -894,7 +894,7 @@ def reach_report(car):
 
 def emit(body, clips, out_dir, name, car=None):
     body.solve()
-    data = body.keys(every=2, clips=clips, markers=[])
+    data = body.keys(every=1, clips=clips, markers=[])
     write(os.path.join(out_dir, f"{name}.keys.json"), data)
     with open(os.path.join(out_dir, f"{name}.fk.json"), "w", encoding="utf-8", newline="\n") as handle:
         json.dump(body.fk_bake(), handle)

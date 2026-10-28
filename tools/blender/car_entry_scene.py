@@ -296,9 +296,9 @@ def render(argv):
             look.up_axis = "UP_Y"
             scene.camera = camera
         elif name == "door":
-            # A standing eye at the door mark (a scale-1 R6's eye, the authoring frame's scale),
-            # looking down into the opening.
-            scene.camera = add_camera(name, roblox_to_blender((0.0, 4.6, 0.4)), roblox_to_blender((-0.3, 2.4, -3.5)), 16)
+            # A standing eye beside the door mark (a scale-1 R6's eye, the authoring frame's scale;
+            # a step back and to the side, out of the entering body's way), looking into the opening.
+            scene.camera = add_camera(name, roblox_to_blender((1.8, 4.6, 2.4)), roblox_to_blender((-0.5, 2.4, -3.4)), 18)
         else:
             location, target, lens = cams[name]
             scene.camera = add_camera(name, roblox_to_blender(location), roblox_to_blender(target), lens)
