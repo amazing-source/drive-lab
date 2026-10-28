@@ -17,6 +17,7 @@ export type Config = {
 	REFLECTION_BRIGHTNESS: number,
 	FLARES: number,
 	REFLECTIONS: number,
+	SEGMENTS: number,
 	HEAD_HEIGHT: number,
 	TOWARD_EYE: number,
 	STREAK_LIFT: number,
@@ -34,6 +35,9 @@ local Config: Config = table.freeze({
 	-- How many of the nearest lit lamps in view get each.
 	FLARES = 8,
 	REFLECTIONS = 8,
+	-- Each glint fades out along its length to nothing at both ends (Rules/LampGlints.taper); a
+	-- Beam only samples its transparency at its segments' ends, so it is drawn in this many.
+	SEGMENTS = 12,
 	-- Metres above a lamp's base to its bulbs (tools/blender/street_lamp.py: 3.49 m).
 	HEAD_HEIGHT = 3.49,
 	-- The flare is drawn this much nearer the eye than the head, so the iron between the

@@ -8,11 +8,16 @@
 	along the camera's right, so it stays level on screen whatever the view. A streak runs along
 	the road from its far end to its near end, on the line from the lamp to the eye's foot: a
 	camera-facing ribbon about that line lies flat on the road.
+
+	A beam whose texture has not loaded draws as a flat, untextured quad (the grey boxes of #44),
+	so neither kind is drawn until Roblox has its image.
 ]]
+local ContentProvider = game:GetService("ContentProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config.LampGlints)
+local Log = require(ReplicatedStorage.Kit.Log)
 local Rules = require(ReplicatedStorage.Shared.Rules.LampGlints)
 local Track = require(ReplicatedStorage.Shared.Config.Track)
 local Units = require(ReplicatedStorage.Shared.Units)
@@ -27,9 +32,12 @@ export type Glints = {
 	flares: { Glint },
 	streaks: { Glint },
 	lamps: { Lamp },
+	-- Whether each texture has loaded; a pool draws nothing before.
+	loaded: { [string]: boolean },
 }
 
 local METRES = Units.METRES_PER_STUD
+local log = Log.scope("LampGlints")
 
 local function studs(metres: number): number
 	return Units.metresToStuds(metres)
@@ -47,7 +55,7 @@ local function newGlint(anchor: BasePart, texture: string, brightness: number): 
 	beam.LightInfluence = 0
 	beam.Brightness = brightness
 	beam.FaceCamera = true
-	beam.Segments = 1
+	beam.Segments = Config.SEGMENTS
 	beam.Enabled = false
 	beam.Attachment0 = from
 	beam.Attachment1 = to
@@ -68,7 +76,11 @@ local function show(glint: Glint, from: Vector3, to: Vector3, widths: { number }
 	glint.to.Position = to
 	glint.beam.Width0 = widths[1]
 	glint.beam.Width1 = widths[2]
-	glint.beam.Transparency = NumberSequence.new(1 - opacity)
+	local keypoints = {}
+	for _, point in Rules.taper(opacity, Config.SEGMENTS + 1) do
+		table.insert(keypoints, NumberSequenceKeypoint.new(point.time, point.value))
+	end
+	glint.beam.Transparency = NumberSequence.new(keypoints)
 	glint.beam.Enabled = true
 end
 
@@ -139,7 +151,16 @@ function LampGlints.new(): Glints
 		table.insert(streaks, newGlint(anchor, Config.REFLECTION_IMAGE, Config.REFLECTION_BRIGHTNESS))
 	end
 	folder.Parent = Workspace
-	return { folder = folder, flares = flares, streaks = streaks, lamps = {} }
+	local loaded: { [string]: boolean } = {}
+	task.spawn(function()
+		ContentProvider:PreloadAsync({ Config.FLARE_IMAGE, Config.REFLECTION_IMAGE }, function(image, status)
+			loaded[image] = status == Enum.AssetFetchStatus.Success
+			if not loaded[image] then
+				log.warn(`{image} did not load ({status.Name}); its glints stay off`)
+			end
+		end)
+	end)
+	return { folder = folder, flares = flares, streaks = streaks, lamps = {}, loaded = loaded }
 end
 
 -- The lit lamps in view, nearest first; each pool draws as many as it holds.
@@ -150,9 +171,11 @@ end
 -- Re-aims every glint at its lamp for this frame's camera; wetness and rain are 0 to 1.
 function LampGlints.render(glints: Glints, camera: Camera, wetness: number, rain: number)
 	local view = camera.CFrame
+	local flares = glints.loaded[Config.FLARE_IMAGE] == true
+	local streaks = glints.loaded[Config.REFLECTION_IMAGE] == true
 	for index, glint in glints.flares do
 		local lamp = glints.lamps[index]
-		if lamp then
+		if lamp and flares then
 			flare(glint, lamp, view, rain)
 		else
 			hide(glint)
@@ -160,7 +183,7 @@ function LampGlints.render(glints: Glints, camera: Camera, wetness: number, rain
 	end
 	for index, glint in glints.streaks do
 		local lamp = glints.lamps[index]
-		if lamp then
+		if lamp and streaks then
 			streak(glint, lamp, view.Position, wetness)
 		else
 			hide(glint)

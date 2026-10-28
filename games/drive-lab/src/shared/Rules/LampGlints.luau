@@ -127,4 +127,28 @@ function LampGlints.reflection(
 	}
 end
 
+-- How much of a glint shows at `t`, 0 to 1 along its length: none at either end, all at the
+-- middle, rising as a sine. The flare's texture is a long streak that fades only in its last
+-- sixteenth, so drawn with one opacity it ended square and read as a flat grey bar at night (#44).
+function LampGlints.window(t: number): number
+	if not finite(t) then
+		return 0
+	end
+	return math.sin(math.pi * math.clamp(t, 0, 1))
+end
+
+-- A glint's transparency along its length at `opacity`: `count` evenly spaced keypoints (at
+-- least 3, so both ends and the middle), fully transparent at both ends. A Beam samples this at
+-- its segments' vertices only, so it needs about as many segments as keypoints.
+function LampGlints.taper(opacity: number, count: number): { { time: number, value: number } }
+	local shown = math.clamp(if finite(opacity) then opacity else 0, 0, 1)
+	local points = math.max(math.floor(count), 3)
+	local keypoints = table.create(points)
+	for index = 0, points - 1 do
+		local t = index / (points - 1)
+		table.insert(keypoints, { time = t, value = 1 - shown * LampGlints.window(t) })
+	end
+	return keypoints
+end
+
 return table.freeze(LampGlints)
