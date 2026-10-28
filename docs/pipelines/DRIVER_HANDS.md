@@ -85,6 +85,94 @@ from the cockpit eye and from beside the driver (the probe is in the session log
 - Level with the forearms, the cockpit eye saw only sleeves; raised 7 cm it looks over them onto
   the hands.
 
+## 8. The start-up: resting hands, the START flap, onto the wheel
+
+Once seated (`Rules/CarEntry`'s phase), the custom arms rest on the thighs while the engine is
+off, then follow the start key: the right hand lifts the red flap by its free edge, presses
+START, lets the flap fall and takes the wheel; the left hand is on the wheel by 1 s. While
+getting in and out the body animation moves the blocky arms instead. Every client plays it from
+the car's replicated state, so other players see the same start-up.
+
+    STARTUP (Config/CarEntry)   0 ... 0.75 lift ... 1.0 up ... 1.5 press ... 2.1 fall ... 2.9 wheel
+    right hand                  Rest -> Point at 0.2 s   index under the edge, rides it up,
+                                pushes START 4 mm, out from under before 2.1, Grip at 2.5, on the rim
+    left hand                   Rest -> Grip at 0.4 s, on the rim at 1.0 s
+
+### 8a. Posed hands
+
+    blender -b --factory-startup -P tools/blender/hand_poses.py -- <Hand_Nails_R.gltf> <out dir>
+
+The same CC0 hand as section 3, posed by joint angles: **Point** (index straight, the other
+fingers curled, the thumb over them) and **Rest** (relaxed, fingers a little curved and apart).
+Each is exported in its own **wrist frame**: origin at the wrist joint, z up the forearm, y out
+of the back of the hand (the frame the game moves a hand by), plus one sleeve cuff for both, the
+left hand the right mirrored in x. `poses.json` gives each mesh's centre, the index tip and the
+palm's middle in that frame. Read the four renders: the thumb tucked, no finger through another.
+The palm point is taken between the wrist and the knuckles across the middle of the hand; with
+the thumb in it, the resting hand sat 4 cm off the thigh's centre.
+
+### 8b. The resting pose
+
+    python -I tools/blender/rest_pose.py <SEAT_WELD.json> <poses.json> <REST_POSE.json>
+
+`SEAT_WELD.json` is the seated R6 measured in Studio (the SeatWeld puts the torso's centre at
+(0, 1.557, 0) studs in the DriverSeat frame at driver scale, upright). The script places each
+hand's palm on its thigh 45 % of the way from hip to knee (thighs from `Config/DriverLegs`, the
+right foot on the throttle, the left on the footrest), pitched so palm and fingertips both lie on
+the cloth. `REST_POSE.json` also gives, for the entry animation's blocky arms, the palm's centre
+and where an R6 arm aimed at it ends. Shoulders are 0.82 + 0.77 studs from the hand: the hands
+cannot reach the knees, which sit 0.45 m out on real-length legs.
+
+### 8c. Keyed paths
+
+    blender -b <svj_interior_v2_wheel.blend> --factory-startup -P tools/blender/startup_paths.py --
+        <inputs.json> games/drive-lab/src/shared/Config/DriverStartup.luau <out dir>
+    stylua games/drive-lab/src/shared/Config/DriverStartup.luau
+
+`inputs.json` (example: `drive-lab-assets/driver/startup_inputs.json`) names the seat's origin in
+the blend, the measured files above, the hands of section 3, the STARTUP times and the flap: its
+hinge line, the point under its free edge, START's top face and the console's normal (agent B's
+door work measured them). The script moves the cabin into the seat frame, then keys an Empty:
+- each Point pose is aimed so the index tip lands on its target with the hand in line with the
+  forearm the arm controller would draw (three passes through its elbow rule);
+- the lift is keyed every 0.05 s on the edge's arc, turning about the hinge as `Rules/CarEntry`
+  turns the flap, so the bake cannot cut the corner;
+- the press: 4 mm above START, down to its face at `pressAt`, held, back up;
+- the last key is the grip of section 3 on the wheel as the rig rests it.
+
+Blender's Bezier easing between keys, baked every 1/30 s. The script stops if a wrist leaves 96 %
+of the arm's reach, prints how far the index strays from the edge (0.4 mm for the SVJ) and where
+it is at the press, renders eight moments from the cockpit eye, the passenger seat and the flap,
+and writes `Config/DriverStartup.luau`: the keys in metres in the seat frame, the shape changes,
+and the geometry they were made against. **Re-bake whenever STARTUP's times or the flap change**:
+`tests/StartupArms.spec.luau` checks the index against `Rules/CarEntry`'s flap and press times
+and fails otherwise.
+
+### 8d. Store and play
+
+Upload `hand_{Point,Rest}_{R,L}.glb` and `cuff_{R,L}.glb`; keep them at
+`ReplicatedStorage.DriveLabAssets.Hands.HandPoint_R` / `_L`, `HandRest_R` / `_L` and
+`WristCuff_R` / `_L`, each with a copy of `Hand_R`'s / `Hand_L`'s SurfaceAppearance (the cuffs
+`Cuff_R`'s look). Without them the grip hand stands in for both shapes.
+
+In game, `Rig/StartupHands` places every hand from a wrist frame: sampled from the keys
+(`Rules/StartupArms`: positions on a cubic through every key, rotations turned evenly between
+them), and over the last 0.5 s bent toward the live grip, so a later change to the wheel's rest
+does not leave a jump. Shapes swap while the hand is moving: Rest to Point leaving the thigh,
+Point to Grip half way to the wheel. `Controllers/DriverArms` reaches the arm to that frame as
+before; only `phase == "Seated"` draws the custom arms.
+
+### 8e. Checked in edit mode
+
+Rig a copy of `workspace.CarImport` with `CarRig.build` well away from the car, seat an R6 from
+`Players:CreateHumanoidModelFromDescription` scaled to `Driving.DRIVER_SCALE` (`Seat:Sit`), write
+the car's entry state (Entry "Enter" long ago, door shut), start `DriverArms` and `DriverLegs`
+(`RenderStepped` runs in edit mode), and bind a render step before them that sets `EngineAt` to
+now minus the moment wanted, which freezes the start-up there. Capture from the cockpit eye (the
+head and torso hidden, as `CarCamera` does), from the passenger seat and close on the console;
+restore the camera and destroy the copy and the controllers' folders afterwards. Captures of
+2026-10-28: `drive-lab-assets/driver/captures_v1/arms_*.jpg`.
+
 ## Owner decisions
 
 | Date | Decision |
