@@ -17,7 +17,8 @@ z = -y, y = +x, x = -z. The left hand is the right mirrored in that frame's x.
 Output, in <out dir>: hand_{Point,Rest}_{R,L}.glb and cuff_{R,L}.glb in Roblox studs at the
 world scale (1 stud = 0.28 / 1.5 m), already in the hand frame; poses.json with, per shape and
 side, the mesh centre (where Roblox puts the imported MeshPart), the cuff's centre, the index
-fingertip and the middle of the palm, all studs in the hand frame; and check renders.
+fingertip (the skin's end of the index) and the middle of the palm, all studs in the hand frame;
+and check renders.
 """
 
 import json
@@ -102,7 +103,10 @@ def posed(hand_path, shape):
     hand.data.transform(place @ hand.matrix_world)
     hand.matrix_world = Matrix.Identity(4)
     hand.name = f"Hand_{shape}"
-    return hand, place @ tip
+    # The index's end on the skin: the bone's tail runs about 2.5 cm past the finger, so the
+    # vertex nearest it is the fingertip the paths aim with.
+    tail = place @ tip
+    return hand, min((v.co.copy() for v in hand.data.vertices), key=lambda co: (co - tail).length)
 
 
 def palm_centre(hand):

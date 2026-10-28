@@ -108,8 +108,10 @@ Each is exported in its own **wrist frame**: origin at the wrist joint, z up the
 of the back of the hand (the frame the game moves a hand by), plus one sleeve cuff for both, the
 left hand the right mirrored in x. `poses.json` gives each mesh's centre, the index tip and the
 palm's middle in that frame. Read the four renders: the thumb tucked, no finger through another.
-The palm point is taken between the wrist and the knuckles across the middle of the hand; with
-the thumb in it, the resting hand sat 4 cm off the thigh's centre.
+The index tip is the skin's vertex nearest the end bone's tail: the tail runs about 2.5 cm past
+the finger, and aiming with it left the finger short of the flap in Studio. The palm point is
+taken between the wrist and the knuckles across the middle of the hand; with the thumb in it,
+the resting hand sat 4 cm off the thigh's centre.
 
 ### 8b. The resting pose
 
@@ -121,7 +123,8 @@ hand's palm on its thigh 45 % of the way from hip to knee (thighs from `Config/D
 right foot on the throttle, the left on the footrest), pitched so palm and fingertips both lie on
 the cloth. `REST_POSE.json` also gives, for the entry animation's blocky arms, the palm's centre
 and where an R6 arm aimed at it ends. Shoulders are 0.82 + 0.77 studs from the hand: the hands
-cannot reach the knees, which sit 0.45 m out on real-length legs.
+cannot reach the knees on real-length legs. Its leg numbers (lengths, `KNEE_OUT`, the pedals'
+heel and ball points) are copies of `Config/DriverLegs`; change them together.
 
 ### 8c. Keyed paths
 
@@ -171,7 +174,9 @@ the car's entry state (Entry "Enter" long ago, door shut), start `DriverArms` an
 now minus the moment wanted, which freezes the start-up there. Capture from the cockpit eye (the
 head and torso hidden, as `CarCamera` does), from the passenger seat and close on the console;
 restore the camera and destroy the copy and the controllers' folders afterwards. Captures of
-2026-10-28: `drive-lab-assets/driver/captures_v1/arms_*.jpg`.
+2026-10-28: `drive-lab-assets/driver/captures_v1/arms_*.jpg` (the `arms_side_*` pair after the
+fingertip fix: the index at the lifted flap's edge at 0.9 s and on START at 1.5 s). Studio must
+be visible: minimized, it renders no frame, so `RenderStepped` and captures both stop.
 
 ## Owner decisions
 

@@ -23,12 +23,12 @@ import sys
 STUDS_PER_METRE = 1.5 / 0.28
 DRIVER_SCALE = 1.5 / 1.75
 # Config/DriverLegs.
-THIGH, SHIN, KNEE_OUT = 0.46, 0.45, 0.6
+THIGH, SHIN, KNEE_OUT = 0.46, 0.45, 1.0
 HIP = (0.5, -1.05, 0.05)
 ANKLE_ALONG, ANKLE_UP = 0.075, 0.085
-THROTTLE = {"heel": (0.169, -0.2194, -0.844), "ball": (0.197, -0.0404, -0.934)}
-FOOTREST = {"heel": (-0.1, -0.2314, -0.874), "ball": (-0.1, -0.0484, -0.954)}
-BRAKE = {"hinge": (0.01, 0.0966, -1.004), "heel": (0.035, -0.2334, -0.777), "ball": (0.03, -0.0534, -0.864)}
+THROTTLE = {"heel": (0.1761, -0.2275, -0.8354), "ball": (0.2044, -0.0482, -0.924)}
+FOOTREST = {"heel": (-0.1012, -0.2352, -0.8776), "ball": (-0.1012, -0.0519, -0.9575)}
+BRAKE = {"hinge": (0.0304, 0.0956, -0.9992), "heel": (0.0308, -0.2334, -0.794), "ball": (0.0308, -0.0486, -0.8705)}
 # tools/blender/driver_legs.py thigh_radius: the cloth's half-height along the thigh.
 THIGH_TOP = (0.075, 0.06)
 # Config/DriverArms at scale 1.

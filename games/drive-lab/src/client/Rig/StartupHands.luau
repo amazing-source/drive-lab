@@ -23,6 +23,14 @@ export type Hands = {
 	shapes: { [DriverStartup.Shape]: BasePart }?,
 	cuff: BasePart?,
 	shown: DriverStartup.Shape,
+	-- Fixed per side, worked out once: the grip's wrist frame in the wheel's frame, and each
+	-- mesh's frame from its wrist frame.
+	gripWrist: CFrame,
+	gripOffset: CFrame,
+	gripCuffOffset: CFrame,
+	restOffset: CFrame,
+	pointOffset: CFrame,
+	cuffOffset: CFrame,
 }
 
 local STUDS_PER_METRE = 1 / Units.METRES_PER_STUD
@@ -86,6 +94,12 @@ function StartupHands.build(
 	local letter = if sign > 0 then "R" else "L"
 	local rest, point, cuff =
 		asset("HandRest_" .. letter), asset("HandPoint_" .. letter), asset("WristCuff_" .. letter)
+	local gripWrist = StartupHands.gripWrist(sign)
+	local fromWrist = gripWrist:Inverse()
+	local centre, cuffCentre = DriverArms.HAND_CENTRE, DriverArms.CUFF_CENTRE
+	local function offset(centreOf: DriverStartup.Point): CFrame
+		return CFrame.new(Vector3.new(sign * centreOf.x, centreOf.y, centreOf.z) * STUDS_PER_METRE)
+	end
 	local hands: Hands = {
 		sign = sign,
 		track = if sign > 0 then DriverStartup.RIGHT else DriverStartup.LEFT,
@@ -94,6 +108,12 @@ function StartupHands.build(
 		shapes = nil,
 		cuff = nil,
 		shown = "Grip",
+		gripWrist = gripWrist,
+		gripOffset = fromWrist * CFrame.new(sign * centre.x, centre.y, centre.z),
+		gripCuffOffset = fromWrist * CFrame.new(sign * cuffCentre.x, cuffCentre.y, cuffCentre.z),
+		restOffset = offset(DriverStartup.MESHES.Rest),
+		pointOffset = offset(DriverStartup.MESHES.Point),
+		cuffOffset = offset(DriverStartup.CUFF),
 	}
 	if rest and point and cuff then
 		hands.shapes = { Rest = tinted(rest, color, folder), Point = tinted(point, color, folder) }
@@ -142,9 +162,7 @@ function StartupHands.place(
 	seat: CFrame,
 	sinceKey: number?
 ): (CFrame, BasePart, CFrame, BasePart, CFrame)
-	local sign = hands.sign
-	local gripWrist = StartupHands.gripWrist(sign)
-	local gripFrame = wheel * gripWrist
+	local gripFrame = wheel * hands.gripWrist
 	local hand = StartupArms.hand(hands.track, sinceKey)
 	local wrist = gripFrame
 	local shape: DriverStartup.Shape = "Grip"
@@ -160,20 +178,10 @@ function StartupHands.place(
 	show(hands, shape)
 	local shapes, cuff = hands.shapes, hands.cuff
 	if shape == "Grip" or shapes == nil or cuff == nil then
-		local centre, cuffCentre = DriverArms.HAND_CENTRE, DriverArms.CUFF_CENTRE
-		local fromWrist = gripWrist:Inverse()
-		return wrist,
-			hands.grip,
-			wrist * fromWrist * CFrame.new(sign * centre.x, centre.y, centre.z),
-			hands.gripCuff,
-			wrist * fromWrist * CFrame.new(sign * cuffCentre.x, cuffCentre.y, cuffCentre.z)
+		return wrist, hands.grip, wrist * hands.gripOffset, hands.gripCuff, wrist * hands.gripCuffOffset
 	end
-	local centre, cuffCentre = DriverStartup.MESHES[shape], DriverStartup.CUFF
-	return wrist,
-		shapes[shape],
-		wrist * CFrame.new(Vector3.new(sign * centre.x, centre.y, centre.z) * STUDS_PER_METRE),
-		cuff,
-		wrist * CFrame.new(Vector3.new(sign * cuffCentre.x, cuffCentre.y, cuffCentre.z) * STUDS_PER_METRE)
+	local offset = if shape == "Rest" then hands.restOffset else hands.pointOffset
+	return wrist, shapes[shape], wrist * offset, cuff, wrist * hands.cuffOffset
 end
 
 return StartupHands
