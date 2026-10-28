@@ -103,7 +103,7 @@ agents. They share politely and talk to each other directly.
 
 | Resource | Rule |
 |---|---|
-| **Studio** | Call `get_studio_mode` before every action; act only in `stop`; never start or stop a playtest. Edit-mode work only, and everything restored after (two syncs in a row write 0). |
+| **Studio** | Before every action call `get_studio_mode` **and** `get_connected_instances`, and act only when there are no server or client peers: `get_studio_mode` alone has answered `stop` while the owner was playtesting. Never start or stop a playtest the owner is running. Edit-mode work only, and everything restored after (two syncs in a row write 0). |
 | **Studio lock** | Anything that moves the camera, captures or adds temporary objects takes `C:/Users/bfhdh/Downloads/drive-lab-assets/.studio-lock` with `if mkdir ...; then echo "<role> <HH:MM>" > .../owner; ...; rm owner; rmdir; fi`. Minutes, not hours. Never remove a lock you did not create. |
 | **Blender lock** | Same pattern with `.blender-lock`: one Blender process at a time on this machine. |
 | **Place changes** | Anything stored in the place (ApplyMesh, new assets under `ReplicatedStorage.DriveLabAssets`) is listed in the PR: only the owner saves the place. |
