@@ -143,6 +143,30 @@ a 2 x 2 flipbook. The outlets are placed from the rear light clusters and checke
 model in Studio with marker balls (they sat 5 cm higher than the mod's numbers). Each pop the
 engine sound plays fires a burst (`Effects/ExhaustFlames`): jets, a fireball and a 0.06 s flash.
 
+## 10. Blurred rims
+
+Built from the car's own wheels, so another car goes through the same two scripts:
+
+```
+blender -b --factory-startup -P tools/blender/rim_blur.py -- <car.glb> <wheel maps dir> <build dir>
+python -I tools/assets/rim_blur_maps.py <build dir> <maps dir>
+```
+
+- `rim_blur.py` splits each `Wheel_*` by mesh island into the rim face (in front of a depth plane
+  per axle, inside 90 % of the tyre's radius) and the rest, renders the face front-on and unlit in
+  Cycles, and averages each render around every circle on the axle (the limit of accumulating
+  rotated renders, without the banding a finite set leaves). It builds a disc per wheel on the
+  face's front envelope and exports `rim_blur.glb` with `manifest.json` (each piece's offset from
+  its wheel). It checks the readback is linear and that no mesh keeps a vertex colour set.
+- **Strip vertex colours.** The export's second colour set has alpha 0: Roblox ignores it while
+  a part is opaque and multiplies it in once the part is partly transparent, so a fading piece
+  vanished outright.
+- `rim_blur_maps.py` writes the 2048 x 1024 atlas (front rim left, rear right): colour with the
+  coverage as alpha, metalness, roughness. Upload the glb and the three PNGs, resolve the decal
+  ids, and put the pieces in `ReplicatedStorage.DriveLabAssets.RimBlur.<Car>.<wheel part>` with an
+  `Offset` attribute each and the wheel's import size as `WheelSize` on the folder: tyre and face
+  take the wheel's SurfaceAppearance, the disc its own with AlphaMode Transparency.
+
 ## Open items on the SVJ
 
 | Item | Plan |
