@@ -21,6 +21,7 @@ local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local Config = require(ReplicatedStorage.Shared.Config.CarEntry)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local DoorMark = require(ReplicatedStorage.Shared.Car.DoorMark)
+local Movement = require(ReplicatedStorage.Shared.Config.Movement)
 local Net = require(ReplicatedStorage.Kit.Net)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rules = require(ReplicatedStorage.Shared.Rules.CarEntry)
@@ -40,6 +41,7 @@ local STALL_GRACE = 0.15
 -- Consecutive clips of a sequence meet on the same pose; a rest pose eases in.
 local CHAIN_FADE = 0
 local POSE_FADE = 0.15
+local SIT, IDLE = Movement.ANIMATIONS.sit.id, Movement.ANIMATIONS.idle.id
 
 -- The door's own motions that play a clip on the body, from inside and from outside.
 local INSIDE: { [string]: Config.ClipName } = { InsideOpen = "InsideOpen", InsideClose = "InsideClose" }
@@ -53,6 +55,9 @@ local outsideDoor: { car: Model, askedAt: number }? = nil
 -- controls off, until the server seats it.
 local entryStartAt: number? = nil
 local exitHeld: { key: Enum.KeyCode, since: number }? = nil
+-- The body was in a car's exit on the last frame seated; then the frame after it stood up.
+local exiting = false
+local standingUp = false
 local controls: Controller? = nil
 
 local function now(): number
@@ -246,6 +251,21 @@ local function finishOutside(current: Body)
 	letGo(current)
 end
 
+-- Getting out ends on a standing frame, and Locomotion's idle only starts after this frame's
+-- animation (it runs on Heartbeat): Roblox's sit, under the exit clip all along, would show for
+-- a frame and blend out (measured: a leg 2.5 studs off). A copy of the idle holds the body for
+-- that frame, then fades out as Locomotion's own fades in.
+local function standUp(current: Body)
+	for _, track in current.clips.animator:GetPlayingAnimationTracks() do
+		local animation = track.Animation
+		if animation and animation.AnimationId == SIT then
+			track:Stop(0)
+		end
+	end
+	ClipPlayer.set(current.clips, IDLE, nil, 0)
+	standingUp = true
+end
+
 local function standingClips(current: Body, at: number)
 	local startAt = entryStartAt
 	if startAt and at > startAt + Config.REFUSED_SECONDS then
@@ -256,7 +276,8 @@ local function standingClips(current: Body, at: number)
 	local pending = outsideDoor
 	if pending == nil then
 		-- Off the seat a held exit clip ends at once: the server put the root where it showed the body.
-		ClipPlayer.set(current.clips, nil, nil, 0)
+		ClipPlayer.set(current.clips, nil, nil, if standingUp then Movement.FADE else 0)
+		standingUp = false
 		return
 	end
 	local request = Rules.outsideRequest(CarState.read(pending.car), at, pending.askedAt)
@@ -278,6 +299,7 @@ local function update()
 	local at = now()
 	local car = seatedCar()
 	if car then
+		exiting = CarState.read(car).entry == "Exit"
 		seatedClips(current, car, at)
 		local held = exitHeld
 		if held and Rules.exitHeld(os.clock() - held.since) then
@@ -286,6 +308,11 @@ local function update()
 		end
 	else
 		exitHeld = nil
+		if exiting then
+			exiting = false
+			standUp(current)
+			return
+		end
 		standingClips(current, at)
 	end
 end
@@ -309,7 +336,7 @@ local function onCharacter(character: Model)
 	if body then
 		ClipPlayer.destroy(body.clips)
 	end
-	body, busy, outsideDoor, entryStartAt = nil, false, nil, nil
+	body, busy, outsideDoor, entryStartAt, exiting, standingUp = nil, false, nil, nil, false, false
 	local humanoid = character:WaitForChild("Humanoid") :: Humanoid
 	local root = character:WaitForChild("HumanoidRootPart") :: BasePart
 	local animator = humanoid:WaitForChild("Animator") :: Animator
