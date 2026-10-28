@@ -3,16 +3,19 @@
 	The live instrument cluster of the car the local player drives: the SVJ's own cluster face,
 	on the screen the rig mounts over the model's static one, with its rev counter lighting cell
 	by cell (red from the redline, flashing on the limiter), the gear, the speed, the driving
-	mode in its colour and the TC/ABS tell-tales drawn over it. The dial sweeps to the top and
-	back when the driver gets in. Built once per drive, then updated from the car's readouts a few
+	mode in its colour and the TC/ABS tell-tales drawn over it. The screen stays dark until START
+	is pressed, then the dial sweeps to the top and back. Built once per drive, then updated from the car's readouts a few
 	dozen times a second, touching only what changed.
 ]]
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
+local CarEntry = require(ReplicatedStorage.Shared.Rules.CarEntry)
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
+local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local Cluster = require(ReplicatedStorage.Shared.Config.Cluster)
 local ClusterTheme = require(ReplicatedStorage.Shared.Config.ClusterTheme)
 local DriverAssists = require(ReplicatedStorage.Shared.Rules.DriverAssists)
@@ -31,7 +34,7 @@ type Display = {
 	mode: TextLabel,
 	tc: TextLabel,
 	abs: TextLabel,
-	builtAt: number,
+	face: ImageLabel,
 	cells: number,
 	theme: string,
 }
@@ -120,6 +123,7 @@ local function build(model: Model, screen: BasePart): Display
 	return {
 		model = model,
 		gui = gui,
+		face = face,
 		lit = lit,
 		red = red,
 		wipes = { litWipe, redWipe },
@@ -129,7 +133,6 @@ local function build(model: Model, screen: BasePart): Display
 		mode = label(face, Cluster.MODE, "STRADA", centred),
 		tc = label(face, Cluster.TC, "TC", centred),
 		abs = label(face, Cluster.ABS, "ABS", centred),
-		builtAt = os.clock(),
 		cells = 0,
 		theme = "",
 	}
@@ -161,7 +164,13 @@ local function refresh(current: Display)
 		current.speed.TextColor3 = theme.text
 	end
 
-	local rpm = Rules.startupRpm(now - current.builtAt) or number(model, "Rpm")
+	-- Dark until START is pressed; from the press the dial sweeps, then shows the start-up's revs.
+	local serverNow = Workspace:GetServerTimeNow()
+	local state = CarState.read(model)
+	local sincePress = CarEntry.startup(state, serverNow).sincePress
+	current.face.Visible = sincePress ~= nil
+	local sweep = if sincePress then Rules.startupRpm(sincePress) else nil
+	local rpm = sweep or CarEntry.shownRpm(state, serverNow, number(model, "Rpm"))
 	local cells = Rules.litCells(rpm)
 	if cells ~= current.cells then
 		current.cells = cells

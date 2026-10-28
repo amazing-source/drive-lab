@@ -8,8 +8,11 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
 
+local CarEntry = require(ReplicatedStorage.Shared.Rules.CarEntry)
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
+local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local DriverAssists = require(ReplicatedStorage.Shared.Rules.DriverAssists)
@@ -85,6 +88,17 @@ local function readInput(): Interface.DriverInput
 	return input
 end
 
+-- Until the car is started, shut and its driver settled in (Rules/CarEntry), it stays parked:
+-- the runner still holds it on its suspension, and a tap meant for a pedal or a paddle is dropped.
+local function gated(model: Model, input: Interface.DriverInput): Interface.DriverInput
+	if CarEntry.drivable(CarState.read(model), Workspace:GetServerTimeNow()) then
+		return input
+	end
+	input.throttle, input.brake, input.steer, input.handbrake = 0, 0, 0, 1
+	input.shiftUp, input.shiftDown = false, false
+	return input
+end
+
 local function publish(model: Model, result: Interface.StepResult, current: VehicleRunner.Runner)
 	local telemetry = result.telemetry
 	model:SetAttribute("SpeedKmh", telemetry.speedKmh)
@@ -138,7 +152,7 @@ local function start(seat: Seat)
 	local current = VehicleRunner.new(rig, entry.physics, help)
 	runner = current
 	connection = RunService.PreSimulation:Connect(function(dt: number)
-		local result = VehicleRunner.step(current, readInput(), dt)
+		local result = VehicleRunner.step(current, gated(model, readInput()), dt)
 		VehicleRunner.animate(current, dt)
 		publish(model, result, current)
 	end)

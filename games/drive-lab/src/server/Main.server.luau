@@ -16,6 +16,8 @@ local START_ORDER = {
 	-- Before Cars: the road and pad must be under the car when it is rigged.
 	Services.Track,
 	Services.Cars,
+	-- After Cars: it takes over the cars Cars has rigged.
+	Services.CarEntry,
 }
 
 Workspace.Gravity = World.GRAVITY

@@ -16,7 +16,6 @@ local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local Driving = require(ReplicatedStorage.Shared.Config.Driving)
 local Interface = require(ReplicatedStorage.Shared.Vehicle.Interface)
 local Log = require(ReplicatedStorage.Kit.Log)
-local Net = require(ReplicatedStorage.Kit.Net)
 local VehicleRunner = require(ReplicatedStorage.Shared.Car.VehicleRunner)
 
 type Car = {
@@ -32,7 +31,6 @@ type Car = {
 
 local log = Log.scope("Cars")
 local cars: { Car } = {}
-local ENTER_LIMIT = { perSecond = 2, burst = 3 }
 
 local PARKED: Interface.DriverInput = {
 	throttle = 0,
@@ -91,18 +89,8 @@ local function carry(car: Car, character: Model?)
 	end
 end
 
--- The driver sits scaled down and gets their size back on the way out.
-local function resize(character: Model?, scale: number)
-	if character and character.Parent and math.abs(character:GetScale() - scale) > 1e-3 then
-		character:ScaleTo(scale)
-	end
-end
-
+-- Services/CarEntry seats the driver, and eases their size down before and back after.
 local function park(car: Car)
-	local driver = car.driver
-	if driver then
-		resize(driver.Character, 1)
-	end
 	carry(car, nil)
 	car.driver = nil
 	car.rig.model:SetAttribute("DriverUserId", 0)
@@ -129,24 +117,6 @@ local function onOccupant(car: Car)
 	end
 end
 
-local function onPrompt(car: Car, player: Player)
-	if not Net.allow(player, "EnterCar", ENTER_LIMIT) or car.rig.seat.Occupant ~= nil then
-		return
-	end
-	local character = player.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if humanoid == nil or humanoid.Health <= 0 or root == nil or not root:IsA("BasePart") then
-		return
-	end
-	if (root.Position - car.rig.seat.Position).Magnitude > Driving.ENTER_DISTANCE then
-		return
-	end
-	-- Scaled before sitting, so the seat weld is made for the size they will drive at.
-	resize(character, Driving.DRIVER_SCALE)
-	car.rig.seat:Sit(humanoid)
-end
-
 local function rig(model: Instance)
 	if not model:IsA("Model") then
 		return
@@ -168,9 +138,6 @@ local function rig(model: Instance)
 	park(car)
 	car.rig.seat:GetPropertyChangedSignal("Occupant"):Connect(function()
 		onOccupant(car)
-	end)
-	car.rig.prompt.Triggered:Connect(function(player)
-		onPrompt(car, player)
 	end)
 	table.insert(cars, car)
 end

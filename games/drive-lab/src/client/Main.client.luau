@@ -11,6 +11,7 @@ local START_ORDER = {
 	Controllers.HeadLook,
 	Controllers.BodyLean,
 	Controllers.Driving,
+	Controllers.CarEntry,
 	Controllers.Locomotion,
 	Controllers.CameraFeel,
 	Controllers.CarAudio,

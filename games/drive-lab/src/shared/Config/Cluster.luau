@@ -64,7 +64,8 @@ local Cluster: Cluster = table.freeze({
 	ESC = { x = 256, y = 110, size = 6 },
 	TC = { x = 205, y = 93, size = 6 },
 	ABS = { x = 307, y = 93, size = 6 },
-	-- The rev counter sweeps to the top and back when the driver gets in, as the real car's does.
+	-- The rev counter sweeps to the top and back when START is pressed (unsourced for the SVJ: no
+	-- reference of its start-up screen was found, 2026-10-28).
 	STARTUP_SECONDS = 1.4,
 	LIMITER_FLASH_HZ = 10,
 	-- Pixels of the screen's canvas, about 2.5 : 1 like the screen; the face fills its height.

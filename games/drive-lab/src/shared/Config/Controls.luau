@@ -15,6 +15,10 @@ export type Controls = {
 	INDICATOR_LEFT: { Enum.KeyCode },
 	INDICATOR_RIGHT: { Enum.KeyCode },
 	HUD_MODE: { Enum.KeyCode },
+	-- Seated: open or shut the driver's door, start the engine, and (held) get out.
+	DOOR: { Enum.KeyCode },
+	START_ENGINE: { Enum.KeyCode },
+	EXIT: { Enum.KeyCode },
 	-- Analog sticks below this count as centred.
 	STICK_DEADZONE: number,
 }
@@ -39,6 +43,12 @@ local Controls: Controls = table.freeze({
 	INDICATOR_RIGHT = { Enum.KeyCode.C, Enum.KeyCode.DPadRight },
 	-- The driving HUD: full, minimal, off.
 	HUD_MODE = { Enum.KeyCode.U },
+	-- F and R sit in the same place on QWERTY and AZERTY. E is also the upshift paddle: a tap
+	-- shifts, holding it (CarEntry.EXIT_HOLD_SECONDS, near a standstill) gets out. L3 is the
+	-- sprint on foot, free while seated.
+	DOOR = { Enum.KeyCode.F, Enum.KeyCode.ButtonL3 },
+	START_ENGINE = { Enum.KeyCode.R, Enum.KeyCode.ButtonA },
+	EXIT = { Enum.KeyCode.E, Enum.KeyCode.ButtonB },
 	STICK_DEADZONE = 0.12,
 })
 

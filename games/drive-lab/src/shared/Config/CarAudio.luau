@@ -118,12 +118,13 @@ local CarAudio: CarAudio = {
 		toDistance = 250,
 	},
 	EVENTS_SOUND_ID = "rbxassetid://104848480098013",
-	-- The flare, then the cold idle settling; its last 2 s fade out while the idle loop fades in.
+	-- The starter (its first 0.75 s), the flare, then the cold idle settling; its last 2 s fade
+	-- out while the idle loop fades in. Played from the moment START is pressed (Rules/CarEntry).
 	STARTUP = {
-		region = { from = 0.5, to = 11 },
+		region = { from = 0, to = 11 },
 		-- The start-up was cut 5.4 dB quieter than the idle loop's gain to keep its flare in range.
 		boostDb = 5.4,
-		handOver = 8.5,
+		handOver = 9.0,
 		abortRpm = 1400,
 		abortHalfLife = 0.08,
 	},
