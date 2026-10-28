@@ -11,6 +11,7 @@
 	Config/Movement.SPRINT_KEYS, which the controller adds to the bindings.
 ]]
 local CarEntry = require("./CarEntry")
+local CarLights = require("./CarLights")
 local DriverAssists = require("./DriverAssists")
 local Rules = require("../Rules/ControlsHelp")
 
@@ -198,6 +199,22 @@ local HELP: Rules.Help = {
 					controls = { "HEADLIGHTS" },
 				},
 				{
+					label = "High beam",
+					text = "Turns the full-beam headlights on or off for seeing further down the road; they only shine while the headlights are on.",
+					controls = { "HIGH_BEAM" },
+				},
+				{
+					label = "Cabin light",
+					text = "Turns the light in the roof above the windscreen on or off so you can see inside the car at night.",
+					controls = { "CABIN_LIGHT" },
+				},
+				{
+					label = "Lights, on a gamepad",
+					text = "Tap to step the headlights through automatic, on, full beam and off; hold for {PAD_HOLD} s to switch the cabin light.",
+					controls = { "LIGHTS_PAD" },
+					gamepadGesture = "Tap or hold",
+				},
+				{
 					label = "Indicators, left / right",
 					text = "Flashes the indicator on that side to show you are turning; press again to stop it.",
 					controls = { "INDICATOR_LEFT", "INDICATOR_RIGHT" },
@@ -276,6 +293,7 @@ local HELP: Rules.Help = {
 		EXIT_KMH = CarEntry.EXIT_MAX_KMH,
 		DOOR_KMH = CarEntry.DOOR_MAX_KMH,
 		ESC_HOLD = DriverAssists.offHoldSeconds,
+		PAD_HOLD = CarLights.PAD_HOLD_SECONDS,
 	},
 	maxLabelLength = 26,
 	maxTextLength = 300,
