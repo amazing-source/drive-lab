@@ -223,7 +223,9 @@ def add_camera(name, location, target, lens):
 
 
 # EntryView's third-person offsets from the head (authoring studs: game studs / driver scale).
-FOLLOW = {"entry": (0.0, 4.5, 12.0), "leave": (13.0, 4.5, 3.0)}
+# Leaving, as EntryView places it since #17's 92a85a5: 11 game studs off the driver's door, a little
+# toward the rear (85% outward, 50% rearward, flattened), 3.5 up.
+FOLLOW = {"entry": (0.0, 4.5, 12.0), "leave": (6.51, 4.08, 11.06)}
 
 
 def roblox_to_blender(point):
