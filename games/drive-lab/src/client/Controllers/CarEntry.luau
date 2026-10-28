@@ -129,6 +129,9 @@ local function approach(car: Model, intent: Intent)
 				task.wait(POLL_SECONDS)
 			end
 		else
+			-- The door clip leans the body into the car's collision box to reach the door;
+			-- held at the mark, physics cannot push it away.
+			current.root.Anchored = true
 			outsideDoor = { car = car, askedAt = now() }
 		end
 		send(car, intent)
@@ -184,6 +187,7 @@ local function standingClips(current: Body, at: number)
 	end
 	if mine or now() - pending.askedAt > REFUSED_SECONDS then
 		outsideDoor = nil
+		current.root.Anchored = false
 		setControls(true)
 	end
 	ClipPlayer.set(current.clips, nil, nil, 0)
