@@ -9,6 +9,7 @@ export type Controls = {
 	SHIFT_DOWN: { Enum.KeyCode },
 	GEARBOX_MODE: { Enum.KeyCode },
 	DRIVING_MODE: { Enum.KeyCode },
+	ESC_OFF: { Enum.KeyCode },
 	CAMERA_VIEW: { Enum.KeyCode },
 	HEADLIGHTS: { Enum.KeyCode },
 	INDICATOR_LEFT: { Enum.KeyCode },
@@ -28,6 +29,9 @@ local Controls: Controls = table.freeze({
 	SHIFT_DOWN = { Enum.KeyCode.Q, Enum.KeyCode.ButtonL1 },
 	GEARBOX_MODE = { Enum.KeyCode.T, Enum.KeyCode.ButtonY },
 	DRIVING_MODE = { Enum.KeyCode.M, Enum.KeyCode.DPadUp },
+	-- Held to switch ESC (and traction control) off, pressed to switch it back on. G sits in the
+	-- same place on QWERTY and AZERTY; View is the one gamepad button free while driving.
+	ESC_OFF = { Enum.KeyCode.G, Enum.KeyCode.ButtonSelect },
 	CAMERA_VIEW = { Enum.KeyCode.V, Enum.KeyCode.ButtonR3 },
 	-- H, X and C sit in the same place on QWERTY and AZERTY.
 	HEADLIGHTS = { Enum.KeyCode.H, Enum.KeyCode.DPadDown },

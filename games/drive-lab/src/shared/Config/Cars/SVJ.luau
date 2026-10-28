@@ -268,8 +268,11 @@ return Types.define({
 	-- 02 §2.12. Shift times are EST from 02 §2.5 (only "up to 50 ms" in Corsa is OEM-S); AWD
 	-- shares are OEM-S/PRESS (02 T10/T11); damping is EST from 02 §2.8 (0.3 of critical in
 	-- Strada, 0.6-0.7 in Corsa), raised in Strada and Sport after the owner found the body's
-	-- motion a little much (2026-10-27); electronics thresholds are EST with the ordering the report
-	-- gives (Strada full, Sport allows slides, Corsa least intrusive).
+	-- motion a little much (2026-10-27). Electronics thresholds are EST; their ordering is sourced
+	-- (issue #21, 2026-10-28): Strada intervenes most; Sport is the mode that slides, oversteer and
+	-- drifting made easy (Lamborghini, Aventador S release) with traction control slacker than
+	-- Corsa's (Car and Driver, SVJ); Corsa trims less than Strada but keeps the car on its line, with
+	-- narrow drift angles (Auto Bild, SVJ).
 	modes = {
 		Strada = {
 			upshiftTime = 0.225,
@@ -299,10 +302,10 @@ return Types.define({
 			frontShareDrive = 0.07,
 			frontShareCoast = 0.0,
 			damperRatio = 0.50,
-			tcSlipRatio = 0.12,
-			escOversteer = 0.15,
+			tcSlipRatio = 0.18,
+			escOversteer = 0.25,
 			escUndersteer = 0.10,
-			escSideslip = math.rad(8),
+			escSideslip = math.rad(12),
 		},
 		Corsa = {
 			upshiftTime = 0.055,
@@ -315,9 +318,9 @@ return Types.define({
 			frontShareCoast = 0.20,
 			damperRatio = 0.65,
 			tcSlipRatio = 0.15,
-			escOversteer = 0.25,
+			escOversteer = 0.15,
 			escUndersteer = 0.15,
-			escSideslip = math.rad(12),
+			escSideslip = math.rad(8),
 		},
 	},
 
