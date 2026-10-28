@@ -167,6 +167,92 @@ python -I tools/assets/rim_blur_maps.py <build dir> <maps dir>
   `Offset` attribute each and the wheel's import size as `WheelSize` on the folder: tyre and face
   take the wheel's SurfaceAppearance, the disc its own with AlphaMode Transparency.
 
+## 11. Opening doors
+
+A game model's door is rarely its own object, but it is usually whole mesh islands: cut it out by
+islands, never by faces, and it keeps its shading and UVs. Four scripts, each with its usage in its
+header, carry one tag through the whole job: a face attribute `door_part` (0 body, 1 door, 2 the
+START flap, 3 the opening's new parts) written into the source meshes. Nothing is separated until
+the export, so every step reads the same selection.
+
+```
+car.blend ─► hero_car_door.py ─► svj_door.blend (tagged) + sill + button ─► hero_car_door_hinge.py ─► hinge.json
+                                        │                                        │
+                                        └──────► hero_car_door_render.py ◄───────┘ ─► renders, svj_door_rig.blend
+                                        └──────► hero_car_door_export.py ─► door.glb + manifest ─► Studio (ApplyMesh)
+```
+
+### Split the door (`hero_car_door.py`)
+
+- **Box first, then rules, then eyes.** An island is door when 85 % of its vertices sit in a box
+  around the door. That catches the door and some strays, and misses parts of the door. The SVJ
+  needed four more rules, each found by rendering the door pulled 0.7 m outboard (anything that
+  floats, or anything left behind, is wrong):
+  - the **outline rule**: a door part sits inside the door's own side outline (outer skin and glass,
+    grown 1 cm), since a door has to pass through its opening; this drops the roof seal and fender
+    slivers;
+  - an **inner limit**: the cabin side of the sill and the seat trim are not door;
+  - the **quarter window**: the box cut the front quarter glass off at the A-pillar, but on the real
+    car the glass is one piece to the A-pillar and rises with the door (check a photograph of the
+    open door from the front);
+  - the **hinge**: the model carried its own hinge, an arm bolted inside the door's front face and
+    pivot hardware inside the fender; arm with the door, pivot parts with the body.
+  Islands the rules get wrong by eye go in an explicit, commented exclusion list (the SVJ: the
+  seat-belt guide on the B-pillar).
+- **Check every part the rule moves.** Plot each candidate island in side and plan view against the
+  door's outline, with its share in the box: near misses (50 to 85 %) are where mistakes hide.
+
+### Close the opening
+
+Cast rays across the opening with the door's faces removed: on the SVJ they reached the
+underbody (z 0.003 m), a black slot to the ground. The script measures, per 2.5 cm slice, the
+door's lowest surface (rays up against the door alone; its skin runs long triangles along the
+bottom, so its vertices say little), the outer skirt's top edge and the cabin-side trim, and lofts
+a sill: a top 6 mm under the door, from under the cabin trim to the skirt, and a face up the
+skirt's inside. No wall up the cabin side: the door's bin and the bottom of its card sit over the
+cabin trim when shut and sweep outward through that line as it opens. Fit a
+straight line through the slices and never go above it or the measurement: at its ends a slice meets
+the door's front face or rear corner, not its bottom. UVs: planar at the material's own texel
+density (median of its existing faces; a tiling map takes any offset).
+
+### Fit the hinge (`hero_car_door_hinge.py`)
+
+A hinge is a pivot and an axis; the door opens by a positive turn about it (right-hand rule).
+`check` turns the door a degree at a time and lists every door triangle that cuts a body triangle,
+by door island and body part. Three rules make that physical on a game mesh:
+- a game mesh has **no shut gaps** (a real door has 4 to 5 mm): door and body touch or overlap along
+  every seam, so a pair only counts once its door triangle has moved 2 cm, and body triangles within
+  1.5 cm of the shut door (its seams) only count once it has moved 8 cm;
+- door triangles within 6 cm of the axis, and body parts inside the fender's hinge pocket, are the
+  hinge turning in its bracket, out of sight, and are listed apart;
+- **show the check failing**: run it on a deliberately wrong axis before trusting a pass.
+
+`fit` searches pivots and axes (a toe about Z swings the door out as it rises, a camber tilts the
+axis down outboard) and keeps those clear at every degree. What decides the shape, measured on the
+SVJ: every point ahead of and above the pivot moves forward and down, every point below it moves
+rearward. So the front quarter window wants the pivot near its tip (far forward, high), and the
+rear edge's lower corner, which then moves rearward into the body behind, needs the camber to carry
+it outward. The fitted door's lean when open is compared with photographs: a near-vertical door,
+its top about 12 degrees outboard (front view), measured on Commons photos (see the commit).
+
+### Export and wire it
+
+- `hero_car_door_export.py` replays `hero_car_export.py` exactly and stops unless every piece
+  matches the place's manifest (triangles, origin, size): the place's parts are then swapped one for
+  one with `ApplyMesh`. Only pieces that lost faces are uploaded.
+- `ApplyMesh` copies the mesh and `MeshSize` but **not** `Size` or `CFrame`: set both from the
+  manifest (the piece's centre moved when it lost the door).
+- New parts copy their SurfaceAppearance(s) and material settings from the place part they came
+  from (same textures, same UVs). Door glass goes in the model binding's `glazing`.
+- Back up every part you change into ServerStorage first (`CarImport_door_backup`).
+- Binding (`Config/Cars/<Car>Model.luau`): `door = { parts, pivot, axis, openAngle }` and
+  `flap = { part, pivot, axis }`, points in the car frame from the centre of mass (before the body
+  raise, like `seat`). `CarRig` hangs the door on one Weld to an invisible `DoorHinge` part whose
+  C0's X is the axis (door parts weld rigidly to it) and the flap on a `FlapHinge` Weld;
+  `Controllers/CarDoor` sets `C0 = RestC0 * CFrame.Angles(angle, 0, 0)` from the car's entry state.
+- Door sounds: one uploaded pack (`tools/audio/pack_door.py`), each sound a region; start them a
+  little ahead of the door's own timeline so the shut's thump lands as it closes.
+
 ## Open items on the SVJ
 
 | Item | Plan |

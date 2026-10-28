@@ -17,6 +17,7 @@ local START_ORDER = {
 	Controllers.CarAudio,
 	Controllers.CarCamera,
 	Controllers.CockpitGlazing,
+	Controllers.CarDoor,
 	Controllers.Cluster,
 	Controllers.DriverArms,
 	Controllers.StreetLights,
