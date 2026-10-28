@@ -149,6 +149,8 @@ def main(argv):
     fractions = [float(v) for v in args.times.split(",")]
     cases = []
     for clip, variants in ids.items():
+        if clip.startswith("_"):
+            continue  # car_entry_upload.py's record of the bake each clip came from
         found = [os.path.join(root, f"{clip}.seatparts.json") for root, _, files in os.walk(args.export_dir) if f"{clip}.seatparts.json" in files]
         if not found:
             continue

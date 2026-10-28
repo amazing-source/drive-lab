@@ -12,7 +12,11 @@ character beside the real car.
   blender -b --factory-startup -P car_entry_scene.py -- build <keys.json> <scene.npz> <out.blend>
   blender -b <out.blend> -P car_entry_scene.py -- bake <out.json> [substeps]
   blender -b <out.blend> -P car_entry_scene.py -- render <out_dir> [--cams side,game,top,eye]
-      [--stretch 4] [--res 480] [--from F] [--to F]
+      [--stretch 4] [--res 480] [--from F] [--to F] [--step N]
+
+Cameras: side, game, top (placed by car_entry_prep.py), eye (rides the head, first person),
+entry and leave (EntryView's third person: a fixed offset from the head, looking at it), door (a
+standing eye at the door mark looking into the opening).
 
 The keys file is r6_rig's format plus "door": [{"frame", "value", "interp"?}] (openness 0 shut to
 1 open) and "clips": [{"name", "start", "end"}].
@@ -218,6 +222,10 @@ def add_camera(name, location, target, lens):
     return camera
 
 
+# EntryView's third-person offsets from the head (authoring studs: game studs / driver scale).
+FOLLOW = {"entry": (0.0, 4.5, 12.0), "leave": (13.0, 4.5, 3.0)}
+
+
 def roblox_to_blender(point):
     """RobloxSpace is turned +90 degrees about X: Roblox (x, y, z) is Blender (x, -z, y)."""
     return (point[0], -point[2], point[1])
@@ -274,6 +282,23 @@ def render(argv):
             camera.matrix_basis = Matrix.Translation(Vector((0.0, 0.1, -0.35)) / scale) @ Matrix.Rotation(0, 4, "X")
             head.hide_render = True
             scene.camera = camera
+        elif name in FOLLOW:
+            # EntryView's third person: a fixed offset from the head, kept from the sequence's
+            # start, looking at the head (entering, the on-foot camera behind the player; leaving,
+            # the car view's place behind the car). Offsets in authoring studs.
+            camera = add_camera(name, roblox_to_blender(FOLLOW[name]), (0, 0, 0), 24)
+            follow = camera.constraints.new("COPY_LOCATION")
+            follow.target = head
+            follow.use_offset = True
+            look = camera.constraints.new("TRACK_TO")
+            look.target = head
+            look.track_axis = "TRACK_NEGATIVE_Z"
+            look.up_axis = "UP_Y"
+            scene.camera = camera
+        elif name == "door":
+            # A standing eye at the door mark (a scale-1 R6's eye, the authoring frame's scale),
+            # looking down into the opening.
+            scene.camera = add_camera(name, roblox_to_blender((0.0, 4.6, 0.4)), roblox_to_blender((-0.3, 2.4, -3.5)), 16)
         else:
             location, target, lens = cams[name]
             scene.camera = add_camera(name, roblox_to_blender(location), roblox_to_blender(target), lens)
