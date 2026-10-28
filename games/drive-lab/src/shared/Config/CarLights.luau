@@ -16,9 +16,10 @@
 	cells above them are the indicators; a clear chevron inboard is the reversing light, with the
 	red fog lamp inside it; plate lamps and a red side marker.
 
-	Not found in any source, so chosen and open to the owner: what the Y does while its side's
-	indicator flashes (the rules allow off or dimmed for the whole cycle, UN R48 6.19.7.5); the
-	Y's level with the headlights on (seen lit at night, brightness not measurable).
+	Not found in any source, so decided by the owner (2026-10-28): the Y goes out on the side whose
+	indicator flashes, for the whole cycle (UN R48 6.19.7.5 allows that or dimming); the bumper's
+	side marker stays steady, as on the EU SVJ; a high beam on its own control. Chosen, with no
+	source: the Y's level with the headlights on (seen lit at night, brightness not measurable).
 ]]
 local CarLights = require("../Rules/CarLights")
 
@@ -53,6 +54,7 @@ export type CarLightsConfig = {
 		rearMarker: Glow,
 	},
 	HEADLIGHT: { range: number, angle: number, brightness: number, color: Rgb, pitch: number },
+	HIGH_BEAM: { range: number, angle: number, brightness: number, pitch: number },
 	TAIL: { range: number, brightness: number, brakeRange: number, brakeBrightness: number, color: Rgb },
 	INDICATOR: { range: number, brightness: number, color: Rgb },
 	REVERSE: { range: number, angle: number, brightness: number, color: Rgb },
@@ -83,6 +85,9 @@ local Config: CarLightsConfig = table.freeze({
 		blinkOnShare = 0.5,
 		drlWithHeadlights = 0.15,
 		drlWhileIndicating = 0,
+		-- The projector's lens glows brighter on high beam: one bi-xenon unit does both beams
+		-- (a shutter moves), so the same lens shows more light.
+		highBeamLevel = 1.6,
 	}),
 	NIGHT_BRIGHTNESS = 0.6,
 	DAY_BRIGHTNESS = 1.6,
@@ -113,6 +118,10 @@ local Config: CarLightsConfig = table.freeze({
 		color = rgb(248, 248, 255),
 		pitch = math.rad(-3),
 	}),
+	-- On high beam a second, narrower beam from each projector reaches level ahead, on top of the
+	-- dipped one (the regulations' high beam peaks at 40,000 cd and more against a dipped beam's
+	-- 10,000 at its key point: UN R149, FMVSS 108).
+	HIGH_BEAM = table.freeze({ range = 60, angle = 30, brightness = 8, pitch = 0 }),
 	TAIL = table.freeze({
 		range = 3,
 		brightness = 0.25,

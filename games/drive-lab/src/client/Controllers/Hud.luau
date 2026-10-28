@@ -326,8 +326,10 @@ local function refresh(current: Ui, model: Model)
 		current.absLine,
 		DriverAssists.telltale(assists.abs, model:GetAttribute("AbsActive") == true)
 	)
-	current.light.ImageColor3 = if model:GetAttribute("HeadlightsOn") == true
-		then Config.GREEN
+	-- Blue for the high beam, as a car's own tell-tale; green for the dipped beam (Controllers/CarLights).
+	current.light.ImageColor3 = if model:GetAttribute("HighBeamOn") == true
+		then Config.BLUE
+		elseif model:GetAttribute("HeadlightsOn") == true then Config.GREEN
 		else Config.OFF
 	current.left.Visible = model:GetAttribute("IndicatorLeft") == true
 	current.right.Visible = model:GetAttribute("IndicatorRight") == true

@@ -12,12 +12,14 @@ local TUNING: CarLights.Tuning = {
 	blinkOnShare = 0.5,
 	drlWithHeadlights = 0.15,
 	drlWhileIndicating = 0,
+	highBeamLevel = 1.6,
 }
 
 local function state(overrides: { [string]: any }): CarLights.State
 	local base: { [string]: any } = {
 		running = true,
 		mode = "Auto",
+		highBeam = false,
 		night = false,
 		rain = 0,
 		brake = 0,
@@ -114,8 +116,9 @@ describe("CarLights", function()
 	end)
 
 	it("burns the Y lamps as tail lamps at a fifth of their brake output or less", function()
-		local tail = CarLights.levels(decide({ night = true }), Config.TAIL_SHARE)
-		local braking = CarLights.levels(decide({ night = true, brake = 1 }), Config.TAIL_SHARE)
+		local tail = CarLights.levels(decide({ night = true }), Config.TAIL_SHARE, TUNING.highBeamLevel)
+		local braking =
+			CarLights.levels(decide({ night = true, brake = 1 }), Config.TAIL_SHARE, TUNING.highBeamLevel)
 		expect(braking.tail).toBe(1)
 		expect(tail.tail > 0).toBe(true)
 		expect(braking.tail / tail.tail >= 5).toBe(true)
@@ -153,5 +156,51 @@ describe("CarLights", function()
 		expect(perMinute >= 60 and perMinute <= 120).toBe(true)
 		expect(Config.TUNING.blinkOnShare >= 0.3 and Config.TUNING.blinkOnShare <= 0.75).toBe(true)
 		expect(1 / Config.TAIL_SHARE >= 5).toBe(true)
+	end)
+
+	it("shines the high beam only while the headlights are on", function()
+		expect(decide({ highBeam = true }).highBeam).toBe(false)
+		expect(decide({ highBeam = true, night = true }).highBeam).toBe(true)
+		expect(decide({ highBeam = true, mode = "On" }).highBeam).toBe(true)
+		expect(decide({ highBeam = true, mode = "Off", night = true }).highBeam).toBe(false)
+		expect(decide({ highBeam = true, mode = "On", running = false }).highBeam).toBe(false)
+		expect(decide({ mode = "On" }).highBeam).toBe(false)
+	end)
+
+	it("steps the pad's lights button Auto, On, high beam, Off and round", function()
+		local mode, high = CarLights.nextPadLights("Auto", false)
+		expect(mode).toBe("On")
+		expect(high).toBe(false)
+		mode, high = CarLights.nextPadLights(mode, high)
+		expect(mode).toBe("On")
+		expect(high).toBe(true)
+		mode, high = CarLights.nextPadLights(mode, high)
+		expect(mode).toBe("Off")
+		expect(high).toBe(false)
+		mode, high = CarLights.nextPadLights(mode, high)
+		expect(mode).toBe("Auto")
+		expect(high).toBe(false)
+		mode, high = CarLights.nextPadLights("Auto", true)
+		expect(mode).toBe("On")
+		expect(high).toBe(false)
+	end)
+
+	it("glows the projector brighter on high beam than dipped", function()
+		local dipped = CarLights.levels(decide({ mode = "On" }), Config.TAIL_SHARE, TUNING.highBeamLevel)
+		local high = CarLights.levels(
+			decide({ mode = "On", highBeam = true }),
+			Config.TAIL_SHARE,
+			TUNING.highBeamLevel
+		)
+		local off = CarLights.levels(
+			decide({ mode = "Off", highBeam = true }),
+			Config.TAIL_SHARE,
+			TUNING.highBeamLevel
+		)
+		expect(dipped.projector).toBe(1)
+		expect(high.projector).toBe(TUNING.highBeamLevel)
+		expect(high.projector > dipped.projector).toBe(true)
+		expect(off.projector).toBe(0)
+		expect(Config.TUNING.highBeamLevel > 1).toBe(true)
 	end)
 end)

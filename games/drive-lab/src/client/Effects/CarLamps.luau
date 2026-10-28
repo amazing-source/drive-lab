@@ -3,7 +3,7 @@
 	One car's lamps on this client. Each lamp is a piece of the car's light mesh with its own
 	SurfaceAppearance (tools/blender/split_lights.py), so a lamp glows by its EmissiveStrength
 	alone; the housings and the rear fog lamps never glow. Roblox lights added here throw the
-	light: a beam per headlight, a red glow behind each tail lamp, an amber glow at each
+	light: a beam per headlight and a farther one on high beam, a red glow behind each tail lamp, an amber glow at each
 	indicator, a reversing light, and the cabin light in the roof console. Only what changed is
 	written.
 ]]
@@ -29,6 +29,7 @@ export type Lamps = {
 	stop: { Glow },
 	reverse: { Glow },
 	beams: { Switch },
+	highBeams: { Switch },
 	tailGlows: { PointLight },
 	blinksLeft: { Switch },
 	blinksRight: { Switch },
@@ -210,7 +211,7 @@ local function required(model: Model): { [string]: BasePart }?
 end
 
 local function addSources(lamps: Lamps, parts: { [string]: BasePart })
-	local headlight, indicator = Config.HEADLIGHT, Config.INDICATOR
+	local headlight, high, indicator = Config.HEADLIGHT, Config.HIGH_BEAM, Config.INDICATOR
 	for _, side in SIDES do
 		local projector = parts[`Light_Front{side}_Projector`]
 		local front = CFrame.new(0, 0, -projector.Size.Z / 2) * CFrame.Angles(headlight.pitch, 0, 0)
@@ -224,6 +225,11 @@ local function addSources(lamps: Lamps, parts: { [string]: BasePart })
 			headlight.color
 		)
 		table.insert(lamps.beams, switchFor(spot))
+		local level = CFrame.new(0, 0, -projector.Size.Z / 2) * CFrame.Angles(high.pitch, 0, 0)
+		local reach = attach(projector, "HighBeam", level)
+		local far =
+			spotLight(reach, Enum.NormalId.Front, high.angle, high.brightness, high.range, headlight.color)
+		table.insert(lamps.highBeams, switchFor(far))
 		local tail = attach(parts[`Light_Rear{side}_Tail`], "TailGlow", CFrame.identity)
 		table.insert(lamps.tailGlows, pointLight(tail, 0, 0, Config.TAIL.color))
 		local blinks = if side == "Left" then lamps.blinksLeft else lamps.blinksRight
@@ -283,6 +289,7 @@ function CarLamps.build(model: Model): Lamps?
 		stop = glows(model, sides("Light_Rear%s_Bar"), glow.stop),
 		reverse = glows(model, sides("Light_Rear%s_Reverse"), glow.reverse),
 		beams = {},
+		highBeams = {},
 		tailGlows = {},
 		blinksLeft = {},
 		blinksRight = {},
@@ -299,7 +306,7 @@ end
 -- Shows what Rules/CarLights decided. `daylight` is Rules.daylight's 0 (night) to 1 (day);
 -- `shadows` lets the beams and the cabin light cast shadows (each shadowed light costs a pass).
 function CarLamps.apply(lamps: Lamps, lit: Rules.Lit, daylight: number, shadows: boolean)
-	local levels = Rules.levels(lit, Config.TAIL_SHARE)
+	local levels = Rules.levels(lit, Config.TAIL_SHARE, Config.TUNING.highBeamLevel)
 	show(lamps.drlLeft, levels.drlLeft, daylight)
 	show(lamps.drlRight, levels.drlRight, daylight)
 	show(lamps.projector, levels.projector, daylight)
@@ -314,6 +321,9 @@ function CarLamps.apply(lamps: Lamps, lit: Rules.Lit, daylight: number, shadows:
 	local night = 1 - daylight
 	for _, switch in lamps.beams do
 		set(switch, lit.headlights, night)
+	end
+	for _, switch in lamps.highBeams do
+		set(switch, lit.highBeam, night)
 	end
 	if tail ~= lamps.tailShown or night ~= lamps.nightShown then
 		lamps.tailShown = tail

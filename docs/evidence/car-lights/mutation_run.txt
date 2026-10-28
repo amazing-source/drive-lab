@@ -1,28 +1,29 @@
-## blink starts dark: 59 spec files, 456 passed, 1 failed
-    FAIL CarLights > lights the indicator from the moment it is switched on, at its rate, the other side dark: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:89: expected tr
-## headlights without ignition: 59 spec files, 456 passed, 1 failed
-    FAIL CarLights > keeps every outside lamp dark until the ignition is on, and the cabin light works without it: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:76: expecte
-## cabin needs ignition: 59 spec files, 456 passed, 1 failed
-    FAIL CarLights > keeps every outside lamp dark until the ignition is on, and the cabin light works without it: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:83: expecte
-## DRL ignores indicator: 59 spec files, 456 passed, 1 failed
-    FAIL CarLights > puts out the running light on the indicator's side for the whole flash cycle: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:106: expected 0, got 1
-## DRL not dimmed by headlights: 59 spec files, 456 passed, 1 failed
-    FAIL CarLights > runs the daytime lights full, dimmed to a position lamp with the headlights: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:98: expected 0.15, got 1
-## tail with running lights: 59 spec files, 456 passed, 1 failed
-    FAIL CarLights > lights the tail lamps with the headlights, not with the running lights alone: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:112: expected false, got tr
-## tail share wins over brake: 59 spec files, 456 passed, 1 failed
-    FAIL CarLights > burns the Y lamps as tail lamps at a fifth of their brake output or less: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:119: expected 1, got 0.2
-## strength blend reversed: 59 spec files, 456 passed, 1 failed
-    FAIL CarLights > draws lamps brighter by day than at night, in proportion to their level: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:131: expected 2, got 8
-## daylight unclamped: 59 spec files, 456 passed, 1 failed
-    FAIL CarLights > draws lamps brighter by day than at night, in proportion to their level: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:129: expected 1, got 1.799999999
-## tap after hold: 59 spec files, 456 passed, 1 failed
-    FAIL CarLights > tells a tap from a hold on the pad's lights button: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:148: expected nil, got Tap
-## hold repeats: 59 spec files, 456 passed, 1 failed
-    FAIL CarLights > tells a tap from a hold on the pad's lights button: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:147: expected nil, got Hold
-## indicator 150 a minute: 59 spec files, 456 passed, 1 failed
-    FAIL CarLights > keeps the configured indicator rhythm and stop-to-tail ratio inside the regulations: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:153: expected true, 
-## tail a third of brake: 59 spec files, 455 passed, 2 failed
-    FAIL CarLights > burns the Y lamps as tail lamps at a fifth of their brake output or less: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:121: expected true, got false
-    FAIL CarLights > keeps the configured indicator rhythm and stop-to-tail ratio inside the regulations: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:155: expected true, 
-restored: 59 spec files, 457 passed, 0 failed
+## blink starts dark: 59 spec files, 461 passed, 1 failed
+    FAIL CarLights > lights the indicator from the moment it is switched on, at its rate, the other side dark: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:91: expected tr
+## headlights without ignition: 59 spec files, 460 passed, 2 failed
+    FAIL CarLights > keeps every outside lamp dark until the ignition is on, and the cabin light works without it: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:78: expecte
+    FAIL CarLights > shines the high beam only while the headlights are on: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:166: expected false, got true
+## cabin needs ignition: 59 spec files, 461 passed, 1 failed
+    FAIL CarLights > keeps every outside lamp dark until the ignition is on, and the cabin light works without it: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:85: expecte
+## DRL ignores indicator: 59 spec files, 461 passed, 1 failed
+    FAIL CarLights > puts out the running light on the indicator's side for the whole flash cycle: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:108: expected 0, got 1
+## DRL not dimmed by headlights: 59 spec files, 461 passed, 1 failed
+    FAIL CarLights > runs the daytime lights full, dimmed to a position lamp with the headlights: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:100: expected 0.15, got 1
+## tail with running lights: 59 spec files, 461 passed, 1 failed
+    FAIL CarLights > lights the tail lamps with the headlights, not with the running lights alone: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:114: expected false, got tr
+## tail share wins over brake: 59 spec files, 461 passed, 1 failed
+    FAIL CarLights > burns the Y lamps as tail lamps at a fifth of their brake output or less: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:122: expected 1, got 0.2
+## strength blend reversed: 59 spec files, 461 passed, 1 failed
+    FAIL CarLights > draws lamps brighter by day than at night, in proportion to their level: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:134: expected 2, got 8
+## daylight unclamped: 59 spec files, 461 passed, 1 failed
+    FAIL CarLights > draws lamps brighter by day than at night, in proportion to their level: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:132: expected 1, got 1.799999999
+## tap after hold: 59 spec files, 461 passed, 1 failed
+    FAIL CarLights > tells a tap from a hold on the pad's lights button: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:151: expected nil, got Tap
+## hold repeats: 59 spec files, 461 passed, 1 failed
+    FAIL CarLights > tells a tap from a hold on the pad's lights button: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:150: expected nil, got Hold
+## indicator 150 a minute: 59 spec files, 461 passed, 1 failed
+    FAIL CarLights > keeps the configured indicator rhythm and stop-to-tail ratio inside the regulations: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:156: expected true, 
+## tail a third of brake: 59 spec files, 460 passed, 2 failed
+    FAIL CarLights > burns the Y lamps as tail lamps at a fifth of their brake output or less: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:124: expected true, got false
+    FAIL CarLights > keeps the configured indicator rhythm and stop-to-tail ratio inside the regulations: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:158: expected true, 
+restored: 59 spec files, 462 passed, 0 failed

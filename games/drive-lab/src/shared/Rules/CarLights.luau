@@ -3,9 +3,9 @@
 	What a car's lamps show for a given state, as the Aventador S and SVJ behave (sources in
 	Config/CarLights): nothing lit until the ignition is on; running lights then, dimmed with the
 	headlights and out on the side whose indicator runs; headlights by mode (automatic at night or
-	in heavy rain); tail lights with the headlights; brake and reversing lights; indicators that
-	flash from the moment they are switched on; and the cabin light, which works with the
-	ignition off.
+	in heavy rain), with the high beam on top of them when the driver asks for it; tail lights with
+	the headlights; brake and reversing lights; indicators that flash from the moment they are
+	switched on; and the cabin light, which works with the ignition off.
 ]]
 local CarLights = {}
 
@@ -16,6 +16,8 @@ export type State = {
 	-- The ignition is on: from the START press while the engine runs.
 	running: boolean,
 	mode: Mode,
+	-- The driver has the high beam selected; it shines only while the headlights are on.
+	highBeam: boolean,
 	night: boolean,
 	rain: number,
 	brake: number,
@@ -35,10 +37,13 @@ export type Tuning = {
 	-- The running lights' level with the headlights on, and on the indicator's side while it runs.
 	drlWithHeadlights: number,
 	drlWhileIndicating: number,
+	-- The projector's glow on high beam, a share of its low-beam glow.
+	highBeamLevel: number,
 }
 
 export type Lit = {
 	headlights: boolean,
+	highBeam: boolean,
 	drlLeft: number,
 	drlRight: number,
 	tail: boolean,
@@ -95,6 +100,7 @@ function CarLights.decide(state: State, tuning: Tuning): Lit
 	local flash = running and CarLights.blinkOn(state.indicating, tuning.blinkHz, tuning.blinkOnShare)
 	return {
 		headlights = headlights,
+		highBeam = headlights and state.highBeam,
 		drlLeft = drl("Left", state, headlights, tuning),
 		drlRight = drl("Right", state, headlights, tuning),
 		tail = headlights,
@@ -106,16 +112,30 @@ function CarLights.decide(state: State, tuning: Tuning): Lit
 	}
 end
 
--- Each lamp's output as a share of its full: the Y tail lamps burn at `tailShare` of their brake
--- output; the markers and plate lamps are position lamps, lit with the tail lamps.
-function CarLights.levels(lit: Lit, tailShare: number): Levels
+-- The pad's lights button steps the headlights Auto, On, high beam, Off and round again; a high
+-- beam selected from the keyboard in Auto counts as Auto.
+function CarLights.nextPadLights(mode: Mode, highBeam: boolean): (Mode, boolean)
+	if mode == "Auto" then
+		return "On", false
+	elseif mode == "On" and not highBeam then
+		return "On", true
+	elseif mode == "On" then
+		return "Off", false
+	end
+	return "Auto", false
+end
+
+-- Each lamp's output as a share of its full: the projector at `highBeamLevel` on high beam; the
+-- Y tail lamps burn at `tailShare` of their brake output; the markers and plate lamps are
+-- position lamps, lit with the tail lamps.
+function CarLights.levels(lit: Lit, tailShare: number, highBeamLevel: number): Levels
 	local function on(flag: boolean): number
 		return if flag then 1 else 0
 	end
 	return {
 		drlLeft = lit.drlLeft,
 		drlRight = lit.drlRight,
-		projector = on(lit.headlights),
+		projector = if lit.highBeam then highBeamLevel elseif lit.headlights then 1 else 0,
 		left = on(lit.left),
 		right = on(lit.right),
 		position = on(lit.tail),

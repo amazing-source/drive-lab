@@ -5,9 +5,9 @@
 	client knows it for every car.
 
 	The driver of a car: H cycles the headlights (automatic, on, off; automatic means at night or
-	in heavy rain), X and C toggle the left and right indicators, L the cabin light; on a pad,
-	D-pad left and right are the indicators and D-pad down cycles the headlights on a tap and
-	switches the cabin light on a hold. The car this player drives also shows its brakes and
+	in heavy rain), J switches the high beam, X and C toggle the left and right indicators, L the
+	cabin light; on a pad, D-pad left and right are the indicators and D-pad down steps the
+	headlights Auto, On, high beam, Off on a tap and switches the cabin light on a hold. The car this player drives also shows its brakes and
 	reverse from its readouts; other cars show what this client can know: running lights and
 	headlights. Everything here is local.
 ]]
@@ -33,6 +33,7 @@ local localPlayer = Players.LocalPlayer
 local cars: { [Model]: CarLamps.Lamps } = {}
 local waiting: { [Model]: true } = {}
 local mode: Rules.Mode = "Auto"
+local highBeam = false
 local indicator: Rules.Side? = nil
 local indicatorSince = 0
 local cabin = false
@@ -78,7 +79,7 @@ local function padButton(now: number)
 	end
 	local gesture = Rules.press(pad, down and drivenModel() ~= nil, now, Config.PAD_HOLD_SECONDS)
 	if gesture == "Tap" then
-		mode = Rules.nextMode(mode)
+		mode, highBeam = Rules.nextPadLights(mode, highBeam)
 	elseif gesture == "Hold" then
 		cabin = not cabin
 	end
@@ -108,6 +109,7 @@ local function update(dt: number)
 		local lit = Rules.decide({
 			running = CarEntry.startup(CarState.read(model), serverNow).sincePress ~= nil,
 			mode = if mine then mode else "Auto",
+			highBeam = mine and highBeam,
 			night = night,
 			rain = if typeof(rain) == "number" then rain else 0,
 			brake = if mine then number(model, "Brake", 0) else 0,
@@ -121,6 +123,7 @@ local function update(dt: number)
 		if mine then
 			-- For the HUD's tell-tales; local, like every readout on the driven car.
 			model:SetAttribute("HeadlightsOn", lit.headlights)
+			model:SetAttribute("HighBeamOn", lit.highBeam)
 			model:SetAttribute("IndicatorLeft", lit.left)
 			model:SetAttribute("IndicatorRight", lit.right)
 		end
@@ -146,6 +149,8 @@ function Controller.start()
 		local key = input.KeyCode
 		if table.find(Controls.HEADLIGHTS, key) then
 			mode = Rules.nextMode(mode)
+		elseif table.find(Controls.HIGH_BEAM, key) then
+			highBeam = not highBeam
 		elseif table.find(Controls.CABIN_LIGHT, key) then
 			cabin = not cabin
 		elseif table.find(Controls.INDICATOR_LEFT, key) then

@@ -12,6 +12,7 @@ export type Controls = {
 	ESC_OFF: { Enum.KeyCode },
 	CAMERA_VIEW: { Enum.KeyCode },
 	HEADLIGHTS: { Enum.KeyCode },
+	HIGH_BEAM: { Enum.KeyCode },
 	CABIN_LIGHT: { Enum.KeyCode },
 	LIGHTS_PAD: { Enum.KeyCode },
 	INDICATOR_LEFT: { Enum.KeyCode },
@@ -39,10 +40,11 @@ local Controls: Controls = table.freeze({
 	-- same place on QWERTY and AZERTY; View is the one gamepad button free while driving.
 	ESC_OFF = { Enum.KeyCode.G, Enum.KeyCode.ButtonSelect },
 	CAMERA_VIEW = { Enum.KeyCode.V, Enum.KeyCode.ButtonR3 },
-	-- H, X, C and L sit in the same place on QWERTY and AZERTY. The pad has no button left while
-	-- driving: D-pad down cycles the headlights on a tap and switches the cabin light on a hold
-	-- (Config/CarLights.PAD_HOLD_SECONDS).
+	-- H, J, X, C and L sit in the same place on QWERTY and AZERTY; J, the high beam, is next to H.
+	-- The pad has no button left while driving: D-pad down steps the headlights Auto, On, high
+	-- beam, Off on a tap and switches the cabin light on a hold (Config/CarLights.PAD_HOLD_SECONDS).
 	HEADLIGHTS = { Enum.KeyCode.H },
+	HIGH_BEAM = { Enum.KeyCode.J },
 	CABIN_LIGHT = { Enum.KeyCode.L },
 	LIGHTS_PAD = { Enum.KeyCode.DPadDown },
 	INDICATOR_LEFT = { Enum.KeyCode.X, Enum.KeyCode.DPadLeft },

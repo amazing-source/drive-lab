@@ -1,0 +1,10 @@
+## high beam without the headlights: 59 spec files, 460 passed, 2 failed
+    FAIL CarLights > shines the high beam only while the headlights are on: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:162: expected false, got true
+    FAIL CarLights > glows the projector brighter on high beam than dipped: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:203: expected 0, got 1.6
+## pad cycle skips the high beam: 59 spec files, 461 passed, 1 failed
+    FAIL CarLights > steps the pad's lights button Auto, On, high beam, Off and round: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:175: expected On, g
+## projector ignores the high beam: 59 spec files, 461 passed, 1 failed
+    FAIL CarLights > glows the projector brighter on high beam than dipped: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:201: expected 1.6, got 1
+## high beam dimmer than dipped: 59 spec files, 461 passed, 1 failed
+    FAIL CarLights > glows the projector brighter on high beam than dipped: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-lights-svj\games\drive-lab\tests\CarLights.spec:204: expected true, got false
+restored: 59 spec files, 462 passed, 0 failed
