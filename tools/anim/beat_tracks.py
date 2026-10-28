@@ -16,6 +16,9 @@ from scipy.interpolate import PchipInterpolator
 
 import r6_fk
 
+# Frames over which a solved standing height eases into the authored pelvis at a support's ends.
+SUPPORT_EASE = 6
+
 
 class Track:
     def __init__(self, size):
@@ -142,15 +145,36 @@ class Body:
         frames = np.arange(self.frames)
         pel = self.pelvis.sample(frames)
         tor = self.torso.sample(frames)
-        # Riding the torso (hang) asks for its frame every frame: compute them once. These are the
-        # authored pelvis heights; a solved standing height shifts a hanging hand with the body
-        # only through the pelvis track, which is close enough for a free arm.
+        guess = {k: np.array(v, dtype=float) for k, v in self.guess.items()}
+        # The body first: where a foot is planted the pelvis height is solved from the legs (their
+        # targets are points on the ground, never riding the body). Then every target that rides
+        # the body (a hanging hand, a hand finding a surface within reach, the strap) is read off
+        # the SOLVED body, so a contact hand sees the shoulder it will really have.
         self._frames_cache = None
+        legs = {k: self.targets[k].sample(frames) for k in ("right_leg", "left_leg")}
+        solved = np.array(pel, dtype=float)
+        supported = np.zeros(len(frames), dtype=bool)
+        for i in frames:
+            support = [limb for start, end, limbs in self.support if start <= i <= end for limb in limbs]
+            if support:
+                supported[i] = True
+                rot = r6_fk.body_turn(*tor[i])
+                solved[i][1] = self._standing_height(solved[i], rot, support, {k: legs[k][i] for k in support}, guess)
+        # Where support starts or ends, the solved height and the authored one differ; easing that
+        # difference in and out over a few frames keeps the hips from popping (a pop drags a foot
+        # that was planted a frame before).
+        lift = solved[:, 1] - pel[:, 1]
+        for i in np.flatnonzero(~supported):
+            near = [j for j in range(max(0, i - SUPPORT_EASE), min(len(frames), i + SUPPORT_EASE + 1)) if supported[j]]
+            if near:
+                j = min(near, key=lambda k: abs(k - i))
+                u = 1.0 - abs(i - j) / (SUPPORT_EASE + 1)
+                solved[i][1] = pel[i][1] + lift[j] * u * u * (3 - 2 * u)
         cache = {}
         for i in frames:
             m = np.identity(4)
             m[:3, :3] = r6_fk.body_turn(*tor[i])
-            m[:3, 3] = pel[i] - m[:3, :3] @ np.asarray(r6_fk.PELVIS, dtype=float)
+            m[:3, 3] = solved[i] - m[:3, :3] @ np.asarray(r6_fk.PELVIS, dtype=float)
             cache[int(i)] = m
         self._frames_cache = cache
         nek = self.neck.sample(frames)
@@ -158,15 +182,11 @@ class Body:
         tgt = {k: t.sample(frames) for k, t in self.targets.items()}
         tw = {k: t.sample(frames)[:, 0] for k, t in self.twist.items()}
         poses, misses = [], []
-        guess = {k: np.array(v, dtype=float) for k, v in self.guess.items()}
         for i in frames:
             # Torso angles are body-relative (lean, yaw, roll); RootJoint gets the matrix.
             rot = r6_fk.body_turn(*tor[i])
-            pelvis = np.array(pel[i])
+            pelvis = np.array(solved[i])
             pose = {"Neck": (tuple(nek[i]), (0, 0, 0))}
-            support = [limb for start, end, limbs in self.support if start <= i <= end for limb in limbs]
-            if support:
-                pelvis[1] = self._standing_height(pelvis, rot, support, {k: tgt[k][i] for k in support}, guess)
             # Root part sits at (0, 3, 0): its frame is the authoring frame shifted up 3.
             loc = r6_fk.torso_root_offset(rot, pelvis - np.array([0.0, r6_fk.ROOT_HEIGHT, 0.0]))
             pose["RootJoint"] = (rot, tuple(loc))
