@@ -63,9 +63,21 @@ local ok, err = pcall(function()
 		local d, h, animator = dummy(Driving.DRIVER_SCALE)
 		local root = d:FindFirstChild("HumanoidRootPart") :: BasePart
 		if case.variant == "seated" then
+			-- The previous dummy's SeatWeld can outlive it and keep the seat occupied: clear it,
+			-- then wait until this dummy is really seated before sampling.
+			for _, w in seat:GetChildren() do
+				if w:IsA("Weld") and w.Name == "SeatWeld" then
+					w:Destroy()
+				end
+			end
+			task.wait(0.1)
 			d:PivotTo(seat.CFrame + Vector3.new(0, 4, 0))
 			seat:Sit(h)
-			task.wait(0.2)
+			local waitedSit = 0
+			while h.SeatPart ~= seat and waitedSit < 2 do
+				task.wait(0.05)
+				waitedSit += 0.05
+			end
 		else
 			-- Standing at the mark, on the ground, as DoorMark.frame and the server's standingFrame
 			-- put it, from the clip's own MARK (the place may hold an older one).
@@ -75,7 +87,9 @@ local ok, err = pcall(function()
 			local mark = CFrame.lookAt(at, at + Vector3.new(toward.X, 0, toward.Z))
 			local ground = seat.Position.Y + case.groundInSeat
 			root.Anchored = true
-			d:PivotTo(mark.Rotation + Vector3.new(mark.Position.X, ground + 3 * Driving.DRIVER_SCALE, mark.Position.Z))
+			-- The root itself, not the model's pivot: a description-built R6's pivot is not its root
+			-- (placing the pivot put the root 1.5 scaled studs low).
+			root.CFrame = mark.Rotation + Vector3.new(mark.Position.X, ground + 3 * Driving.DRIVER_SCALE, mark.Position.Z)
 		end
 		local animation = Instance.new("Animation")
 		animation.AnimationId = case.id
@@ -87,34 +101,45 @@ local ok, err = pcall(function()
 		end
 		track:Play(0)
 		track:AdjustSpeed(0)
-		local worst, sum, n = 0, 0, 0
+		local worst, sum, n, headWorst = 0, 0, 0, 0
 		local rows = {}
 		for _, sample in case.samples do
 			track.TimePosition = sample.time
 			animator:StepAnimations(0)
 			task.wait()
 			animator:StepAnimations(0)
-			local frameWorst = 0
+			local frameWorst, headErr = 0, 0
 			for name, values in sample.parts do
 				local part = d:FindFirstChild(name)
 				if part and name ~= "HumanoidRootPart" then
 					local got = seat.CFrame:PointToObjectSpace(part.Position)
 					local want = Vector3.new(values[1], values[2], values[3])
 					local e = (got - want).Magnitude
-					frameWorst = math.max(frameWorst, e)
-					sum += e
-					n += 1
+					if name == "Head" and case.variant == "standing" then
+						-- The standing variants leave the neck at rest (HeadLook turns the head in
+						-- game), so their head is reported apart from the body.
+						headErr = math.max(headErr, e)
+					else
+						frameWorst = math.max(frameWorst, e)
+						sum += e
+						n += 1
+					end
 				end
 			end
 			worst = math.max(worst, frameWorst)
+			headWorst = math.max(headWorst, headErr)
 			table.insert(rows, string.format("%.2f:%.4f", sample.time, frameWorst))
 		end
 		track:Stop(0)
+		local rootInSeat = seat.CFrame:PointToObjectSpace(root.Position)
 		table.insert(results, {
 			clip = case.clip,
 			variant = case.variant,
+			seated = h.SeatPart == seat,
+			root = string.format("%.3f,%.3f,%.3f", rootInSeat.X, rootInSeat.Y, rootInSeat.Z),
 			length = track.Length,
 			worst = worst,
+			headWorst = headWorst,
 			mean = if n > 0 then sum / n else 0,
 			rows = table.concat(rows, " "),
 		})
