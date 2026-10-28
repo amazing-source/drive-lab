@@ -395,7 +395,7 @@ def outside_close(b, car, s, e):
     b.hang("right_arm", s + 2, s + 30, (1.5, -0.9, 0.0))
     b.neck.at(s + 6, (26, -24, 0))
     f = walk_steps(b, s + 4, 3, home_r, home_l, stand_r, stand_l, lead="left_leg", per=8, roll=4)
-    b.support.append((f, f + 34, both))
+    b.support.append((f, f + 35, both))  # to the walk back's first step, no unsupported frame
     b.pelvis.at(f, (px, 2.0, pz))
     # Up on the toes, leaning away to lift the right shoulder, the arm straight up for the corner.
     up = f + 8
@@ -604,8 +604,10 @@ def get_in(b, car, s, e, seat):
     b.pelvis.at(s + 62, perch + (0, 0.2, -0.05)).at(s + 64, perch + (0, 0.45, -0.1))
     b.pelvis.at(s + 66, perch + (0, 0.52, -0.15))
     for limb in feet:
-        b.targets[limb].at(s + 61, feet[limb] + (0, 0.08, 0)).at(s + 62, feet[limb] + (0, 0.2, 0))
-        b.targets[limb].at(s + 64, feet[limb] + (0, 0.42, -0.06)).at(s + 66, feet[limb] + (0, 0.55, -0.15))
+        # The soles leave by more than a tilted box foot's corner drop (~0.25) at once, or the corners
+        # drag as the hips rise.
+        b.targets[limb].at(s + 61, feet[limb] + (0, 0.3, 0)).at(s + 62, feet[limb] + (0, 0.38, 0))
+        b.targets[limb].at(s + 64, feet[limb] + (0, 0.48, -0.06)).at(s + 66, feet[limb] + (0, 0.55, -0.15))
     wall_r = V([PERCH_X - 0.7, WALL_TOP + 0.18, WALL_Z - 0.25])
     b.targets["right_arm"].at(s + 67, wall_r + (0, 0.35, 0.2))
     b.targets["right_arm"].attach(s + 70, s + 90, car.on_surface(b, "right_arm", wall_r, "GetIn right hand on the cabin wall"))
@@ -763,8 +765,10 @@ def get_out(b, car, s, e, seat):
     b.pelvis.at(s + 55, perch + (0, 0.42, -0.12)).at(s + 58, perch + (0, 0.06, -0.02)).at(s + 59, perch)
     b.torso.at(s + 55, (4, -184, 0)).at(s + 58, (0, FACING_OUT, 0))
     for limb in feet:
-        b.targets[limb].at(s + 54, feet[limb] + (0, 0.55, -0.15)).at(s + 57, feet[limb] + (0, 0.2, 0))
-        b.targets[limb].at(s + 58, feet[limb] + (0, 0.08, 0)).at(s + 59, feet[limb])
+        # A tilted box foot's lowest corner is about 0.25 below its sole: the soles stay high until
+        # the landing frame, or the corners touch down early and drag.
+        b.targets[limb].at(s + 54, feet[limb] + (0, 0.55, -0.15)).at(s + 57, feet[limb] + (0, 0.38, 0))
+        b.targets[limb].at(s + 58, feet[limb] + (0, 0.3, 0)).at(s + 59, feet[limb])
     hand_y = SILL_TOP + 0.18
     sill_r, sill_l = V([PERCH_X - 1.1, hand_y, -2.65]), V([PERCH_X + 0.6, hand_y, -2.75])
     b.targets["right_arm"].at(s + 54, sill_r + (0.1, 0.3, 0.1))
