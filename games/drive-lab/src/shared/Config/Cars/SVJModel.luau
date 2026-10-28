@@ -32,6 +32,22 @@ export type CarModel = {
 	-- bottom left), from the centre of mass in the car frame, metres: where the cockpit view
 	-- draws the water on the glass (Atmosphere/Windshield).
 	windshield: { { forward: number, right: number, up: number } },
+	-- The driver's door (its part names) and the START flap, each on a hinge: a pivot from the
+	-- centre of mass in the car frame (metres, before bodyRaise, like `seat`) and a unit axis in
+	-- the car frame. A positive turn about the axis by the right-hand rule in the chassis's space
+	-- (x right, y up, z back) opens it; the door by up to openAngle radians. Optional: a model
+	-- without them rigs as before.
+	door: {
+		parts: { string },
+		pivot: { forward: number, right: number, up: number },
+		axis: { forward: number, right: number, up: number },
+		openAngle: number,
+	}?,
+	flap: {
+		part: string,
+		pivot: { forward: number, right: number, up: number },
+		axis: { forward: number, right: number, up: number },
+	}?,
 }
 
 local SVJModel: CarModel = table.freeze({
@@ -66,7 +82,12 @@ local SVJModel: CarModel = table.freeze({
 	}),
 	-- Two meshes, the outer and inner faces of every window (the model's own red and orange
 	-- light lenses are Glass too and stay so).
-	glazing = table.freeze({ "Window_Window_Material_1", "WindowInside_Window_Material_1" }),
+	glazing = table.freeze({
+		"Window_Window_Material_1",
+		"WindowInside_Window_Material_1",
+		"DoorGlass",
+		"DoorGlassInside",
+	}),
 	-- Measured on the outer glass mesh (Window_Window_Material_1, read with an EditableMesh,
 	-- 2026-10-28): the vertices within 3.5 cm of the screen's plane, its four extremes. The SVJ's
 	-- screen is long and raked: 1.28 m from the roof down to the cowl, 1.21 m wide at the top and
@@ -76,6 +97,32 @@ local SVJModel: CarModel = table.freeze({
 		table.freeze({ forward = 0.003, right = 0.605, up = 0.492 }),
 		table.freeze({ forward = 1.253, right = 0.831, up = 0.228 }),
 		table.freeze({ forward = 1.253, right = -0.831, up = 0.228 }),
+	}),
+	-- Fitted by tools/blender/hero_car_door_hinge.py (2026-10-28; drive-lab-assets/door/HANDOFF.json):
+	-- the pivot sits at the front quarter window's tip by the A-pillar's foot, the axis turned
+	-- 18 degrees about up and tilted 30 degrees down outboard, so the door clears the fender and
+	-- swings out as it rises. Open, it stands 14 degrees outboard with its length 1.5 degrees
+	-- rearward of vertical, as photographed (Commons: Tuner tom, front; Axion23, rear three-quarter).
+	door = table.freeze({
+		parts = table.freeze({
+			"DoorPaint",
+			"DoorCarbon",
+			"DoorTrim",
+			"DoorInterior",
+			"DoorGlass",
+			"DoorGlassInside",
+			"DoorBase",
+		}),
+		pivot = table.freeze({ forward = 1.419, right = -0.9, up = 0.2386 }),
+		axis = table.freeze({ forward = 0.26762, right = -0.82364, up = -0.5 }),
+		openAngle = math.rad(90.8),
+	}),
+	-- Hinged on its front edge, across the car; the rear edge, with the finger notch, lifts
+	-- (Lamborghini's console photograph shows the notch at the rear).
+	flap = table.freeze({
+		part = "StartFlap",
+		pivot = table.freeze({ forward = 0.6318, right = 0, up = 0.017 }),
+		axis = table.freeze({ forward = 0, right = -1, up = 0 }),
 	}),
 })
 

@@ -12,6 +12,7 @@ local CollectionService = game:GetService("CollectionService")
 local Workspace = game:GetService("Workspace")
 
 local Geometry = require("../Vehicle/Geometry")
+local Hinge = require("../Rules/Hinge")
 local SVJModel = require("../Config/Cars/SVJModel")
 local Types = require("../Config/Cars/Types")
 local Units = require("../Units")
@@ -31,11 +32,19 @@ export type Rig = {
 	-- Turns about its C0's Z axis (the column, toward the driver); nil on a model without one.
 	steeringWheel: Weld?,
 	steeringWheelRest: CFrame,
+	-- The driver's door and the START flap open by turning their weld's C0 about its X axis (the
+	-- hinge); nil on a model without one. Each rest is that C0 shut.
+	door: Weld?,
+	doorRest: CFrame,
+	flap: Weld?,
+	flapRest: CFrame,
 	seat: Seat,
 	prompt: ProximityPrompt,
 }
 
 local TAG = "DriveLabCar"
+local DOOR_HINGE = "DoorHinge"
+local FLAP_HINGE = "FlapHinge"
 
 local CarRig = {
 	TAG = TAG,
@@ -150,6 +159,75 @@ local function weldSteeringWheel(chassis: BasePart, wheel: BasePart, lift: numbe
 	joint.C1 = wheel.PivotOffset
 	joint:SetAttribute("RestC0", joint.C0)
 	joint.Parent = chassis
+end
+
+-- A hinge in chassis space: at its pivot (raised with the body), X along its axis (Rules/Hinge).
+local function hingeFrame(pivot: Hinge.CarPoint, axis: Hinge.CarPoint, bodyRaise: number): CFrame
+	local x, y, z = Hinge.frame(Hinge.chassis(axis))
+	return CFrame.fromMatrix(
+		carSpace(pivot, pivot.up + bodyRaise),
+		Vector3.new(x.x, x.y, x.z),
+		Vector3.new(y.x, y.y, y.z),
+		Vector3.new(z.x, z.y, z.z)
+	)
+end
+
+local function hingeWeld(name: string, chassis: BasePart, part: BasePart, frame: CFrame)
+	local joint = Instance.new("Weld")
+	joint.Name = name
+	joint.Part0 = chassis
+	joint.Part1 = part
+	joint.C0 = frame
+	joint.C1 = part.CFrame:ToObjectSpace(chassis.CFrame * frame)
+	joint:SetAttribute("RestC0", frame)
+	joint.Parent = chassis
+end
+
+-- The door's parts and the flap that the binding names and the model has.
+local function hingedParts(model: Model, binding: SVJModel.CarModel): ({ BasePart }, BasePart?)
+	local door = {}
+	if binding.door then
+		for _, name in binding.door.parts do
+			local part = model:FindFirstChild(name, true)
+			if part and part:IsA("BasePart") then
+				table.insert(door, part)
+			end
+		end
+	end
+	local flap = if binding.flap then model:FindFirstChild(binding.flap.part, true) else nil
+	return door, if flap and flap:IsA("BasePart") then flap else nil
+end
+
+-- The door hangs on one Weld to an invisible part at its hinge, its parts welded rigidly to that
+-- part; the flap hangs on its own Weld. Turning either Weld's C0 about X opens it.
+local function hang(
+	model: Model,
+	chassis: BasePart,
+	binding: SVJModel.CarModel,
+	door: { BasePart },
+	flap: BasePart?
+)
+	if binding.door and #door > 0 then
+		local frame = hingeFrame(binding.door.pivot, binding.door.axis, binding.bodyRaise)
+		local hinge = newPart("Part", DOOR_HINGE, Vector3.new(0.2, 0.2, 0.2), chassis.CFrame * frame)
+		hinge.Massless = true
+		hinge.Parent = model
+		hingeWeld(DOOR_HINGE, chassis, hinge, frame)
+		for _, part in door do
+			local joint = Instance.new("WeldConstraint")
+			joint.Part0 = hinge
+			joint.Part1 = part
+			joint.Parent = part
+		end
+	end
+	if binding.flap and flap then
+		hingeWeld(
+			FLAP_HINGE,
+			chassis,
+			flap,
+			hingeFrame(binding.flap.pivot, binding.flap.axis, binding.bodyRaise)
+		)
+	end
 end
 
 local function rigFrame(model: Model, binding: SVJModel.CarModel, car: Types.CarConfig): (CFrame, number)
@@ -291,6 +369,14 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: SVJModel.CarM
 			moving[findPart(model, caliper)] = true
 		end
 	end
+	local doorParts, flapPart = hingedParts(model, binding)
+	local hinged: { [BasePart]: true } = {}
+	for _, part in doorParts do
+		hinged[part] = true
+	end
+	if flapPart then
+		hinged[flapPart] = true
+	end
 	for _, part in model:GetDescendants() do
 		if part:IsA("BasePart") and part ~= chassis then
 			part.Massless = true
@@ -299,7 +385,7 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: SVJModel.CarM
 			part.CanQuery = false
 			if moving[part] and part ~= steeringWheel then
 				weld(chassis, part)
-			elseif not moving[part] then
+			elseif not moving[part] and not hinged[part] then
 				local joint = Instance.new("WeldConstraint")
 				joint.Part0 = chassis
 				joint.Part1 = part
@@ -307,6 +393,7 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: SVJModel.CarM
 			end
 		end
 	end
+	hang(model, chassis, binding, doorParts, flapPart)
 	addHull(model, chassis, ground, binding.hullClearance)
 	addSeat(model, chassis, binding)
 	addClusterScreen(model, chassis, binding)
@@ -319,6 +406,16 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: SVJModel.CarM
 		end
 	end
 	return CarRig.find(model, binding) :: Rig
+end
+
+-- A hinge weld and its rest C0, or nil while it or its part has not streamed in.
+local function hingeOf(chassis: Instance, name: string): (Weld?, CFrame)
+	local joint = chassis:FindFirstChild(name)
+	local rest = joint and joint:GetAttribute("RestC0")
+	if joint and joint:IsA("Weld") and joint.Part1 and typeof(rest) == "CFrame" then
+		return joint, rest
+	end
+	return nil, CFrame.identity
 end
 
 -- Either side: the rig's pieces, or nil while they have not all streamed in.
@@ -361,6 +458,8 @@ function CarRig.find(model: Model, binding: SVJModel.CarModel): Rig?
 		end
 		calipers[index], caliperRest[index] = list, rests
 	end
+	local doorHinge, doorRest = hingeOf(chassis, DOOR_HINGE)
+	local flapHinge, flapRest = hingeOf(chassis, FLAP_HINGE)
 	local steeringWeld = chassis:FindFirstChild(binding.steeringWheel)
 	local steeringRest = steeringWeld and steeringWeld:GetAttribute("RestC0")
 	return {
@@ -379,6 +478,10 @@ function CarRig.find(model: Model, binding: SVJModel.CarModel): Rig?
 			then steeringWeld
 			else nil,
 		steeringWheelRest = if typeof(steeringRest) == "CFrame" then steeringRest else CFrame.identity,
+		door = doorHinge,
+		doorRest = doorRest,
+		flap = flapHinge,
+		flapRest = flapRest,
 		seat = seat,
 		prompt = prompt,
 	}
