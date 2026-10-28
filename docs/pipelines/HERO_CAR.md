@@ -253,6 +253,32 @@ its top about 12 degrees outboard (front view), measured on Commons photos (see 
 - Door sounds: one uploaded pack (`tools/audio/pack_door.py`), each sound a region; start them a
   little ahead of the door's own timeline so the shut's thump lands as it closes.
 
+### The pull strap (`hero_car_door_strap.py`)
+
+The seated driver closes the door by a 25 cm loop strap (the plausibility cap; aftermarket straps
+are 18 to 22 cm, reviews of the SVJ describe a leather pull strap in place of a handle). A strap
+is soft, so it is modelled as what a soft strap does, not as a stiff tab: a stiff strap would sit
+25 cm into the cabin trim with the door shut.
+- `measure` casts strap-wide rays down from the anchor (the card's inner lower edge nearest the
+  seated shoulder) at every quarter degree of the swing, against the body and the door, and keeps
+  the free length as a table: the strap hangs no longer than the trim below lets it (the rest of a
+  real strap would lie on the trim). On the SVJ: 16 cm shut, 2 to 5 cm from 1.5 to 8 degrees while
+  the door's lower edge sweeps just over the cabin trim, the whole 25 cm from 15.5 degrees. It then
+  checks every hanging pose, every held pose (taut from the anchor to the palm, from the grab angle
+  to shut) and the swing between them; `--full-length` must fail that check.
+- `tilt` measured the alternative, tilting a full-length strap aside instead of shortening it, and
+  it was not taken: shut, the strap would lie 60 degrees along the card, and between 2 and 8 degrees
+  the clearing direction jumps from one quarter degree to the next.
+- `build` exports the strap in its own frame (its -Y down the strap, its Z the faces' normal, full
+  length), so the game aims it by its weld's C0 and sets its length by `Size.Y`, and the door card
+  without the model's old short strap, size and origin unchanged for `ApplyMesh`. The strap's UVs
+  sit in the old strap's red island, so it takes the card's own SurfaceAppearance. The manifest
+  carries the place pose and the binding's numbers (`door.strap` in `Config/Cars/<Car>Model.luau`).
+- In the game the strap hangs on its own Weld from the chassis (`CarRig`), and
+  `Controllers/CarDoor` poses it every frame with `Rules/DoorStrap`: held while a clip that closes
+  the door by it plays (InsideClose, GetIn) and the door is between the grab angle and shut, aimed at
+  the seated driver's animated palm and never longer than the strap; hanging otherwise.
+
 ## Open items on the SVJ
 
 | Item | Plan |
