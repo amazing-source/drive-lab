@@ -1,7 +1,10 @@
 --!strict
 --[[
-	The driver's arms. While a character sits in a car's driver seat, its blocky arms are hidden
-	and custom ones drawn instead: the hands on the steering wheel's rim at a quarter to three,
+	The driver's arms. Once a character is seated in a car's driver seat (Rules/CarEntry's phase;
+	getting in and out, the body animation moves the blocky arms), its blocky arms are hidden
+	and custom ones drawn instead: the hands on the thighs while the engine is off, reaching
+	for the START flap and onto the wheel after the start key (Rig/StartupHands), then on the
+	steering wheel's rim at a quarter to three,
 	turning with the wheel up to FOLLOW_LIMIT either way (past that the wheel slides through
 	them), and an upper arm and a forearm reaching each wrist from the shoulder, the elbow
 	bending down and out (Rules/ArmIK).
@@ -22,9 +25,12 @@ local Workspace = game:GetService("Workspace")
 local Log = require(ReplicatedStorage.Kit.Log)
 
 local ArmIK = require(ReplicatedStorage.Shared.Rules.ArmIK)
+local CarEntry = require(ReplicatedStorage.Shared.Rules.CarEntry)
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
+local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local DriverArms = require(ReplicatedStorage.Shared.Config.DriverArms)
+local StartupHands = require(script.Parent.Parent.Rig.StartupHands)
 local Steering = require(ReplicatedStorage.Shared.Vehicle.Steering)
 
 type Side = {
@@ -38,6 +44,7 @@ type Side = {
 	elbow: BasePart,
 	hand: BasePart,
 	cuff: BasePart,
+	hands: StartupHands.Hands,
 }
 
 type Driver = {
@@ -45,6 +52,7 @@ type Driver = {
 	torso: BasePart,
 	model: Model,
 	chassis: BasePart,
+	seat: BasePart,
 	rest: CFrame,
 	maxTurn: number,
 	scale: number,
@@ -113,6 +121,7 @@ local function release(driver: Driver)
 		side.elbow:Destroy()
 		side.hand:Destroy()
 		side.cuff:Destroy()
+		StartupHands.release(side.hands)
 		if side.arm.Parent then
 			side.arm.Transparency = side.armTransparency
 		end
@@ -122,6 +131,7 @@ end
 local function build(model: Model, character: Model): Driver?
 	local torso = character:FindFirstChild("Torso")
 	local chassis = model:FindFirstChild("Chassis")
+	local seat = model:FindFirstChild("DriverSeat")
 	local wheel = chassis and chassis:FindFirstChild("SteeringWheel")
 	local name = model:GetAttribute("Car")
 	local entry = if typeof(name) == "string" then Catalog[name] else nil
@@ -130,6 +140,8 @@ local function build(model: Model, character: Model): Driver?
 		or not torso:IsA("BasePart")
 		or chassis == nil
 		or not chassis:IsA("BasePart")
+		or seat == nil
+		or not seat:IsA("BasePart")
 		or wheel == nil
 		or not wheel:IsA("Weld")
 		or wheel.Part1 == nil
@@ -186,6 +198,7 @@ local function build(model: Model, character: Model): Driver?
 			hand.Color = arm.Color
 		end
 		hand.Parent = folder
+		local cuff = sleeve(limb.cuff)
 		table.insert(sides, {
 			sign = limb.sign,
 			joint = joint,
@@ -195,7 +208,8 @@ local function build(model: Model, character: Model): Driver?
 			lower = lower,
 			elbow = elbowBall(scale),
 			hand = hand,
-			cuff = sleeve(limb.cuff),
+			cuff = cuff,
+			hands = StartupHands.build(limb.sign, hand, cuff, arm.Color, folder :: Folder),
 		})
 		arm.Transparency = 1
 	end
@@ -204,6 +218,7 @@ local function build(model: Model, character: Model): Driver?
 		torso = torso,
 		model = model,
 		chassis = chassis,
+		seat = seat,
 		rest = rest,
 		maxTurn = Steering.maxWheelAngle(entry.physics.steering),
 		scale = scale,
@@ -234,7 +249,7 @@ local function reach(
 	return CFrame.lookAt(shoulder, elbow, normal), CFrame.lookAt(elbow, reached, handBack)
 end
 
-local function pose(driver: Driver)
+local function pose(driver: Driver, state: CarEntry.State, now: number)
 	local steer = driver.model:GetAttribute("Steer")
 	local turn = math.clamp(
 		(if typeof(steer) == "number" then steer else 0) * driver.maxTurn,
@@ -246,20 +261,21 @@ local function pose(driver: Driver)
 	local torso = driver.torso.CFrame
 	local scale = driver.scale
 	local upper, lower = DriverArms.UPPER_LENGTH * scale, DriverArms.LOWER_LENGTH * scale
-	local centre, cuff, wrist = DriverArms.HAND_CENTRE, DriverArms.CUFF_CENTRE, DriverArms.HAND_WRIST
-	local forearm, back, bias = DriverArms.HAND_FOREARM, DriverArms.HAND_BACK, DriverArms.ELBOW_BIAS
-	local overhang = DriverArms.CUFF_OVERHANG
+	local bias, overhang = DriverArms.ELBOW_BIAS, DriverArms.CUFF_OVERHANG
+	-- The hands rest while the engine is off and reach through the start-up after the key.
+	local sinceKey = if state.engine == "On" then now - state.engineAt else nil
 	for _, side in driver.sides do
 		local sign = side.sign
 		local inset = Vector3.new(sign * DriverArms.SHOULDER_INSET * scale, 0, 0)
 		local shoulder = torso:PointToWorldSpace(side.joint.C0.Position - inset)
-		local wristAt = wheel:PointToWorldSpace(Vector3.new(sign * wrist.x, wrist.y, wrist.z))
+		local wrist, hand, handFrame, cuff, cuffFrame =
+			StartupHands.place(side.hands, wheel, driver.seat.CFrame, sinceKey)
+		local wristAt = wrist.Position
 		-- Toward where the elbow would be with the forearm straight down the hand's axis.
-		local along = wheel:VectorToWorldSpace(Vector3.new(sign * forearm.x, forearm.y, forearm.z))
+		local along = wrist.ZVector
 		local bendToward = (wristAt + along * lower - shoulder).Unit
 			+ torso:VectorToWorldSpace(Vector3.new(sign * bias.out, -bias.down, bias.back))
-		local handBack = wheel:VectorToWorldSpace(Vector3.new(sign * back.x, back.y, back.z))
-		local upperFrame, lowerFrame = reach(shoulder, wristAt, bendToward, handBack, upper, lower)
+		local upperFrame, lowerFrame = reach(shoulder, wristAt, bendToward, wrist.YVector, upper, lower)
 		table.insert(parts, side.upper)
 		table.insert(frames, upperFrame * CFrame.new(0, 0, -upper / 2))
 		-- The forearm runs past the wrist by the cuff's overhang, over the hand's cut end.
@@ -267,35 +283,45 @@ local function pose(driver: Driver)
 		table.insert(frames, lowerFrame * CFrame.new(0, 0, -(lower + overhang) / 2))
 		table.insert(parts, side.elbow)
 		table.insert(frames, CFrame.new(lowerFrame.Position))
-		table.insert(parts, side.hand)
-		table.insert(frames, wheel * CFrame.new(sign * centre.x, centre.y, centre.z))
-		table.insert(parts, side.cuff)
-		table.insert(frames, wheel * CFrame.new(sign * cuff.x, cuff.y, cuff.z))
+		table.insert(parts, hand)
+		table.insert(frames, handFrame)
+		table.insert(parts, cuff)
+		table.insert(frames, cuffFrame)
 	end
 end
 
+-- Only once seated: getting in and out, the body animation moves the blocky arms.
+local function seated(model: Model, now: number): boolean
+	return CarEntry.phase(CarState.read(model), now) == "Seated"
+end
+
 local function update()
+	local now = Workspace:GetServerTimeNow()
 	for _, model in CollectionService:GetTagged(CarRig.TAG) do
 		if model:IsA("Model") and drivers[model] == nil then
 			local character = seatedCharacter(model)
-			local driver = character and build(model, character)
-			if driver then
-				drivers[model] = driver
+			if character and seated(model, now) then
+				local driver = build(model, character)
+				if driver then
+					drivers[model] = driver
+				end
 			end
 		end
 	end
 	table.clear(parts)
 	table.clear(frames)
 	for model, driver in drivers do
+		local state = CarState.read(model)
 		if
 			model.Parent == nil
 			or seatedCharacter(model) ~= driver.character
 			or driver.torso.Parent == nil
+			or CarEntry.phase(state, now) ~= "Seated"
 		then
 			release(driver)
 			drivers[model] = nil
 		else
-			pose(driver)
+			pose(driver, state, now)
 		end
 	end
 	if #parts > 0 then
