@@ -85,6 +85,9 @@ function EntryWalk.place(walk: Walk, goal: CFrame, seconds: number)
 		task.wait()
 	end
 	root.Anchored = false
+	-- Held, the root kept the walk's velocity, and it would slide on with it (measured: 0.05 studs).
+	root.AssemblyLinearVelocity = Vector3.zero
+	root.AssemblyAngularVelocity = Vector3.zero
 	halt(walk)
 end
 
@@ -159,11 +162,12 @@ function EntryWalk.toMark(walk: Walk, seat: BasePart, hull: BasePart?): Outcome
 end
 
 -- Gives the body back to the player: free, turning with its walk, and when standing, with no
--- walk target left behind (a seated humanoid would keep one for when it stands).
-function EntryWalk.release(walk: Walk)
+-- walk target left behind (a seated humanoid would keep one for when it stands). `seated`: a
+-- seat's weld holds the body, which Humanoid.SeatPart can say a frame late.
+function EntryWalk.release(walk: Walk, seated: boolean)
 	walk.root.Anchored = false
 	walk.humanoid.AutoRotate = true
-	if walk.humanoid.SeatPart == nil then
+	if not seated and walk.humanoid.SeatPart == nil then
 		halt(walk)
 	end
 end

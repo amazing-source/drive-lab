@@ -171,11 +171,14 @@ local function record(): ({ Frame }, () -> ())
 		if character == nil or humanoid == nil or root == nil or torso == nil or animator == nil then
 			return
 		end
+		local weld = seat():FindFirstChild("SeatWeld")
+		local welded = weld ~= nil and weld:IsA("Weld") and weld.Part1 == root
 		table.insert(frames, {
 			t = os.clock() - started,
 			root = (root :: BasePart).Position,
 			torso = (torso :: BasePart).Position,
-			seated = humanoid.SeatPart ~= nil,
+			-- Seated by the weld itself, as the game's own clips decide it.
+			seated = welded,
 			anchored = (root :: BasePart).Anchored,
 			autoRotate = humanoid.AutoRotate,
 			scale = character:GetScale(),
@@ -207,6 +210,20 @@ local function standingJump(frames: { Frame }): number
 		local a, b = frames[index - 1], frames[index]
 		if not a.seated and not b.seated and a.character == b.character then
 			worst = math.max(worst, (Vector3.new(b.root.X, 0, b.root.Z) - Vector3.new(a.root.X, 0, a.root.Z)).Magnitude)
+		end
+	end
+	return worst
+end
+
+-- The largest move of the torso in one frame, of the same body: what the eye sees jump. The
+-- clips move it at most 0.18 studs a frame at 60 fps (GetIn, from the bakes), a walk 0.21.
+local function torsoJump(frames: { Frame }): number
+	local worst = 0
+	for index = 2, #frames do
+		local a, b = frames[index - 1], frames[index]
+		if a.character == b.character then
+			worst =
+				math.max(worst, (Vector3.new(b.torso.X, 0, b.torso.Z) - Vector3.new(a.torso.X, 0, a.torso.Z)).Magnitude)
 		end
 	end
 	return worst
@@ -374,7 +391,7 @@ local function check(scenario: Scenario, frames: { Frame }, log: { any }, notes:
 	end
 	local case, kind = scenario.case, scenario.abuse
 	expect(not root.Anchored, "the root is left anchored")
-	expect(standingJump(frames) <= 1, string.format("a standing jump of %.2f studs", standingJump(frames)))
+	expect(torsoJump(frames) <= 0.5, string.format("the torso jumped %.2f studs in one frame", torsoJump(frames)))
 	if kind == "ResetWalk" or kind == "ResetSequence" or kind == "WalkAway" then
 		expect(state.entry == "None", "entry state " .. state.entry)
 		expect(humanoid.SeatPart == nil, "still seated")
@@ -522,6 +539,7 @@ function Client.run(scenario: Scenario): { [string]: any }
 	result.pass = check(scenario, frames, log, result.notes) and done
 	result.timings = timings(frames)
 	result.standingJump = standingJump(frames)
+	result.torsoJump = torsoJump(frames)
 	result.handOverJump = handOverJump(frames)
 	result.requests = #log
 	local seen = {}

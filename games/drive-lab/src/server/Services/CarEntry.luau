@@ -92,20 +92,25 @@ local function placeRoot(character: Model, root: BasePart, frame: CFrame)
 	character:PivotTo(frame * root.CFrame:ToObjectSpace(character:GetPivot()))
 end
 
--- Instant, about the feet. Only for a body this server knows the place of (it has just left a
--- seat): one the client is walking would be pulled back to this server's late view of it.
+-- Scales about the root, which keeps its place. Scaling about the character's own pivot (an R6
+-- player's head) moves the root, and that write reaches the client that owns the body, from this
+-- server's late view of it (measured in Play: pulled back 0.45 to 4 studs). The client plants the
+-- feet again when the size arrives (Controllers/SeatHandOver).
+local function scaleAboutRoot(character: Model, root: BasePart, to: number)
+	if math.abs(character:GetScale() - to) <= SCALE_EPSILON then
+		return
+	end
+	local primary = character.PrimaryPart
+	character.PrimaryPart = root
+	character:ScaleTo(to)
+	character.PrimaryPart = primary
+end
+
 local function setScale(player: Player, to: number)
 	local character, _, root = body(player)
-	if character == nil or root == nil then
-		return
+	if character and root then
+		scaleAboutRoot(character, root, to)
 	end
-	local from = character:GetScale()
-	if math.abs(from - to) <= SCALE_EPSILON then
-		return
-	end
-	local feet = root.Position.Y - ROOT_HEIGHT * from
-	character:ScaleTo(to)
-	placeRoot(character, root, root.CFrame + Vector3.new(0, feet + ROOT_HEIGHT * to - root.Position.Y, 0))
 end
 
 local function speedKmh(car: Car): number
@@ -176,6 +181,16 @@ local function standingFrame(car: Car, spot: CFrame, scale: number): CFrame
 	return spot.Rotation + Vector3.new(spot.Position.X, height, spot.Position.Z)
 end
 
+-- Gives the body standing on `spot` the size `to`. This server's view of the root may be behind
+-- the client's (measured: 0.45 studs on the mark; still in the seat getting out) and a size change
+-- writes the body from that view to the client, so the root is put on `spot` first, then scaled
+-- about, then set at the new size's height, where the client puts it too.
+local function resizeOn(car: Car, character: Model, root: BasePart, spot: CFrame, to: number)
+	placeRoot(character, root, standingFrame(car, spot, character:GetScale()))
+	scaleAboutRoot(character, root, to)
+	placeRoot(character, root, standingFrame(car, spot, to))
+end
+
 -- A sequence that ends other than as authored (the occupant left, died or never sat): the door
 -- settles at its nearer rest and the engine stops.
 local function cutShort(car: Car, at: number)
@@ -233,16 +248,8 @@ local function seat(car: Car, player: Player, startedAt: number)
 		cutShort(car, now())
 		return
 	end
-	-- The client has stopped the body on the mark, where this server's view of it may still be
-	-- a little behind (measured: 0.45 studs), and scaling writes the root from that view back to
-	-- the client. So the root is put on the mark exactly before and after the size changes, all
-	-- in the same step as the seat weld.
-	local mark = DoorMark.frame(car.seat)
-	placeRoot(character, root, standingFrame(car, mark, character:GetScale()))
-	if math.abs(character:GetScale() - Driving.DRIVER_SCALE) > SCALE_EPSILON then
-		character:ScaleTo(Driving.DRIVER_SCALE)
-	end
-	placeRoot(character, root, standingFrame(car, mark, Driving.DRIVER_SCALE))
+	-- The client has stopped the body on the mark; resized there in the same step as the weld.
+	resizeOn(car, character, root, DoorMark.frame(car.seat), Driving.DRIVER_SCALE)
 	car.seat:Sit(humanoid)
 end
 
@@ -338,11 +345,10 @@ local function finishExit(car: Car, player: Player, startedAt: number)
 		weld:Destroy()
 	end
 	humanoid.Sit = false
-	-- The last clip ends standing at EXIT_END: the root goes under the body there, at full size.
-	if math.abs(character:GetScale() - 1) > SCALE_EPSILON then
-		character:ScaleTo(1)
-	end
-	placeRoot(character, root, standingFrame(car, DoorMark.exitFrame(car.seat), 1))
+	-- The client, which owns the body, puts it standing where the last clip frame shows it
+	-- (Controllers/SeatHandOver): a placement from here alone does not take on that client
+	-- (measured). It regains its size on that same spot.
+	resizeOn(car, character, root, DoorMark.exitFrame(car.seat), 1)
 end
 
 local function exit(car: Car, player: Player, _request: Request)

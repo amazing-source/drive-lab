@@ -29,8 +29,11 @@ local MOVED = 0.05
 local SIT, IDLE = Movement.ANIMATIONS.sit.id, Movement.ANIMATIONS.idle.id
 
 local heldWeld: Weld? = nil
-local placedOut: { car: Model, at: Vector3, scale: number, untilClock: number }? = nil
+local heldRoot: BasePart? = nil
+local placedOut: { car: Model, at: Vector3, untilClock: number }? = nil
 local standingUp = false
+-- The body's size last standing frame: a change plants the feet again.
+local lastScale: number? = nil
 
 local SeatHandOver = {}
 
@@ -46,47 +49,59 @@ local function seatOf(current: Body, entering: Model?): BasePart?
 	return if seat and seat:IsA("BasePart") then seat else nil
 end
 
--- The car whose seat holds the body: its seat weld holds the root, or, getting into `entering` or
--- with the humanoid already told it sits, the server has put the root in the seat before the weld
--- reached this client (measured: the body drawn in the seat for a frame, 5 studs from where the
--- clip shows it).
-function SeatHandOver.seatedIn(current: Body, entering: Model?): Model?
+local function weldHolds(current: Body, seat: BasePart): boolean
+	local weld = seat:FindFirstChild("SeatWeld")
+	return weld ~= nil and weld:IsA("Weld") and weld.Part1 == current.root
+end
+
+-- The car whose seat holds the body, and whether its weld does: getting into `entering`, the
+-- server can put the root in the seat before the weld reaches this client (measured: the body
+-- drawn in the seat for a frame, 5 studs from where the clip shows it).
+function SeatHandOver.seatedIn(current: Body, entering: Model?): (Model?, boolean)
 	local seat = seatOf(current, entering)
 	if seat == nil then
-		return nil
+		return nil, false
 	end
-	local weld = seat:FindFirstChild("SeatWeld")
-	local welded = weld ~= nil and weld:IsA("Weld") and weld.Part1 == current.root
-	local seating = entering ~= nil or current.humanoid.SeatPart == seat
-	local carried = seating and flat(current.root.Position - seat.Position).Magnitude < IN_SEAT
-	if not welded and not carried then
-		return nil
-	end
+	local welded = weldHolds(current, seat)
+	local carried = entering ~= nil and flat(current.root.Position - seat.Position).Magnitude < IN_SEAT
 	local model = seat.Parent
-	return if model and model:IsA("Model") and model:HasTag(CarRig.TAG) then model else nil
+	if (welded or carried) and model and model:IsA("Model") and model:HasTag(CarRig.TAG) then
+		return model, welded
+	end
+	return nil, false
 end
 
--- At the start of a frame: a weld held off last frame takes the root again, now that the clips
--- follow it.
+-- At the start of a frame: what was held for the last one is let go, now that the clips follow it.
 function SeatHandOver.beginFrame()
-	local weld = heldWeld
+	local weld, root = heldWeld, heldRoot
+	heldWeld, heldRoot = nil, nil
 	if weld then
-		heldWeld = nil
 		weld.Enabled = true
 	end
+	if root then
+		root.Anchored = false
+	end
 end
 
--- Before physics: a seat weld that arrived after this frame's clips were chosen (`posed` false)
--- would move the root into the seat with the body still posed standing. Held off for the frame.
-function SeatHandOver.holdLateWeld(current: Body, posed: boolean, entering: Model?)
-	if posed then
+-- Before physics, for a seat that changed after this frame's clips were chosen. A weld that
+-- arrived (`posed` false) would move the root into the seat with the body still posed standing:
+-- it is held off for the frame. Getting out of `leaving`, a weld that went would let the root
+-- move under the seated clips (measured: the torso 1.1 studs off for a frame): the root is held.
+function SeatHandOver.guardFrame(current: Body, posed: boolean, entering: Model?, leaving: Model?)
+	if not posed then
+		local seat = seatOf(current, entering)
+		local weld = seat and seat:FindFirstChild("SeatWeld")
+		if weld and weld:IsA("Weld") and weld.Part1 == current.root and weld.Enabled then
+			weld.Enabled = false
+			heldWeld = weld
+		end
 		return
 	end
-	local seat = seatOf(current, entering)
-	local weld = seat and seat:FindFirstChild("SeatWeld")
-	if weld and weld:IsA("Weld") and weld.Part1 == current.root and weld.Enabled then
-		weld.Enabled = false
-		heldWeld = weld
+	local seat = if leaving then leaving:FindFirstChild("DriverSeat") else nil
+	local root = current.root
+	if seat and seat:IsA("BasePart") and not weldHolds(current, seat) and not root.Anchored then
+		root.Anchored = true
+		heldRoot = root
 	end
 end
 
@@ -119,7 +134,21 @@ local function placeOut(current: Body, car: Model)
 	current.root.AssemblyAngularVelocity = Vector3.zero
 	current.humanoid:MoveTo(current.root.Position)
 	local untilClock = if placedOut then placedOut.untilClock else os.clock() + HOLD_OUT
-	placedOut = { car = car, at = current.root.Position, scale = scale, untilClock = untilClock }
+	placedOut = { car = car, at = current.root.Position, untilClock = untilClock }
+	lastScale = scale
+end
+
+-- The server changes the body's size about its root (Services/CarEntry), which leaves the feet
+-- in or above the ground: the root is set back above the ground for the new size.
+local function plantFeet(current: Body, scale: number)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { current.character }
+	local root = current.root
+	local hit = Workspace:Raycast(root.Position, Vector3.new(0, -2 * ROOT_HEIGHT, 0), params)
+	if hit then
+		root.CFrame += Vector3.new(0, hit.Position.Y + ROOT_HEIGHT * scale - root.Position.Y, 0)
+	end
 end
 
 -- The first frame off the seat after getting out. The server lets go of the body, but this client
@@ -138,24 +167,27 @@ function SeatHandOver.standUp(current: Body, car: Model)
 			track:Stop(0)
 		end
 	end
+	-- An exit clip still fading would pose the body against the root's new place.
+	ClipPlayer.stopAll(current.clips)
 	ClipPlayer.set(current.clips, IDLE, nil, 0)
 	standingUp = true
 end
 
--- Every standing frame: for a moment after getting out, a late size change or a late write from
--- the server that moves the body, while the player is not moving it, puts it back.
-function SeatHandOver.keepOut(current: Body)
+-- Every standing frame: the feet are planted again in the frame a new size arrives, and for a
+-- moment after getting out, a late write from the server that moves the body while the player
+-- is not moving it puts it back where it was placed.
+function SeatHandOver.keepStanding(current: Body)
 	local out = placedOut
-	if out == nil then
-		return
+	if out and (os.clock() > out.untilClock or current.humanoid.MoveDirection.Magnitude > 0.1) then
+		placedOut, out = nil, nil
 	end
-	if os.clock() > out.untilClock or current.humanoid.MoveDirection.Magnitude > 0.1 then
-		placedOut = nil
-		return
-	end
-	local moved = flat(current.root.Position - out.at).Magnitude > MOVED
-	if moved or current.character:GetScale() ~= out.scale then
+	local scale = current.character:GetScale()
+	local resized = lastScale ~= nil and scale ~= lastScale
+	lastScale = scale
+	if out and (resized or flat(current.root.Position - out.at).Magnitude > MOVED) then
 		placeOut(current, out.car)
+	elseif resized then
+		plantFeet(current, scale)
 	end
 end
 
@@ -167,7 +199,7 @@ function SeatHandOver.clearStanding(current: Body)
 end
 
 function SeatHandOver.reset()
-	heldWeld, placedOut, standingUp = nil, nil, false
+	heldWeld, heldRoot, placedOut, standingUp, lastScale = nil, nil, nil, false, nil
 end
 
 return table.freeze(SeatHandOver)

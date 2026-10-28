@@ -80,6 +80,14 @@ function ClipPlayer.set(self: ClipPlayer, id: string?, into: number?, fade: numb
 	end
 end
 
+-- Stops every clip at once, those still fading out included.
+function ClipPlayer.stopAll(self: ClipPlayer)
+	for _, track in self.tracks do
+		track:Stop(0)
+	end
+	self.playing, self.playingId = nil, nil
+end
+
 function ClipPlayer.destroy(self: ClipPlayer)
 	for _, track in self.tracks do
 		track:Stop(0)

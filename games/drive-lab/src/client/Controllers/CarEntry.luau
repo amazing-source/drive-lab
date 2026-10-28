@@ -169,7 +169,7 @@ local function onPrompt(car: Model, intent: Intent)
 	if asked or body ~= current then
 		return
 	end
-	EntryWalk.release(walker(current, false))
+	EntryWalk.release(walker(current, false), false)
 	SeatHandOver.headClear(current, false)
 	if reservedForMe(car) then
 		send(car, "Cancel")
@@ -183,6 +183,11 @@ end
 
 local function seatedClips(current: Body, car: Model, at: number)
 	local state = CarState.read(car)
+	if exiting == car and state.entry == "None" then
+		-- The exit is over but the seat has not let go yet: the last exit frame stays held, or a
+		-- rest pose fading in would drag the body back toward the seat as it is placed outside.
+		return
+	end
 	local phase = Rules.phase(state, at)
 	if phase == "Entering" or phase == "Exiting" then
 		local step, into = Rules.stepAt(Rules.steps(state.entry, state.entryDoorOpen), at - state.entryAt)
@@ -199,11 +204,12 @@ local function seatedClips(current: Body, car: Model, at: number)
 	ClipPlayer.set(current.clips, Config.SEATED_POSE, nil, POSE_FADE)
 end
 
--- Ends a request from outside: the body is free again; standing outside, its head collides again.
-local function finishPending(current: Body)
+-- Ends a request: the body is free again; standing outside, its head collides again. `seated`:
+-- the seat's weld holds the body (in one assembly with the car, the head cannot collide with it).
+local function finishPending(current: Body, seated: boolean)
 	pending = nil
-	EntryWalk.release(walker(current, false))
-	if current.humanoid.SeatPart == nil then
+	EntryWalk.release(walker(current, false), seated)
+	if not seated and current.humanoid.SeatPart == nil then
 		SeatHandOver.headClear(current, false)
 	end
 end
@@ -225,7 +231,7 @@ local function standingClips(current: Body, at: number)
 	local state = CarState.read(request.car)
 	if request.intent == "Enter" then
 		if refused(request, state, at) then
-			finishPending(current)
+			finishPending(current, false)
 		end
 		SeatHandOver.clearStanding(current)
 		return
@@ -239,7 +245,7 @@ local function standingClips(current: Body, at: number)
 		return
 	end
 	if door.finished or refused(request, state, at) then
-		finishPending(current)
+		finishPending(current, false)
 	end
 	SeatHandOver.clearStanding(current)
 end
@@ -251,8 +257,12 @@ local function update()
 		return
 	end
 	local at = now()
-	local car = SeatHandOver.seatedIn(current, entering())
+	local car, welded = SeatHandOver.seatedIn(current, entering())
 	posedSeated = car ~= nil
+	if car and welded and pending then
+		-- The seat holds the body: the entry is the server's now.
+		finishPending(current, true)
+	end
 	if car then
 		-- Kept once set: the car's state can read None a frame before its seat lets go.
 		local entry = CarState.read(car).entry
@@ -276,14 +286,14 @@ local function update()
 		SeatHandOver.standUp(current, leaving)
 		return
 	end
-	SeatHandOver.keepOut(current)
+	SeatHandOver.keepStanding(current)
 	standingClips(current, at)
 end
 
 local function afterAnimation()
 	local current = body
 	if current then
-		SeatHandOver.holdLateWeld(current, posedSeated, entering())
+		SeatHandOver.guardFrame(current, posedSeated, entering(), exiting)
 	end
 end
 
@@ -338,10 +348,6 @@ local function onCharacter(character: Model)
 		local inCar = seatedCar() ~= nil
 		-- Jumping would leave the seat; Space is the handbrake and leaving is the exit key's.
 		humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, not inCar)
-		local current = body
-		if inCar and current and current.humanoid == humanoid then
-			finishPending(current)
-		end
 	end)
 end
 
