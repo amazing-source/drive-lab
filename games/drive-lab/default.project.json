@@ -1,0 +1,37 @@
+{
+	"name": "DriveLab",
+	"tree": {
+		"$className": "DataModel",
+		"ReplicatedStorage": {
+			"Shared": {
+				"$path": "src/shared"
+			},
+			"Kit": {
+				"$path": "../../kit/src"
+			},
+			"Packages": {
+				"$path": "../../packages/shared"
+			}
+		},
+		"ServerScriptService": {
+			"Server": {
+				"$path": "src/server"
+			},
+			"Packages": {
+				"$path": "../../packages/server"
+			}
+		},
+		"StarterPlayer": {
+			"StarterPlayerScripts": {
+				"Client": {
+					"$path": "src/client"
+				}
+			},
+			"StarterCharacterScripts": {
+				"Animate": {
+					"$path": "src/character/Animate.client.luau"
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,3 @@
+--!strict
+-- Deliberately empty. A script named Animate here stops Roblox inserting its default one;
+-- Controllers/Locomotion animates the character instead.

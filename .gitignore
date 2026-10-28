@@ -1,0 +1,12 @@
+# Rojo build output at the repo root; games keep their build scripts in games/*/build/.
+/build/
+# Generated per checkout: the sourcemap by rojo, the type definitions by curl.
+sourcemap.json
+roblox.d.luau
+*.lock
+__pycache__/
+# Places built at the repo root (the CI build step).
+/*.rbxl
+
+# Agent worktrees (one per branch, see docs/engineering/AGENTIC_WORKFLOW.md).
+/.worktrees/

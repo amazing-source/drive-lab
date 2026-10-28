@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    # A spec that yields forever hangs the runner; fail in minutes, not GitHub's six hours.
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ok-nick/setup-aftman@v0.4.2
+
+      - name: Format
+        run: stylua --check games kit tools
+
+      - name: Lint
+        run: selene games/drive-lab/src kit/src tools
+
+      - name: Types
+        working-directory: games/drive-lab
+        run: |
+          curl -sfL https://raw.githubusercontent.com/JohnnyMorganz/luau-lsp/1.70.1/scripts/globalTypes.None.d.luau -o ../../roblox.d.luau
+          rojo sourcemap default.project.json -o sourcemap.json
+          luau-lsp analyze --sourcemap=sourcemap.json --definitions=../../roblox.d.luau --base-luaurc=../../.luaurc --ignore="**/packages/**" src ../../kit/src
+
+      - name: Unit tests
+        run: lune run tools/test/run
+
+      - name: Build
+        run: rojo build games/drive-lab/default.project.json -o drive-lab.rbxl

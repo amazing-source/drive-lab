@@ -1,0 +1,10 @@
+# The owner reads every line of these before a merge.
+
+# CI, templates and the workflow itself
+/.github/ @amazing-source
+/CLAUDE.md @amazing-source
+/docs/engineering/ @amazing-source
+
+# Remotes and the server's trust boundary
+/games/drive-lab/src/shared/Remotes.luau @amazing-source
+/games/drive-lab/src/server/ @amazing-source
