@@ -91,6 +91,12 @@ restored the decision. That is the behaviour this rule asks for from the start.
   come with an edit-mode capture or a measurement from Studio, or are listed as not verified.
 - **Scope every claim to what was tested.** "Checked at night in the chase view" is a claim;
   "works" is not.
+- **A runtime flow is checked in Play before its PR is merged.** Anything that changes what
+  happens when the player acts (input, client-server round trips, state, timing, physics) gets a
+  short functional Play session by the agent: the whole flow end to end, the state logged, then the
+  place restored. Edit-mode checks and models cannot replace it. The coordinator does not merge a PR
+  whose not-verified list names the flow's own runtime path (2026-10-28: the entry pacing passed
+  every edit-mode check, was merged, and broke getting in; reverted in #45).
 - **Feel is the owner's.** Driving feel, camera feel, sound balance: agents run the gates, sync,
   and hand over; they do not run measuring playtests in the owner's place.
 - **Performance** is measured for anything that runs every frame (script time p50/p95, frame
