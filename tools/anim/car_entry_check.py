@@ -12,7 +12,10 @@ the driver's scale for game studs).
       [--spacing 0.05] [--from F] [--to F] [--json out.json] [--mutate pelvis_y=-0.6@F0-F1]
 
 allow.json: [{"from", "to", "parts": [...], "groups": [...], "depth"}] = intended contacts (a bottom
-on the sill, a hand on the door) may go that deep; everything else fails above --tol. Exit code 1
+on the sill, a hand on the door) may go that deep; everything else fails above --tol. An entry with
+"touch": <gap> also REQUIRES the contact: on every frame of its span the end of each named part
+(the hand, the sole: the quarter of the part toward its end) must come within <gap> of those
+surfaces, or it fails as "float" (a hand pushing on air passes a penetration check). Exit code 1
 on any failure, so a deliberate mutation (--mutate) must turn the run red.
 
 --json also records what was checked: the SHA-256 of the baked timeline, the scene and the allow
@@ -97,6 +100,18 @@ def depths(points, frame, half, tol):
 def corners(frame, half):
     s = np.array([[x, y, z] for x in (-1, 1) for y in (-1, 1) for z in (-1, 1)], dtype=float)
     return (s * np.asarray(half)) @ frame[:3, :3].T + frame[:3, 3]
+
+
+def end_gap(points, frame, half):
+    """Distance from the end quarter of a limb box (local y from -half_y to -half_y/2) to the
+    nearest of `points`; infinity when there are none."""
+    if not len(points):
+        return float("inf")
+    local = (points - frame[:3, 3]) @ frame[:3, :3]
+    centre = np.array([0.0, -0.75 * half[1], 0.0])
+    box = np.array([half[0], 0.25 * half[1], half[2]])
+    excess = np.maximum(np.abs(local - centre) - box, 0.0)
+    return float(np.sqrt((excess**2).sum(axis=1)).min())
 
 
 def apply_mutation(frames, spec):
@@ -184,11 +199,21 @@ def main(argv):
             if -low > best:
                 best, group = -low, "ground"
             row["parts"][part] = {"depth": round(best, 3), "group": group, "low": round(low, 3)}
+            for a in allow:
+                if "touch" in a and a["from"] <= fr <= a["to"] and part in a["parts"]:
+                    reach = radius + 2.5  # wide enough to report how far a floating hand is
+                    near = [cloud[i] for i in tree.query_ball_point(m[:3, 3], reach) if labels[i] in a["groups"]]
+                    if door_pts is not None and "door" in a["groups"]:
+                        near += list(door_pts[np.linalg.norm(door_pts - m[:3, 3], axis=1) < reach])
+                    gap = end_gap(np.array(near).reshape(-1, 3), m, half)
+                    row["parts"][part]["gap"] = round(min(gap, 99.0), 3)
+                    if gap > float(a["touch"]):
+                        failures.append((fr, part, "float", round(min(gap, 99.0), 3)))
             if best > args.tol:
                 allowed = 0.0
                 for a in allow:
                     if a["from"] <= fr <= a["to"] and part in a["parts"] and group in a["groups"]:
-                        allowed = max(allowed, a["depth"])
+                        allowed = max(allowed, a.get("depth", 0.0))
                 if best > max(allowed, args.tol):
                     failures.append((fr, part, group, round(best, 3)))
             w = worst.get(part)
