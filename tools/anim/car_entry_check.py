@@ -198,7 +198,7 @@ def main(argv):
             low = float(corners(m, half)[:, 1].min())
             if -low > best:
                 best, group = -low, "ground"
-            row["parts"][part] = {"depth": round(best, 3), "group": group, "low": round(low, 3)}
+            row["parts"][part] = {"depth": round(best, 4), "group": group, "low": round(low, 4)}
             for a in allow:
                 if "touch" in a and a["from"] <= fr <= a["to"] and part in a["parts"]:
                     reach = radius + 2.5  # wide enough to report how far a floating hand is
@@ -215,10 +215,10 @@ def main(argv):
                     if a["from"] <= fr <= a["to"] and part in a["parts"] and group in a["groups"]:
                         allowed = max(allowed, a.get("depth", 0.0))
                 if best > max(allowed, args.tol):
-                    failures.append((fr, part, group, round(best, 3)))
+                    failures.append((fr, part, group, round(best, 6)))
             w = worst.get(part)
             if w is None or best > w[0]:
-                worst[part] = (round(best, 3), fr, group)
+                worst[part] = (round(best, 4), fr, group)
         # Feet: a sole on the ground should not slide. Measured at the sole's centre, so a foot
         # turning on the spot (a pivot) is not a slide.
         if previous is not None:
@@ -238,10 +238,10 @@ def main(argv):
 
     print(f"{len(frames)} frames, cloud {len(cloud)} points (+door {0 if door is None else len(door)}), tol {args.tol}")
     for part, (d, fr, group) in worst.items():
-        print(f"  worst {part:10s} {d:6.3f} at f{fr} ({group})")
+        print(f"  worst {part:10s} {d:7.4f} at f{fr} ({group})")
     print(f"FAILURES {len(failures)}")
     for fr, part, group, d in failures[:60]:
-        print(f"  f{fr:<4} {part:10s} {group:10s} {d}")
+        print(f"  f{fr:<4} {part:10s} {group:10s} {d:.4f}")
     if args.json:
         record = {
             "baked": args.baked,

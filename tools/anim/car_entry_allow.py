@@ -38,7 +38,9 @@ def measured(check, parts, groups, start, end):
     for f, part, group, depth in measure.get(check, []):
         if start <= f <= end and part in parts and group in groups:
             worst = max(worst, depth)
-    return math.ceil(worst * 1000 + 1) / 1000 if worst else 0.0  # rounded up, never below what was measured
+    # The check keeps depths to six decimals: the allowance is the measured maximum rounded UP at the
+    # fourth decimal, so it is the measured value and never below it.
+    return math.ceil(worst * 10000 - 1e-9) / 10000 if worst else 0.0
 
 
 THIGHS_ON_SILL = max(
