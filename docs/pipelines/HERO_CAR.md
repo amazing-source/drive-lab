@@ -148,14 +148,19 @@ blender -b --factory-startup -P tools/blender/split_lights.py -- <car.glb> <ligh
   their look.
 - **Output.** `lights.glb`, uploaded as one model with `tools/assets/upload_images.py`, and
   `lights.json`: each piece's box, and the boxes of the parts it was cut from.
-- **Into the place.** Back up the parts you change into ServerStorage (`CarImport_lights_backup`).
-  Each piece goes at its source part's CFrame moved by the piece's box centre minus the source's.
-  Housings and windows are swapped with `ApplyMesh`, then `Size` and `CFrame` are set (ApplyMesh
-  sets neither). New lamp pieces copy their corner's SurfaceAppearance with a uniform white
-  emissive mask, so a lamp glows over its whole surface, shaded by its colour map. Check that each
-  corner's pieces rebuild its old box.
+- **Into the place.** `tools/studio/lights_place.luau` (its header shows the MCP call):
+  `dry()` checks each piece is in the uploaded model at its box's size and that each corner's
+  pieces rebuild its old box; `apply()` backs up the parts it changes into
+  `ServerStorage.CarImport_lights_backup`, swaps the housings and windows with `ApplyMesh` and
+  sets their `Size` and `CFrame` (ApplyMesh sets neither), adds each lamp piece with its corner's
+  SurfaceAppearance and a uniform white emissive mask (a lamp glows over its whole surface,
+  shaded by its colour map), makes `LampGlass` clear Glass, all as one undo step. On the SVJ the
+  car's bounding box, and so the rig's hull, does not move.
 - **In game.** `Controllers/CarLights` decides (`Rules/CarLights`) and `Effects/CarLamps` drives
-  each piece's EmissiveStrength and tint, with the Roblox lights: headlight beams from the
+  each piece's EmissiveStrength and tint (a lamp behind a coloured lens also takes the lens's
+  colour as its SurfaceAppearance Color: Roblox Glass blends with what is behind it rather than
+  filtering it, so a white lamp face showed pink through the red lens), with the Roblox lights,
+  scaled by 1 - daylight since a real lamp's light is lost in the sun's: headlight beams from the
   projectors, red tail glow, amber indicator glow, a reversing light and the cabin light in the
   roof console (`SVJModel.cabinLight`). The roles, the rhythm and the sources per lamp are in
   `Config/CarLights.luau`. `Effects/ExhaustFlames` places its outlets from the union of each rear
