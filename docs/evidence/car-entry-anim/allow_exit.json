@@ -1,7 +1,7 @@
 [
  {
-  "why": "left hand on the release bar, pulling it and pushing the door up; the left arm against the door card as the body leans in to it",
-  "from": 6,
+  "why": "left hand on the release bar, pulling it and pushing the door up",
+  "from": 12,
   "to": 26,
   "parts": [
    "Left Arm"
@@ -13,6 +13,21 @@
    "trim"
   ],
   "depth": 0.12
+ },
+ {
+  "why": "DECIDED (lead): upper arm resting on the door card while reaching the release, at its measured depth",
+  "from": 6,
+  "to": 11,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "door",
+   "interior",
+   "carbon",
+   "trim"
+  ],
+  "depth": 0.095
  },
  {
   "why": "hands on the cabin wall and the lip through the hoist out",
@@ -48,7 +63,7 @@
   "depth": 0.398
  },
  {
-  "why": "INHERITED, TIGHTENED to its measured depth: thighs over the sill's edge while swinging out and perched",
+  "why": "INHERITED, TIGHTENED (rigid-thigh class): thighs over the sill's edge while swinging out and perched; one allowance with the entry's thighs over the lip, at their measured maximum",
   "from": 88,
   "to": 118,
   "parts": [
@@ -59,7 +74,7 @@
    "sill",
    "paint"
   ],
-  "depth": 0.148
+  "depth": 0.15
  },
  {
   "why": "bottom on the lip",

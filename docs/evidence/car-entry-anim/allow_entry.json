@@ -109,7 +109,7 @@
   "depth": 0.253
  },
  {
-  "why": "PROPOSED: thighs over the sill's lip while the legs swing in (the entry's twin of the exit's thighs-on-sill)",
+  "why": "DECIDED (lead, rigid-thigh class): thighs over the sill's lip while the legs swing in; one allowance with the exit's thighs-on-sill, at their measured maximum",
   "from": 160,
   "to": 184,
   "parts": [
@@ -120,7 +120,7 @@
    "sill",
    "paint"
   ],
-  "depth": 0.149
+  "depth": 0.15
  },
  {
   "why": "right hand on the release: must touch",

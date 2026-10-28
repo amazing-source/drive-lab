@@ -1,0 +1,212 @@
+{
+ "entry": {
+  "baked_sha256": "e1b35ccaa2b773e4376ee17dfbc28a7f1084b221714dfb8f9d142091d54fbaaa",
+  "frames": 229,
+  "passed": false,
+  "failures": 6,
+  "by_part": {
+   "Right Leg slide": {
+    "frames": 3,
+    "max": 2.97,
+    "list": [
+     [
+      122,
+      0.74
+     ],
+     [
+      161,
+      2.68
+     ],
+     [
+      162,
+      2.97
+     ]
+    ]
+   },
+   "Left Leg slide": {
+    "frames": 2,
+    "max": 1.27,
+    "list": [
+     [
+      161,
+      1.27
+     ],
+     [
+      162,
+      1.27
+     ]
+    ]
+   },
+   "Right Arm interior": {
+    "frames": 1,
+    "max": 0.062,
+    "list": [
+     [
+      197,
+      0.062
+     ]
+    ]
+   }
+  }
+ },
+ "exit": {
+  "baked_sha256": "30af001a3503a95bdf6bd03023fc8d8e72a83900d9287b9f8361e893a97c0341",
+  "frames": 307,
+  "passed": false,
+  "failures": 27,
+  "by_part": {
+   "Left Leg interior": {
+    "frames": 2,
+    "max": 0.071,
+    "list": [
+     [
+      8,
+      0.051
+     ],
+     [
+      28,
+      0.071
+     ]
+    ]
+   },
+   "Head interior": {
+    "frames": 1,
+    "max": 0.041,
+    "list": [
+     [
+      70,
+      0.041
+     ]
+    ]
+   },
+   "Left Leg slide": {
+    "frames": 12,
+    "max": 3.44,
+    "list": [
+     [
+      106,
+      3.44
+     ],
+     [
+      107,
+      2.37
+     ],
+     [
+      108,
+      1.26
+     ],
+     [
+      109,
+      0.78
+     ],
+     [
+      169,
+      0.74
+     ],
+     [
+      244,
+      1.15
+     ],
+     [
+      248,
+      0.87
+     ],
+     [
+      255,
+      2.02
+     ],
+     [
+      256,
+      1.99
+     ],
+     [
+      279,
+      0.62
+     ],
+     [
+      295,
+      0.62
+     ],
+     [
+      304,
+      0.77
+     ]
+    ]
+   },
+   "Right Leg slide": {
+    "frames": 11,
+    "max": 2.37,
+    "list": [
+     [
+      107,
+      2.37
+     ],
+     [
+      108,
+      1.26
+     ],
+     [
+      109,
+      0.78
+     ],
+     [
+      144,
+      1.14
+     ],
+     [
+      153,
+      1.4
+     ],
+     [
+      195,
+      0.63
+     ],
+     [
+      211,
+      0.63
+     ],
+     [
+      221,
+      0.77
+     ],
+     [
+      243,
+      1.19
+     ],
+     [
+      249,
+      0.99
+     ],
+     [
+      250,
+      1.27
+     ]
+    ]
+   },
+   "Left Leg ground": {
+    "frames": 1,
+    "max": 0.057,
+    "list": [
+     [
+      255,
+      0.057
+     ]
+    ]
+   }
+  }
+ },
+ "close": {
+  "baked_sha256": "a0a07820ae09c5db8de6ab26009570cce6353bc49bfcc1756e4d8f1de642694a",
+  "frames": 55,
+  "passed": true,
+  "failures": 0,
+  "by_part": {}
+ },
+ "seated": {
+  "baked_sha256": "6ff702707f1ed2318a9600ed820dc75b12fa08ab8b395592b3cbd7a0c61b3ff5",
+  "frames": 31,
+  "passed": true,
+  "failures": 0,
+  "by_part": {}
+ }
+}
