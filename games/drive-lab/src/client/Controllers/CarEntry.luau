@@ -1,13 +1,13 @@
 --!strict
 --[[
 	The local player's side of getting in and out, the driver's door and the start. A car's
-	prompt walks the body to the door mark, in front of it first when coming from the side so it
-	walks in facing the car, then places it exactly on the mark and asks the server; the body's
-	clips then play in step with the car's state (Rules/CarEntry), the clock every client also
-	turns the door from, so the door stays under the hand. Getting in asks as the placing begins,
-	for the moment it ends, so the round trip runs alongside it. Seated: the door key moves the
-	door, the start key starts the engine, holding the exit key gets out (Config/Controls). Clips
-	played on one's own character replicate to the other players.
+	prompt walks the body to the door mark (Controllers/EntryWalk) and asks the server, which
+	checks the body against its own view; the clips then play in step with the car's state
+	(Rules/CarEntry), the clock every client also turns the door from, so the door stays under the
+	hand. Getting in asks as the final placing begins, so the round trip runs alongside it. A
+	movement key during the walk gives it up, and so does a refusal: the body is left standing,
+	free. Seated: the door key moves the door, the start key starts the engine, holding the exit
+	key gets out (Config/Controls). Clips played on one's own character replicate to the others.
 ]]
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -27,38 +27,54 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rules = require(ReplicatedStorage.Shared.Rules.CarEntry)
 
 local ClipPlayer = require(script.Parent.Parent.Rig.ClipPlayer)
+local EntryWalk = require(script.Parent.EntryWalk)
 
 type Intent = "Enter" | "Door"
 type Body = { character: Model, humanoid: Humanoid, root: BasePart, clips: ClipPlayer.ClipPlayer }
-type Controller = { Enable: (Controller) -> (), Disable: (Controller) -> () }
+-- A request from outside the server has not answered yet, and the server time it was sent.
+type Pending = { car: Model, intent: Intent, askedAt: number }
 
-local APPROACH = Config.APPROACH
--- A walk counts as stopped once the body has moved slower than this (studs a second) for
--- STALL_FRAMES frames in a row, after its first STALL_GRACE seconds.
-local STALL_SPEED = 0.5
-local STALL_FRAMES = 4
-local STALL_GRACE = 0.15
 -- Consecutive clips of a sequence meet on the same pose; a rest pose eases in.
 local CHAIN_FADE = 0
 local POSE_FADE = 0.15
 local SIT, IDLE = Movement.ANIMATIONS.sit.id, Movement.ANIMATIONS.idle.id
+-- On foot, the keys that move the body (Roblox's default controls, which cannot be switched off
+-- while the walk to the door runs): pressed then, they give the walk up. The left stick does too.
+local WALK_AWAY_KEYS = {
+	Enum.KeyCode.W,
+	Enum.KeyCode.A,
+	Enum.KeyCode.S,
+	Enum.KeyCode.D,
+	Enum.KeyCode.Up,
+	Enum.KeyCode.Down,
+	Enum.KeyCode.Left,
+	Enum.KeyCode.Right,
+	Enum.KeyCode.Space,
+	Enum.KeyCode.ButtonA,
+}
 
 -- The door's own motions that play a clip on the body, from inside and from outside.
 local INSIDE: { [string]: Config.ClipName } = { InsideOpen = "InsideOpen", InsideClose = "InsideClose" }
 
+-- Every clip a body may play here, loaded when it spawns.
+local PRELOAD: { string } = { Config.SEATED_POSE, IDLE }
+for _, clip in Config.CLIPS do
+	table.insert(PRELOAD, clip.seated)
+	if clip.standing then
+		table.insert(PRELOAD, clip.standing)
+	end
+end
+
 local localPlayer = Players.LocalPlayer
 local body: Body? = nil
-local busy = false
--- A door the local player is moving from outside, and the server time it asked.
-local outsideDoor: { car: Model, askedAt: number }? = nil
--- The server time an entry the local player asked for starts; the body waits on the mark,
--- controls off, until the server seats it.
-local entryStartAt: number? = nil
+-- Walking to a car's door; a movement key pressed meanwhile gives the walk up.
+local walking = false
+local walkedAway = false
+local pending: Pending? = nil
 local exitHeld: { key: Enum.KeyCode, since: number }? = nil
 -- The body was in a car's exit on the last frame seated; then the frame after it stood up.
 local exiting = false
 local standingUp = false
-local controls: Controller? = nil
 
 local function now(): number
 	return Workspace:GetServerTimeNow()
@@ -68,10 +84,6 @@ local function send(car: Model, action: Rules.Action, at: number?)
 	Net.send(Remotes.CAR_ACTION, { car = car, action = action, at = at })
 end
 
-local function flat(vector: Vector3): Vector3
-	return Vector3.new(vector.X, 0, vector.Z)
-end
-
 local function seatedCar(): Model?
 	local current = body
 	local seat = current and current.humanoid.SeatPart
@@ -79,53 +91,27 @@ local function seatedCar(): Model?
 	return if model and model:IsA("Model") and model:HasTag(CarRig.TAG) then model else nil
 end
 
--- Roblox's default PlayerModule, which is untyped: its controls, to hold the body still.
-local function setControls(enabled: boolean)
-	if controls == nil then
-		local scripts = localPlayer:FindFirstChildOfClass("PlayerScripts")
-		local module = scripts and scripts:FindFirstChild("PlayerModule")
-		if module == nil or not module:IsA("ModuleScript") then
-			return
-		end
-		controls = ((require :: any)(module) :: any):GetControls()
-	end
-	local current = controls :: Controller
-	if enabled then
-		current:Enable()
-	else
-		current:Disable()
-	end
-end
-
 local function reservedForMe(car: Model): boolean
 	return car:GetAttribute(Config.ATTRIBUTES.RESERVED_BY) == localPlayer.UserId
 end
 
--- Frees a body held on the mark and gives the controls back.
-local function letGo(current: Body)
-	current.root.Anchored = false
-	setControls(true)
+-- `stoppable`: a movement key ends it too.
+local function walker(current: Body, stoppable: boolean): EntryWalk.Walk
+	return {
+		humanoid = current.humanoid,
+		root = current.root,
+		going = function(): boolean
+			return body == current and not (stoppable and walkedAway)
+		end,
+	}
 end
 
--- Walks toward `target` until within `within` studs, stopped, refused or out of time. False if
--- the walk was given up (the body changed, or the server never reserved the car).
-local function walkTo(current: Body, car: Model, target: Vector3, within: number, started: number): boolean
-	local humanoid, root = current.humanoid, current.root
-	humanoid:MoveTo(Vector3.new(target.X, root.Position.Y, target.Z))
-	local legStarted, slow = os.clock(), 0
-	while body == current do
-		local elapsed = os.clock() - started
-		if elapsed > Config.APPROACH_SECONDS then
-			return false
-		end
-		if elapsed > Config.REFUSED_SECONDS / 3 and not reservedForMe(car) then
-			return false
-		end
-		if flat(target - root.Position).Magnitude <= within then
-			return true
-		end
-		slow = if flat(root.AssemblyLinearVelocity).Magnitude < STALL_SPEED then slow + 1 else 0
-		if os.clock() - legStarted > STALL_GRACE and slow >= STALL_FRAMES then
+-- The server reserves the car for the player who pressed; that arrives a round trip after the
+-- press, possibly after a short walk has ended.
+local function awaitReservation(current: Body, car: Model): boolean
+	local deadline = os.clock() + Config.REFUSED_SECONDS
+	while body == current and not walkedAway and os.clock() < deadline do
+		if reservedForMe(car) then
 			return true
 		end
 		task.wait()
@@ -133,88 +119,46 @@ local function walkTo(current: Body, car: Model, target: Vector3, within: number
 	return false
 end
 
--- Moves and turns the held body onto `goal` (its height kept), eased; stops if a seat takes it.
-local function settle(current: Body, goal: CFrame, seconds: number)
-	local root = current.root
-	local from = root.CFrame
-	local target = goal.Rotation + Vector3.new(goal.Position.X, from.Position.Y, goal.Position.Z)
-	local started = os.clock()
-	while body == current and current.humanoid.SeatPart == nil do
-		local share = Rules.settleShare(os.clock() - started, seconds)
-		root.CFrame = from:Lerp(target, share)
-		if share >= 1 then
-			return
-		end
-		task.wait()
-	end
-end
-
-local function turnBetween(from: CFrame, to: CFrame): number
-	local a, b = flat(from.LookVector), flat(to.LookVector)
-	if a.Magnitude < 1e-3 or b.Magnitude < 1e-3 then
-		return 0
-	end
-	return math.acos(math.clamp(a.Unit:Dot(b.Unit), -1, 1))
-end
-
--- Walks to the mark, lined up in front of it when coming from the side, places the body on it
--- exactly, and asks. The controls stay off until the seat or the door's clip gives them back.
-local function approach(car: Model, intent: Intent): boolean
-	local current = body
+-- Walks to the mark and asks, if the car's state allows it. False when it gave up.
+local function approach(current: Body, car: Model, intent: Intent): boolean
 	local seat = car:FindFirstChild("DriverSeat")
-	if current == nil or current.humanoid.SeatPart ~= nil or seat == nil or not seat:IsA("BasePart") then
+	local hull = car:FindFirstChild("Hull")
+	if current.humanoid.SeatPart ~= nil or seat == nil or not seat:IsA("BasePart") then
 		return false
 	end
-	local started = os.clock()
+	local state, at = CarState.read(car), now()
+	if
+		not (if intent == "Enter" then Rules.canEnter(state, at) else Rules.canMoveDoor(state, at, 0, false))
+	then
+		return false
+	end
+	local outcome =
+		EntryWalk.toMark(walker(current, true), seat, if hull and hull:IsA("BasePart") then hull else nil)
+	if outcome ~= "Arrived" or not awaitReservation(current, car) then
+		return false
+	end
 	local mark = DoorMark.frame(seat)
-	if DoorMark.distance(seat, current.root.Position) > APPROACH.arrived then
-		if Rules.linesUpFirst(DoorMark.offset(seat, current.root.Position)) then
-			local lineUp = (mark * CFrame.new(0, 0, APPROACH.lineUp)).Position
-			if not walkTo(current, car, lineUp, APPROACH.reach, started) then
-				return false
-			end
-		end
-		if not walkTo(current, car, mark.Position, APPROACH.arrived, started) then
-			return false
-		end
-	end
-	local root = current.root
-	local distance = DoorMark.distance(seat, root.Position)
-	if body ~= current or not reservedForMe(car) or distance > APPROACH.reach then
-		return false
-	end
-	-- Held, physics cannot push the body off the mark: turning there sweeps the torso into the
-	-- car's collision box, and the door clips lean it in to reach the door.
-	root.Anchored = true
-	local seconds = Rules.settleSeconds(distance, turnBetween(root.CFrame, mark))
-	if intent == "Enter" then
-		entryStartAt = now() + seconds
-		send(car, "Enter", entryStartAt)
-		settle(current, mark, seconds)
-		-- Facing the car on the mark the body clears its collision box. A root still held when
-		-- the seat welds it would pull the car onto itself.
-		root.Anchored = false
-	else
-		settle(current, mark, seconds)
-		outsideDoor = { car = car, askedAt = now() }
-		send(car, "Door")
-	end
-	-- Ends the walk where the body now stands, so a refused request leaves it standing still.
-	current.humanoid:MoveTo(root.Position)
+	local seconds = EntryWalk.placeSeconds(current.root, mark)
+	pending = { car = car, intent = intent, askedAt = now() }
+	send(car, intent, if intent == "Enter" then now() + seconds else nil)
+	EntryWalk.place(walker(current, false), mark, seconds)
 	return true
 end
 
 local function onPrompt(car: Model, intent: Intent)
 	local current = body
-	if busy or current == nil then
+	if walking or pending ~= nil or current == nil then
 		return
 	end
-	busy = true
-	setControls(false)
-	local asked = approach(car, intent)
-	busy = false
-	if not asked and body == current then
-		letGo(current)
+	walking, walkedAway = true, false
+	local asked = approach(current, car, intent)
+	walking = false
+	if asked or body ~= current then
+		return
+	end
+	EntryWalk.release(walker(current, false))
+	if reservedForMe(car) then
+		send(car, "Cancel")
 	end
 end
 
@@ -245,10 +189,10 @@ local function seatedClips(current: Body, car: Model, at: number)
 	ClipPlayer.set(current.clips, Config.SEATED_POSE, nil, POSE_FADE)
 end
 
--- Ends a door request from outside: frees the body held at the mark and gives the controls back.
-local function finishOutside(current: Body)
-	outsideDoor = nil
-	letGo(current)
+-- Ends a request from outside: the body is free again.
+local function finishPending(current: Body)
+	pending = nil
+	EntryWalk.release(walker(current, false))
 end
 
 -- Getting out ends on a standing frame, and Locomotion's idle only starts after this frame's
@@ -264,31 +208,49 @@ local function standUp(current: Body)
 	end
 	ClipPlayer.set(current.clips, IDLE, nil, 0)
 	standingUp = true
+	current.humanoid:MoveTo(current.root.Position)
+end
+
+-- A request the server let go of without acting on it, or never answered, was refused.
+local function refused(request: Pending, state: Rules.State, at: number): boolean
+	if at - request.askedAt > Config.ARRIVAL_WAIT + Config.REFUSED_SECONDS then
+		return true
+	end
+	return not reservedForMe(request.car) and state.entry ~= "Enter"
+end
+
+-- Off the seat a held exit clip ends at once: the server put the root where it showed the body.
+local function clearStanding(current: Body)
+	ClipPlayer.set(current.clips, nil, nil, if standingUp then Movement.FADE else 0)
+	standingUp = false
 end
 
 local function standingClips(current: Body, at: number)
-	local startAt = entryStartAt
-	if startAt and at > startAt + Config.REFUSED_SECONDS then
-		-- The server never seated us: refused.
-		entryStartAt = nil
-		letGo(current)
-	end
-	local pending = outsideDoor
-	if pending == nil then
-		-- Off the seat a held exit clip ends at once: the server put the root where it showed the body.
-		ClipPlayer.set(current.clips, nil, nil, if standingUp then Movement.FADE else 0)
-		standingUp = false
+	local request = pending
+	if request == nil then
+		clearStanding(current)
 		return
 	end
-	local request = Rules.outsideRequest(CarState.read(pending.car), at, pending.askedAt)
-	if request.clip then
-		ClipPlayer.set(current.clips, clipId(request.clip, true), request.into, POSE_FADE)
+	local state = CarState.read(request.car)
+	if request.intent == "Enter" then
+		if refused(request, state, at) then
+			finishPending(current)
+		end
+		clearStanding(current)
 		return
 	end
-	if request.finished then
-		finishOutside(current)
+	local door = Rules.outsideRequest(state, at, request.askedAt)
+	if door.clip then
+		-- The standing clip leans the body into the car's collision box to reach the door; held
+		-- at the mark, physics cannot push it away.
+		current.root.Anchored = true
+		ClipPlayer.set(current.clips, clipId(door.clip, true), door.into, POSE_FADE)
+		return
 	end
-	ClipPlayer.set(current.clips, nil, nil, 0)
+	if door.finished or refused(request, state, at) then
+		finishPending(current)
+	end
+	clearStanding(current)
 end
 
 local function update()
@@ -318,11 +280,18 @@ local function update()
 end
 
 local function onInputBegan(input: InputObject)
-	local car = seatedCar()
-	if car == nil or UserInputService:GetFocusedTextBox() ~= nil then
+	if UserInputService:GetFocusedTextBox() ~= nil then
 		return
 	end
 	local key = input.KeyCode
+	if walking and table.find(WALK_AWAY_KEYS, key) then
+		walkedAway = true
+		return
+	end
+	local car = seatedCar()
+	if car == nil then
+		return
+	end
 	if table.find(Controls.DOOR, key) then
 		send(car, "Door")
 	elseif table.find(Controls.START_ENGINE, key) then
@@ -332,31 +301,37 @@ local function onInputBegan(input: InputObject)
 	end
 end
 
+local function onInputChanged(input: InputObject)
+	if
+		walking
+		and input.KeyCode == Enum.KeyCode.Thumbstick1
+		and input.Position.Magnitude > Controls.STICK_DEADZONE
+	then
+		walkedAway = true
+	end
+end
+
 local function onCharacter(character: Model)
 	if body then
 		ClipPlayer.destroy(body.clips)
 	end
-	body, busy, outsideDoor, entryStartAt, exiting, standingUp = nil, false, nil, nil, false, false
+	body, walking, pending, exiting, standingUp = nil, false, nil, false, false
 	local humanoid = character:WaitForChild("Humanoid") :: Humanoid
 	local root = character:WaitForChild("HumanoidRootPart") :: BasePart
 	local animator = humanoid:WaitForChild("Animator") :: Animator
 	if character.Parent == nil or localPlayer.Character ~= character then
 		return
 	end
-	body = { character = character, humanoid = humanoid, root = root, clips = ClipPlayer.new(animator) }
+	local clips = ClipPlayer.new(animator)
+	ClipPlayer.preload(clips, PRELOAD, { [Config.SEATED_POSE] = true, [IDLE] = true })
+	body = { character = character, humanoid = humanoid, root = root, clips = clips }
 	humanoid:GetPropertyChangedSignal("SeatPart"):Connect(function()
 		local inCar = seatedCar() ~= nil
 		-- Jumping would leave the seat; Space is the handbrake and leaving is the exit key's.
 		humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, not inCar)
 		local current = body
-		if not inCar or current == nil or current.humanoid ~= humanoid then
-			return
-		end
-		entryStartAt = nil
-		if outsideDoor ~= nil then
-			finishOutside(current)
-		else
-			letGo(current)
+		if inCar and current and current.humanoid == humanoid then
+			finishPending(current)
 		end
 	end)
 end
@@ -374,6 +349,7 @@ function Controller.start()
 		end
 	end)
 	UserInputService.InputBegan:Connect(onInputBegan)
+	UserInputService.InputChanged:Connect(onInputChanged)
 	UserInputService.InputEnded:Connect(function(input: InputObject)
 		local held = exitHeld
 		if held and input.KeyCode == held.key then

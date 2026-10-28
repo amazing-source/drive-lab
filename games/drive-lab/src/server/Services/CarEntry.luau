@@ -4,10 +4,11 @@
 	writer of each car's state (Car/CarState), which every client turns into the same body
 	animation, door angle and start-up (Rules/CarEntry). A prompt holds the seat or the door for
 	one player while their client walks them to the door mark; the client then asks, and the
-	request is checked against the rules and where the character stands. The body takes the
-	seated size the moment the player asks to get in, so the walk-up and the first frame of the
-	entry are already at that size, and its own size the moment getting out ends; both changes
-	are instant, with the feet kept where they stand.
+	request is checked against the rules and against where this server sees the character, which
+	lags the client's own view by the network: a request from outside waits for that view to reach
+	the mark. The body changes size only where this server knows where it is: down in the step
+	that seats it, back up in the step that puts it outside after getting out. Scaling a body the
+	client is walking would move it back to where this server last saw it.
 ]]
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -28,7 +29,9 @@ local Rules = require(ReplicatedStorage.Shared.Rules.CarEntry)
 local Units = require(ReplicatedStorage.Shared.Units)
 
 type Intent = "Enter" | "Door"
-type Reservation = { player: Player, intent: Intent, at: number }
+-- `character` is the body that pressed: a reservation ends with it. `asked` once its request
+-- has arrived: a repeat of it is ignored.
+type Reservation = { player: Player, character: Model, intent: Intent, at: number, asked: boolean }
 type Car = {
 	model: Model,
 	seat: Seat,
@@ -83,14 +86,14 @@ local function body(player: Player): (Model?, Humanoid?, BasePart?)
 	return character, humanoid, root
 end
 
--- Moves the character so its root lands on `frame`. Its pivot is not always its root (an R6
--- built from a description pivots on its head).
+-- Moves the character so its root lands on `frame`. Its pivot is not its root (an R6 player
+-- character pivots on its head, measured in Play).
 local function placeRoot(character: Model, root: BasePart, frame: CFrame)
 	character:PivotTo(frame * root.CFrame:ToObjectSpace(character:GetPivot()))
 end
 
--- Instant, about the feet: the root rises or sinks with the legs, so the body neither floats
--- nor sinks into the ground.
+-- Instant, about the feet. Only for a body this server knows the place of (it has just left a
+-- seat): one the client is walking would be pulled back to this server's late view of it.
 local function setScale(player: Player, to: number)
 	local character, _, root = body(player)
 	if character == nil or root == nil then
@@ -121,6 +124,44 @@ end
 local function release(car: Car)
 	car.reservation = nil
 	car.model:SetAttribute(ATTRIBUTE.RESERVED_BY, 0)
+end
+
+local function reservedFor(car: Car, player: Player, intent: Intent): boolean
+	local reservation = car.reservation
+	return reservation ~= nil
+		and reservation.player == player
+		and reservation.intent == intent
+		and reservation.character == player.Character
+end
+
+-- Claims the reservation for its one request; false if it is not this player's or was claimed.
+local function claim(car: Car, player: Player, intent: Intent): boolean
+	local reservation = car.reservation
+	if reservation == nil or reservation.asked or not reservedFor(car, player, intent) then
+		return false
+	end
+	reservation.asked = true
+	return true
+end
+
+-- Waits, at most ARRIVAL_WAIT, for this server's view of the player to reach the mark while the
+-- reservation holds; the client stops there before this server can see it.
+local function awaitArrival(car: Car, player: Player, intent: Intent): boolean
+	local deadline = now() + Config.ARRIVAL_WAIT
+	while reservedFor(car, player, intent) do
+		local _, _, root = body(player)
+		if root == nil then
+			return false
+		end
+		if atMark(car, root) then
+			return true
+		end
+		if now() > deadline then
+			return false
+		end
+		RunService.Heartbeat:Wait()
+	end
+	return false
 end
 
 -- The root's frame standing on the ground under `spot`.
@@ -154,8 +195,8 @@ local function onPrompt(car: Car, player: Player, intent: Intent)
 	if not Net.allow(player, "CarPrompt", PROMPT_LIMIT) or car.reservation ~= nil then
 		return
 	end
-	local _, humanoid, root = body(player)
-	if humanoid == nil or root == nil or humanoid.SeatPart ~= nil then
+	local character, humanoid, root = body(player)
+	if character == nil or humanoid == nil or root == nil or humanoid.SeatPart ~= nil then
 		return
 	end
 	if DoorMark.distance(car.seat, root.Position) > Config.PROMPT_DISTANCE + DISTANCE_SLACK then
@@ -168,49 +209,49 @@ local function onPrompt(car: Car, player: Player, intent: Intent)
 	if not allowed then
 		return
 	end
-	car.reservation = { player = player, intent = intent, at = at }
+	car.reservation = { player = player, character = character, intent = intent, at = at, asked = false }
 	car.model:SetAttribute(ATTRIBUTE.RESERVED_AT, at)
 	car.model:SetAttribute(ATTRIBUTE.RESERVED_BY, player.UserId)
-	if intent == "Enter" then
-		setScale(player, Driving.DRIVER_SCALE)
-	end
 end
 
-local function reservedFor(car: Car, player: Player, intent: Intent): boolean
-	local reservation = car.reservation
-	return reservation ~= nil and reservation.player == player and reservation.intent == intent
-end
-
--- At the entry's start: the root goes to the seat, where the first clip's frame shows the body
--- standing on the mark, as the client placed it. Anything that changed since the request cuts
--- the entry short.
+-- At the entry's start: the body takes the seated size and the root goes to the seat, where the
+-- first clip's frame shows it standing on the mark, as the client placed it. Anything that
+-- changed since the request cuts the entry short.
 local function seat(car: Car, player: Player, startedAt: number)
 	local state = CarState.read(car.model)
 	if state.entry ~= "Enter" or state.entryAt ~= startedAt then
 		return
 	end
-	local _, humanoid = body(player)
-	if humanoid == nil or humanoid.SeatPart ~= nil or car.seat.Occupant ~= nil then
+	local character, humanoid = body(player)
+	if character == nil or humanoid == nil or humanoid.SeatPart ~= nil or car.seat.Occupant ~= nil then
 		cutShort(car, now())
-		setScale(player, 1)
 		return
+	end
+	-- The seat weld places the root in the same step, so this server's late view of where the
+	-- body stood does not matter here.
+	if math.abs(character:GetScale() - Driving.DRIVER_SCALE) > SCALE_EPSILON then
+		character:ScaleTo(Driving.DRIVER_SCALE)
 	end
 	car.seat:Sit(humanoid)
 end
 
 local function enter(car: Car, player: Player, request: Request)
-	local character, humanoid, root = body(player)
+	if not claim(car, player, "Enter") then
+		return
+	end
+	local arrived = awaitArrival(car, player, "Enter")
+	local _, humanoid = body(player)
 	local state, at = CarState.read(car.model), now()
-	if character == nil or humanoid == nil or root == nil or not reservedFor(car, player, "Enter") then
+	if not arrived or humanoid == nil or not reservedFor(car, player, "Enter") then
+		if reservedFor(car, player, "Enter") then
+			release(car)
+		end
 		return
 	end
 	release(car)
-	if car.seat.Occupant ~= nil or not atMark(car, root) or not Rules.canEnter(state, at) then
-		setScale(player, 1)
+	if car.seat.Occupant ~= nil or humanoid.SeatPart ~= nil or not Rules.canEnter(state, at) then
 		return
 	end
-	-- The clips are authored at the seated size; the prompt already set it.
-	setScale(player, Driving.DRIVER_SCALE)
 	local startAt = Rules.entryStart(at, request.at)
 	-- State first, for the whole sequence's timing; the seat follows at its start.
 	CarState.write(car.model, {
@@ -226,21 +267,22 @@ local function enter(car: Car, player: Player, request: Request)
 end
 
 local function moveDoor(car: Car, player: Player, _request: Request)
-	local state, at = CarState.read(car.model), now()
 	local inside = driver(car) == player
-	if inside then
-		if not Rules.canMoveDoor(state, at, speedKmh(car), true) then
+	if not inside then
+		if not claim(car, player, "Door") then
 			return
 		end
-	else
-		local _, _, root = body(player)
-		if root == nil or not reservedFor(car, player, "Door") or not atMark(car, root) then
+		local arrived = awaitArrival(car, player, "Door")
+		if reservedFor(car, player, "Door") then
+			release(car)
+		end
+		if not arrived then
 			return
 		end
-		if not Rules.canMoveDoor(state, at, speedKmh(car), false) then
-			return
-		end
-		release(car)
+	end
+	local state, at = CarState.read(car.model), now()
+	if not Rules.canMoveDoor(state, at, speedKmh(car), inside) then
+		return
 	end
 	car.model:SetAttribute(ATTRIBUTE.DOOR_AT, at)
 	car.model:SetAttribute(ATTRIBUTE.DOOR, Rules.doorClip(state, at, inside))
@@ -251,6 +293,14 @@ local function start(car: Car, player: Player, _request: Request)
 	if driver(car) == player and Rules.canStart(state, at) then
 		car.model:SetAttribute(ATTRIBUTE.ENGINE_AT, at)
 		car.model:SetAttribute(ATTRIBUTE.ENGINE, "On")
+	end
+end
+
+-- The player walked away or gave up before asking: their hold on the car ends.
+local function cancel(car: Car, player: Player, _request: Request)
+	local reservation = car.reservation
+	if reservation and reservation.player == player then
+		release(car)
 	end
 end
 
@@ -327,6 +377,7 @@ local HANDLERS: { [Rules.Action]: (Car, Player, Request) -> () } = {
 	Exit = exit,
 	Door = moveDoor,
 	Start = start,
+	Cancel = cancel,
 }
 
 local function parseRequest(payload: unknown): Request?
@@ -345,12 +396,16 @@ end
 
 local function updateCar(car: Car, at: number)
 	local reservation = car.reservation
-	if reservation and (at - reservation.at > Config.RESERVE_SECONDS or reservation.player.Parent == nil) then
+	if
+		reservation
+		and (
+			at - reservation.at > Config.RESERVE_SECONDS
+			or reservation.player.Parent == nil
+			or reservation.player.Character ~= reservation.character
+			or body(reservation.player) == nil
+		)
+	then
 		release(car)
-		local _, humanoid = body(reservation.player)
-		if reservation.intent == "Enter" and humanoid and humanoid.SeatPart == nil then
-			setScale(reservation.player, 1)
-		end
 	end
 	local state = CarState.read(car.model)
 	local free = car.reservation == nil

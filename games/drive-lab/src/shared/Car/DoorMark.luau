@@ -34,10 +34,4 @@ function DoorMark.distance(seat: BasePart, point: Vector3): number
 	return Vector3.new(delta.X, 0, delta.Z).Magnitude
 end
 
--- A point in the mark's frame, in studs: sideways, and outward away from the car.
-function DoorMark.offset(seat: BasePart, point: Vector3): (number, number)
-	local here = DoorMark.frame(seat):PointToObjectSpace(point)
-	return here.X, here.Z
-end
-
 return table.freeze(DoorMark)

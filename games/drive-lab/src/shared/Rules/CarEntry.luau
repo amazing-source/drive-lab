@@ -11,7 +11,8 @@ export type EntryKind = "None" | "Enter" | "Exit"
 export type Phase = "Outside" | "Entering" | "Seated" | "Exiting"
 export type EngineState = "Off" | "On"
 export type Stage = "Off" | "Reaching" | "Cranking" | "Running"
-export type Action = "Enter" | "Exit" | "Door" | "Start"
+export type Action = "Enter" | "Exit" | "Door" | "Start" | "Cancel"
+export type ApproachPlan = "Settle" | "Straight" | "LineUp"
 
 export type State = {
 	-- The last sequence the server started, and when (server time).
@@ -38,7 +39,8 @@ export type Startup = {
 	drivable: boolean,
 }
 
-local ACTIONS: { [string]: Action } = { Enter = "Enter", Exit = "Exit", Door = "Door", Start = "Start" }
+local ACTIONS: { [string]: Action } =
+	{ Enter = "Enter", Exit = "Exit", Door = "Door", Start = "Start", Cancel = "Cancel" }
 local OUTSIDE_CLIPS: { [string]: Config.ClipName } =
 	{ OutsideOpen = "OutsideOpen", OutsideClose = "OutsideClose" }
 
@@ -307,11 +309,21 @@ function CarEntry.entryStart(now: number, asked: unknown): number
 	return math.clamp(asked, now, now + Config.ENTRY_LEAD)
 end
 
--- Whether the walk to the mark first lines up in front of it: from anywhere outside the corridor
--- straight out from the mark. `lateral` and `outward` are studs in the mark's frame, outward away
--- from the car.
-function CarEntry.linesUpFirst(lateral: number, outward: number): boolean
-	return outward <= 0 or math.abs(lateral) > outward * math.tan(Config.APPROACH.lineUpAngle)
+-- How the walk reaches the mark from where the body stands: placed on it when already there;
+-- straight in from the corridor in front of it, once far enough out to turn clear of the car or
+-- already facing it; else round the car to the point in front of it first. `lateral` and
+-- `outward` are studs in the mark's frame, outward away from the car; `turn` is how far the
+-- body faces off the mark's facing, in radians.
+function CarEntry.approachPlan(lateral: number, outward: number, turn: number): ApproachPlan
+	local approach = Config.APPROACH
+	if math.sqrt(lateral * lateral + outward * outward) <= approach.arrived then
+		return "Settle"
+	end
+	local inCorridor = outward > 0 and math.abs(lateral) <= outward * math.tan(approach.lineUpAngle)
+	if inCorridor and (outward >= approach.lineUp or math.abs(turn) <= approach.lineUpAngle) then
+		return "Straight"
+	end
+	return "LineUp"
 end
 
 -- Seconds to place the body exactly on the mark from `distance` studs and `turn` radians away.
