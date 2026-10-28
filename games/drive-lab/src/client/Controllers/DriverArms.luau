@@ -4,20 +4,23 @@
 	getting in and out, the body animation moves the blocky arms), its blocky arms are hidden
 	and custom ones drawn instead: the hands on the thighs while the engine is off, reaching
 	for the START flap and onto the wheel after the start key (Rig/StartupHands), then on the
-	steering wheel's rim at a quarter to three,
-	turning with the wheel up to FOLLOW_LIMIT either way (past that the wheel slides through
-	them), and an upper arm and a forearm reaching each wrist from the shoulder, the elbow
-	bending down and out (Rules/ArmIK).
+	steering wheel's rim at a quarter to three, turning with the wheel up to FOLLOW_LIMIT either
+	way (past that the wheel slides through them), and an upper arm and a forearm reaching each
+	wrist from the shoulder, the elbow bending down and out (Rules/ArmIK).
 
-	The hands are meshes posed around the SVJ's rim (tools/blender/hand_grip.py), tinted with
-	the avatar's arm colour; the sleeves are modelled tubes (tools/blender/driver_sleeves.py)
-	stretched to each bone, the forearm turned so its cuff lies flat with the hand, and a ball of
-	the same cloth fills the elbow. All are kept in the place at ReplicatedStorage.DriveLabAssets. Every client draws every driver's arms: they are cosmetic, built
-	locally and never replicated. A car's steering readout exists only on its driver's client, so other drivers'
-	hands rest at the straight-ahead grip, as their wheels do here. Drawn after physics each
-	frame from the parts' current positions, so the arms never trail a car at speed.
+	The hands are meshes posed around the SVJ's rim (tools/blender/hand_grip.py), gloved or in
+	the avatar's skin colour (Rig/Gloves). The sleeves are modelled tubes
+	(tools/blender/driver_sleeves.py) stretched to each bone, the forearm turned so its cuff lies
+	flat with the hand, and a ball of the same cloth fills the elbow; in the cockpit view the
+	local driver sees only the gloves (Rules/ArmPieces). All are kept in the place at
+	ReplicatedStorage.DriveLabAssets. Every client draws every driver's arms: they are cosmetic,
+	built locally and never replicated. A car's steering readout exists only on its driver's
+	client, so other drivers' hands rest at the straight-ahead grip, as their wheels do here.
+	Drawn after physics each frame from the parts' current positions, so the arms never trail a
+	car at speed.
 ]]
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -25,11 +28,13 @@ local Workspace = game:GetService("Workspace")
 local Log = require(ReplicatedStorage.Kit.Log)
 
 local ArmIK = require(ReplicatedStorage.Shared.Rules.ArmIK)
+local ArmPieces = require(ReplicatedStorage.Shared.Rules.ArmPieces)
 local CarEntry = require(ReplicatedStorage.Shared.Rules.CarEntry)
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local DriverArms = require(ReplicatedStorage.Shared.Config.DriverArms)
+local Gloves = require(script.Parent.Parent.Rig.Gloves)
 local StartupHands = require(script.Parent.Parent.Rig.StartupHands)
 local Steering = require(ReplicatedStorage.Shared.Vehicle.Steering)
 
@@ -57,6 +62,8 @@ type Driver = {
 	maxTurn: number,
 	scale: number,
 	sides: { Side },
+	-- Whether the upper arms, elbows and forearms are drawn (Rules/ArmPieces).
+	sleevesShown: boolean,
 }
 
 local LIMBS: { { sign: number, joint: string, arm: string } } = {
@@ -189,16 +196,10 @@ local function build(model: Model, character: Model): Driver?
 			lower.Size.Y,
 			DriverArms.LOWER_LENGTH * scale + DriverArms.CUFF_OVERHANG
 		)
-		-- The skin's detail map is near white; the avatar's arm colour tints it.
-		local hand = limb.hand:Clone()
-		local skin = hand:FindFirstChildOfClass("SurfaceAppearance")
-		if skin then
-			skin.Color = arm.Color
-		else
-			hand.Color = arm.Color
-		end
+		local hand = Gloves.hand(limb.hand, arm.Color)
 		hand.Parent = folder
-		local cuff = sleeve(limb.cuff)
+		local cuff = Gloves.cuff(limb.cuff)
+		cuff.Parent = folder
 		table.insert(sides, {
 			sign = limb.sign,
 			joint = joint,
@@ -223,7 +224,21 @@ local function build(model: Model, character: Model): Driver?
 		maxTurn = Steering.maxWheelAngle(entry.physics.steering),
 		scale = scale,
 		sides = sides,
+		sleevesShown = true,
 	}
+end
+
+local function showSleeves(driver: Driver, shown: boolean)
+	if driver.sleevesShown == shown then
+		return
+	end
+	driver.sleevesShown = shown
+	local transparency = if shown then 0 else 1
+	for _, side in driver.sides do
+		side.upper.Transparency = transparency
+		side.lower.Transparency = transparency
+		side.elbow.Transparency = transparency
+	end
 end
 
 -- Shoulder to wrist with the elbow between, as the two bones' frames: each looks down its bone
@@ -310,6 +325,9 @@ local function update()
 	end
 	table.clear(parts)
 	table.clear(frames)
+	local camera = Workspace.CurrentCamera
+	local view = camera and camera:GetAttribute("DriveLabView")
+	local own = Players.LocalPlayer and Players.LocalPlayer.Character
 	for model, driver in drivers do
 		local state = CarState.read(model)
 		if
@@ -321,6 +339,10 @@ local function update()
 			release(driver)
 			drivers[model] = nil
 		else
+			showSleeves(
+				driver,
+				ArmPieces.sleevesShown(view, driver.character == own, DriverArms.COCKPIT_GLOVES_ONLY)
+			)
 			pose(driver, state, now)
 		end
 	end

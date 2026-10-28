@@ -4,6 +4,22 @@
 	follow a wheel's steering and travel without spinning, and where the driver sits. The
 	physics never reads this; the rig does.
 ]]
+
+-- A soft loop pull strap sewn to the door card (Rules/DoorStrap). `top` is where it is sewn with
+-- the door shut and `facing` the card's unit normal there, into the cabin (car frame from the
+-- centre of mass, metres, before bodyRaise). Hanging, it leans `lean` radians off the card and is
+-- never longer than `hang` allows at a door angle (radians, ascending): the trim below a soft
+-- strap pushes it short. A closing hand holds it from the door angle `grab` down to shut.
+export type DoorStrap = {
+	part: string,
+	top: { forward: number, right: number, up: number },
+	facing: { forward: number, right: number, up: number },
+	length: number,
+	lean: number,
+	grab: number,
+	hang: { { angle: number, length: number } },
+}
+
 export type CarModel = {
 	-- Part names, in Vehicle/Geometry's wheel order: front left, front right, rear left, rear right.
 	wheels: { string },
@@ -42,6 +58,9 @@ export type CarModel = {
 		pivot: { forward: number, right: number, up: number },
 		axis: { forward: number, right: number, up: number },
 		openAngle: number,
+		-- The pull strap on the door card (Rules/DoorStrap), its own part on its own weld, so it
+		-- is not in `parts`. Optional.
+		strap: DoorStrap?,
 	}?,
 	flap: {
 		part: string,
@@ -125,6 +144,46 @@ local SVJModel: CarModel = table.freeze({
 		pivot = table.freeze({ forward = 1.419, right = -0.9, up = 0.2386 }),
 		axis = table.freeze({ forward = 0.26762, right = -0.82364, up = -0.5 }),
 		openAngle = math.rad(90.8),
+		-- Measured by tools/blender/hero_car_door_strap.py on the door rig (2026-10-28;
+		-- drive-lab-assets/door/strap/manifest.json): 25 cm, the plausibility cap set on #9 (the
+		-- seated reach takes the door at 30 degrees; aftermarket straps are 18 to 22 cm), sewn
+		-- on the card's inner lower edge nearest the seated left shoulder. Shut, the cabin trim
+		-- is 16 cm below it; from 1.5 to 8 degrees the door's lower edge sweeps just over that
+		-- trim and leaves 2 to 5 cm; from 15.5 degrees it hangs its whole length.
+		strap = table.freeze({
+			part = "DoorStrap",
+			top = table.freeze({ forward = 0.54444, right = -0.64267, up = -0.22109 }),
+			facing = table.freeze({ forward = 0.36011, right = 0.83179, up = -0.42242 }),
+			length = 0.25,
+			lean = math.rad(5),
+			grab = math.rad(30),
+			hang = table.freeze({
+				table.freeze({ angle = 0, length = 0.1624 }),
+				table.freeze({ angle = 0.00436, length = 0.1624 }),
+				table.freeze({ angle = 0.01745, length = 0.1714 }),
+				table.freeze({ angle = 0.02182, length = 0.1627 }),
+				table.freeze({ angle = 0.02618, length = 0.0888 }),
+				table.freeze({ angle = 0.03491, length = 0.0297 }),
+				table.freeze({ angle = 0.03927, length = 0.022 }),
+				table.freeze({ angle = 0.04363, length = 0.02 }),
+				table.freeze({ angle = 0.07418, length = 0.02 }),
+				table.freeze({ angle = 0.07854, length = 0.0204 }),
+				table.freeze({ angle = 0.08727, length = 0.0227 }),
+				table.freeze({ angle = 0.09163, length = 0.024 }),
+				table.freeze({ angle = 0.10472, length = 0.0287 }),
+				table.freeze({ angle = 0.11781, length = 0.0337 }),
+				table.freeze({ angle = 0.12654, length = 0.0389 }),
+				table.freeze({ angle = 0.13526, length = 0.0439 }),
+				table.freeze({ angle = 0.13963, length = 0.0477 }),
+				table.freeze({ angle = 0.14399, length = 0.1628 }),
+				table.freeze({ angle = 0.15272, length = 0.1679 }),
+				table.freeze({ angle = 0.18326, length = 0.19 }),
+				table.freeze({ angle = 0.2138, length = 0.2125 }),
+				table.freeze({ angle = 0.24435, length = 0.2354 }),
+				table.freeze({ angle = 0.27053, length = 0.25 }),
+				table.freeze({ angle = 1.58476, length = 0.25 }),
+			}),
+		}),
 	}),
 	-- Hinged on its front edge, across the car; the rear edge, with the finger notch, lifts
 	-- (Lamborghini's console photograph shows the notch at the rear).

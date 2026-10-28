@@ -143,7 +143,31 @@ a 2 x 2 flipbook. The outlets are placed from the rear light clusters and checke
 model in Studio with marker balls (they sat 5 cm higher than the mod's numbers). Each pop the
 engine sound plays fires a burst (`Effects/ExhaustFlames`): jets, a fireball and a 0.06 s flash.
 
-## 10. Opening doors
+## 10. Blurred rims
+
+Built from the car's own wheels, so another car goes through the same two scripts:
+
+```
+blender -b --factory-startup -P tools/blender/rim_blur.py -- <car.glb> <wheel maps dir> <build dir>
+python -I tools/assets/rim_blur_maps.py <build dir> <maps dir>
+```
+
+- `rim_blur.py` splits each `Wheel_*` by mesh island into the rim face (in front of a depth plane
+  per axle, inside 90 % of the tyre's radius) and the rest, renders the face front-on and unlit in
+  Cycles, and averages each render around every circle on the axle (the limit of accumulating
+  rotated renders, without the banding a finite set leaves). It builds a disc per wheel on the
+  face's front envelope and exports `rim_blur.glb` with `manifest.json` (each piece's offset from
+  its wheel). It checks the readback is linear and that no mesh keeps a vertex colour set.
+- **Strip vertex colours.** The export's second colour set has alpha 0: Roblox ignores it while
+  a part is opaque and multiplies it in once the part is partly transparent, so a fading piece
+  vanished outright.
+- `rim_blur_maps.py` writes the 2048 x 1024 atlas (front rim left, rear right): colour with the
+  coverage as alpha, metalness, roughness. Upload the glb and the three PNGs, resolve the decal
+  ids, and put the pieces in `ReplicatedStorage.DriveLabAssets.RimBlur.<Car>.<wheel part>` with an
+  `Offset` attribute each and the wheel's import size as `WheelSize` on the folder: tyre and face
+  take the wheel's SurfaceAppearance, the disc its own with AlphaMode Transparency.
+
+## 11. Opening doors
 
 A game model's door is rarely its own object, but it is usually whole mesh islands: cut it out by
 islands, never by faces, and it keeps its shading and UVs. Four scripts, each with its usage in its
@@ -232,6 +256,32 @@ its top about 12 degrees outboard (front view), measured on Commons photos (see 
   by `Controllers/DriverLegs`. A binding without pedals rigs as before.
 - Door sounds: one uploaded pack (`tools/audio/pack_door.py`), each sound a region; start them a
   little ahead of the door's own timeline so the shut's thump lands as it closes.
+
+### The pull strap (`hero_car_door_strap.py`)
+
+The seated driver closes the door by a 25 cm loop strap (the plausibility cap; aftermarket straps
+are 18 to 22 cm, reviews of the SVJ describe a leather pull strap in place of a handle). A strap
+is soft, so it is modelled as what a soft strap does, not as a stiff tab: a stiff strap would sit
+25 cm into the cabin trim with the door shut.
+- `measure` casts strap-wide rays down from the anchor (the card's inner lower edge nearest the
+  seated shoulder) at every quarter degree of the swing, against the body and the door, and keeps
+  the free length as a table: the strap hangs no longer than the trim below lets it (the rest of a
+  real strap would lie on the trim). On the SVJ: 16 cm shut, 2 to 5 cm from 1.5 to 8 degrees while
+  the door's lower edge sweeps just over the cabin trim, the whole 25 cm from 15.5 degrees. It then
+  checks every hanging pose, every held pose (taut from the anchor to the palm, from the grab angle
+  to shut) and the swing between them; `--full-length` must fail that check.
+- `tilt` measured the alternative, tilting a full-length strap aside instead of shortening it, and
+  it was not taken: shut, the strap would lie 60 degrees along the card, and between 2 and 8 degrees
+  the clearing direction jumps from one quarter degree to the next.
+- `build` exports the strap in its own frame (its -Y down the strap, its Z the faces' normal, full
+  length), so the game aims it by its weld's C0 and sets its length by `Size.Y`, and the door card
+  without the model's old short strap, size and origin unchanged for `ApplyMesh`. The strap's UVs
+  sit in the old strap's red island, so it takes the card's own SurfaceAppearance. The manifest
+  carries the place pose and the binding's numbers (`door.strap` in `Config/Cars/<Car>Model.luau`).
+- In the game the strap hangs on its own Weld from the chassis (`CarRig`), and
+  `Controllers/CarDoor` poses it every frame with `Rules/DoorStrap`: held while a clip that closes
+  the door by it plays (InsideClose, GetIn) and the door is between the grab angle and shut, aimed at
+  the seated driver's animated palm and never longer than the strap; hanging otherwise.
 
 ## Open items on the SVJ
 

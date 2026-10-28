@@ -1,21 +1,27 @@
 --!strict
 --[[
 	The camera while the local player gets in or out; CarCamera asks it each frame. In the third
-	person views it keeps the framing the camera had when the sequence began and follows the
-	body with it, easing into the car's own view as the entry ends and out of it as the exit
-	begins. In the cockpit view it rides the animated head. Seated, it hands back the car's view.
+	person views it follows the body, easing into the car's own view as the entry ends and out
+	of it as the exit begins: getting in, it keeps the framing the camera had when the sequence
+	began; getting out, it stands off the driver's door, since the car's own view behind the car
+	would have the car's body between it and the driver. In the cockpit view it rides the
+	animated head. Seated, it hands back the car's view.
 ]]
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local CarState = require(ReplicatedStorage.Shared.Car.CarState)
+local DoorMark = require(ReplicatedStorage.Shared.Car.DoorMark)
 local Rules = require(ReplicatedStorage.Shared.Rules.CarEntry)
 
 -- Seconds over which the view eases between following the body and the car's view.
 local BLEND_SECONDS = 1.2
 -- Studs the third person camera keeps from the head, whatever framing it started with.
 local MIN_DISTANCE, MAX_DISTANCE = 5, 16
+-- Getting out: studs from the head and above it, off the door and a little toward the rear.
+local EXIT_DISTANCE, EXIT_HEIGHT = 11, 3.5
+local EXIT_OUTWARD, EXIT_REARWARD = 0.85, 0.5
 -- The eye in the head's own axes: a little up and forward of its centre.
 local EYE = CFrame.new(0, 0.1, -0.35)
 
@@ -43,6 +49,25 @@ local function startOffset(entering: boolean, from: Vector3, normal: CFrame, foc
 	return if offset.Magnitude > 1e-3 then offset.Unit * distance else Vector3.new(0, 0, distance)
 end
 
+local function flat(vector: Vector3): Vector3
+	local level = Vector3.new(vector.X, 0, vector.Z)
+	return if level.Magnitude > 1e-3 then level.Unit else Vector3.zero
+end
+
+local function exitOffset(model: Model): Vector3?
+	local seat = model:FindFirstChild("DriverSeat")
+	if seat == nil or not seat:IsA("BasePart") then
+		return nil
+	end
+	local outward = flat(DoorMark.frame(seat).Position - seat.Position)
+	local rearward = flat(-seat.CFrame.LookVector)
+	local across = outward * EXIT_OUTWARD + rearward * EXIT_REARWARD
+	if across.Magnitude < 1e-3 then
+		return nil
+	end
+	return across.Unit * EXIT_DISTANCE + Vector3.yAxis * EXIT_HEIGHT
+end
+
 -- `normal` is where the car's view would put the camera; `current` is where it is now.
 function EntryView.place(view: string, model: Model, normal: CFrame, current: CFrame): CFrame
 	local state = CarState.read(model)
@@ -59,7 +84,9 @@ function EntryView.place(view: string, model: Model, normal: CFrame, current: CF
 		then previous
 		else {
 			startedAt = state.entryAt,
-			offset = startOffset(entering, current.Position, normal, headPart.Position),
+			offset = if entering
+				then startOffset(true, current.Position, normal, headPart.Position)
+				else exitOffset(model) or startOffset(false, current.Position, normal, headPart.Position),
 		}
 	sequence = active
 	local follow = if view == "Cockpit"

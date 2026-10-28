@@ -24,6 +24,9 @@ export type DriverArms = {
 	HAND_BACK: Point,
 	FOLLOW_LIMIT: number,
 	SLEEVE_COLOR: Color3,
+	GLOVES: boolean,
+	GLOVE_COLOR: Color3,
+	COCKPIT_GLOVES_ONLY: boolean,
 }
 
 local DriverArms: DriverArms = table.freeze({
@@ -57,6 +60,15 @@ local DriverArms: DriverArms = table.freeze({
 	-- through them, so the arms never cross.
 	FOLLOW_LIMIT = math.rad(110),
 	SLEEVE_COLOR = Color3.fromRGB(22, 22, 24),
+	-- Racing gloves on the seated driver's hands, in every view, with the cuffs at the wrists as
+	-- their gauntlets (FIA 8856-2018 gloves, such as Alpinestars' Tech-1 Race, have a long
+	-- gauntlet cuff over the suit's sleeve). Off, the hands take the avatar's skin colour and the
+	-- cuffs the sleeves'. The hand meshes' near-white skin detail map takes the colour as a tint.
+	GLOVES = true,
+	GLOVE_COLOR = Color3.fromRGB(34, 34, 38),
+	-- In the cockpit view the local driver sees only their gloved hands, as in a racing sim
+	-- (Rules/ArmPieces); other views and other drivers keep the full arms.
+	COCKPIT_GLOVES_ONLY = true,
 })
 
 return DriverArms

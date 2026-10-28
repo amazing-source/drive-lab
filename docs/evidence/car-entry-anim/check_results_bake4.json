@@ -1,0 +1,128 @@
+{
+ "entry": {
+  "baked_sha256": "c87d988c6d6c3b2b4e68f7ebbb319213c885ee9debd667294c4bd7340d842588",
+  "frames": 229,
+  "passed": false,
+  "failures": 2,
+  "by_part": {
+   "Right Leg slide": {
+    "frames": 1,
+    "max": 2.3,
+    "list": [
+     [
+      161,
+      2.3
+     ]
+    ]
+   },
+   "Left Leg slide": {
+    "frames": 1,
+    "max": 0.96,
+    "list": [
+     [
+      161,
+      0.96
+     ]
+    ]
+   }
+  }
+ },
+ "exit": {
+  "baked_sha256": "b49f73d623fdd736edf375143a8e29aca54d32371f158f080de61a574f4e3405",
+  "frames": 307,
+  "passed": false,
+  "failures": 16,
+  "by_part": {
+   "Right Leg slide": {
+    "frames": 9,
+    "max": 1.91,
+    "list": [
+     [
+      107,
+      1.91
+     ],
+     [
+      144,
+      1.14
+     ],
+     [
+      153,
+      1.4
+     ],
+     [
+      195,
+      0.63
+     ],
+     [
+      211,
+      0.63
+     ],
+     [
+      221,
+      0.77
+     ],
+     [
+      243,
+      1.19
+     ],
+     [
+      249,
+      0.99
+     ],
+     [
+      250,
+      1.27
+     ]
+    ]
+   },
+   "Left Leg slide": {
+    "frames": 7,
+    "max": 1.91,
+    "list": [
+     [
+      107,
+      1.91
+     ],
+     [
+      169,
+      0.74
+     ],
+     [
+      244,
+      1.15
+     ],
+     [
+      248,
+      0.87
+     ],
+     [
+      279,
+      0.62
+     ],
+     [
+      295,
+      0.62
+     ],
+     [
+      304,
+      0.77
+     ]
+    ]
+   }
+  }
+ },
+ "close": {
+  "baked_sha256": "a0a07820ae09c5db8de6ab26009570cce6353bc49bfcc1756e4d8f1de642694a",
+  "frames": 55,
+  "passed": true,
+  "failures": 0,
+  "by_part": {}
+ },
+ "seated": {
+  "baked_sha256": "6ff702707f1ed2318a9600ed820dc75b12fa08ab8b395592b3cbd7a0c61b3ff5",
+  "frames": 31,
+  "passed": true,
+  "failures": 0,
+  "by_part": {}
+ }
+}

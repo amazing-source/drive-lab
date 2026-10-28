@@ -1,0 +1,17 @@
+[
+ {
+  "why": "left hand on the strap pulling the door shut (#31)",
+  "from": 24,
+  "to": 42,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "door",
+   "interior",
+   "carbon",
+   "trim"
+  ],
+  "depth": 0.12
+ }
+]

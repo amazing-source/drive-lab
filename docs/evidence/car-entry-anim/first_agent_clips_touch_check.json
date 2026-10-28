@@ -1,0 +1,128 @@
+{
+ "entry": {
+  "Left Leg slide": {
+   "frames": 19,
+   "from": 14.0,
+   "to": 164.0,
+   "max": 8.18
+  },
+  "Right Leg slide": {
+   "frames": 16,
+   "from": 15.0,
+   "to": 163.0,
+   "max": 5.43
+  },
+  "Head door": {
+   "frames": 7,
+   "from": 26.0,
+   "to": 32.0,
+   "max": 0.095
+  },
+  "Right Arm door": {
+   "frames": 6,
+   "from": 26.0,
+   "to": 31.0,
+   "max": 0.245
+  },
+  "Right Leg paint": {
+   "frames": 8,
+   "from": 161.0,
+   "to": 168.0,
+   "max": 0.205
+  },
+  "Left Leg paint": {
+   "frames": 6,
+   "from": 163.0,
+   "to": 182.0,
+   "max": 0.146
+  },
+  "Left Arm float": {
+   "frames": 23,
+   "from": 170.0,
+   "to": 192.0,
+   "max": 0.996
+  },
+  "Right Arm float": {
+   "frames": 15,
+   "from": 173.0,
+   "to": 190.0,
+   "max": 0.525
+  },
+  "Left Leg interior": {
+   "frames": 3,
+   "from": 191.0,
+   "to": 193.0,
+   "max": 0.102
+  },
+  "Right Leg interior": {
+   "frames": 5,
+   "from": 192.0,
+   "to": 196.0,
+   "max": 0.193
+  }
+ },
+ "entry_baked_sha256": "7b554024e644846a8869efae857fe6e3d680d368febcbf5ca8f4b3e266acfce8",
+ "exit": {
+  "Left Arm float": {
+   "frames": 40,
+   "from": 61.0,
+   "to": 114.0,
+   "max": 1.009
+  },
+  "Head interior": {
+   "frames": 1,
+   "from": 70.0,
+   "to": 70.0,
+   "max": 0.045
+  },
+  "Right Leg interior": {
+   "frames": 15,
+   "from": 70.0,
+   "to": 89.0,
+   "max": 0.393
+  },
+  "Right Arm float": {
+   "frames": 26,
+   "from": 75.0,
+   "to": 114.0,
+   "max": 0.709
+  },
+  "Left Leg interior": {
+   "frames": 3,
+   "from": 75.0,
+   "to": 77.0,
+   "max": 0.128
+  },
+  "Right Leg sill": {
+   "frames": 1,
+   "from": 97.0,
+   "to": 97.0,
+   "max": 0.222
+  },
+  "Right Leg paint": {
+   "frames": 3,
+   "from": 98.0,
+   "to": 100.0,
+   "max": 0.308
+  },
+  "Left Leg slide": {
+   "frames": 16,
+   "from": 105.0,
+   "to": 304.0,
+   "max": 5.63
+  },
+  "Right Leg slide": {
+   "frames": 20,
+   "from": 122.0,
+   "to": 297.0,
+   "max": 50.26
+  },
+  "Right Leg ground": {
+   "frames": 2,
+   "from": 133.0,
+   "to": 134.0,
+   "max": 0.083
+  }
+ },
+ "exit_baked_sha256": "317570778f231fa80a4dff50f0cf32bb7c6a2b87b94650dc029cd11276f3c279"
+}

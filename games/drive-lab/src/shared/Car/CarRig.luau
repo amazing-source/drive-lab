@@ -38,6 +38,10 @@ export type Rig = {
 	doorRest: CFrame,
 	flap: Weld?,
 	flapRest: CFrame,
+	-- The door's pull strap (Rules/DoorStrap) on its own weld from the chassis, posed by its C0
+	-- (the strap's centre, its -Y down the strap) and its part's Size.Y; nil on a model without
+	-- one or before it has streamed in.
+	strap: Weld?,
 	seat: Seat,
 	prompt: ProximityPrompt,
 }
@@ -45,9 +49,13 @@ export type Rig = {
 local TAG = "DriveLabCar"
 local DOOR_HINGE = "DoorHinge"
 local FLAP_HINGE = "FlapHinge"
+local DOOR_STRAP = "DoorStrap"
 
 local CarRig = {
 	TAG = TAG,
+	-- The strap's weld on the chassis: present once the server has rigged a car with a strap,
+	-- so a client that finds it without its part knows the part has not streamed in yet.
+	STRAP_WELD = DOOR_STRAP,
 	-- Wheel rays travel in RAY_GROUP, which the server makes pass through CHARACTER_GROUP.
 	RAY_GROUP = "DriveLabWheelRays",
 	CHARACTER_GROUP = "DriveLabCharacters",
@@ -183,9 +191,10 @@ local function hingeWeld(name: string, chassis: BasePart, part: BasePart, frame:
 	joint.Parent = chassis
 end
 
--- The door's parts and the flap that the binding names and the model has.
-local function hingedParts(model: Model, binding: SVJModel.CarModel): ({ BasePart }, BasePart?)
+-- The door's parts, the flap and the door's strap that the binding names and the model has.
+local function hingedParts(model: Model, binding: SVJModel.CarModel): ({ BasePart }, BasePart?, BasePart?)
 	local door = {}
+	local strap: Instance? = nil
 	if binding.door then
 		for _, name in binding.door.parts do
 			local part = model:FindFirstChild(name, true)
@@ -193,9 +202,12 @@ local function hingedParts(model: Model, binding: SVJModel.CarModel): ({ BasePar
 				table.insert(door, part)
 			end
 		end
+		strap = if binding.door.strap then model:FindFirstChild(binding.door.strap.part, true) else nil
 	end
 	local flap = if binding.flap then model:FindFirstChild(binding.flap.part, true) else nil
-	return door, if flap and flap:IsA("BasePart") then flap else nil
+	return door,
+		if flap and flap:IsA("BasePart") then flap else nil,
+		if strap and strap:IsA("BasePart") then strap else nil
 end
 
 -- The pedals the binding names and the model has, each with its hinge frame. Each hangs on its
@@ -216,13 +228,16 @@ local function pedalParts(model: Model, binding: SVJModel.CarModel): { [BasePart
 end
 
 -- The door hangs on one Weld to an invisible part at its hinge, its parts welded rigidly to that
--- part; the flap hangs on its own Weld. Turning either Weld's C0 about X opens it.
+-- part; the flap hangs on its own Weld. Turning either Weld's C0 about X opens it. The door's
+-- strap hangs on its own Weld from the chassis, where it sits in the place; Controllers/CarDoor
+-- poses it from then on.
 local function hang(
 	model: Model,
 	chassis: BasePart,
 	binding: SVJModel.CarModel,
 	door: { BasePart },
-	flap: BasePart?
+	flap: BasePart?,
+	strap: BasePart?
 )
 	if binding.door and #door > 0 then
 		local frame = hingeFrame(binding.door.pivot, binding.door.axis, binding.bodyRaise)
@@ -244,6 +259,15 @@ local function hang(
 			flap,
 			hingeFrame(binding.flap.pivot, binding.flap.axis, binding.bodyRaise)
 		)
+	end
+	if strap then
+		local joint = Instance.new("Weld")
+		joint.Name = DOOR_STRAP
+		joint.Part0 = chassis
+		joint.Part1 = strap
+		joint.C0 = chassis.CFrame:ToObjectSpace(strap.CFrame)
+		joint:SetAttribute("RestC0", joint.C0)
+		joint.Parent = chassis
 	end
 end
 
@@ -386,13 +410,16 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: SVJModel.CarM
 			moving[findPart(model, caliper)] = true
 		end
 	end
-	local doorParts, flapPart = hingedParts(model, binding)
+	local doorParts, flapPart, strapPart = hingedParts(model, binding)
 	local hinged: { [BasePart]: true } = {}
 	for _, part in doorParts do
 		hinged[part] = true
 	end
 	if flapPart then
 		hinged[flapPart] = true
+	end
+	if strapPart then
+		hinged[strapPart] = true
 	end
 	local pedals = pedalParts(model, binding)
 	for part in pedals do
@@ -414,7 +441,7 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: SVJModel.CarM
 			end
 		end
 	end
-	hang(model, chassis, binding, doorParts, flapPart)
+	hang(model, chassis, binding, doorParts, flapPart, strapPart)
 	for part, hinge in pedals do
 		hingeWeld(part.Name, chassis, part, hinge)
 	end
@@ -484,6 +511,7 @@ function CarRig.find(model: Model, binding: SVJModel.CarModel): Rig?
 	end
 	local doorHinge, doorRest = hingeOf(chassis, DOOR_HINGE)
 	local flapHinge, flapRest = hingeOf(chassis, FLAP_HINGE)
+	local strap = hingeOf(chassis, DOOR_STRAP)
 	local steeringWeld = chassis:FindFirstChild(binding.steeringWheel)
 	local steeringRest = steeringWeld and steeringWeld:GetAttribute("RestC0")
 	return {
@@ -506,6 +534,7 @@ function CarRig.find(model: Model, binding: SVJModel.CarModel): Rig?
 		doorRest = doorRest,
 		flap = flapHinge,
 		flapRest = flapRest,
+		strap = strap,
 		seat = seat,
 		prompt = prompt,
 	}

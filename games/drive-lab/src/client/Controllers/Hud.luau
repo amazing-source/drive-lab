@@ -2,10 +2,10 @@
 --[[
 	The driving HUD (Config/Hud): the owner's design as a frame image, with the live parts drawn
 	over it: ten rev segments of a thousand rpm, filling as a needle would and red past the
-	redline, the drive mode, TC and ABS lit while they act, A or M and the gear, the speed, the
-	headlight tell-tale, and the indicators while they blink. Shown while this player drives,
-	bottom centre, or bottom right in the cockpit; U cycles full, minimal (the same, smaller) and
-	off. Reads the readouts the driving and lights controllers publish on the car model.
+	redline, the drive mode, TC and ABS lit while they act (red while switched off), A or M and the
+	gear, the speed, the headlight tell-tale, and the indicators while they blink. Shown while this
+	player drives, bottom centre, or bottom right in the cockpit; U cycles full, minimal (the same,
+	smaller) and off. Reads the readouts the driving and lights controllers publish on the car model.
 ]]
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -21,6 +21,8 @@ local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local ClusterRules = require(ReplicatedStorage.Shared.Rules.Cluster)
 local Config = require(ReplicatedStorage.Shared.Config.Hud)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
+local DriverAssists = require(ReplicatedStorage.Shared.Rules.DriverAssists)
+local DriverAssistsConfig = require(ReplicatedStorage.Shared.Config.DriverAssists)
 local Rules = require(ReplicatedStorage.Shared.Rules.Hud)
 
 local MONTSERRAT = "rbxasset://fonts/families/Montserrat.json"
@@ -85,6 +87,18 @@ local function bar(parent: Instance, box: Config.Box): Frame
 	place(line, box)
 	line.Parent = parent
 	return line
+end
+
+-- A tell-tale's text and line: grey while ready, yellow while it acts, red while switched off.
+local function paint(label: TextLabel, line: Frame, state: DriverAssists.Telltale)
+	label.TextColor3 = if state == "Acting"
+		then Config.YELLOW
+		elseif state == "Off" then Config.RED
+		else Config.GREY
+	line.BackgroundColor3 = if state == "Acting"
+		then Config.YELLOW
+		elseif state == "Off" then Config.RED
+		else Config.LINE_GREY
 end
 
 -- The segment's colour along its length: yellow, then red from where the redline falls in it.
@@ -301,12 +315,17 @@ local function refresh(current: Ui, model: Model)
 	local modeName = model:GetAttribute("DrivingMode")
 	current.mode.Text = if typeof(modeName) == "string" then string.upper(modeName) else ""
 
-	local tc = model:GetAttribute("TcActive") == true
-	local abs = model:GetAttribute("AbsActive") == true
-	current.tc.TextColor3 = if tc then Config.YELLOW else Config.GREY
-	current.tcLine.BackgroundColor3 = if tc then Config.YELLOW else Config.LINE_GREY
-	current.abs.TextColor3 = if abs then Config.YELLOW else Config.GREY
-	current.absLine.BackgroundColor3 = if abs then Config.YELLOW else Config.LINE_GREY
+	local assists = DriverAssists.assists(model:GetAttribute("EscOff") == true, DriverAssistsConfig)
+	paint(
+		current.tc,
+		current.tcLine,
+		DriverAssists.telltale(assists.tc, model:GetAttribute("TcActive") == true)
+	)
+	paint(
+		current.abs,
+		current.absLine,
+		DriverAssists.telltale(assists.abs, model:GetAttribute("AbsActive") == true)
+	)
 	current.light.ImageColor3 = if model:GetAttribute("HeadlightsOn") == true
 		then Config.GREEN
 		else Config.OFF

@@ -99,35 +99,95 @@ local CarEntry: CarEntry = {
 		RESERVED_BY = "ReservedBy",
 		RESERVED_AT = "ReservedAt",
 	}),
-	-- EST until the Blender pipeline delivers: timings for a 1.5x world and a driver at
-	-- Driving.DRIVER_SCALE, door curves eased between the moments a hand moves it.
+	-- From the Blender pipeline (docs/pipelines/CAR_ENTRY_ANIMATION.md, 2026-10-28): authored at
+	-- Driving.DRIVER_SCALE against the cut door, a key on every frame, contact-checked (contacts
+	-- that must touch, the decided ones named in docs/evidence/car-entry-anim/allow_*.json) and
+	-- uploaded through the guard; each door curve is the door keyed on the same timeline as the hand.
+	-- GetIn carries the close (#9): the hand rides the door's lower inner edge from half open, then
+	-- the strap from 30 degrees; InsideClose takes the strap at 30 degrees.
 	CLIPS = table.freeze({
 		OutsideOpen = table.freeze({
-			seated = "",
-			standing = "",
-			duration = 2.2,
-			door = table.freeze({ times = { 0.7, 1.0, 1.6, 2.0 }, values = { 0, 0.08, 0.75, 1 } }),
+			seated = "rbxassetid://105348915995074",
+			standing = "rbxassetid://116794100117562",
+			duration = 3.333,
+			door = table.freeze({
+				times = { 0.967, 1.3, 1.5, 1.667, 1.867, 2.033, 2.133, 2.333, 2.533, 2.7, 2.8, 2.933 },
+				values = { 0, 0.035, 0.089, 0.153, 0.258, 0.374, 0.459, 0.66, 0.834, 0.94, 0.98, 1 },
+			}),
 		}),
-		GetIn = table.freeze({ seated = "", duration = 3.6 }),
+		GetIn = table.freeze({
+			seated = "rbxassetid://88140349551789",
+			duration = 4.267,
+			door = table.freeze({
+				times = {
+					2.533,
+					2.567,
+					2.6,
+					2.667,
+					2.7,
+					2.8,
+					2.833,
+					2.867,
+					2.933,
+					3.133,
+					3.267,
+					3.333,
+					3.5,
+					3.6,
+					3.667,
+					3.733,
+				},
+				values = {
+					1,
+					0.988,
+					0.957,
+					0.87,
+					0.812,
+					0.604,
+					0.542,
+					0.5,
+					0.465,
+					0.372,
+					0.33,
+					0.287,
+					0.139,
+					0.054,
+					0.015,
+					0,
+				},
+			}),
+		}),
 		InsideClose = table.freeze({
-			seated = "",
-			duration = 1.6,
-			door = table.freeze({ times = { 0.4, 0.9, 1.3 }, values = { 1, 0.45, 0 } }),
+			seated = "rbxassetid://86043343714462",
+			duration = 1.8,
+			door = table.freeze({
+				times = { 0.267, 0.3, 0.367, 0.467, 0.5, 0.567, 0.7, 0.833, 0.967, 1.067, 1.233, 1.3, 1.333 },
+				values = { 1, 0.995, 0.961, 0.88, 0.847, 0.756, 0.55, 0.369, 0.228, 0.143, 0.031, 0.004, 0 },
+			}),
 		}),
 		InsideOpen = table.freeze({
-			seated = "",
-			duration = 1.4,
-			door = table.freeze({ times = { 0.3, 0.5, 1.1 }, values = { 0, 0.1, 1 } }),
+			seated = "rbxassetid://93977108041759",
+			duration = 1.6,
+			door = table.freeze({
+				times = { 0.5, 0.767, 0.833, 0.9, 1, 1.067, 1.233, 1.367, 1.433, 1.5, 1.533, 1.567 },
+				values = { 0, 0.05, 0.076, 0.134, 0.25, 0.347, 0.649, 0.844, 0.922, 0.973, 0.992, 1 },
+			}),
 		}),
-		GetOut = table.freeze({ seated = "", duration = 3.4 }),
+		GetOut = table.freeze({
+			seated = "rbxassetid://82829724490644",
+			duration = 4,
+		}),
 		OutsideClose = table.freeze({
-			seated = "",
-			standing = "",
-			duration = 1.8,
-			door = table.freeze({ times = { 0.4, 0.9, 1.4 }, values = { 1, 0.5, 0 } }),
+			seated = "rbxassetid://112948852391762",
+			standing = "rbxassetid://116154715049025",
+			duration = 4.6,
+			door = table.freeze({
+				times = { 1.933, 2.067, 2.133, 2.167, 2.233, 2.4, 2.7, 2.733, 2.8, 2.833 },
+				values = { 1, 0.986, 0.97, 0.955, 0.897, 0.697, 0.254, 0.2, 0.039, 0 },
+			}),
 		}),
 	}),
-	SEATED_POSE = "",
+	SEATED_POSE = "rbxassetid://77930295624365",
 	STARTUP = table.freeze({
 		flapUpAt = 1.0,
 		pressAt = 1.5,
@@ -148,7 +208,7 @@ local CarEntry: CarEntry = {
 		flapMove = 0.25,
 		brake = 0.6,
 	}),
-	MARK = table.freeze({ right = -0.92, forward = 0 }),
+	MARK = table.freeze({ right = -0.88, forward = 0 }),
 	MARK_TOLERANCE = 2,
 	PROMPT_DISTANCE = 6,
 	RESERVE_SECONDS = 4,
