@@ -25,6 +25,7 @@ export type Cluster = {
 	GEAR: Spot,
 	SPEED: Spot,
 	MODE: Spot,
+	ESC: Spot,
 	TC: Spot,
 	ABS: Spot,
 	STARTUP_SECONDS: number,
@@ -59,6 +60,8 @@ local Cluster: Cluster = table.freeze({
 	GEAR = { x = 256, y = 82, size = 30 },
 	SPEED = { x = 379, y = 157, size = 20 },
 	MODE = { x = 190.5, y = 109.5, size = 8.5 },
+	-- The ESC light, under the gear in the free band between the mode and the odometer.
+	ESC = { x = 256, y = 110, size = 6 },
 	TC = { x = 205, y = 93, size = 6 },
 	ABS = { x = 307, y = 93, size = 6 },
 	-- The rev counter sweeps to the top and back when START is pressed (unsourced for the SVJ: no

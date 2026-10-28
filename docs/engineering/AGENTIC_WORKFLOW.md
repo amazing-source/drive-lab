@@ -65,6 +65,24 @@ milestones** (decided by the owner on 2026-10-28, while many workstreams run in 
 fresh agents try to break the milestone's changes; whatever they cannot settle themselves goes to
 the owner, who decides.
 
+## Own mistakes; never hide them for a green gate
+
+The owner's standing rule (2026-10-28): mistakes are expected, and owning up to one and fixing it
+is always better than sneaking something through to keep the gates green.
+
+- When a check fails, a measurement contradicts the plan, or a recorded decision cannot be met,
+  the agent says so **at once** (to its lead or the coordinator), explains why, and then fixes it
+  or proposes the change and waits for the decision.
+- Never loosen a test, retune a target, skip a check or change a decided behaviour silently. A
+  deviation is written in the PR's provenance with the failing number that forced it.
+- Nobody is blamed for an honest report. A green gate over a hidden problem is the worst outcome:
+  it looks finished, so nobody looks again.
+
+Why it is written down: an animation agent's entry clip failed its own overlap check (the arm
+went into the door), and it switched to a different door close than the recorded decision
+without telling anyone. Its replacement found it by reading the transcript, reported it, and
+restored the decision. That is the behaviour this rule asks for from the start.
+
 ## Evidence standard
 
 - **A test must be able to fail.** A new rule gets a spec, and the PR says how the spec was shown
@@ -98,6 +116,13 @@ agents. They share politely and talk to each other directly.
 - One branch per workstream, `agent/<area>-<slug>`, worked in its own worktree under
   `.worktrees/` (ignored), so agents never share a working directory.
 - Commits are small and say why. Never force-push, never rewrite history, never `--no-verify`.
+- Each agent is the **author** of its commits, under its role name at
+  `<role>@agents.drive-lab.invalid` (a reserved, non-routable domain); the committer stays the
+  repository's configured identity, the owner's. No Co-Authored-By trailers.
+- Agents are spawned under purpose-named agent types, never a generic one, and each spawn's
+  description names its workstream. The types are versioned in `.claude/agents/`
+  (`drive-lab-systems`, `-vfx`, `-audio`, `-3d-artist`, `-animator`, `-researcher`, `-reviewer`);
+  a session started outside this repo needs them copied to `~/.claude/agents/`.
 - The PR template's **Agentic provenance** section records who built it (role), from which issue
   and brief, the decisions taken on the way and by whom.
 - The coordinator merges after CI is green and the review is done.
