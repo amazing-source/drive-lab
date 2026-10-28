@@ -1,0 +1,28 @@
+{
+ "about": "Agent C, 2026-10-28, Studio edit mode: a CarRig-built copy of CarImport, an R6 from CreateHumanoidModelFromDescription at DRIVER_SCALE 0.857 seated with Seat:Sit, DriverArms + DriverLegs running; variants set through the SeatWeld's C0. Studs of the 1.5x world in the DriverSeat frame unless stated. Rays on the copy's MeshParts only.",
+ "cushion": {
+  "method": "rays straight down at x in {-0.86,-0.6,-0.43,0,0.43,0.6,0.86}, z in {-0.43,-0.2,0,0.2,0.43}",
+  "underTorsoHighest": -0.168,
+  "atHipLine": {"x0": -0.48, "x+0.43": -0.36, "x-0.43": -0.60},
+  "sideBolstersHighest": 0.126,
+  "torsoBottomToday": 0.70,
+  "note": "A deep bucket: lowest near z -0.5, rising to the back and the front lip. The earlier 2.0-stud estimate measured to the pan's bottom; the torso's footprint rests first on the rear rise at -0.17."
+ },
+ "dropB": {"studs": 0.868, "metres": 0.162},
+ "reclineBprime": {"deg": 20, "from": "the SVJ backrest mesh: 18-21 deg from vertical between 0.31 and 0.55 m up (rays on Interior_Geo_lodA); SAE/E-NCAP design torso angle reference 25 deg"},
+ "armReachStuds": 1.363,
+ "variants": {
+  "T": {"root": [0, 1.557, 0], "arms": {"straight": "R 1.280 (94%), L 1.274 (94%)", "follow +110": "R 1.364 (100%), L 1.969 (144%)", "follow -110": "R 1.933 (142%), L 1.390 (102%)"}, "legs": {"throttleRest": "0.844 m of 0.91, knee 136", "throttleFull": "0.873, knee 147", "brake0.6": "0.806, knee 125", "footrest": "0.876, knee 149", "thighUndersideAboveCushion": "4-18 cm"}, "headRoofClearanceCm": 6.7, "eyeY": 3.218, "kneeToDashMinCm": -1, "headBackToSeatCm": 9, "torsoBackToSeatCm": 22},
+  "B": {"root": [0, 0.689, 0], "arms": {"straight": "R 1.743 (128%), L 1.738 (128%)", "follow +110": "R 1.106 (81%), L 2.418 (177%)", "follow -110": "R 2.389 (175%), L 1.138 (84%)", "grip 30 deg lower": "101%", "grip 45 deg lower": "88%"}, "legs": {"throttleRest": "0.812, knee 126", "throttleFull": "0.843, knee 136", "brake0.6": "0.771, knee 116", "footrest": "0.843, knee 136", "thighUndersideAboveCushion": "-6 to +4 cm (resting on it, up to 6 cm sunk)"}, "headRoofClearanceCm": 22.9, "eyeYIfUnchanged": 2.350, "eyeUpToKeepTodaysEye": "0.07 + 0.162 = 0.232 m", "kneeToDashMinCm": 3, "headBackToSeatCm": 20, "torsoBackToSeatCm": 15, "forearmGapAtCuffStuds": 0.27},
+  "Bprime": {"root": [0, 0.638, 0.293], "arms": {"straight": "R 2.120 (156%), L 2.117 (155%)", "follow +110": "R 1.492 (109%), L 2.726 (200%)", "follow -110": "R 2.701 (198%), L 1.516 (111%)", "grip 30 deg lower": "131%", "grip 45 deg lower": "119%"}, "legs": "as B within 4 mm", "headRoofClearanceCm": 12.1, "eyeYIfUnchanged": 2.221, "kneeToDashMinCm": 3, "headBackToSeatCm": 10, "torsoBackToSeatCm": 7},
+  "B moved forward": {"0.30 studs": "arms 114% (30 deg lower 84%), knee to dash 0 cm", "0.45": "108% (77%), knee -1 cm", "0.60": "102% (71%), knee -3 cm"},
+  "B' moved forward": {"0.60": "124% (95%), knee -4 cm", "0.90": "112% (81%), knee -2 cm"}
+ },
+ "captures": {
+  "T_eye.jpg, B_eye.jpg, Bprime_eye.jpg": "the same eye world CFrame (today's: seat (0, 3.218, 0), looking ahead), head and torso hidden; the three look the same because the hands are placed on the wheel and the clamped forearms come from below the view",
+  "T/B/Bprime_outside_side_door_shut.jpg": "outside the driver's window, glass made 85% see-through on the copy (the sun's glare hides the driver otherwise)",
+  "B_passenger_arms_stretched.jpg": "B from the passenger seat: arms straight, the sleeves short of the cuffs (gap 0.27 studs at the cuff)",
+  "T_passenger_rest.jpg": "today, engine off, hands resting"
+ },
+ "notCaptured": "door open (B's door parts are not in the place yet); a chase-camera view"
+}
