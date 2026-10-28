@@ -3,8 +3,10 @@
 	Lights the street lamps on this client: on from dusk to dawn by the local time of day (the
 	weather sets Lighting.ClockTime), each lamp switching at its own moment within a couple of
 	seconds; only lamps near the camera have their lights enabled, and only the nearest few
-	downlights cast shadows. Lit, a lamp's candle-bulbs turn to warm neon. The lamps themselves
-	are laid by the server's road (Services/Track); everything here is local.
+	downlights cast shadows. Lit, a lamp's candle-bulbs turn to warm neon. The nearest lit lamps
+	in view also get their glints (Effects/LampGlints): a faint flare, and a streak of reflected
+	light when the road is wet. The lamps themselves are laid by the server's road
+	(Services/Track); everything here is local.
 ]]
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
@@ -13,6 +15,8 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config.StreetLights)
+local GlintConfig = require(ReplicatedStorage.Shared.Config.LampGlints)
+local LampGlints = require(script.Parent.Parent.Effects.LampGlints)
 local StreetLamps = require(ReplicatedStorage.Shared.Rules.StreetLamps)
 local Units = require(ReplicatedStorage.Shared.Units)
 
@@ -25,12 +29,15 @@ type Lamp = {
 	glows: { Light },
 	delay: number,
 	lit: boolean,
+	-- The verge it stands on (-1 left, 1 right), from the server; 0 if unknown, and no glints.
+	side: number,
 }
 
 local lamps: { [Model]: Lamp } = {}
 local night = false
 local changedAt = -math.huge
 local elapsed = 0
+local glints: LampGlints.Glints? = nil
 
 local function track(model: Instance)
 	-- The lamp kept in ReplicatedStorage is tagged too; only lamps standing in the world count.
@@ -47,6 +54,7 @@ local function track(model: Instance)
 	end
 	local bulb = model:FindFirstChild("Bulb")
 	local at = model:GetPivot().Position
+	local side = model:GetAttribute("RoadSide")
 	lamps[model] = {
 		model = model,
 		bulb = if bulb and bulb:IsA("BasePart") then bulb else nil,
@@ -54,6 +62,7 @@ local function track(model: Instance)
 		glows = glows,
 		delay = StreetLamps.delay(at.X, at.Z, Config.SWITCH_SPREAD),
 		lit = false,
+		side = if side == 1 then 1 elseif side == -1 then -1 else 0,
 	}
 end
 
@@ -67,6 +76,27 @@ local function setLit(lamp: Lamp, lit: boolean)
 		bulb.Material = if lit then Enum.Material.Neon else Enum.Material.SmoothPlastic
 		bulb.Color = if lit then Config.BULB_ON else Config.BULB_OFF
 	end
+end
+
+-- The nearest lit lamps in view, as many as the larger glint pool holds.
+local function inView(near: { { lamp: Lamp, distance: number } }, view: CFrame): { LampGlints.Lamp }
+	local wanted = math.max(GlintConfig.FLARES, GlintConfig.REFLECTIONS)
+	local found = {}
+	for _, entry in near do
+		local pivot = entry.lamp.model:GetPivot()
+		local offset = pivot.Position - view.Position
+		if
+			entry.lamp.side ~= 0
+			and offset.Magnitude > 0
+			and view.LookVector:Dot(offset.Unit) > GlintConfig.IN_VIEW
+		then
+			table.insert(found, { base = pivot.Position, right = pivot.ZVector, side = entry.lamp.side })
+			if #found >= wanted then
+				break
+			end
+		end
+	end
+	return found
 end
 
 local function update(dt: number)
@@ -114,6 +144,21 @@ local function update(dt: number)
 			light.Shadows = index <= Config.SHADOW_LAMPS
 		end
 	end
+	if glints and camera then
+		LampGlints.assign(glints, inView(near, camera.CFrame))
+	end
+end
+
+local function attribute(name: string): number
+	local value = Workspace:GetAttribute(name)
+	return if typeof(value) == "number" then value else 0
+end
+
+local function renderGlints()
+	local camera = Workspace.CurrentCamera
+	if glints and camera then
+		LampGlints.render(glints, camera, attribute("Wetness"), attribute("RainIntensity"))
+	end
 end
 
 local Controller = {}
@@ -129,6 +174,9 @@ function Controller.start()
 		end
 	end)
 	RunService.Heartbeat:Connect(update)
+	glints = LampGlints.new()
+	-- After the camera has moved this frame, so the glints are aimed from where it now is.
+	RunService:BindToRenderStep("DriveLabLampGlints", Enum.RenderPriority.Camera.Value + 1, renderGlints)
 end
 
 return Controller
