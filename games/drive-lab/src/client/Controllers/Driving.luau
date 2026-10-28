@@ -14,6 +14,8 @@ local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local InputHelp = require(ReplicatedStorage.Shared.Config.InputHelp)
 local Interface = require(ReplicatedStorage.Shared.Vehicle.Interface)
+local TyreSmoke = require(ReplicatedStorage.Shared.Rules.TyreSmoke)
+local TyreSmokeConfig = require(ReplicatedStorage.Shared.Config.TyreSmoke)
 local Types = require(ReplicatedStorage.Shared.Config.Cars.Types)
 local VehicleRunner = require(ReplicatedStorage.Shared.Car.VehicleRunner)
 
@@ -25,6 +27,7 @@ local connection: RBXScriptConnection? = nil
 local pressed = { shiftUp = false, shiftDown = false }
 local gearboxMode: "auto" | "manual" = "auto"
 local modeIndex = 1
+local tyreReadings: { TyreSmoke.Wheel } = {}
 
 local function held(keys: { Enum.KeyCode }): boolean
 	for _, key in keys do
@@ -95,6 +98,11 @@ local function publish(model: Model, result: Interface.StepResult, current: Vehi
 	model:SetAttribute("Clutch", telemetry.clutch)
 	model:SetAttribute("AbsActive", telemetry.absActive)
 	model:SetAttribute("TcActive", telemetry.tcActive)
+	-- Per tyre, for the smoke: read from the model, never written back.
+	for wheel, reading in TyreSmoke.measure(current.state, result.wheels, tyreReadings) do
+		model:SetAttribute(TyreSmokeConfig.SLIP_ATTRIBUTES[wheel], reading.slip)
+		model:SetAttribute(TyreSmokeConfig.SLIDE_ATTRIBUTES[wheel], reading.slide)
+	end
 end
 
 local function stop()
