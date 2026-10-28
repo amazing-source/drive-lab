@@ -74,6 +74,10 @@ export type CarEntry = {
 	RESERVE_SECONDS: number,
 	-- Seconds the client walks toward the mark before giving up.
 	APPROACH_SECONDS: number,
+	-- Seconds a request waits for the server to act before it counts as refused, and the clock
+	-- skew allowed between the client's request time and the server's start of the motion.
+	REFUSED_SECONDS: number,
+	REQUEST_SLACK: number,
 	-- Seconds over which the body changes between its own size and the seated size.
 	SCALE_SECONDS: number,
 	-- Speeds (km/h) at or below which one may get out, or open or shut the door from inside.
@@ -149,6 +153,8 @@ local CarEntry: CarEntry = {
 	PROMPT_DISTANCE = 6,
 	RESERVE_SECONDS = 4,
 	APPROACH_SECONDS = 3,
+	REFUSED_SECONDS = 1.5,
+	REQUEST_SLACK = 1,
 	SCALE_SECONDS = 0.8,
 	EXIT_MAX_KMH = 3,
 	DOOR_MAX_KMH = 5,

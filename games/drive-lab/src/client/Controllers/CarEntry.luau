@@ -32,15 +32,12 @@ type Controller = { Enable: (Controller) -> (), Disable: (Controller) -> () }
 -- Studs from the mark that count as arrived.
 local ARRIVED = 0.6
 local POLL_SECONDS = 0.05
--- Seconds a refused request waits before the controls come back.
-local REFUSED_SECONDS = 1.5
 -- Consecutive clips of a sequence meet on the same pose; a rest pose eases in.
 local CHAIN_FADE = 0
 local POSE_FADE = 0.15
 
 -- The door's own motions that play a clip on the body, from inside and from outside.
 local INSIDE: { [string]: Config.ClipName } = { InsideOpen = "InsideOpen", InsideClose = "InsideClose" }
-local OUTSIDE: { [string]: Config.ClipName } = { OutsideOpen = "OutsideOpen", OutsideClose = "OutsideClose" }
 
 local localPlayer = Players.LocalPlayer
 local body: Body? = nil
@@ -93,7 +90,7 @@ local function waitArrival(current: Body, car: Model, seat: BasePart)
 		if DoorMark.distance(seat, current.root.Position) <= ARRIVED then
 			return
 		end
-		if os.clock() - started > REFUSED_SECONDS / 3 and not reservedForMe(car) then
+		if os.clock() - started > Config.REFUSED_SECONDS / 3 and not reservedForMe(car) then
 			return
 		end
 		task.wait(POLL_SECONDS)
@@ -137,7 +134,7 @@ local function approach(car: Model, intent: Intent)
 		send(car, intent)
 	end
 	busy = false
-	task.delay(REFUSED_SECONDS, function()
+	task.delay(Config.REFUSED_SECONDS, function()
 		if seatedCar() == nil and outsideDoor == nil then
 			setControls(true)
 		end
@@ -171,6 +168,13 @@ local function seatedClips(current: Body, car: Model, at: number)
 	ClipPlayer.set(current.clips, Config.SEATED_POSE, nil, POSE_FADE)
 end
 
+-- Ends a door request from outside: frees the body held at the mark and gives the controls back.
+local function finishOutside(current: Body)
+	outsideDoor = nil
+	current.root.Anchored = false
+	setControls(true)
+end
+
 local function standingClips(current: Body, at: number)
 	local pending = outsideDoor
 	if pending == nil then
@@ -178,17 +182,13 @@ local function standingClips(current: Body, at: number)
 		ClipPlayer.set(current.clips, nil, nil, 0)
 		return
 	end
-	local state = CarState.read(pending.car)
-	local outside: Config.ClipName? = OUTSIDE[state.door]
-	local mine = outside ~= nil and state.doorAt >= pending.askedAt - 1
-	if outside ~= nil and mine and at - state.doorAt < clipLength(outside) then
-		ClipPlayer.set(current.clips, clipId(outside, true), at - state.doorAt, POSE_FADE)
+	local request = Rules.outsideRequest(CarState.read(pending.car), at, pending.askedAt)
+	if request.clip then
+		ClipPlayer.set(current.clips, clipId(request.clip, true), request.into, POSE_FADE)
 		return
 	end
-	if mine or now() - pending.askedAt > REFUSED_SECONDS then
-		outsideDoor = nil
-		current.root.Anchored = false
-		setControls(true)
+	if request.finished then
+		finishOutside(current)
 	end
 	ClipPlayer.set(current.clips, nil, nil, 0)
 end
@@ -244,7 +244,10 @@ local function onCharacter(character: Model)
 		local inCar = seatedCar() ~= nil
 		-- Jumping would leave the seat; Space is the handbrake and leaving is the exit key's.
 		humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, not inCar)
-		if inCar then
+		local current = body
+		if inCar and current and current.humanoid == humanoid and outsideDoor ~= nil then
+			finishOutside(current)
+		elseif inCar then
 			setControls(true)
 		end
 	end)

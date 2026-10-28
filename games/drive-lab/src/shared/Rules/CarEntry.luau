@@ -27,6 +27,10 @@ export type State = {
 
 export type Step = { clip: Config.ClipName, start: number, duration: number }
 
+-- A door the local player asked to move from outside: the standing clip to play and how far
+-- into it, or finished (the clip has ended, or the server never moved the door: refused).
+export type OutsideRequest = { clip: Config.ClipName?, into: number, finished: boolean }
+
 export type Startup = {
 	stage: Stage,
 	-- Seconds since START was pressed, once it has been.
@@ -35,6 +39,9 @@ export type Startup = {
 }
 
 local ACTIONS: { [string]: Action } = { Enter = "Enter", Exit = "Exit", Door = "Door", Start = "Start" }
+local OUTSIDE_CLIPS: { [string]: Config.ClipName } =
+	{ OutsideOpen = "OutsideOpen", OutsideClose = "OutsideClose" }
+
 -- The clips of each sequence, from a shut or an open door.
 local ENTER_SHUT: { Config.ClipName } = { "OutsideOpen", "GetIn", "InsideClose" }
 local ENTER_OPEN: { Config.ClipName } = { "GetIn", "InsideClose" }
@@ -270,6 +277,20 @@ function CarEntry.doorClip(state: State, now: number, inside: boolean): Config.C
 		return if open then "InsideClose" else "InsideOpen"
 	end
 	return if open then "OutsideClose" else "OutsideOpen"
+end
+
+-- `askedAt` is the server time of the request. A motion that started before it (less the clock
+-- slack) is someone else's.
+function CarEntry.outsideRequest(state: State, now: number, askedAt: number): OutsideRequest
+	local clip: Config.ClipName? = OUTSIDE_CLIPS[state.door]
+	if clip ~= nil and state.doorAt >= askedAt - Config.REQUEST_SLACK then
+		local into = now - state.doorAt
+		if into < Config.CLIPS[clip].duration then
+			return { clip = clip, into = into, finished = false }
+		end
+		return { clip = nil, into = 0, finished = true }
+	end
+	return { clip = nil, into = 0, finished = now - askedAt > Config.REFUSED_SECONDS }
 end
 
 -- The body's scale `elapsed` seconds into a change from `from` to `to`, eased at both ends.
