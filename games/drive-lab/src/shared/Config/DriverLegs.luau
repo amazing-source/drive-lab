@@ -29,9 +29,9 @@ export type DriverLegs = {
 	-- The point each knee bends toward, in the seat frame: the knee stays in the plane through the
 	-- hip, the ankle and this point.
 	KNEE_TOWARD: { right: Point, left: Point },
-	-- The trousers' seat, a cloth block under the torso that the thighs grow out of, filling the
-	-- room between the R6's torso and the cushion: its centre in the torso's space (studs at
-	-- character scale 1). Its mesh is modelled for Driving.DRIVER_SCALE.
+	-- The trousers' seat: cloth from inside the torso's bottom and the thighs down into the bucket,
+	-- shaped to the car's cushion (tools/blender/seat_fill.py): its box centre in the torso's
+	-- space (studs at character scale 1). Its mesh is modelled for Driving.DRIVER_SCALE.
 	PELVIS_CENTRE: Point,
 	-- The shoe: the ankle joint from where the sole meets the floor under the heel, along the
 	-- sole toward the toes and up off it.
@@ -65,27 +65,28 @@ local DriverLegs: DriverLegs = table.freeze({
 	THIGH = 0.46,
 	SHIN = 0.45,
 	-- At the torso's bottom edge, where the resting hands can still reach the thighs: Roblox's
-	-- upright sit holds the torso's bottom 13 to 22 cm above the bucket's cushion (measured in
-	-- Studio). Hips low enough to lay the thighs on the cushion put them out of the R6 arms'
-	-- reach; the pelvis below fills the room down to the cushion instead.
+	-- upright sit holds the torso's bottom about 37 cm above the SVJ's cushion at the hips, and
+	-- the thighs 15 to 19 cm above its front edge (measured on the cabin mesh). Hips low enough to
+	-- lay the thighs on the cushion put them out of the R6 arms' reach; the trousers' seat fills
+	-- the room down to the cushion instead.
 	HIP = table.freeze({ x = 0.5, y = -1.05, z = 0.05 }),
 	-- The right knee rides the gap between the steering column and the centre console, below the
 	-- dash; the left leans out toward the door, where there is room. Fitted against the cabin
 	-- (tools/blender/leg_clearance.py): the right leg touches the console and the column (at most
-	-- 0.6 cm into them on a pedal, 1.0 cm at worst crossing between them; 0.5 cm clear under full
-	-- braking), as a real driver's knee rests on the tunnel; bent straight out instead, the knee
-	-- sat 5 cm inside the console. The left clears everything by 5 cm.
+	-- 0.6 cm into them on a pedal, 1.0 cm at worst crossing between them), as a real driver's
+	-- knee rests on the tunnel; the knee has 1.7 cm under the dash at full braking. Bent straight
+	-- out instead, the knee sat 5 cm inside the console. The left clears everything by 5 cm.
 	KNEE_TOWARD = table.freeze({
 		right = table.freeze({ x = 0.17, y = 0.15, z = -0.4 }),
 		left = table.freeze({ x = -0.58, y = 0.62, z = 0.008 }),
 	}),
-	PELVIS_CENTRE = table.freeze({ x = 0, y = -1.564, z = -0.281 }),
+	PELVIS_CENTRE = table.freeze({ x = 0, y = -2.1129, z = -0.75 }),
 	ANKLE_ALONG = 0.075,
 	ANKLE_UP = 0.085,
 	-- Measured on the SVJ's interior mesh (tools/blender/footwell.py): an organ throttle hinged on
 	-- the floor, the foot lying on its plate with the heel at the hinge; a brake hanging from
 	-- under the dash, the heel on the floor behind it; a fixed footrest. 16 and 12 degrees of
-	-- travel: 7 and 4.5 cm at the ball of the foot.
+	-- travel: 5.8 and 4.0 cm at the ball of the foot (measured on the rigged pedals in Studio).
 	THROTTLE = table.freeze({
 		part = "Pedal_Throttle",
 		hinge = table.freeze({ x = 0.1761, y = -0.2364, z = -0.8354 }),

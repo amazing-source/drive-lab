@@ -13,9 +13,9 @@ left foot on the footrest, the pedals turning under them.
   a perforated footrest.
 - **Travel.** Accelerator pedal modules turn 12.6 to 17 degrees over their stroke (Bosch
   Motorsport's module about 16 degrees and 70 mm; CTS series 552 12.6 / 14; a WM treadle 17):
-  the SVJ's throttle gets 16 degrees (7 cm at the ball of the foot). A boosted brake pedal moves
-  a few centimetres at the pad under hard braking (one service limit 63.5 mm): 12 degrees here
-  (4.5 cm at the pad).
+  the SVJ's throttle gets 16 degrees (5.8 cm at the ball of the foot, measured on the rigged
+  pedal in Studio). A boosted brake pedal moves a few centimetres at the pad under hard braking
+  (one service limit 63.5 mm): 12 degrees here (4.0 cm at the ball of the foot).
 - **One foot for both pedals**, the heel on the floor, as road drivers do; the left foot rests.
 
 ## 2. Sources for the meshes
@@ -47,10 +47,22 @@ Download only the shoes from the pack
   the toes to the heel), scaled to 28.5 cm heel to toe, its sole's lowest point 8.5 cm below the
   ankle and its heel 7.5 cm behind it (`Config/DriverLegs` ANKLE_UP, ANKLE_ALONG). The left shoe
   is the right mirrored. The sock rising from the shoe stays inside the trouser hem.
-- **Trousers' seat** (`pelvis.glb`): a soft block 33 x 22 x 25 cm under the R6 torso. Roblox's
-  upright sit holds the torso's bottom 13 to 22 cm above the bucket's cushion; the block fills
-  that room so the thighs grow out of cloth that sits on the seat, not out of the air.
 - `legs.json` gives the shoe's mesh centre in its frame (`SHOE_CENTRE`); read the renders.
+- **Trousers' seat** (`pelvis.glb`), shaped to the car's bucket, so it is built on the car:
+
+      lune run tools/legs/poses <SEAT_WELD.json> <poses.json>
+      blender -b <car.blend> --factory-startup -P tools/blender/seat_fill.py -- <poses.json> <out dir>
+
+  Roblox's upright sit holds the R6 torso's bottom about 37 cm above the SVJ driver's cushion at
+  the hips, and the thighs 15 to 19 cm above its front edge, and the hips cannot come down (the
+  resting hands, `DRIVER_HANDS.md` §8b). The cloth comes down instead: its underside is the
+  cushion as rays straight down find it, sunk 5 mm; its top runs inside the torso's bottom, then
+  4.5 cm inside the thighs' lowest pose (the right thigh's underside moves 3.8 cm between its
+  poses) as far as the cushion's front edge; its sides swell out like cloth instead of a box's
+  walls. `seat_fill.json` gives its box centre in the torso's space (`PELVIS_CENTRE`) and checks
+  it on the built mesh: the underside 0.4 to 0.5 cm from the cabin (nearest surface), the seam
+  0.9 cm inside every thigh pose. A first version with straight walls read as a box from the
+  side (`captures_v3/seat_v1_side_close_box_sides_rejected.jpg`).
 
 Upload `thigh.glb`, `shin.glb`, `pelvis.glb`, `shoe_R.glb`, `shoe_L.glb` and the shoe's colour map
 (`tools/assets/upload_images.py`); keep them at `ReplicatedStorage.DriveLabAssets.Legs.Thigh`,
@@ -81,7 +93,7 @@ its own (`KNEE_TOWARD`, seat frame):
   the brake (`Rules/CarEntry.startupBrake`), so every client shows it;
 - the hips sit at the R6 torso's bottom edge (`HIP`): lower, the thighs would lie on the cushion
   but the resting hands (`DRIVER_HANDS.md` §8b) would be out of the R6 arms' reach. The trousers'
-  seat fills the room below.
+  seat (§3) fills the room down to the cushion.
 
 Lengths: thigh 0.46 m, shin 0.45 m, the floored throttle at 96 % of the leg's reach.
 
@@ -93,13 +105,17 @@ left, the centre console on its right, the dash above. Measure every change:
 
 It prints, for 26 poses (21 across the pedals, the throttle and the brake half and fully
 pressed, the left foot at rest), how far the knee ball and the thigh and shin tubes stay off the
-nearest cabin surface. The SVJ with the knee points as set (2026-10-28):
+nearest cabin surface, the knee's room straight above it (`above`: the dash, whatever the
+nearest surface is) and the air under the thigh (`under`: what the trousers' seat fills). The
+SVJ with the knee points as set, re-measured on the pedal-tagged door blend on 2026-10-28
+(`drive-lab-assets/driver/clearance_v1/clearance.log`):
 
-| Right leg | knee | thigh | shin |
-|---|---|---|---|
-| on a pedal, worst | 0.0 cm | +0.3 cm | -0.6 cm (throttle at rest) |
-| brake fully pressed | +0.5 cm | +1.0 cm | +0.5 cm |
-| crossing, worst (half way) | -0.7 cm | -1.0 cm | -0.6 cm |
+| Right leg | knee | thigh | shin | knee under the dash |
+|---|---|---|---|---|
+| on a pedal, worst | 0.0 cm | +0.3 cm | -0.6 cm (throttle at rest) | +0.7 cm (on the brake at rest) |
+| brake fully pressed | +0.5 cm | +1.0 cm | +0.5 cm | **+1.7 cm** |
+| throttle fully pressed | +1.1 cm | +1.5 cm | -0.1 cm | +4.6 cm |
+| crossing, worst (half way) | -0.7 cm | -1.0 cm | -0.6 cm | -0.6 cm |
 
 A negative gap is contact: the trousers touch the console's side and the column as a real
 driver's knee rests on the tunnel. The left leg clears everything by 5 cm. Bent straight out
@@ -127,9 +143,13 @@ with the pedals' own change (`HERO_CAR.md` §10).
 The probe of `DRIVER_HANDS.md` §8e, with `Throttle` and `Brake` attributes set on the car (a
 render step can't see them move unless Studio's window is showing: minimized, it renders no
 frame). The cockpit eye looking down (the player's look is limited to 40 degrees) sees the thighs
-under the wheel; the knees and feet are under the dash. To see the feet, look from the passenger
-footwell, or hide the door and the left leg with `LocalTransparencyModifier`. Captures of
-2026-10-28: `drive-lab-assets/driver/captures_v2/legs_*`.
+under the wheel; the knees and feet are under the dash. To see the feet, put the camera inside the
+centre console beside the throttle: mesh back faces are not drawn, so its wall disappears. Judge
+the seat from a standing player's eye by the open door, not from low at the side, where the
+near bolster hides any air under the trousers; red marker balls at points measured in Blender
+show whether the blend and the place agree (they sat on the cushion). Captures of 2026-10-28:
+`drive-lab-assets/driver/captures_v3/` (`legs_*` the feet and pedals, `seat_*` the trousers'
+seat before and after).
 
 ## Owner decisions
 

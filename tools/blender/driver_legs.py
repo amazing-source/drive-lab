@@ -1,6 +1,7 @@
 """
-Builds the seated driver's leg meshes for Roblox: a thigh and a shin trouser sleeve, the trousers'
-seat under the torso and a pair of shoes, real-sized (the legs reach the car's real pedals).
+Builds the seated driver's leg meshes for Roblox: a thigh and a shin trouser sleeve and a pair of
+shoes, real-sized (the legs reach the car's real pedals). The trousers' seat is shaped to the car's
+bucket by seat_fill.py.
 
     blender -b --factory-startup -P tools/blender/driver_legs.py -- <out dir> <shoe.obj|.glb>
         [--shoe-length 0.285] [--keep -x|+x|both] [--toe -y]
@@ -17,7 +18,7 @@ behind the ankle. --keep keeps one shoe of a pair (MakeHuman's right shoe is -x)
 is the right mirrored. UVs are kept; the colour map is uploaded on its own and set as the
 shoes' SurfaceAppearance in the place.
 
-Output: thigh.glb, shin.glb, pelvis.glb, shoe_R.glb, shoe_L.glb in studs at the world scale (1 m = 1.5 / 0.28
+Output: thigh.glb, shin.glb, shoe_R.glb, shoe_L.glb in studs at the world scale (1 m = 1.5 / 0.28
 studs); legs.json (the shoe's mesh centre in its frame, metres, and its sole points); renders.
 """
 
@@ -118,47 +119,6 @@ def shin_folds(t, theta):
     return 0.06 * weight * wave
 
 
-# The trousers' seat under the R6 torso, metres at Driving.DRIVER_SCALE: from inside the torso
-# down to the bucket's cushion, wide as the torso, reaching forward under the start of the thighs.
-PELVIS = (0.33, 0.22, 0.25)
-
-
-def pelvis(name):
-    """A rounded block (a superellipsoid), x across, y up, z back, soft folds round its waist."""
-    width, height, depth = PELVIS
-    obj_mesh = bmesh.new()
-    rings = []
-    stacks, segments, power = 16, 32, 4.0
-
-    def signed_pow(value, exponent):
-        return math.copysign(abs(value) ** exponent, value)
-
-    for i in range(stacks + 1):
-        v = -math.pi / 2 + math.pi * i / stacks
-        ring = []
-        for j in range(segments):
-            u = 2 * math.pi * j / segments
-            fold = 1 + 0.02 * math.sin(6 * u) * math.cos(v) ** 2
-            x = width / 2 * signed_pow(math.cos(v), 2 / power) * signed_pow(math.cos(u), 2 / power) * fold
-            z = depth / 2 * signed_pow(math.cos(v), 2 / power) * signed_pow(math.sin(u), 2 / power) * fold
-            y = height / 2 * signed_pow(math.sin(v), 2 / power)
-            ring.append(obj_mesh.verts.new((x, y, z)))
-        rings.append(ring)
-    for a, b in zip(rings, rings[1:]):
-        for j in range(segments):
-            k = (j + 1) % segments
-            obj_mesh.faces.new((a[j], a[k], b[k], b[j]))
-    bmesh.ops.remove_doubles(obj_mesh, verts=obj_mesh.verts, dist=1e-6)
-    bmesh.ops.recalc_face_normals(obj_mesh, faces=obj_mesh.faces)
-    data = bpy.data.meshes.new(name)
-    obj_mesh.to_mesh(data)
-    for polygon in data.polygons:
-        polygon.use_smooth = True
-    obj = bpy.data.objects.new(name, data)
-    bpy.context.collection.objects.link(obj)
-    return obj
-
-
 def export(obj, path, stretch_z):
     """Roblox (x, y, z) is Blender (-x, z, y) after the glTF importer's half turn."""
     copy = obj.copy()
@@ -253,8 +213,6 @@ def main(args):
     shin = tube("Shin", shin_radius, shin_folds, open_end=True)
     export(thigh, os.path.join(out, "thigh.glb"), stretch_z=False)
     export(shin, os.path.join(out, "shin.glb"), stretch_z=False)
-    seat = pelvis("Pelvis")
-    export(seat, os.path.join(out, "pelvis.glb"), stretch_z=True)
 
     shoe = import_shoe(shoe_path, keep_side)
     scale = to_shoe_frame(shoe, length, toe)
@@ -274,8 +232,6 @@ def main(args):
         "shoeTriangles": tris,
         "thighTriangles": sum(len(p.vertices) - 2 for p in thigh.data.polygons),
         "shinTriangles": sum(len(p.vertices) - 2 for p in shin.data.polygons),
-        "pelvisSize": list(PELVIS),
-        "pelvisTriangles": sum(len(p.vertices) - 2 for p in seat.data.polygons),
     }
     json.dump(report, open(os.path.join(out, "legs.json"), "w"), indent=1)
     print(json.dumps(report, indent=1))

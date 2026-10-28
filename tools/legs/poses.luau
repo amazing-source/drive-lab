@@ -5,7 +5,8 @@
 	and ankle of each in metres in the seat frame: the input of tools/blender/leg_clearance.py.
 	Usage: lune run tools/legs/poses <SEAT_WELD.json> <out.json>
 	SEAT_WELD.json is the seated R6 measured in Studio (drive-lab-assets/driver): its torso's
-	centre in the DriverSeat's frame, studs, at Driving.DRIVER_SCALE.
+	centre in the DriverSeat's frame, studs, at Driving.DRIVER_SCALE. The last entry is that
+	torso, in metres, for tools/blender/seat_fill.py.
 ]]
 local fs = require("@lune/fs")
 local process = require("@lune/process")
@@ -55,5 +56,18 @@ for _, press in { 0.5, 1 } do
 	add(`brake {press}`, Legs.right(right, 1, throttleAngle, brakeAngle), "right")
 end
 add("footrest", Legs.left(left), "left")
+-- The R6 torso (2 x 2 x 1 studs at character scale 1) the trousers' seat hangs from.
+local torsoScale = Driving.DRIVER_SCALE * Units.METRES_PER_STUD
+table.insert(poses, {
+	name = "torso",
+	side = "seat",
+	centre = {
+		torso[1] * Units.METRES_PER_STUD,
+		torso[2] * Units.METRES_PER_STUD,
+		torso[3] * Units.METRES_PER_STUD,
+	},
+	size = { 2 * torsoScale, 2 * torsoScale, torsoScale },
+	studsPerTorsoUnit = torsoScale,
+})
 fs.writeFile(process.args[2], serde.encode("json", poses, true))
 print(`{#poses} poses written`)
