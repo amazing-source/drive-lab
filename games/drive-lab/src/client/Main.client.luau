@@ -25,6 +25,7 @@ local START_ORDER = {
 	Controllers.Hud,
 	script.Parent.Atmosphere,
 	Controllers.WeatherAudio,
+	Controllers.RoadAudio,
 	Controllers.MotionBlur,
 	Controllers.DrivingEffects,
 	-- Controllers.RunWrap is off: the owner rejected the run's wind swirl (2026-10-27).
