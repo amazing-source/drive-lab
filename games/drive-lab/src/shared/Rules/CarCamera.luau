@@ -64,7 +64,8 @@ end
 
 -- The critically damped spring after `dt`, its target moving at a steady rate from the last
 -- frame's to this one: the exact solution, so it is stable, trails a steady turn by exactly
--- 2 * rate / omega, and moves the same at any frame rate. Angles wrap the short way round.
+-- 2 * rate / omega, and moves the same at any frame rate. The target turns the short way round
+-- across +-180 degrees; the angle is always kept on the target's side of it.
 function Rules.stepYaw(spring: Spring, target: number, dt: number, hz: number)
 	if dt <= 0 then
 		return
@@ -72,7 +73,7 @@ function Rules.stepYaw(spring: Spring, target: number, dt: number, hz: number)
 	local omega = 2 * math.pi * hz
 	local rate = wrap(target - spring.target) / dt
 	local trail = 2 * rate / omega
-	local offset = wrap(spring.angle - spring.target) + trail
+	local offset = spring.angle - spring.target + trail
 	local slip = spring.velocity - rate
 	local drive = slip + omega * offset
 	local decay = math.exp(-omega * dt)
