@@ -31,6 +31,7 @@ type Lamp = {
 	lit: boolean,
 	-- The verge it stands on (-1 left, 1 right), from the server; 0 if unknown, and no glints.
 	side: number,
+	connections: { RBXScriptConnection },
 }
 
 local lamps: { [Model]: Lamp } = {}
@@ -39,31 +40,80 @@ local changedAt = -math.huge
 local elapsed = 0
 local glints: LampGlints.Glints? = nil
 
-local function track(model: Instance)
-	-- The lamp kept in ReplicatedStorage is tagged too; only lamps standing in the world count.
-	if not model:IsA("Model") or not model:IsDescendantOf(Workspace) then
-		return
+local function paintBulb(bulb: BasePart, lit: boolean)
+	bulb.Material = if lit then Enum.Material.Neon else Enum.Material.SmoothPlastic
+	bulb.Color = if lit then Config.BULB_ON else Config.BULB_OFF
+end
+
+local function adopt(lamp: Lamp, instance: Instance)
+	if instance:IsA("SpotLight") then
+		table.insert(lamp.downlights, instance)
+	elseif instance:IsA("PointLight") then
+		table.insert(lamp.glows, instance)
+	elseif instance:IsA("BasePart") and instance.Name == "Bulb" and instance.Parent == lamp.model then
+		lamp.bulb = instance
+		paintBulb(instance, lamp.lit)
 	end
-	local downlights: { Light }, glows: { Light } = {}, {}
-	for _, light in model:GetDescendants() do
-		if light:IsA("SpotLight") then
-			table.insert(downlights, light)
-		elseif light:IsA("PointLight") then
-			table.insert(glows, light)
+end
+
+local function drop(lamp: Lamp, instance: Instance)
+	for _, list in { lamp.downlights, lamp.glows } do
+		local index = table.find(list, instance :: Light)
+		if index then
+			table.remove(list, index)
 		end
 	end
-	local bulb = model:FindFirstChild("Bulb")
+	if lamp.bulb == instance then
+		lamp.bulb = nil
+	end
+end
+
+local function untrack(model: Instance)
+	local lamp = lamps[model :: Model]
+	if lamp then
+		for _, connection in lamp.connections do
+			connection:Disconnect()
+		end
+		lamps[model :: Model] = nil
+	end
+end
+
+-- With streaming on, a lamp model arrives before its parts and its parts stream out and back in
+-- as new instances: its lights and bulb are kept as they come and go (#44: read once on arrival,
+-- every lamp stayed dark while its glints were drawn).
+local function track(model: Instance)
+	-- The lamp kept in ReplicatedStorage is tagged too; only lamps standing in the world count.
+	if not model:IsA("Model") or not model:IsDescendantOf(Workspace) or lamps[model] then
+		return
+	end
 	local at = model:GetPivot().Position
 	local side = model:GetAttribute("RoadSide")
-	lamps[model] = {
+	local lamp: Lamp = {
 		model = model,
-		bulb = if bulb and bulb:IsA("BasePart") then bulb else nil,
-		downlights = downlights,
-		glows = glows,
+		bulb = nil,
+		downlights = {},
+		glows = {},
 		delay = StreetLamps.delay(at.X, at.Z, Config.SWITCH_SPREAD),
 		lit = false,
 		side = if side == 1 then 1 elseif side == -1 then -1 else 0,
+		connections = {},
 	}
+	for _, instance in model:GetDescendants() do
+		adopt(lamp, instance)
+	end
+	table.insert(
+		lamp.connections,
+		model.DescendantAdded:Connect(function(instance)
+			adopt(lamp, instance)
+		end)
+	)
+	table.insert(
+		lamp.connections,
+		model.DescendantRemoving:Connect(function(instance)
+			drop(lamp, instance)
+		end)
+	)
+	lamps[model] = lamp
 end
 
 local function setLit(lamp: Lamp, lit: boolean)
@@ -73,8 +123,7 @@ local function setLit(lamp: Lamp, lit: boolean)
 	lamp.lit = lit
 	local bulb = lamp.bulb
 	if bulb then
-		bulb.Material = if lit then Enum.Material.Neon else Enum.Material.SmoothPlastic
-		bulb.Color = if lit then Config.BULB_ON else Config.BULB_OFF
+		paintBulb(bulb, lit)
 	end
 end
 
@@ -116,7 +165,7 @@ local function update(dt: number)
 	local near: { { lamp: Lamp, distance: number } } = {}
 	for model, lamp in lamps do
 		if model.Parent == nil then
-			lamps[model] = nil
+			untrack(model)
 			continue
 		end
 		-- Each lamp follows the switch once its own delay has passed.
@@ -124,7 +173,8 @@ local function update(dt: number)
 		local lit = if switched then night else not night
 		setLit(lamp, lit)
 		local distance = (model:GetPivot().Position - eye).Magnitude
-		local shining = lit and distance < reach
+		-- A lamp whose parts have not streamed in has nothing to light or to glint.
+		local shining = lit and distance < reach and #lamp.downlights > 0
 		for _, light in lamp.downlights do
 			light.Enabled = shining
 		end
@@ -168,11 +218,7 @@ function Controller.start()
 		track(model)
 	end
 	CollectionService:GetInstanceAddedSignal(TAG):Connect(track)
-	CollectionService:GetInstanceRemovedSignal(TAG):Connect(function(model)
-		if model:IsA("Model") then
-			lamps[model] = nil
-		end
-	end)
+	CollectionService:GetInstanceRemovedSignal(TAG):Connect(untrack)
 	RunService.Heartbeat:Connect(update)
 	glints = LampGlints.new()
 	-- After the camera has moved this frame, so the glints are aimed from where it now is.
