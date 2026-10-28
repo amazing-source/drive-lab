@@ -1,0 +1,60 @@
+
+## round trip 0.00 s
+entry, 4 studs straight out:
+  walk ends            before 0.297  after 0.304
+  first clip frame     before 0.825  after 0.320
+  still at the mark    before 0.528  after 0.000
+  settle               before  -     after 0.016
+entry, 4 studs along the car, 1 out:
+  walk ends            before 0.307  after 0.362
+  first clip frame     before 0.825  after 0.407
+  still at the mark    before 0.518  after 0.000
+  settle               before  -     after 0.045
+entry, on the mark, facing away:
+  walk ends            before 0.025  after 0.000
+  first clip frame     before 0.825  after 0.200
+  still at the mark    before 0.800  after 0.000
+  settle               before  -     after 0.200
+exit, door shut:
+  first motion         before 0.608  after 0.358
+  sequence             before 10.200  after 9.033
+  held after           before 0.008  after 0.008
+  grow                 before 0.800  after 0.000
+  free at full size    before 11.617  after 9.400
+exit, door open:
+  first motion         before 0.608  after 0.358
+  sequence             before 8.600  after 7.433
+  held after           before 0.008  after 0.008
+  grow                 before 0.800  after 0.000
+  free at full size    before 10.017  after 7.800
+
+## round trip 0.10 s
+entry, 4 studs straight out:
+  walk ends            before 0.297  after 0.304
+  first clip frame     before 0.975  after 0.404
+  still at the mark    before 0.678  after 0.084
+  settle               before  -     after 0.016
+entry, 4 studs along the car, 1 out:
+  walk ends            before 0.307  after 0.362
+  first clip frame     before 0.975  after 0.462
+  still at the mark    before 0.668  after 0.055
+  settle               before  -     after 0.045
+entry, on the mark, facing away:
+  walk ends            before 0.025  after 0.000
+  first clip frame     before 0.975  after 0.250
+  still at the mark    before 0.950  after 0.050
+  settle               before  -     after 0.200
+exit, door shut:
+  first motion         before 0.708  after 0.458
+  sequence             before 10.200  after 9.033
+  held after           before 0.058  after 0.058
+  grow                 before 0.800  after 0.000
+  free at full size    before 11.767  after 9.550
+exit, door open:
+  first motion         before 0.708  after 0.458
+  sequence             before 8.600  after 7.433
+  held after           before 0.058  after 0.058
+  grow                 before 0.800  after 0.000
+  free at full size    before 10.167  after 7.950
+
+entry sequence (door shut): OutsideOpen + GetIn = 7.600 s, unchanged
