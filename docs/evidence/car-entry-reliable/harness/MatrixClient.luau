@@ -8,6 +8,7 @@
 ]]
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -60,6 +61,15 @@ local EXIT_IDS = {
 }
 
 local Client = {}
+
+-- The prompts this client shows now: only a shown prompt can be pressed by a player.
+local shown: { [ProximityPrompt]: boolean } = {}
+ProximityPromptService.PromptShown:Connect(function(prompt: ProximityPrompt)
+	shown[prompt] = true
+end)
+ProximityPromptService.PromptHidden:Connect(function(prompt: ProximityPrompt)
+	shown[prompt] = nil
+end)
 
 local function car(): Model
 	return CollectionService:GetTagged("DriveLabCar")[1] :: Model
@@ -158,6 +168,24 @@ local function placeAt(start: Start): boolean
 	local goal = spot.Rotation
 		+ Vector3.new(spot.Position.X, ground + 3 * character:GetScale(), spot.Position.Z)
 	local wanted = DoorMark.distance(seat(), goal.Position)
+	-- A long move goes up and over the car: this server eases the body between the places its
+	-- client sends, and a straight line across would sweep it through the car (measured: the car
+	-- pushed 1.08 studs).
+	if
+		(Vector3.new(root.Position.X, 0, root.Position.Z) - Vector3.new(goal.Position.X, 0, goal.Position.Z)).Magnitude
+		> 6
+	then
+		local lift = Vector3.new(0, 25, 0)
+		for _, step in { root.CFrame + lift, goal + lift } do
+			root.CFrame = step
+			root.AssemblyLinearVelocity = Vector3.zero
+			waitFor(function(): boolean
+				local seen = remote():InvokeServer("state")
+				return math.abs(seen.dist - DoorMark.distance(seat(), step.Position)) < 0.3
+			end, 4)
+			task.wait(0.2)
+		end
+	end
 	-- Placed again until both this client and the server see the body there and it stays.
 	for _ = 1, 5 do
 		root.CFrame = goal
@@ -671,7 +699,17 @@ function Client.run(scenario: Scenario): { [string]: any }
 	if not SEATED_CASES[scenario.case] then
 		local distance, reach = promptReach(promptName(scenario.case))
 		result.promptDistance = distance
-		if distance > reach then
+		local target = prompt(promptName(scenario.case))
+		local visible = waitFor(function(): boolean
+			return shown[target] == true
+		end, 2)
+		result.promptShown = visible
+		if distance <= reach and not visible then
+			stop()
+			table.insert(result.notes, "FAIL the prompt was never shown though in reach")
+			return result
+		end
+		if not visible then
 			-- Out of the prompt's reach no player can press it: pressing anyway must change nothing.
 			act(scenario)
 			task.wait(2.5)

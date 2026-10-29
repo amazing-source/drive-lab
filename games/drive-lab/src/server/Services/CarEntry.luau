@@ -81,6 +81,11 @@ local function now(): number
 	return Workspace:GetServerTimeNow()
 end
 
+-- Seconds a change made here takes to reach `player`: half its measured round trip.
+local function oneWay(player: Player): number
+	return player:GetNetworkPing() / 2
+end
+
 local function body(player: Player): (Model?, Humanoid?, BasePart?)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -281,8 +286,11 @@ local function enter(car: Car, player: Player, request: Request)
 	if car.seat.Occupant ~= nil or humanoid.SeatPart ~= nil or not Rules.canEnter(state, at) then
 		return
 	end
-	local startAt = Rules.entryStart(at, request.at)
-	-- State first, for the whole sequence's timing; the seat follows at its start.
+	local delay = oneWay(player)
+	local startAt = Rules.entryStart(at, request.at, delay)
+	-- State first, for the whole sequence's timing. The seat follows so that its weld reaches the
+	-- client as the sequence starts there: sent at the start, it arrived a one-way delay late and
+	-- the client showed the clip already under way (measured: 0.45 studs in one frame, poor network).
 	CarState.write(car.model, {
 		entry = "Enter",
 		entryAt = startAt,
@@ -292,7 +300,7 @@ local function enter(car: Car, player: Player, request: Request)
 		engine = "Off",
 		engineAt = state.engineAt,
 	})
-	task.delay(startAt - at, seat, car, player, startAt)
+	task.delay(math.max(startAt - delay - at, 0), seat, car, player, startAt)
 end
 
 local function collisionGroup(character: Model, group: string)
@@ -351,7 +359,7 @@ local function leaveSeat(car: Car, player: Player?, character: Model)
 	end, LEAVE_THROUGH_LONGEST)
 end
 
-local function moveDoor(car: Car, player: Player, _request: Request)
+local function moveDoor(car: Car, player: Player, request: Request)
 	local inside = driver(car) == player
 	if not inside then
 		if not claim(car, player, "Door") then
@@ -370,13 +378,15 @@ local function moveDoor(car: Car, player: Player, _request: Request)
 		return
 	end
 	local clip: Config.ClipName = Rules.doorClip(state, at, inside)
+	-- From where the client can show it from its start (as an entry's start, Rules/CarEntry).
+	local startAt = Rules.entryStart(at, request.at, oneWay(player))
 	local character = player.Character
 	if not inside and character then
 		-- The clip leans the body into the car's box to reach the door, and this server, which
 		-- moves the parked car, pushed the car away from it (measured: 1.14 studs over OutsideOpen).
-		passThrough(character, Config.CLIPS[clip].duration + CLIP_THROUGH_MARGIN)
+		passThrough(character, startAt - at + Config.CLIPS[clip].duration + CLIP_THROUGH_MARGIN)
 	end
-	car.model:SetAttribute(ATTRIBUTE.DOOR_AT, at)
+	car.model:SetAttribute(ATTRIBUTE.DOOR_AT, startAt)
 	car.model:SetAttribute(ATTRIBUTE.DOOR, clip)
 end
 

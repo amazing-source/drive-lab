@@ -291,7 +291,8 @@ end
 function CarEntry.outsideRequest(state: State, now: number, askedAt: number): OutsideRequest
 	local clip: Config.ClipName? = OUTSIDE_CLIPS[state.door]
 	if clip ~= nil and state.doorAt >= askedAt - Config.REQUEST_SLACK then
-		local into = now - state.doorAt
+		-- Before its start the clip holds its first frame.
+		local into = math.max(now - state.doorAt, 0)
 		if into < Config.CLIPS[clip].duration then
 			return { clip = clip, into = into, finished = false }
 		end
@@ -300,13 +301,20 @@ function CarEntry.outsideRequest(state: State, now: number, askedAt: number): Ou
 	return { clip = nil, into = 0, finished = now - askedAt > Config.REFUSED_SECONDS }
 end
 
--- The server time an entry starts: when the client asked it to (the end of its settle at the
--- mark), never in the past and at most ENTRY_LEAD ahead; now if it asked nothing usable.
-function CarEntry.entryStart(now: number, asked: unknown): number
-	if typeof(asked) ~= "number" or asked ~= asked or math.abs(asked) == math.huge then
-		return now
+-- The server time a sequence a client asked for starts: when it asked (the end of its placing on
+-- the mark), but never before the state can reach that client, `oneWay` seconds away (at most
+-- MAX_ONE_WAY), else the client would show the sequence already under way; at most ENTRY_LEAD
+-- after that. The earliest if it asked nothing usable.
+function CarEntry.entryStart(now: number, asked: unknown, oneWay: unknown): number
+	local delay = 0
+	if typeof(oneWay) == "number" and oneWay == oneWay then
+		delay = math.clamp(oneWay, 0, Config.MAX_ONE_WAY)
 	end
-	return math.clamp(asked, now, now + Config.ENTRY_LEAD)
+	local earliest = now + delay
+	if typeof(asked) ~= "number" or asked ~= asked or math.abs(asked) == math.huge then
+		return earliest
+	end
+	return math.clamp(asked, earliest, earliest + Config.ENTRY_LEAD)
 end
 
 -- How the walk reaches the mark from where the body stands: placed on it when already there;

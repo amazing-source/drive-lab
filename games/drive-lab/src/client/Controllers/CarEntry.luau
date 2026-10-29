@@ -152,7 +152,7 @@ local function approach(current: Body, car: Model, intent: Intent): boolean
 	local mark = DoorMark.frame(seat)
 	local seconds = EntryWalk.placeSeconds(current.root, mark)
 	pending = { car = car, intent = intent, askedAt = now() }
-	send(car, intent, if intent == "Enter" then now() + seconds + START_MARGIN else nil)
+	send(car, intent, now() + seconds + START_MARGIN)
 	EntryWalk.place(walker(current, false), mark, seconds)
 	return true
 end

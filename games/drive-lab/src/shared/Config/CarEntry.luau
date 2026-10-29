@@ -112,6 +112,8 @@ export type CarEntry = {
 	-- Seconds ahead of the server's clock an entry may be asked to start: the client asks as its
 	-- settle at the mark begins, for the moment it ends, so the round trip runs alongside it.
 	ENTRY_LEAD: number,
+	-- Seconds: the longest one-way delay to a client a sequence's start waits for.
+	MAX_ONE_WAY: number,
 	-- Seconds the server waits for its own copy of the body to reach the mark (it lags the
 	-- client's by the network) before it refuses a request from outside.
 	ARRIVAL_WAIT: number,
@@ -274,6 +276,7 @@ local CarEntry: CarEntry = {
 	REFUSED_SECONDS = 3,
 	REQUEST_SLACK = 1,
 	ENTRY_LEAD = 0.3,
+	MAX_ONE_WAY = 0.5,
 	ARRIVAL_WAIT = 1.5,
 	EXIT_MAX_KMH = 3,
 	DOOR_MAX_KMH = 5,
