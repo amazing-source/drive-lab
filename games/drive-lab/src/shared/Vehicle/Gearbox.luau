@@ -43,6 +43,8 @@ export type GearboxState = {
 	engagement: number,
 	holding: boolean,
 	launching: boolean,
+	-- Seconds since the last upshift began.
+	sinceUpshift: number,
 }
 
 -- What the gearbox needs to know each substep. Speeds in rad/s except `groundSpeed` (m/s).
@@ -73,6 +75,7 @@ function Gearbox.newState(): GearboxState
 		engagement = 0,
 		holding = false,
 		launching = true,
+		sinceUpshift = math.huge,
 	}
 end
 
@@ -101,6 +104,9 @@ end
 
 local function startShift(state: GearboxState, target: number, mode: Types.ModeConfig)
 	state.upshift = target > state.gear
+	if state.upshift then
+		state.sinceUpshift = 0
+	end
 	state.target = target
 	state.phase = "opening"
 	state.phaseTime = 0
@@ -206,7 +212,12 @@ local function autoShift(
 	local down = mode.downshiftRpm.light + (mode.downshiftRpm.full - mode.downshiftRpm.light) * throttle
 	if gear < #ratios and rpm > up and rpm * ratios[gear + 1] / ratios[gear] > down then
 		startShift(state, gear + 1, mode)
-	elseif gear > 1 and rpm < down and rpm * ratios[gear - 1] / ratios[gear] < up * DOWNSHIFT_MARGIN then
+	elseif
+		gear > 1
+		and rpm < down
+		and rpm * ratios[gear - 1] / ratios[gear] < up * DOWNSHIFT_MARGIN
+		and state.sinceUpshift >= config.upshiftHoldTime
+	then
 		startShift(state, gear - 1, mode)
 	end
 end
@@ -285,6 +296,7 @@ function Gearbox.update(
 	context: Context,
 	dt: number
 ): (boolean, number)
+	state.sinceUpshift += dt
 	if Gearbox.isShifting(state) then
 		advanceShift(config, state, dt)
 	else

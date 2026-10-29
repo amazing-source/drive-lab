@@ -79,4 +79,24 @@ describe("Automatic gearbox", function()
 		expect(gearAfter.Sport).toBe(4)
 		expect(gearAfter.Strada > 4).toBe(true)
 	end)
+
+	for _, fps in { 30, 60 } do
+		it(`shifts 1, 2, 3 at full throttle from a standstill without stepping back, at {fps} FPS`, function()
+			-- Sport hunted 1-2-1-2 around 70-77 km/h (#35): the rear slip read through the gearbox
+			-- fell after the upshift and took second under the downshift point.
+			for _, mode in { "Strada", "Sport", "Corsa" } :: { any } do
+				local sim = DriveSim.new(SVJ)
+				local input = DriveSim.input({ throttle = 1, drivingMode = mode })
+				local targets = { 1 }
+				while sim.time < 6 do
+					DriveSim.frame(sim, input, 1 / fps)
+					local target = sim.model.gearbox.target
+					if target ~= targets[#targets] then
+						table.insert(targets, target)
+					end
+				end
+				expect(`{mode}: {table.concat(targets, ",")}`).toBe(`{mode}: 1,2,3`)
+			end
+		end)
+	end
 end)

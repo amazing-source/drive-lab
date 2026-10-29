@@ -93,6 +93,9 @@ export type GearboxConfig = {
 	-- Ground speed below which the selector moves between reverse, neutral and first, and the
 	-- brake holds the clutch open.
 	selectorMaxSpeed: number,
+	-- Seconds after an upshift begins during which the automatic does not shift down again,
+	-- except while braking: its guard against hunting between two gears.
+	upshiftHoldTime: number,
 	-- Shares of a shift's time spent opening, in neutral and closing.
 	shiftOpenShare: number,
 	shiftNeutralShare: number,
