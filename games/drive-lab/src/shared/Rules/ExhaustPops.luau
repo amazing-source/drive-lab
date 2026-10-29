@@ -38,7 +38,7 @@ export type State = {
 
 local ExhaustPops = {}
 
-function ExhaustPops.forMode(values: ByMode, mode: Types.DrivingMode): number
+local function forMode(values: ByMode, mode: Types.DrivingMode): number
 	return if mode == "Corsa" then values.Corsa elseif mode == "Sport" then values.Sport else values.Strada
 end
 
@@ -63,15 +63,15 @@ function ExhaustPops.step(
 	local crack = events.gear == "Up"
 		and car.rpm >= tuning.upshiftMinRpm
 		and car.throttle >= tuning.upshiftMinThrottle
-		and draw() < ExhaustPops.forMode(tuning.upshiftChance, mode)
+		and draw() < forMode(tuning.upshiftChance, mode)
 	if car.throttle > tuning.closedThrottle or car.rpm < tuning.minRpm then
 		state.trainUntil = 0
 		return crack
 	end
 	local train: Range? = nil
-	if events.lift and draw() < ExhaustPops.forMode(tuning.liftChance, mode) then
+	if events.lift and draw() < forMode(tuning.liftChance, mode) then
 		train = tuning.liftTrain
-	elseif events.gear == "Down" and draw() < ExhaustPops.forMode(tuning.downshiftChance, mode) then
+	elseif events.gear == "Down" and draw() < forMode(tuning.downshiftChance, mode) then
 		train = tuning.downshiftTrain
 	end
 	if train then

@@ -136,9 +136,10 @@ local CarAudio: CarAudio = {
 		speed = { from = 0.92, to = 1.08 },
 	},
 	-- A stock SVJ pops on every lift and downshift in Sport and Corsa, and Corsa cracks on every
-	-- upshift under load; Strada keeps its valves shut longest and is the quietest (2026-10-29
-	-- research for #63, from road tests). The Strada and Sport shares, the trains and every rpm
-	-- are our choice: no source gives a number. Each pop throws a flame, also our choice.
+	-- upshift under load; Strada keeps its valves shut longest and is the quietest (road tests,
+	-- docs/evidence/audio-pops-flames/research_exhaust.md). The Strada and Sport shares, the
+	-- trains and every rpm are our choice: no source gives a number. Each pop throws a flame,
+	-- also our choice.
 	POP_TRIGGERS = {
 		liftChance = { Strada = 0.35, Sport = 1, Corsa = 1 },
 		upshiftChance = { Strada = 0, Sport = 0.6, Corsa = 1 },
