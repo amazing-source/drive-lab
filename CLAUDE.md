@@ -19,6 +19,9 @@ owner; **read `docs/engineering/AGENTIC_WORKFLOW.md` before your first change.**
 - Evidence: gates green; every new rule's spec shown failing on a deliberate break; edit-mode
   Studio captures for anything visual; performance numbers for anything per-frame; an honest
   not-verified list. Feel is judged by the owner in Play, not measured by agents.
+- A change to a runtime flow (input, round trips, state, timing) is run end to end in a short Play
+  session before its PR (functional, not feel); a PR whose not-verified list names its own runtime
+  path is not merged.
 - Never: publish to Roblox, write DataStores, print or commit a key, force-push, rewrite history,
   start or stop the owner's playtest.
 
