@@ -135,19 +135,25 @@ local CarAudio: CarAudio = {
 		volume = { from = 1, to = 1.8 },
 		speed = { from = 0.92, to = 1.08 },
 	},
+	-- A stock SVJ pops on every lift and downshift in Sport and Corsa, and Corsa cracks on every
+	-- upshift under load; Strada keeps its valves shut longest and is the quietest (2026-10-29
+	-- research for #63, from road tests). The Strada and Sport shares, the trains and every rpm
+	-- are our choice: no source gives a number. Each pop throws a flame, also our choice.
 	POP_TRIGGERS = {
-		-- The exhaust valve opens earlier in the sportier modes.
-		liftChance = { Strada = 0.35, Sport = 0.8, Corsa = 1 },
-		upshiftChance = { Strada = 0, Sport = 0.25, Corsa = 0.6 },
-		downshiftChance = { Strada = 0, Sport = 0, Corsa = 0 },
+		liftChance = { Strada = 0.35, Sport = 1, Corsa = 1 },
+		upshiftChance = { Strada = 0, Sport = 0.6, Corsa = 1 },
+		downshiftChance = { Strada = 0.25, Sport = 1, Corsa = 1 },
 		liftTrain = { from = 0.35, to = 1.1 },
-		downshiftTrain = { from = 0.35, to = 1.1 },
+		downshiftTrain = { from = 0.3, to = 0.8 },
 		gap = { from = 0.06, to = 0.22 },
-		upshiftMinRpm = 5000,
-		minRpm = 3500,
+		upshiftMinRpm = 4000,
+		upshiftMinThrottle = 0.6,
+		-- Strada's braking downshifts come back at 3,200 to 3,500 rpm from seventh to third: under
+		-- the old 3,500 they could never pop.
+		minRpm = 3000,
 		closedThrottle = 0.1,
 	},
-	EVENTS = { liftFrom = 0.6, liftTo = 0.1, liftMinRpm = 5000, limiterHold = 0.15 },
+	EVENTS = { liftFrom = 0.6, liftTo = 0.1, liftMinRpm = 4000, limiterHold = 0.15 },
 	VIEW_ATTRIBUTE = "DriveLabView",
 	COCKPIT_VIEW = "Cockpit",
 	VIEW_HALF_LIFE = 0.06,

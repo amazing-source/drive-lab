@@ -14,6 +14,7 @@ local TUNING: ExhaustPops.Tuning = {
 	downshiftTrain = { from = 0.375, to = 0.75 },
 	gap = { from = 0.125, to = 0.25 },
 	upshiftMinRpm = 5000,
+	upshiftMinThrottle = 0.6,
 	minRpm = 3500,
 	closedThrottle = 0.1,
 }
@@ -93,16 +94,20 @@ describe("ExhaustPops", function()
 			expect(count(state, DOWNSHIFT, car(), car(), case.mode, 1, always(0.6))).toBe(case.pops)
 		end
 		local strada = ExhaustPops.new(TUNING)
-		expect(ExhaustPops.step(strada, UPSHIFT, car({ rpm = 7000, throttle = 1 }), "Strada", 0, always(0))).toBe(false)
+		expect(ExhaustPops.step(strada, UPSHIFT, car({ rpm = 7000, throttle = 1 }), "Strada", 0, always(0))).toBe(
+			false
+		)
 	end)
 
-	it("cracks once as an upshift engages, from its rpm, and not at the shift's cut", function()
+	it("cracks once as an upshift engages under load, from its rpm, and not at the shift's cut", function()
 		local open = car({ rpm = 7000, throttle = 1 })
 		local state = ExhaustPops.new(TUNING)
-		expect(count(state, CUT, car({ rpm = 7000 }), car({ rpm = 7000 }), "Corsa", 0.5, always(0))).toBe(0)
+		expect(count(state, CUT, open, open, "Corsa", 0.5, always(0))).toBe(0)
 		expect(count(state, UPSHIFT, open, open, "Corsa", 0.5, always(0))).toBe(1)
 		local low = car({ rpm = 4000, throttle = 1 })
 		expect(count(ExhaustPops.new(TUNING), UPSHIFT, low, low, "Corsa", 0.5, always(0))).toBe(0)
+		local light = car({ rpm = 7000, throttle = 0.3 })
+		expect(count(ExhaustPops.new(TUNING), UPSHIFT, light, light, "Corsa", 0.5, always(0))).toBe(0)
 	end)
 
 	it("stops a lift's train when the throttle opens or the overrun falls under the floor", function()

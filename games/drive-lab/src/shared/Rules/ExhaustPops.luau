@@ -2,7 +2,7 @@
 --[[
 	When the exhaust pops, and so throws flame (Effects/ExhaustFlames fires with every pop): a
 	train on the overrun after a lift or a downshift with the throttle closed, and one crack as an
-	upshift engages. Each starts by a chance set per drive mode.
+	upshift engages under load. Each starts by a chance set per drive mode.
 
 	An upshift is known only once its gear engages: the shift's cut looks the same both ways.
 	The random draws come in as a function, so a spec can fix them.
@@ -22,9 +22,10 @@ export type Tuning = {
 	liftTrain: Range,
 	downshiftTrain: Range,
 	gap: Range,
-	-- An upshift cracks from this rpm. A train needs the overrun at minRpm or more and the
-	-- throttle at closedThrottle or less, and stops as soon as either fails.
+	-- An upshift cracks from this rpm and this throttle. A train needs the overrun at minRpm or
+	-- more and the throttle at closedThrottle or less, and stops as soon as either fails.
 	upshiftMinRpm: number,
+	upshiftMinThrottle: number,
 	minRpm: number,
 	closedThrottle: number,
 }
@@ -61,6 +62,7 @@ function ExhaustPops.step(
 	local tuning = state.tuning
 	local crack = events.gear == "Up"
 		and car.rpm >= tuning.upshiftMinRpm
+		and car.throttle >= tuning.upshiftMinThrottle
 		and draw() < ExhaustPops.forMode(tuning.upshiftChance, mode)
 	if car.throttle > tuning.closedThrottle or car.rpm < tuning.minRpm then
 		state.trainUntil = 0
