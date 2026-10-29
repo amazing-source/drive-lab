@@ -32,6 +32,10 @@ local HOLD_OUT = 0.6
 local DISPLACED = 0.6
 local MOVED = 0.05
 local SCALE_EPSILON = 1e-4
+-- Studs past the car's box that count as clear of it, and seconds at most a body the seat let go of
+-- goes through the box (as CarBody on the server).
+local CLEAR_OF_BOX = 1
+local LEFT_SEAT_THROUGH = 2
 local SIT, IDLE = Movement.ANIMATIONS.sit.id, Movement.ANIMATIONS.idle.id
 
 local heldWeld: Weld? = nil
@@ -43,6 +47,9 @@ local lastScale: number? = nil
 -- Where the root stood last standing frame, and whether it is held there for the seat's weld.
 local lastStanding: CFrame? = nil
 local holding = false
+-- The car whose seat last held the body, and when.
+local leftCar: Model? = nil
+local leftAt = 0
 
 local SeatHandOver = {}
 
@@ -167,6 +174,43 @@ function SeatHandOver.guardFrame(current: Body, posed: boolean, entering: Model?
 	end
 end
 
+local function clearOfBox(current: Body, car: Model): boolean
+	local hull = car:FindFirstChild("Hull")
+	if hull == nil or not hull:IsA("BasePart") then
+		return true
+	end
+	for _, name in { "HumanoidRootPart", "Torso" } do
+		local part = current.character:FindFirstChild(name)
+		if part and part:IsA("BasePart") then
+			local at = hull.CFrame:PointToObjectSpace(part.Position)
+			if
+				math.abs(at.X) <= hull.Size.X / 2 + CLEAR_OF_BOX
+				and math.abs(at.Z) <= hull.Size.Z / 2 + CLEAR_OF_BOX
+			then
+				return false
+			end
+		end
+	end
+	return true
+end
+
+-- How the body collides this frame. `car`: the car whose seat holds it. A body the seat let go of
+-- other than by getting out is still inside the car's box, and while this client still moves the
+-- car it threw the car off the body (measured: 1 to 1.8 studs up): it goes through the box until
+-- it is clear of it, for LEFT_SEAT_THROUGH seconds at most.
+function SeatHandOver.collision(current: Body, car: Model?, atDoor: boolean): Collision
+	if car then
+		leftCar, leftAt = car, os.clock()
+		return "Seated"
+	end
+	local left = leftCar
+	if left and os.clock() - leftAt < LEFT_SEAT_THROUGH and not clearOfBox(current, left) then
+		return "Seated"
+	end
+	leftCar = nil
+	return if atDoor then "AtDoor" else "Free"
+end
+
 -- On foot, HeadLook turns the head toward the camera, and from the door mark the turned head's box
 -- reaches into the car's collision box (measured: 0.53 studs, pushing the body 0.47 off the mark;
 -- the torso clears it by 0.15). The Humanoid sets the head colliding again every frame (measured),
@@ -174,7 +218,7 @@ end
 -- body is free again. In the seat the torso is inside the box too: there the whole body goes
 -- through it, so the frame the seat lets go of it pushes nothing.
 -- Every frame, part by part: the server sets these groups on its own view of the body too
--- (Services/CarEntry), and its writes reach this client.
+-- (CarBody), and its writes reach this client.
 function SeatHandOver.collide(current: Body, mode: Collision)
 	for _, part in current.character:GetChildren() do
 		if part:IsA("BasePart") then
@@ -258,7 +302,7 @@ end
 
 function SeatHandOver.reset()
 	heldWeld, heldRoot, placedOut, standingUp, lastScale = nil, nil, nil, false, nil
-	lastStanding, holding = nil, false
+	lastStanding, holding, leftCar = nil, false, nil
 end
 
 return table.freeze(SeatHandOver)

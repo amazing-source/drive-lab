@@ -23,6 +23,7 @@ local Config = require(ReplicatedStorage.Shared.Config.CarEntry)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local DoorMark = require(ReplicatedStorage.Shared.Car.DoorMark)
 local Movement = require(ReplicatedStorage.Shared.Config.Movement)
+local Log = require(ReplicatedStorage.Kit.Log)
 local Net = require(ReplicatedStorage.Kit.Net)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rules = require(ReplicatedStorage.Shared.Rules.CarEntry)
@@ -70,6 +71,7 @@ for _, clip in Config.CLIPS do
 	end
 end
 
+local log = Log.scope("CarEntry")
 local localPlayer = Players.LocalPlayer
 local body: Body? = nil
 -- Walking to a car's door; a movement key pressed meanwhile gives the walk up.
@@ -131,30 +133,34 @@ local function awaitReservation(current: Body, car: Model): boolean
 	return false
 end
 
--- Walks to the mark and asks, if the car's state allows it. False when it gave up.
-local function approach(current: Body, car: Model, intent: Intent): boolean
+-- Walks to the mark and asks, if the car's state allows it. Nil once asked, else why it gave up.
+local function approach(current: Body, car: Model, intent: Intent): string?
 	local seat = car:FindFirstChild("DriverSeat")
 	local hull = car:FindFirstChild("Hull")
-	if current.humanoid.SeatPart ~= nil or seat == nil or not seat:IsA("BasePart") then
-		return false
+	if current.humanoid.SeatPart ~= nil then
+		return "already seated"
+	elseif seat == nil or not seat:IsA("BasePart") then
+		return "no driver's seat"
 	end
 	local state, at = CarState.read(car), now()
 	if
 		not (if intent == "Enter" then Rules.canEnter(state, at) else Rules.canMoveDoor(state, at, 0, false))
 	then
-		return false
+		return `the car's state does not allow it (entry {state.entry}, door {state.door})`
 	end
 	local outcome =
 		EntryWalk.toMark(walker(current, true), seat, if hull and hull:IsA("BasePart") then hull else nil)
-	if outcome ~= "Arrived" or not awaitReservation(current, car) then
-		return false
+	if outcome ~= "Arrived" then
+		return `the walk {string.lower(outcome)}`
+	elseif not awaitReservation(current, car) then
+		return "the server held the car for no one"
 	end
 	local mark = DoorMark.frame(seat)
 	local seconds = EntryWalk.placeSeconds(current.root, mark)
 	pending = { car = car, intent = intent, askedAt = now() }
 	send(car, intent, now() + seconds + START_MARGIN)
 	EntryWalk.place(walker(current, false), mark, seconds)
-	return true
+	return nil
 end
 
 local function onPrompt(car: Model, intent: Intent)
@@ -163,11 +169,12 @@ local function onPrompt(car: Model, intent: Intent)
 		return
 	end
 	walking, walkedAway = true, false
-	local asked = approach(current, car, intent)
+	local gaveUp = approach(current, car, intent)
 	walking = false
-	if asked or body ~= current then
+	if gaveUp == nil or body ~= current then
 		return
 	end
+	log.debug(`{intent} at {car:GetFullName()} given up: {gaveUp}`)
 	EntryWalk.release(walker(current, false), false)
 	if reservedForMe(car) then
 		send(car, "Cancel")
@@ -255,7 +262,7 @@ local function update()
 	posedSeated = car ~= nil
 	-- After the placing, getting in: on the mark until the seat's weld arrives.
 	local awaitingWeld = not walking and SeatHandOver.holdForSeat(current, entering())
-	SeatHandOver.collide(current, if car then "Seated" elseif pending or walking then "AtDoor" else "Free")
+	SeatHandOver.collide(current, SeatHandOver.collision(current, car, pending ~= nil or walking))
 	if car and pending then
 		-- The seat holds the body: the entry is the server's now.
 		finishPending(current, true)
