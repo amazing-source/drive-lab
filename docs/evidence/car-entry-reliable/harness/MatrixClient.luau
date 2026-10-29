@@ -475,7 +475,10 @@ end
 
 local function act(scenario: Scenario)
 	local case = scenario.case
-	if case == "EnterShut" or case == "EnterOpen" then
+	if scenario.abuse == "RealKey" then
+		-- Pressed from outside, with the prompt's own key on the keyboard.
+		return
+	elseif case == "EnterShut" or case == "EnterOpen" then
 		press("Enter")
 		if scenario.abuse == "DoubleE" then
 			task.wait(0.15)
@@ -687,7 +690,7 @@ function Client.run(scenario: Scenario): { [string]: any }
 		table.insert(result.notes, "FAIL set-up: the prompt or the seat never became available")
 		return result
 	end
-	if scenario.abuse == "WalkAway" then
+	if scenario.abuse == "WalkAway" or scenario.abuse == "RealKey" then
 		-- Driven from outside: the movement key is a real key press sent with the go.
 		shared.PacingGo = false
 		shared.PacingReady = true
