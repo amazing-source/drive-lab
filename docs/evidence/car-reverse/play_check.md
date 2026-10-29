@@ -27,6 +27,20 @@ its night spot light (`spot`, off by day by design, `Effects/CarLamps`).
 Screenshot in manual R at a standstill, by day: `play_manual_R_reversing_lamps_hud.jpg` (HUD
 shows R and M; the two clear chevrons lit).
 
+## Reverse's top speed (#70), second session
+
+Solo Play, 2026-10-29 12:12-12:15, lock held, no network simulation. Synced from a local check
+branch merging `agent/car-reverse` and `agent/world-road-end` (the barrier, #69) on main 7854a3b
+(first sync 12 written, second 0); the check branch is not pushed. Same probe, plus position.
+
+| Check | Keys | Result | Line from the log |
+|---|---|---|---|
+| No R while braking from speed | W 3.5 s (to 105 km/h), then S held | PASS: the box stepped 4 to 1 under braking; R at -0.04 m/s after the stop | `GEAR 1->t=9.64 g=-1 v=-0.04 m/s` |
+| Reverse tops out under 40 km/h | S still held, 12 s | PASS: steady at 39.2 km/h from 1.7 s after R until the barrier, never above | `MAX BACKWARDS: v=-10.88 m/s (-39.2 km/h)`; `t=21.62 g=-1 v=-10.88 m/s` |
+
+The car then met the barrier at the cap: see `docs/evidence/road-end/play_check.md` on the
+barrier's PR.
+
 ## Seen on the way (follow-ups, not changed here)
 
 - A first run held S for 3 s: the car reached 28 m/s backwards and, coasting on, left the road
