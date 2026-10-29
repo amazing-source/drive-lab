@@ -163,14 +163,12 @@ local function onPrompt(car: Model, intent: Intent)
 		return
 	end
 	walking, walkedAway = true, false
-	SeatHandOver.headClear(current, true)
 	local asked = approach(current, car, intent)
 	walking = false
 	if asked or body ~= current then
 		return
 	end
 	EntryWalk.release(walker(current, false), false)
-	SeatHandOver.headClear(current, false)
 	if reservedForMe(car) then
 		send(car, "Cancel")
 	end
@@ -204,14 +202,10 @@ local function seatedClips(current: Body, car: Model, at: number)
 	ClipPlayer.set(current.clips, Config.SEATED_POSE, nil, POSE_FADE)
 end
 
--- Ends a request: the body is free again; standing outside, its head collides again. `seated`:
--- the seat's weld holds the body (in one assembly with the car, the head cannot collide with it).
+-- Ends a request: the body is free again. `seated`: the seat's weld holds it.
 local function finishPending(current: Body, seated: boolean)
 	pending = nil
 	EntryWalk.release(walker(current, false), seated)
-	if not seated and current.humanoid.SeatPart == nil then
-		SeatHandOver.headClear(current, false)
-	end
 end
 
 -- A request the server let go of without acting on it, or never answered, was refused.
@@ -257,9 +251,12 @@ local function update()
 		return
 	end
 	local at = now()
-	local car, welded = SeatHandOver.seatedIn(current, entering())
+	local car = SeatHandOver.seatedIn(current, entering())
 	posedSeated = car ~= nil
-	if car and welded and pending then
+	-- After the placing, getting in: on the mark until the seat's weld arrives.
+	local awaitingWeld = not walking and SeatHandOver.holdForSeat(current, entering())
+	SeatHandOver.collide(current, if car then "Seated" elseif pending or walking then "AtDoor" else "Free")
+	if car and pending then
 		-- The seat holds the body: the entry is the server's now.
 		finishPending(current, true)
 	end
@@ -270,6 +267,7 @@ local function update()
 			exiting = car
 		elseif entry == "Enter" then
 			exiting = nil
+			SeatHandOver.seatedSize(current)
 		end
 		seatedClips(current, car, at)
 		local held = exitHeld
@@ -286,7 +284,9 @@ local function update()
 		SeatHandOver.standUp(current, leaving)
 		return
 	end
-	SeatHandOver.keepStanding(current)
+	if not awaitingWeld then
+		SeatHandOver.keepStanding(current)
+	end
 	standingClips(current, at)
 end
 

@@ -59,6 +59,11 @@ local CarRig = {
 	-- Wheel rays travel in RAY_GROUP, which the server makes pass through CHARACTER_GROUP.
 	RAY_GROUP = "DriveLabWheelRays",
 	CHARACTER_GROUP = "DriveLabCharacters",
+	-- A character's colliding parts while it is at a car's door or in its seat
+	-- (Controllers/SeatHandOver): as CHARACTER_GROUP, but through the Default group the car's
+	-- collision box is in. The Humanoid sets the head and torso colliding every frame, so their
+	-- group is what keeps them from pushing the body off the door mark or the car off the body.
+	DOOR_GROUP = "DriveLabAtCarDoor",
 }
 
 -- Box edges (studs) whose solid-box inertia matches the car's: I = m (a^2 + b^2) / 12.

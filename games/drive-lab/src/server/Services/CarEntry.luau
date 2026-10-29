@@ -53,6 +53,15 @@ local ROOT_HEIGHT = 3
 -- Studs past the prompt distance allowed for a character still moving when it pressed.
 local DISTANCE_SLACK = 2
 local SCALE_EPSILON = 1e-3
+-- Seconds past a standing door clip's end its body still goes through the car's box here: this
+-- server poses the body from its client's animation, behind it by the network.
+local CLIP_THROUGH_MARGIN = 0.5
+-- Seconds a body that left a seat goes through the car's box here past a round trip, and at most;
+-- how often it is checked for being clear; studs past the box that count as clear of it.
+local LEAVE_THROUGH_SECONDS = 0.5
+local LEAVE_THROUGH_LONGEST = 5
+local THROUGH_POLL = 0.1
+local CLEAR_OF_BOX = 1
 local REST: Rules.State = {
 	entry = "None",
 	entryAt = 0,
@@ -65,6 +74,8 @@ local REST: Rules.State = {
 
 local log = Log.scope("CarEntry")
 local cars: { [Model]: Car } = {}
+-- The bodies going through cars' boxes on this server, each with the token of the call that set it.
+local throughFor: { [Model]: {} } = {}
 
 local function now(): number
 	return Workspace:GetServerTimeNow()
@@ -284,6 +295,62 @@ local function enter(car: Car, player: Player, request: Request)
 	task.delay(startAt - at, seat, car, player, startAt)
 end
 
+local function collisionGroup(character: Model, group: string)
+	for _, part in character:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.CollisionGroup = group
+		end
+	end
+end
+
+-- On this server the body goes through cars' collision boxes (CarRig.DOOR_GROUP) for `seconds`,
+-- then for as long as `clear` says it is not out yet, up to `longest`; a later call for the same
+-- body takes over. Its client sets its own view of the body itself (Controllers/SeatHandOver).
+local function passThrough(character: Model, seconds: number, clear: (() -> boolean)?, longest: number?)
+	local token = {}
+	throughFor[character] = token
+	collisionGroup(character, CarRig.DOOR_GROUP)
+	task.spawn(function()
+		local started = os.clock()
+		while character.Parent ~= nil and throughFor[character] == token do
+			local elapsed = os.clock() - started
+			if elapsed >= (longest or seconds) or (elapsed >= seconds and (clear == nil or clear())) then
+				break
+			end
+			task.wait(THROUGH_POLL)
+		end
+		if throughFor[character] == token then
+			throughFor[character] = nil
+			if character.Parent ~= nil then
+				collisionGroup(character, CarRig.CHARACTER_GROUP)
+			end
+		end
+	end)
+end
+
+-- The body has left the seat. This server still poses it from the seated clips for a few frames,
+-- and the body its client sends stays in the seat until that client's own placement outside
+-- arrives, a round trip later: both put the torso inside the car's box, and this server, which
+-- moves the parked car again, throws the car off it (measured: lifted 1.56 studs with the body
+-- placed out in the same step, 9.5 studs and rolled 76 degrees with it left in the seat). So the
+-- body goes through the box for a round trip and more, then until this server sees it clear.
+local function leaveSeat(car: Car, player: Player?, character: Model)
+	local hull = car.model:FindFirstChild("Hull")
+	local function outside(name: string): boolean
+		local part = character:FindFirstChild(name)
+		if hull == nil or not hull:IsA("BasePart") or part == nil or not part:IsA("BasePart") then
+			return true
+		end
+		local at = hull.CFrame:PointToObjectSpace(part.Position)
+		return math.abs(at.X) > hull.Size.X / 2 + CLEAR_OF_BOX
+			or math.abs(at.Z) > hull.Size.Z / 2 + CLEAR_OF_BOX
+	end
+	local roundTrip = if player then 2 * player:GetNetworkPing() else 0
+	passThrough(character, LEAVE_THROUGH_SECONDS + roundTrip, function(): boolean
+		return outside("HumanoidRootPart") and outside("Torso")
+	end, LEAVE_THROUGH_LONGEST)
+end
+
 local function moveDoor(car: Car, player: Player, _request: Request)
 	local inside = driver(car) == player
 	if not inside then
@@ -302,8 +369,15 @@ local function moveDoor(car: Car, player: Player, _request: Request)
 	if not Rules.canMoveDoor(state, at, speedKmh(car), inside) then
 		return
 	end
+	local clip: Config.ClipName = Rules.doorClip(state, at, inside)
+	local character = player.Character
+	if not inside and character then
+		-- The clip leans the body into the car's box to reach the door, and this server, which
+		-- moves the parked car, pushed the car away from it (measured: 1.14 studs over OutsideOpen).
+		passThrough(character, Config.CLIPS[clip].duration + CLIP_THROUGH_MARGIN)
+	end
 	car.model:SetAttribute(ATTRIBUTE.DOOR_AT, at)
-	car.model:SetAttribute(ATTRIBUTE.DOOR, Rules.doorClip(state, at, inside))
+	car.model:SetAttribute(ATTRIBUTE.DOOR, clip)
 end
 
 local function start(car: Car, player: Player, _request: Request)
@@ -340,6 +414,7 @@ local function finishExit(car: Car, player: Player, startedAt: number)
 	if character == nil or humanoid == nil or root == nil or car.seat.Occupant ~= humanoid then
 		return
 	end
+	leaveSeat(car, player, character)
 	local weld = car.seat:FindFirstChild("SeatWeld")
 	if weld then
 		weld:Destroy()
@@ -379,6 +454,9 @@ local function onOccupant(car: Car)
 	end
 	local previous = car.occupant
 	car.occupant = nil
+	if previous then
+		leaveSeat(car, Players:GetPlayerFromCharacter(previous), previous)
+	end
 	local at = now()
 	if CarState.read(car.model).entry ~= "None" then
 		cutShort(car, at)

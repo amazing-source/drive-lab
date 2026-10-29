@@ -22,6 +22,9 @@ type Entry = { t: number, action: string, dist: number, scale: number }
 
 local Server = {}
 local entries: { Entry } = {}
+-- Where the car stood when the harness was installed: every fixture puts it back there, so a
+-- scenario that moved it does not move the next one's start.
+local home: CFrame? = nil
 
 local function car(): Model
 	return CollectionService:GetTagged("DriveLabCar")[1] :: Model
@@ -43,36 +46,74 @@ local function rest(door: string)
 	})
 end
 
+-- The car back where it stood, still: a fixture that unseats the body inside the car's collision
+-- box shoves the car on this server (measured: 10.6 studs over 20 scenarios).
+local function park()
+	local model = car()
+	local at = home
+	if at == nil then
+		return
+	end
+	local here = model:GetPivot()
+	if (here.Position - at.Position).Magnitude <= 0.02 and here.LookVector:Dot(at.LookVector) >= 0.99999 then
+		return
+	end
+	model:PivotTo(at)
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") and not part.Anchored then
+			part.AssemblyLinearVelocity = Vector3.zero
+			part.AssemblyAngularVelocity = Vector3.zero
+		end
+	end
+	-- Put back, the car settles on its suspension (measured: a bounce of 0.7 studs): the next
+	-- scenario starts once it is still.
+	task.wait(1.5)
+end
+
+-- Lets the body go and puts it outside in the same step, as the game's own exit does, so it is
+-- never free inside the car's collision box.
 local function unseat(player: Player)
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local weld = seat():FindFirstChild("SeatWeld")
 	if weld then
 		weld:Destroy()
+		if character and root then
+			local spot = DoorMark.frame(seat()) * CFrame.new(0, 0, 4)
+			character:PivotTo(
+				(spot.Rotation + Vector3.new(spot.Position.X, spot.Position.Y + 1, spot.Position.Z))
+					* root.CFrame:ToObjectSpace(character:GetPivot())
+			)
+		end
 	end
-	local character = player.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
 		humanoid.Sit = false
 	end
 end
 
+-- As the game scales the body (Services/CarEntry): about the root, which keeps its place. The
+-- character's own pivot is its head, and scaling about it moves the root on the client.
+local function scaleTo(character: Model, to: number)
+	local root = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if root == nil or math.abs(character:GetScale() - to) <= 1e-3 then
+		return
+	end
+	local primary = character.PrimaryPart
+	character.PrimaryPart = root
+	character:ScaleTo(to)
+	character.PrimaryPart = primary
+end
+
 local HANDLERS: { [string]: (Player, any) -> any } = {
 	outside = function(player: Player, door: string)
-		local wasSeated = seat().Occupant ~= nil
 		rest(door)
 		unseat(player)
 		local character = player.Character
-		if character and math.abs(character:GetScale() - 1) > 1e-3 then
-			character:ScaleTo(1)
+		if character then
+			scaleTo(character, 1)
 		end
-		if wasSeated and character then
-			local root = character:FindFirstChild("HumanoidRootPart") :: BasePart
-			local mark = DoorMark.frame(seat())
-			local spot = mark * CFrame.new(0, 0, 4)
-			character:PivotTo(
-				(spot.Rotation + Vector3.new(spot.Position.X, root.Position.Y - 1, spot.Position.Z))
-					* root.CFrame:ToObjectSpace(character:GetPivot())
-			)
-		end
+		park()
 		return true
 	end,
 	seated = function(player: Player, door: string)
@@ -88,9 +129,8 @@ local HANDLERS: { [string]: (Player, any) -> any } = {
 			engine = "Off",
 			engineAt = 0,
 		})
-		if math.abs(character:GetScale() - Driving.DRIVER_SCALE) > 1e-3 then
-			character:ScaleTo(Driving.DRIVER_SCALE)
-		end
+		scaleTo(character, Driving.DRIVER_SCALE)
+		park()
 		-- The seat frees a moment after the last occupant leaves; Sit before that fails.
 		for _ = 1, 30 do
 			if seat().Occupant == humanoid then
@@ -114,6 +154,7 @@ local HANDLERS: { [string]: (Player, any) -> any } = {
 	end,
 	state = function(player: Player)
 		local model = car()
+		local pivot = model:GetPivot()
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
 		return {
@@ -124,6 +165,7 @@ local HANDLERS: { [string]: (Player, any) -> any } = {
 			occupied = seat().Occupant ~= nil,
 			dist = if root and root:IsA("BasePart") then DoorMark.distance(seat(), root.Position) else -1,
 			scale = if character then character:GetScale() else 0,
+			carMoved = if home then (pivot.Position - home.Position).Magnitude else 0,
 		}
 	end,
 	log = function(_player: Player, since: number)
@@ -147,6 +189,7 @@ function Server.install(): string
 		local handler = if typeof(command) == "string" then HANDLERS[command] else nil
 		return if handler then handler(player, argument) else nil
 	end
+	home = car():GetPivot()
 	remote.Parent = ReplicatedStorage
 	local action = ReplicatedStorage:FindFirstChild("CarAction", true) :: RemoteEvent
 	action.OnServerEvent:Connect(function(player: Player, payload: any)

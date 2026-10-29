@@ -341,6 +341,16 @@ describe("Walking to the mark", function()
 		expect(approach.settleSeconds <= 0.2).toBe(true)
 	end)
 
+	it("stops the walk in short of the mark by a frame of sprinting, within the placing's reach", function()
+		local approach = Config.APPROACH
+		-- Halted, the body can still cover one frame: sprinting, at 30 frames a second. That is
+		-- Config/Movement's SPRINT_SPEED, which Lune cannot load (it names Enum values).
+		local sprintSpeed = 26
+		expect(approach.short > sprintSpeed / 30).toBe(true)
+		expect(approach.short + approach.arrived < approach.reach).toBe(true)
+		expect(approach.short < approach.lineUp).toBe(true)
+	end)
+
 	it("eases the placing from its start to the mark", function()
 		expect(Rules.settleShare(0, 0.2)).toBe(0)
 		expect(Rules.settleShare(0.05, 0.2)).toBeNear(0.15625, 1e-9)

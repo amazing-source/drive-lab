@@ -48,6 +48,9 @@ local function setupCollisionGroups()
 	PhysicsService:RegisterCollisionGroup(CarRig.RAY_GROUP)
 	PhysicsService:RegisterCollisionGroup(CarRig.CHARACTER_GROUP)
 	PhysicsService:CollisionGroupSetCollidable(CarRig.RAY_GROUP, CarRig.CHARACTER_GROUP, false)
+	PhysicsService:RegisterCollisionGroup(CarRig.DOOR_GROUP)
+	PhysicsService:CollisionGroupSetCollidable(CarRig.RAY_GROUP, CarRig.DOOR_GROUP, false)
+	PhysicsService:CollisionGroupSetCollidable("Default", CarRig.DOOR_GROUP, false)
 	local function enlist(part: Instance)
 		if part:IsA("BasePart") then
 			part.CollisionGroup = CarRig.CHARACTER_GROUP

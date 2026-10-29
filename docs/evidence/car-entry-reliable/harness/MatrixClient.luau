@@ -23,6 +23,8 @@ export type Scenario = { name: string, case: string, start: Start?, abuse: strin
 type Frame = {
 	t: number,
 	root: Vector3,
+	-- The root before this frame's physics, after the game's own frame code moved it.
+	before: Vector3,
 	torso: Vector3,
 	seated: boolean,
 	anchored: boolean,
@@ -31,6 +33,10 @@ type Frame = {
 	entryClip: boolean,
 	exitClip: boolean,
 	doorClip: boolean,
+	-- A dead body falls apart as Roblox's death does: its frames are no jump of the game's.
+	dead: boolean,
+	-- The driver's seat this frame: the car can move, and the mark and exit spot move with it.
+	seat: CFrame,
 	character: Model,
 }
 
@@ -136,8 +142,12 @@ end
 
 -- Stands the local body at `start` (the mark's frame: sideways, out from the car, turned from
 -- facing it), on the ground, and waits until the server sees it there.
-local function placeAt(start: Start)
+local function placeAt(start: Start): boolean
 	local character, humanoid, root = body()
+	-- The fixture's size change reaches this client late; a placement before it would be moved.
+	waitFor(function(): boolean
+		return math.abs(character:GetScale() - 1) < 1e-3
+	end, 4)
 	local mark = DoorMark.frame(seat())
 	local spot = mark * CFrame.new(start.lateral, 0, start.outward) * CFrame.Angles(0, math.rad(start.yaw), 0)
 	local params = RaycastParams.new()
@@ -145,20 +155,40 @@ local function placeAt(start: Start)
 	params.FilterDescendantsInstances = { car(), character }
 	local hit = Workspace:Raycast(spot.Position + Vector3.new(0, 6, 0), Vector3.new(0, -40, 0), params)
 	local ground = if hit then hit.Position.Y else root.Position.Y - 3 * character:GetScale()
-	root.CFrame = spot.Rotation + Vector3.new(spot.Position.X, ground + 3 * character:GetScale(), spot.Position.Z)
-	root.AssemblyLinearVelocity = Vector3.zero
-	humanoid:MoveTo(root.Position)
-	local wanted = DoorMark.distance(seat(), root.Position)
-	waitFor(function(): boolean
-		local seen = remote():InvokeServer("state")
-		return math.abs(seen.dist - wanted) < 0.3
-	end, 4)
+	local goal = spot.Rotation
+		+ Vector3.new(spot.Position.X, ground + 3 * character:GetScale(), spot.Position.Z)
+	local wanted = DoorMark.distance(seat(), goal.Position)
+	-- Placed again until both this client and the server see the body there and it stays.
+	for _ = 1, 5 do
+		root.CFrame = goal
+		root.AssemblyLinearVelocity = Vector3.zero
+		humanoid:MoveTo(goal.Position)
+		waitFor(function(): boolean
+			local seen = remote():InvokeServer("state")
+			return math.abs(seen.dist - wanted) < 0.3
+		end, 4)
+		task.wait(0.3)
+		local off =
+			Vector3.new(root.Position.X - goal.Position.X, 0, root.Position.Z - goal.Position.Z).Magnitude
+		if off < 0.1 then
+			return true
+		end
+	end
+	return false
 end
 
 local function record(): ({ Frame }, () -> ())
 	local frames: { Frame } = {}
 	local started = os.clock()
 	sawReservation = false
+	local before = Vector3.zero
+	local beforeConnection = RunService.PreSimulation:Connect(function()
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if root and root:IsA("BasePart") then
+			before = root.Position
+		end
+	end)
 	local connection = RunService.Heartbeat:Connect(function()
 		if car():GetAttribute("ReservedBy") == player.UserId then
 			sawReservation = true
@@ -176,6 +206,7 @@ local function record(): ({ Frame }, () -> ())
 		table.insert(frames, {
 			t = os.clock() - started,
 			root = (root :: BasePart).Position,
+			before = before,
 			torso = (torso :: BasePart).Position,
 			-- Seated by the weld itself, as the game's own clips decide it.
 			seated = welded,
@@ -185,11 +216,14 @@ local function record(): ({ Frame }, () -> ())
 			entryClip = playing(animator, ENTRY_IDS),
 			exitClip = playing(animator, EXIT_IDS),
 			doorClip = playing(animator, DOOR_IDS),
+			dead = humanoid.Health <= 0,
+			seat = seat().CFrame,
 			character = character,
 		})
 	end)
 	return frames, function()
 		connection:Disconnect()
+		beforeConnection:Disconnect()
 	end
 end
 
@@ -208,8 +242,11 @@ local function standingJump(frames: { Frame }): number
 	local worst = 0
 	for index = 2, #frames do
 		local a, b = frames[index - 1], frames[index]
-		if not a.seated and not b.seated and a.character == b.character then
-			worst = math.max(worst, (Vector3.new(b.root.X, 0, b.root.Z) - Vector3.new(a.root.X, 0, a.root.Z)).Magnitude)
+		if not a.seated and not b.seated and a.character == b.character and not b.dead then
+			worst = math.max(
+				worst,
+				(Vector3.new(b.root.X, 0, b.root.Z) - Vector3.new(a.root.X, 0, a.root.Z)).Magnitude
+			)
 		end
 	end
 	return worst
@@ -221,12 +258,60 @@ local function torsoJump(frames: { Frame }): number
 	local worst = 0
 	for index = 2, #frames do
 		local a, b = frames[index - 1], frames[index]
-		if a.character == b.character then
-			worst =
-				math.max(worst, (Vector3.new(b.torso.X, 0, b.torso.Z) - Vector3.new(a.torso.X, 0, a.torso.Z)).Magnitude)
+		if a.character == b.character and not b.dead then
+			worst = math.max(
+				worst,
+				(Vector3.new(b.torso.X, 0, b.torso.Z) - Vector3.new(a.torso.X, 0, a.torso.Z)).Magnitude
+			)
 		end
 	end
 	return worst
+end
+
+-- The frames round the torso's largest one-frame move, for a failure's diagnosis: time, how far
+-- the torso and root moved into that frame, seated, anchored, scale and the clip playing.
+local function worstWindow(frames: { Frame }): string
+	local worst, at = 0, 0
+	for index = 2, #frames do
+		local a, b = frames[index - 1], frames[index]
+		local moved = (Vector3.new(b.torso.X, 0, b.torso.Z) - Vector3.new(a.torso.X, 0, a.torso.Z)).Magnitude
+		if a.character == b.character and not b.dead and moved > worst then
+			worst, at = moved, index
+		end
+	end
+	if at == 0 then
+		return ""
+	end
+	local lines = {}
+	local fromSeat = seat().CFrame:ToObjectSpace(DoorMark.frame(seat()))
+	for index = math.max(2, at - 6), math.min(#frames, at + 3) do
+		local a, b = frames[index - 1], frames[index]
+		local clip = if b.entryClip
+			then "entry"
+			elseif b.exitClip then "exit"
+			elseif b.doorClip then "door"
+			else "-"
+		local rel = (b.seat * fromSeat):PointToObjectSpace(b.root)
+		table.insert(
+			lines,
+			string.format(
+				"%s%d t=%.3f torso=%.2f root=%.2f phys=%.2f mark=(%.2f,%.2f) seated=%s anch=%s scale=%.3f %s",
+				if index == at then ">" else " ",
+				index,
+				b.t,
+				(Vector3.new(b.torso.X, 0, b.torso.Z) - Vector3.new(a.torso.X, 0, a.torso.Z)).Magnitude,
+				(Vector3.new(b.root.X, 0, b.root.Z) - Vector3.new(a.root.X, 0, a.root.Z)).Magnitude,
+				(Vector3.new(b.root.X, 0, b.root.Z) - Vector3.new(b.before.X, 0, b.before.Z)).Magnitude,
+				rel.X,
+				rel.Z,
+				tostring(b.seated),
+				tostring(b.anchored),
+				b.scale,
+				clip
+			)
+		)
+	end
+	return table.concat(lines, "\n")
 end
 
 -- The torso's jump across the frame where the body went from standing to seated (or back),
@@ -235,9 +320,11 @@ local function handOverJump(frames: { Frame }): number
 	local worst = 0
 	for index = 2, #frames do
 		local a, b = frames[index - 1], frames[index]
-		if a.seated ~= b.seated and a.character == b.character then
-			worst =
-				math.max(worst, (Vector3.new(b.torso.X, 0, b.torso.Z) - Vector3.new(a.torso.X, 0, a.torso.Z)).Magnitude)
+		if a.seated ~= b.seated and a.character == b.character and not b.dead then
+			worst = math.max(
+				worst,
+				(Vector3.new(b.torso.X, 0, b.torso.Z) - Vector3.new(a.torso.X, 0, a.torso.Z)).Magnitude
+			)
 		end
 	end
 	return worst
@@ -247,6 +334,57 @@ end
 local function exitSpot(): CFrame
 	local exitFrame = (DoorMark :: any).exitFrame
 	return if exitFrame then exitFrame(seat()) else DoorMark.frame(seat())
+end
+
+-- The exit spot where the car stood on `frame`.
+local function exitSpotAt(frame: Frame): CFrame
+	return frame.seat * seat().CFrame:ToObjectSpace(exitSpot())
+end
+
+local function standUpIndex(frames: { Frame }): number?
+	for index = 2, #frames do
+		if frames[index - 1].seated and not frames[index].seated then
+			return index
+		end
+	end
+	return nil
+end
+
+-- The root's offset across the ground from where getting out ends, from the first frame off the
+-- seat: at that frame, a few after, and the last, with the time and the size.
+local function exitTrace(frames: { Frame }): string
+	local start = standUpIndex(frames)
+	if start == nil then
+		return "never stood up"
+	end
+	local picks = {}
+	for _, offset in { 0, 1, 2, 3, 5, 10, 20, 40, 80 } do
+		if start + offset <= #frames then
+			table.insert(picks, start + offset)
+		end
+	end
+	table.insert(picks, #frames)
+	local parts = {}
+	local first = exitSpotAt(frames[start])
+	for _, index in picks do
+		local frame = frames[index]
+		local spot = exitSpotAt(frame)
+		local rel = spot:PointToObjectSpace(frame.root)
+		local moved = (spot.Position - first.Position) * Vector3.new(1, 0, 1)
+		table.insert(
+			parts,
+			string.format(
+				"+%d t=%.2f off=(%.2f,%.2f) car moved %.2f s=%.3f",
+				index - start,
+				frame.t,
+				rel.X,
+				rel.Z,
+				moved.Magnitude,
+				frame.scale
+			)
+		)
+	end
+	return table.concat(parts, " | ")
 end
 
 -- How far the root moved, standing, from the first frame off the seat to the last frame: what
@@ -297,7 +435,9 @@ local function setUp(scenario: Scenario): boolean
 		end, 5)
 	end
 	remote():InvokeServer("outside", door)
-	placeAt(scenario.start or { lateral = 0, outward = 4, yaw = 0 })
+	if not placeAt(scenario.start or { lateral = 0, outward = 4, yaw = 0 }) then
+		return false
+	end
 	return waitFor(function(): boolean
 		return prompt(promptName(scenario.case)).Enabled
 	end, 4)
@@ -391,11 +531,17 @@ local function check(scenario: Scenario, frames: { Frame }, log: { any }, notes:
 	end
 	local case, kind = scenario.case, scenario.abuse
 	expect(not root.Anchored, "the root is left anchored")
-	expect(torsoJump(frames) <= 0.5, string.format("the torso jumped %.2f studs in one frame", torsoJump(frames)))
+	expect(
+		torsoJump(frames) <= 0.5,
+		string.format("the torso jumped %.2f studs in one frame", torsoJump(frames))
+	)
 	if kind == "ResetWalk" or kind == "ResetSequence" or kind == "WalkAway" then
 		expect(state.entry == "None", "entry state " .. state.entry)
 		expect(humanoid.SeatPart == nil, "still seated")
-		expect(state.door == "Closed" or state.door == "Open" or Rules.doorIdle(state, at), "door left moving")
+		expect(
+			state.door == "Closed" or state.door == "Open" or Rules.doorIdle(state, at),
+			"door left moving"
+		)
 		expect(car():GetAttribute("ReservedBy") == 0, "reservation held")
 		expect(math.abs(character:GetScale() - 1) < 1e-3, string.format("scale %.3f", character:GetScale()))
 		expect(humanoid.AutoRotate, "AutoRotate left off")
@@ -410,12 +556,21 @@ local function check(scenario: Scenario, frames: { Frame }, log: { any }, notes:
 		end
 		expect(handOverJump(frames) <= 0.4, string.format("hand-over jump %.2f studs", handOverJump(frames)))
 	elseif case == "ExitShut" or case == "ExitOpen" then
-		local goal = exitSpot()
-		local off = (
-			Vector3.new(root.Position.X, 0, root.Position.Z) - Vector3.new(goal.Position.X, 0, goal.Position.Z)
-		).Magnitude
+		-- Where the body stood up against where getting out ends, both where the car was then: the
+		-- car itself can move afterwards (reported apart, as carAfterExit).
+		local start = standUpIndex(frames)
+		local off = math.huge
+		if start then
+			local frame = frames[start]
+			local spot = exitSpotAt(frame)
+			off = (Vector3.new(frame.root.X, 0, frame.root.Z) - Vector3.new(
+				spot.Position.X,
+				0,
+				spot.Position.Z
+			)).Magnitude
+		end
 		expect(humanoid.SeatPart == nil, "still seated")
-		expect(off <= 0.35, string.format("%.2f studs from where getting out ends", off))
+		expect(off <= 0.35, string.format("stood up %.2f studs from where getting out ends", off))
 		expect(math.abs(character:GetScale() - 1) < 1e-3, "not at full size")
 		expect(not hullOverlap(character), "overlapping the car's collision box")
 		expect(state.entry == "None" and state.engine == "Off", "car state not at rest")
@@ -423,7 +578,12 @@ local function check(scenario: Scenario, frames: { Frame }, log: { any }, notes:
 		expect(humanoid.AutoRotate, "AutoRotate left off")
 		expect(handOverJump(frames) <= 0.35, string.format("hand-over jump %.2f studs", handOverJump(frames)))
 		expect(drift(frames) <= 0.1, string.format("pushed %.2f studs after getting out", drift(frames)))
-	elseif case == "OpenOutside" or case == "CloseOutside" or case == "CloseInside" or case == "OpenInside" then
+	elseif
+		case == "OpenOutside"
+		or case == "CloseOutside"
+		or case == "CloseInside"
+		or case == "OpenInside"
+	then
 		local open = Rules.doorOpenness(state, at)
 		local wantOpen = case == "OpenOutside" or case == "OpenInside"
 		expect(Rules.doorIdle(state, at), "door still moving")
@@ -445,7 +605,8 @@ local function timings(frames: { Frame }): { [string]: number }
 	local mark = DoorMark.frame(seat()).Position
 	local onMark = first(frames, function(frame: Frame): boolean
 		return not frame.seated
-			and (Vector3.new(frame.root.X, 0, frame.root.Z) - Vector3.new(mark.X, 0, mark.Z)).Magnitude <= 0.05
+			and (Vector3.new(frame.root.X, 0, frame.root.Z) - Vector3.new(mark.X, 0, mark.Z)).Magnitude
+				<= 0.05
 	end)
 	local clip = first(frames, function(frame: Frame): boolean
 		return frame.entryClip or frame.exitClip or frame.doorClip
@@ -549,6 +710,19 @@ function Client.run(scenario: Scenario): { [string]: any }
 	result.serverSaw = table.concat(seen, ", ")
 	result.drift = drift(frames)
 	result.frames = #frames
+	local start = standUpIndex(frames)
+	if start and (scenario.case == "ExitShut" or scenario.case == "ExitOpen") then
+		local a, b = exitSpotAt(frames[start]).Position, exitSpot().Position
+		result.carAfterExit = (Vector3.new(b.X, 0, b.Z) - Vector3.new(a.X, 0, a.Z)).Magnitude
+	end
+	-- How far the car itself moved during the scenario (the fixtures park it before each one).
+	result.carMoved = remote():InvokeServer("state").carMoved
+	if not result.pass then
+		result.window = worstWindow(frames)
+	end
+	if scenario.case == "ExitShut" or scenario.case == "ExitOpen" then
+		result.exitTrace = exitTrace(frames)
+	end
 	return result
 end
 

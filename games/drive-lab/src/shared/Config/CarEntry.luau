@@ -74,8 +74,10 @@ export type CarEntry = {
 	-- The walk to the mark, in studs, radians and seconds. Unless it already stands in the
 	-- corridor straight out from the mark (`lineUpAngle` either side, at least `lineUp` out), the
 	-- body walks round the car's collision box grown by `margin` (Rules/ApproachPath) to `lineUp`
-	-- studs in front of the mark, turns there to face the car, clear of it, and walks straight in.
-	-- It turns from one waypoint to the next within `pass` of it; it is stopped on a point within
+	-- studs in front of the mark, turns there to face the car, clear of it, and walks straight in
+	-- to `short` studs in front of the mark, never to the mark itself: a walk that overshoots it
+	-- presses the torso into the car's box, and the server, which moves the parked car, pushes the
+	-- car away. It turns from one waypoint to the next within `pass` of it; it is stopped on a point within
 	-- `arrived`; a leg that has not closed in by `progress` for `stallSeconds` is blocked, and
 	-- the walk tries again from where it stands, `tries` times in all. Stopped within `reach` of
 	-- the mark, it is placed exactly: moved and turned at `settleSpeed` and `turnSpeed`, eased,
@@ -83,6 +85,7 @@ export type CarEntry = {
 	APPROACH: {
 		lineUp: number,
 		lineUpAngle: number,
+		short: number,
 		margin: number,
 		pass: number,
 		arrived: number,
@@ -252,6 +255,7 @@ local CarEntry: CarEntry = {
 	APPROACH = table.freeze({
 		lineUp = 1.5,
 		lineUpAngle = math.rad(10),
+		short = 0.9,
 		margin = 0.75,
 		pass = 0.5,
 		arrived = 0.25,

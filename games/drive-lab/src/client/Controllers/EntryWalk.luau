@@ -69,25 +69,25 @@ local function leg(walk: Walk, point: Vector3, within: number, stopOn: boolean, 
 	end
 end
 
--- Moves and turns the body onto `goal` (its height kept), held so nothing pushes it, eased.
+-- Moves and turns the body onto `goal` (its height kept), eased, still. Not anchored: getting in,
+-- the seat's weld can arrive meanwhile, and a weld that joins an anchored root pulls the car to it.
 function EntryWalk.place(walk: Walk, goal: CFrame, seconds: number)
 	local root = walk.root
 	local from = root.CFrame
 	local target = goal.Rotation + Vector3.new(goal.Position.X, from.Position.Y, goal.Position.Z)
 	local started = os.clock()
-	root.Anchored = true
+	halt(walk)
 	while walk.going() and walk.humanoid.SeatPart == nil do
 		local share = Rules.settleShare(os.clock() - started, seconds)
 		root.CFrame = from:Lerp(target, share)
+		-- Else the root keeps the walk's velocity and slides on with it (measured: 0.05 studs).
+		root.AssemblyLinearVelocity = Vector3.zero
+		root.AssemblyAngularVelocity = Vector3.zero
 		if share >= 1 then
 			break
 		end
 		task.wait()
 	end
-	root.Anchored = false
-	-- Held, the root kept the walk's velocity, and it would slide on with it (measured: 0.05 studs).
-	root.AssemblyLinearVelocity = Vector3.zero
-	root.AssemblyAngularVelocity = Vector3.zero
 	halt(walk)
 end
 
@@ -141,8 +141,14 @@ local function attempt(walk: Walk, mark: CFrame, hull: BasePart?, deadline: numb
 	if EntryWalk.turn(walk.root.CFrame, mark) > APPROACH.lineUpAngle / 2 then
 		squareUp(walk, mark)
 	end
+	local stop = mark * CFrame.new(0, 0, APPROACH.short)
+	local left = stop:PointToObjectSpace(walk.root.Position)
+	if left.Z <= APPROACH.arrived and math.abs(left.X) <= APPROACH.arrived then
+		-- Already there or nearer the mark: the placing covers the rest.
+		return "Arrived"
+	end
 	walk.humanoid.AutoRotate = false
-	local outcome: Outcome = leg(walk, mark.Position, APPROACH.arrived, true, deadline)
+	local outcome: Outcome = leg(walk, stop.Position, APPROACH.arrived, true, deadline)
 	walk.humanoid.AutoRotate = true
 	return outcome
 end
