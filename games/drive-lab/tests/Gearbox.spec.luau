@@ -141,6 +141,52 @@ describe("Gearbox automatic", function()
 		expect(state.target).toBe(3)
 	end)
 
+	it("holds off a downshift for the hold after an upshift, but never one under braking", function()
+		local mode = SVJ.modes.Sport
+		local under = (mode.downshiftRpm.full - 200) * RPM / config.ratios[2]
+		local floored = context({ gearboxMode = "auto", throttle = 1, mode = mode, outputSpeed = under })
+		local state = engaged(2)
+		state.sinceUpshift = 0
+		local held = 0
+		while held < config.upshiftHoldTime - 2 * STEP do
+			Gearbox.update(config, engine, state, floored, STEP)
+			held += STEP
+		end
+		expect(state.target).toBe(2)
+		Gearbox.update(config, engine, state, floored, 3 * STEP)
+		expect(state.target).toBe(1)
+
+		local braking = engaged(2)
+		braking.sinceUpshift = 0
+		local slow = context({
+			gearboxMode = "auto",
+			throttle = 0,
+			brake = 1,
+			mode = mode,
+			outputSpeed = (mode.brakeDownshiftRpm - 200) * RPM / config.ratios[2],
+		})
+		Gearbox.update(config, engine, braking, slow, STEP)
+		expect(braking.target).toBe(1)
+	end)
+
+	it("starts the hold with every upshift", function()
+		local state = engaged(2)
+		expect(state.sinceUpshift >= config.upshiftHoldTime).toBe(true)
+		Gearbox.request(config, engine, state, true, false, context())
+		expect(state.sinceUpshift).toBe(0)
+		local down = engaged(3)
+		down.sinceUpshift = 5
+		Gearbox.request(
+			config,
+			engine,
+			down,
+			false,
+			true,
+			context({ outputSpeed = 3000 * RPM / config.ratios[3] })
+		)
+		expect(down.sinceUpshift).toBe(5)
+	end)
+
 	it("in manual, drops a gear only to avoid falling under idle", function()
 		local state = engaged(3)
 		local low = context({ outputSpeed = (engine.idleRpm + 100) * RPM / config.ratios[3] })

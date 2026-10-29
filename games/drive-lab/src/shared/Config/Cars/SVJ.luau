@@ -166,6 +166,11 @@ return Types.define({
 		clutchSlipBand = 0.2,
 		clutchCloseTime = 0.15,
 		selectorMaxSpeed = 1.0,
+		-- Not a car figure; no ISR source. Production gearbox controllers stop hunting with a
+		-- timed hold after a shift (e.g. US4041810, US6123644). In Sport at full throttle the rear
+		-- slip read through the gearbox drops after the 1-2 upshift and took the input under the
+		-- downshift point for up to 0.34 s (#35); 1 s is three times that and ten Sport upshifts.
+		upshiftHoldTime = 1.0,
 		-- EST: shift time split into cut-and-open, neutral and re-engagement (01 §2.3).
 		shiftOpenShare = 0.2,
 		shiftNeutralShare = 0.4,

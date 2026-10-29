@@ -1,0 +1,13 @@
+[1 no hold (the code before the fix)] 65 spec files, 527 passed, 3 failed
+    \AutoShift.spec:98: expected Sport: 1,2,3, got Sport: 1,2,1,2,3
+    \AutoShift.spec:98: expected Sport: 1,2,3, got Sport: 1,2,1,2,3
+    \Gearbox.spec:154: expected 2, got 1
+[2 a hold shorter than the dip] 65 spec files, 528 passed, 2 failed
+    \AutoShift.spec:98: expected Sport: 1,2,3, got Sport: 1,2,1,2,3
+    \AutoShift.spec:98: expected Sport: 1,2,3, got Sport: 1,2,1,2,3
+[3 every shift starts the hold] 65 spec files, 529 passed, 1 failed
+    \Gearbox.spec:186: expected 5, got 0
+[4 the hold never runs out] 65 spec files, 529 passed, 1 failed
+    \Gearbox.spec:156: expected 1, got 2
+[5 the hold blocks braking too] 65 spec files, 529 passed, 1 failed
+    \Gearbox.spec:168: expected 1, got 2
