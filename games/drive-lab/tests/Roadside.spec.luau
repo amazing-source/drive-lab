@@ -2,6 +2,7 @@
 local Config = require("../src/shared/Config/Roadside")
 local Roadside = require("../src/shared/Rules/Roadside")
 local T = require("../../../tools/test/T")
+local Track = require("../src/shared/Config/Track")
 
 local describe, it, expect = T.describe, T.it, T.expect
 
@@ -153,5 +154,29 @@ describe("Roadside", function()
 			end
 			expect(across / kinds.Crack > 0.2 and across / kinds.Crack < 0.5).toBe(true)
 		end)
+	end)
+end)
+
+describe("Roadside road end", function()
+	it("spans the width with the fewest whole sections, centred and end to end", function()
+		local section = GUARDRAILS.section
+		for _, width in { 11, 24, 25, 131 } do
+			local lefts = Roadside.roadEnd(width, section)
+			expect(#lefts).toBe(math.ceil(width / section))
+			expect(lefts[1] <= -width / 2 + 1e-9).toBe(true)
+			expect(lefts[#lefts] + section >= width / 2 - 1e-9).toBe(true)
+			expect(lefts[1] + lefts[#lefts] + section).toBeNear(0, 1e-9)
+			for index = 2, #lefts do
+				expect(lefts[index] - lefts[index - 1]).toBeNear(section, 1e-9)
+			end
+		end
+	end)
+
+	it("closes the whole road and both verges behind the spawn", function()
+		local width = Track.ROAD_WIDTH + 2 * Track.VERGE_WIDTH
+		local lefts = Roadside.roadEnd(width, GUARDRAILS.section)
+		expect(-lefts[1] >= width / 2).toBe(true)
+		expect(lefts[#lefts] + GUARDRAILS.section >= width / 2).toBe(true)
+		expect(Config.ROAD_END_SETBACK > 0).toBe(true)
 	end)
 end)

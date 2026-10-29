@@ -173,6 +173,19 @@ function Roadside.delineators(
 	return kept
 end
 
+-- The barrier across the road's start: the fewest whole sections (metres long) that span `width`,
+-- centred on the road. Each section's left end, in metres right of the road's centre, in order;
+-- the line's own ends take the terminals.
+function Roadside.roadEnd(width: number, section: number): { number }
+	local count = math.ceil(width / section - 1e-9)
+	local first = -count * section / 2
+	local lefts = table.create(count)
+	for index = 1, count do
+		lefts[index] = first + (index - 1) * section
+	end
+	return lefts
+end
+
 -- Sign gantries in [from, to), by arc length: one lattice side only, as a gantry spans both.
 function Roadside.gantries(from: number, to: number, seed: number, layout: Scatter.Layout): { number }
 	local found = {}

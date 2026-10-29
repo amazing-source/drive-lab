@@ -16,6 +16,8 @@ export type Config = {
 	DELINEATOR_CLEARANCE: number,
 	GUARDRAILS: Roadside.GuardrailLayout,
 	GUARDRAIL_SETBACK: number,
+	-- Metres behind the road's start where the barrier across it stands.
+	ROAD_END_SETBACK: number,
 	GANTRIES: Scatter.Layout,
 	MARKS: Roadside.MarkLayout,
 	-- By mark kind.
@@ -115,6 +117,10 @@ local Config: Config = table.freeze({
 	}),
 	-- From the road's edge to the beam's face.
 	GUARDRAIL_SETBACK = 0.3,
+	-- Behind the road the world ends at the start pad's edge (#69): a line of the same guardrail
+	-- closes the road's start across the road and both verges, on the pad's concrete just behind
+	-- the first metre of asphalt.
+	ROAD_END_SETBACK = 1,
 	-- A sign gantry about every 1.2 km, unevenly.
 	GANTRIES = table.freeze({ spacing = 900, jitter = 0.35, skip = 0.25, start = 250 }),
 	-- About one mark every 30 m a lane. Lanes are 3.5 m: their centres 1.75 m off the middle.
