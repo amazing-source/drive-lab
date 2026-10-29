@@ -64,7 +64,8 @@ local TyreSmoke: TyreSmoke = table.freeze({
 		fall = 0.3,
 	}),
 	THROW = table.freeze({ share = 0.2, min = 0.3, max = 3.5 }),
-	SIZE = table.freeze({ Units.metresToStuds(0.6), Units.metresToStuds(2.4) }),
+	-- The owner found the puffs too big at 0.6 to 2.4 m (2026-10-29).
+	SIZE = table.freeze({ Units.metresToStuds(0.4), Units.metresToStuds(1.4) }),
 	SIZE_SPREAD = 0.25,
 	LIFETIME = table.freeze({ 1.6, 3 }),
 	TRANSPARENCY = table.freeze({
