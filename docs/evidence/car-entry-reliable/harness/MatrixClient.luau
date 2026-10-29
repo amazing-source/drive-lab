@@ -62,6 +62,9 @@ local EXIT_IDS = {
 
 local Client = {}
 
+-- Studs a second: the fastest the body moves of its own accord (Config/Movement's sprint, 26).
+local LEGIT_SPEED = 30
+
 -- The prompts this client shows now: only a shown prompt can be pressed by a player.
 local shown: { [ProximityPrompt]: boolean } = {}
 ProximityPromptService.PromptShown:Connect(function(prompt: ProximityPrompt)
@@ -280,6 +283,23 @@ end
 -- The largest move of the torso in one frame, of the same body: what the eye sees jump. The
 -- clips move it at most 0.18 studs a frame at 60 fps (GetIn, from the bakes), a walk 0.21.
 local function torsoJump(frames: { Frame }): number
+	local worst = 0
+	for index = 2, #frames do
+		local a, b = frames[index - 1], frames[index]
+		if a.character == b.character and not b.dead then
+			local moved = (Vector3.new(b.torso.X, 0, b.torso.Z) - Vector3.new(a.torso.X, 0, a.torso.Z)).Magnitude
+			-- A long frame (Studio hitches to 50 ms) carries a walk past 0.5 studs: a move no faster
+			-- than sprinting is the body's own motion, not a jump.
+			if moved / math.max(b.t - a.t, 1e-3) > LEGIT_SPEED then
+				worst = math.max(worst, moved)
+			end
+		end
+	end
+	return worst
+end
+
+-- The largest move of the torso in one frame, whatever its speed, for the record.
+local function torsoLargestMove(frames: { Frame }): number
 	local worst = 0
 	for index = 2, #frames do
 		local a, b = frames[index - 1], frames[index]
@@ -744,6 +764,7 @@ function Client.run(scenario: Scenario): { [string]: any }
 	result.timings = timings(frames)
 	result.standingJump = standingJump(frames)
 	result.torsoJump = torsoJump(frames)
+	result.torsoMove = torsoLargestMove(frames)
 	result.handOverJump = handOverJump(frames)
 	result.requests = #log
 	local seen = {}
