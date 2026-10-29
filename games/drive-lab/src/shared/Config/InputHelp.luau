@@ -54,14 +54,17 @@ InputHelp.REVERSE_HOLD_SECONDS = REVERSE_HOLD_SECONDS
 
 InputHelp.keyboard = table.freeze({
 	-- Was a constant 2.5 of lock a second (0.4 s), twice as fast back, with no easing: the
-	-- owner found it abrupt (2026-10-29). Assetto Corsa's keyboard defaults also turn toward
-	-- the other side about 1.4 times faster than they turn in, so a slide can be caught.
-	lockTime = 0.9,
-	easeTime = 0.15,
+	-- owner found it abrupt (2026-10-29). The research's 0.9 s still felt too light to the
+	-- owner the same day, so 1.3 s, the relaxed end of a human parking turn (about 330 to 400
+	-- degrees a second of the steering wheel); the ease and the returns keep their proportions.
+	-- Assetto Corsa's keyboard defaults also turn toward the other side about 1.4 times faster
+	-- than they turn in, so a slide can be caught.
+	lockTime = 1.3,
+	easeTime = 0.22,
 	rateHalvingSpeed = 25,
 	oppositeFactor = 1.4,
-	returnTimeStill = 0.9,
-	returnTimeMoving = 0.4,
+	returnTimeStill = 1.3,
+	returnTimeMoving = 0.55,
 	returnBlend = table.freeze({ from = 2, to = 15 }),
 	stickExponent = 1,
 	deadzone = 0,

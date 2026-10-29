@@ -453,6 +453,7 @@ function Model.step(
 	)
 	Selector.update(state.help, car.gearbox, gearbox, state.selector, input, groundSpeed, launchReady, dt)
 	local pedals = Selector.pedals(state.help, gearbox, input, state.pedals)
+	local steerBefore = state.controls.steer
 	InputFilter.update(state.help, car, state.controls, pedals, forward, right, yaw, dt)
 	local controls = state.controls
 	Launch.update(
@@ -465,7 +466,10 @@ function Model.step(
 		gearbox.gear,
 		groundSpeed
 	)
-	Steering.update(car, state.steering, state.controls.steer, forward, dt)
+	-- The wheels hold one angle through the frame's substeps: the frame's mean steer rather than
+	-- its end, or at 30 FPS a turning wheel leads the 240 FPS car by half a frame (3 to 4 % more
+	-- yaw half a second into a slow keyboard turn, measured 2026-10-29).
+	Steering.update(car, state.steering, (steerBefore + state.controls.steer) / 2, forward, dt)
 	updateCorners(state, wheels, mode, dt)
 	local alaTarget =
 		Aero.alaTarget(car.aero, forward, state.controls.throttle, state.controls.brake, yaw * forward)
