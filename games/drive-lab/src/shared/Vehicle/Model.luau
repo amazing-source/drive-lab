@@ -22,6 +22,7 @@ local Geometry = require("./Geometry")
 local InputFilter = require("./InputFilter")
 local InputHelp = require("../Config/InputHelp")
 local Interface = require("./Interface")
+local Launch = require("./Launch")
 local Selector = require("./Selector")
 local Steering = require("./Steering")
 local Suspension = require("./Suspension")
@@ -51,6 +52,7 @@ export type VehicleState = {
 	brakes: Brakes.Brakes,
 	controls: InputFilter.Controls,
 	selector: Selector.SelectorState,
+	launch: Launch.LaunchState,
 	-- The device's pedals after the selector's swap, for the input filter.
 	pedals: InputFilter.RawControls,
 	engineState: Engine.EngineState,
@@ -109,6 +111,7 @@ function Model.new(car: CarConfig, help: InputHelp.InputHelp?): VehicleState
 		brakes = Brakes.prepare(car.brakes),
 		controls = InputFilter.newState(),
 		selector = Selector.newState(),
+		launch = Launch.newState(),
 		pedals = { steer = 0, throttle = 0, brake = 0, handbrake = 0 },
 		engineState = Engine.newState(engine),
 		gearbox = Gearbox.newState(),
@@ -143,6 +146,7 @@ function Model.new(car: CarConfig, help: InputHelp.InputHelp?): VehicleState
 			brake = 0,
 			mode = car.modes.Strada,
 			gearboxMode = "auto",
+			holdGear = false,
 		},
 		motion = { forwardSpeed = 0, rightSpeed = 0, yawRate = 0, frontSteer = 0, rearSteer = 0, grip = 1 },
 	}
@@ -163,6 +167,7 @@ local function gearboxContext(
 	context.brake = state.controls.brake
 	context.mode = state.car.modes[input.drivingMode]
 	context.gearboxMode = input.gearboxMode
+	context.holdGear = state.launch.phase == "Launching" and not state.car.launch.autoUpshift
 	return context
 end
 
@@ -265,11 +270,13 @@ local function runElectronics(
 		state.ground,
 		dt
 	)
+	-- A launch works the tyres at its own slip, even with TC switched off.
+	local launching = state.launch.phase == "Launching"
 	Electronics.updateTc(
 		car.electronics,
-		mode,
+		if launching then car.launch.slipRatio else mode.tcSlipRatio,
 		electronics,
-		input.assists.tc,
+		input.assists.tc or launching,
 		state.controls.throttle,
 		state.surface,
 		state.ground,
@@ -413,6 +420,7 @@ local function buildResult(state: VehicleState, chassis: ChassisMotion, dt: numb
 			clutch = gearbox.engagement,
 			limiter = state.engineState.limiterCut,
 			alaOpen = state.aero.alaOpen,
+			launch = state.launch.phase,
 			steer = state.controls.steer,
 			rearSteerAngle = state.steering.rearAngle,
 		},
@@ -432,9 +440,31 @@ function Model.step(
 	dt = math.clamp(dt, 1e-5, car.simulation.maxFrameTime)
 	local mode = car.modes[input.drivingMode]
 	local forward, right, yaw = chassis.forwardSpeed, chassis.rightSpeed, chassis.yawRate
-	Selector.update(state.help, car.gearbox, state.gearbox, state.selector, input, math.abs(forward), dt)
-	local pedals = Selector.pedals(state.help, state.gearbox, input, state.pedals)
+	local groundSpeed = math.abs(forward)
+	local gearbox = state.gearbox
+	local selected = Launch.selected(car.launch, input)
+	local launchReady = Launch.available(
+		car.launch,
+		input,
+		gearbox.gear,
+		Gearbox.isShifting(gearbox),
+		groundSpeed,
+		car.gearbox.selectorMaxSpeed
+	)
+	Selector.update(state.help, car.gearbox, gearbox, state.selector, input, groundSpeed, launchReady, dt)
+	local pedals = Selector.pedals(state.help, gearbox, input, state.pedals)
 	InputFilter.update(state.help, car, state.controls, pedals, forward, right, yaw, dt)
+	local controls = state.controls
+	Launch.update(
+		car.launch,
+		state.launch,
+		selected,
+		launchReady,
+		controls.throttle,
+		controls.brake,
+		gearbox.gear,
+		groundSpeed
+	)
 	Steering.update(car, state.steering, state.controls.steer, forward, dt)
 	updateCorners(state, wheels, mode, dt)
 	local alaTarget =

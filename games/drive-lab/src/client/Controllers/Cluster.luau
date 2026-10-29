@@ -186,13 +186,14 @@ local function refresh(current: Display)
 	current.speed.Text = tostring(math.round(number(model, "SpeedKmh")))
 	current.tc.TextColor3 = if read(model, "TcActive") == true then ClusterTheme.WARNING else theme.dim
 	current.abs.TextColor3 = if read(model, "AbsActive") == true then ClusterTheme.WARNING else theme.dim
-	local lamp = DriverAssists.escLamp(
+	local lamp: DriverAssists.Lamp = DriverAssists.escLamp(
 		read(model, "EscOff") == true,
 		read(model, "EscActive") == true,
 		now,
 		DriverAssistsConfig
 	)
-	local escText = if lamp == "EscOff" then "ESC OFF" elseif lamp == "Esc" then "ESC" else ""
+	local launch = read(model, "Launch")
+	local escText = Rules.lampText(lamp, launch == "Armed" or launch == "Launching")
 	if current.esc.Text ~= escText then
 		current.esc.Text = escText
 	end

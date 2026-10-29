@@ -30,6 +30,9 @@ export type Cluster = {
 	ABS: Spot,
 	STARTUP_SECONDS: number,
 	LIMITER_FLASH_HZ: number,
+	-- Shown under the gear, where the ESC light is, while launch control is armed or launching: our
+	-- own UI, no source shows the car's (#74).
+	LAUNCH_TEXT: string,
 	CANVAS_WIDTH: number,
 	CANVAS_HEIGHT: number,
 	UPDATE_INTERVAL: number,
@@ -68,6 +71,7 @@ local Cluster: Cluster = table.freeze({
 	-- reference of its start-up screen was found, 2026-10-28).
 	STARTUP_SECONDS = 1.4,
 	LIMITER_FLASH_HZ = 10,
+	LAUNCH_TEXT = "LAUNCH",
 	-- Pixels of the screen's canvas, about 2.5 : 1 like the screen; the face fills its height.
 	CANVAS_WIDTH = 1240,
 	CANVAS_HEIGHT = 500,

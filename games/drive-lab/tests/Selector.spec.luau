@@ -30,7 +30,7 @@ local function hold(
 	help: InputHelp.InputHelp?
 )
 	for _ = 1, math.round(seconds / DT) do
-		Selector.update(help or keyboard, config, gearbox, selector, input, speed, DT)
+		Selector.update(help or keyboard, config, gearbox, selector, input, speed, false, DT)
 	end
 end
 
@@ -62,6 +62,19 @@ describe("Selector: the automatic's reverse on the pedals", function()
 			hold(gearbox, selector, DriveSim.input({}), 0, DT)
 		end
 		expect(gearbox.gear).toBe(1)
+	end)
+
+	it("selects no reverse on the brake while launch control can arm", function()
+		local gearbox, selector = engaged(1), Selector.newState()
+		local brake = DriveSim.input({ brake = 1 })
+		for _ = 1, math.round(3 / DT) do
+			Selector.update(keyboard, config, gearbox, selector, brake, 0, true, DT)
+		end
+		expect(gearbox.gear).toBe(1)
+		Selector.update(keyboard, config, gearbox, selector, brake, 0, false, DT)
+		expect(gearbox.gear).toBe(1)
+		hold(gearbox, selector, brake, 0, HOLD + DT)
+		expect(gearbox.gear).toBe(-1)
 	end)
 
 	it("selects nothing while both pedals are down", function()
@@ -208,6 +221,28 @@ describe("Selector in the car", function()
 					expect(-DriveSim.forwardSpeed(sim) >= max - band).toBe(true)
 				end
 			end
+		end
+	)
+
+	it(
+		"in Corsa with ESC off the brake arms nothing and selects no reverse; in Sport it selects reverse",
+		function()
+			local function held(mode: "Corsa" | "Sport"): DriveSim.Sim
+				local sim = DriveSim.new(SVJ, keyboard)
+				for _ = 1, math.round(3 / DT) do
+					DriveSim.frame(
+						sim,
+						DriveSim.input({ brake = 1, drivingMode = mode, tc = false, esc = false }),
+						DT
+					)
+				end
+				return sim
+			end
+			local corsa = held("Corsa")
+			expect(corsa.model.gearbox.gear).toBe(1)
+			expect(corsa.model.launch.phase).toBe("Off")
+			expect(math.abs(DriveSim.forwardSpeed(corsa)) < 0.05).toBe(true)
+			expect(held("Sport").model.gearbox.gear).toBe(-1)
 		end
 	)
 

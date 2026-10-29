@@ -141,7 +141,7 @@ describe("ControlsHelp", function()
 		local reverse: ControlsHelp.Row? = nil
 		for _, group in Config.HELP.groups do
 			for _, row in group.rows do
-				if row.keysOf and table.find(row.keysOf, "BRAKE") then
+				if row.label == "Reverse (automatic)" then
 					reverse = row
 				end
 			end

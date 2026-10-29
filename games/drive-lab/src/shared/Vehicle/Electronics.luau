@@ -101,12 +101,12 @@ function Electronics.updateAbs(
 	state.absActive = active
 end
 
--- Torque reduction in two stages: proportional to the slip over the mode's threshold, then a
--- full cut past `tcCutFactor` times it. The speed floor lets a stopped car spin its wheels a
--- little, or it could never move off (01 §2.4 pitfall).
+-- Torque reduction in two stages: proportional to the slip over `threshold` (the mode's, or a
+-- launch's), then a full cut past `tcCutFactor` times it. The speed floor lets a stopped car spin
+-- its wheels a little, or it could never move off (01 §2.4 pitfall).
 function Electronics.updateTc(
 	config: Types.ElectronicsConfig,
-	mode: Types.ModeConfig,
+	threshold: number,
 	state: ElectronicsState,
 	enabled: boolean,
 	throttle: number,
@@ -130,7 +130,6 @@ function Electronics.updateTc(
 			/ math.max(math.abs(ground[wheel]), config.tcSpeedFloor)
 		worst = math.max(worst, slip)
 	end
-	local threshold = mode.tcSlipRatio
 	local factor = state.tcFactor
 	if worst > threshold * config.tcCutFactor then
 		factor = 0
