@@ -12,6 +12,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Log = require(ReplicatedStorage.Kit.Log)
 local Movement = require(ReplicatedStorage.Shared.Config.Movement)
+local Sprint = require(ReplicatedStorage.Shared.Rules.Sprint)
 
 type Name = "idle" | "walk" | "run" | "jump" | "fall" | "climb" | "sit"
 
@@ -68,6 +69,12 @@ local function sprinting(): boolean
 	return gamepadSprint or UserInputService:IsKeyDown(Movement.SPRINT_KEYS[1])
 end
 
+local function seated(): boolean
+	local character = localPlayer.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	return humanoid ~= nil and humanoid.SeatPart ~= nil
+end
+
 local function update(current: Body)
 	local humanoid = current.humanoid
 	local state = humanoid:GetState()
@@ -117,7 +124,7 @@ local Controller = {}
 
 function Controller.start()
 	UserInputService.InputBegan:Connect(function(input, processed)
-		if not processed and input.KeyCode == Movement.SPRINT_KEYS[2] then
+		if Sprint.toggles(input.KeyCode, Movement.SPRINT_KEYS[2], processed, seated()) then
 			gamepadSprint = not gamepadSprint
 		end
 	end)
