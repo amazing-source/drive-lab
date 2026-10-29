@@ -130,6 +130,10 @@ local function rig(model: Instance)
 		log.warn(`{model:GetFullName()} has no known "Car" attribute`)
 		return
 	end
+	-- Never streamed out. A car that streamed back in came back with the server's lamp values,
+	-- so its tail lamps glowed white instead of red (#59); one car in a solo sandbox costs
+	-- little to keep loaded on every client.
+	model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 	local car: Car = {
 		rig = CarRig.build(model, entry.physics, entry.model),
 		entry = entry,

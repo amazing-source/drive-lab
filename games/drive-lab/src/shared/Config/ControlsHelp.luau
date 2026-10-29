@@ -246,6 +246,16 @@ local HELP: Rules.Help = {
 			},
 		},
 		{
+			title = "Weather",
+			rows = {
+				{
+					label = "Weather",
+					text = "Steps the weather through a clear day, rain by day and rain at night; the change takes a few seconds and the road soaks or dries slowly, as a real one does.",
+					controls = { "WEATHER" },
+				},
+			},
+		},
+		{
 			title = "HUD",
 			rows = {
 				{

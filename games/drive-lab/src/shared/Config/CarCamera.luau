@@ -61,11 +61,12 @@ local VIEWS: { View } = { "Chase", "Cockpit", "Hood" }
 -- the car pulls (2026-10-28). Chase 60 is Assetto Corsa's default. The cockpit is 4 degrees
 -- wider than Assetto Corsa's 56: from the default seat the cluster's screen then ends at 95 % of
 -- the frame's height with its bezel in view, where at 56 it touched the frame's bottom edge
--- (edit-mode captures, 2026-10-28). The cockpit takes an eighth of the kick (1.5 degrees per g,
--- what it had before) and the hood a quarter (3 per g), or the dashboard and the bonnet zoom.
+-- (edit-mode captures, 2026-10-28). The cockpit and the hood take a quarter of the kick (4.5
+-- degrees per g), or the dashboard and the bonnet zoom; the cockpit had an eighth until the
+-- owner found the widening too faint (2026-10-29).
 local FOV: { [View]: ViewFov } = {
 	Chase = table.freeze({ base = 60, kickShare = 1 }),
-	Cockpit = table.freeze({ base = 60, kickShare = 0.125 }),
+	Cockpit = table.freeze({ base = 60, kickShare = 0.25 }),
 	Hood = table.freeze({ base = 70, kickShare = 0.25 }),
 }
 
@@ -110,9 +111,10 @@ local CarCamera: CarCamera = table.freeze({
 	-- defaults). The owner found +0.08 too close and -0.065 too far (2026-10-27/28).
 	EYE_RANGE = table.freeze({ forward = { -0.15, 0.12 }, up = { -0.05, 0.15 }, step = 0.01 }),
 	FOV = table.freeze(FOV),
-	-- Sized so full throttle shrinks the chase car by about the 16 % of the reference (frames 02
-	-- and 03), and held through a gear change: frame 03 is mid-upshift and still wide.
-	FOV_KICK = table.freeze({ perG = 12, max = 10, attack = 0.15, hold = 0.25, release = 0.5 }),
+	-- First sized so full throttle shrinks the chase car by about the 16 % of the reference
+	-- (frames 02 and 03), held through a gear change: frame 03 is mid-upshift and still wide.
+	-- Raised by half (12 per g up to 10) when the owner found it not marked enough (2026-10-29).
+	FOV_KICK = table.freeze({ perG = 18, max = 15, attack = 0.15, hold = 0.25, release = 0.5 }),
 	-- Right mouse button (or right stick) to look around; the view eases back on release.
 	LOOK_SENSITIVITY = math.rad(0.25),
 	LOOK_RETURN_HALF_LIFE = 0.25,
