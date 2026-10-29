@@ -168,13 +168,10 @@ local function placeAt(start: Start): boolean
 	local goal = spot.Rotation
 		+ Vector3.new(spot.Position.X, ground + 3 * character:GetScale(), spot.Position.Z)
 	local wanted = DoorMark.distance(seat(), goal.Position)
-	-- A long move goes up and over the car: this server eases the body between the places its
+	-- Every move goes up and over the car: this server eases the body between the places its
 	-- client sends, and a straight line across would sweep it through the car (measured: the car
 	-- pushed 1.08 studs).
-	if
-		(Vector3.new(root.Position.X, 0, root.Position.Z) - Vector3.new(goal.Position.X, 0, goal.Position.Z)).Magnitude
-		> 6
-	then
+	do
 		local lift = Vector3.new(0, 25, 0)
 		for _, step in { root.CFrame + lift, goal + lift } do
 			root.CFrame = step
@@ -463,7 +460,12 @@ local function setUp(scenario: Scenario): boolean
 		end, 5)
 	end
 	remote():InvokeServer("outside", door)
-	if not placeAt(scenario.start or { lateral = 0, outward = 4, yaw = 0 }) then
+	local start = scenario.start or { lateral = 0, outward = 4, yaw = 0 }
+	if not placeAt(start) then
+		return false
+	end
+	-- Moving the body may still have nudged the car: parked again, the body is placed again.
+	if remote():InvokeServer("park") and not placeAt(start) then
 		return false
 	end
 	return waitFor(function(): boolean

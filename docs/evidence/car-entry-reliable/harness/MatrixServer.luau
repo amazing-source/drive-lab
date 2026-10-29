@@ -48,15 +48,15 @@ end
 
 -- The car back where it stood, still: a fixture that unseats the body inside the car's collision
 -- box shoves the car on this server (measured: 10.6 studs over 20 scenarios).
-local function park()
+local function park(): boolean
 	local model = car()
 	local at = home
 	if at == nil then
-		return
+		return false
 	end
 	local here = model:GetPivot()
 	if (here.Position - at.Position).Magnitude <= 0.02 and here.LookVector:Dot(at.LookVector) >= 0.99999 then
-		return
+		return false
 	end
 	model:PivotTo(at)
 	for _, part in model:GetDescendants() do
@@ -68,6 +68,7 @@ local function park()
 	-- Put back, the car settles on its suspension (measured: a bounce of 0.7 studs): the next
 	-- scenario starts once it is still.
 	task.wait(1.5)
+	return true
 end
 
 -- Lets the body go and puts it outside in the same step, as the game's own exit does, so it is
@@ -144,6 +145,9 @@ local HANDLERS: { [string]: (Player, any) -> any } = {
 			task.wait(0.1)
 		end
 		return seat().Occupant == humanoid
+	end,
+	park = function(_player: Player)
+		return park()
 	end,
 	kill = function(player: Player)
 		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")

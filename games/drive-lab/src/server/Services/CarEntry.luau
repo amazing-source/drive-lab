@@ -81,9 +81,10 @@ local function now(): number
 	return Workspace:GetServerTimeNow()
 end
 
--- Seconds a change made here takes to reach `player`: half its measured round trip.
+-- Seconds a change made here takes to reach `player`: half its measured round trip, and a margin
+-- for its jitter.
 local function oneWay(player: Player): number
-	return player:GetNetworkPing() / 2
+	return player:GetNetworkPing() / 2 + Config.LATENCY_MARGIN
 end
 
 local function body(player: Player): (Model?, Humanoid?, BasePart?)
@@ -442,16 +443,18 @@ local function exit(car: Car, player: Player, _request: Request)
 		return
 	end
 	local doorOpen = Rules.doorOpenness(state, at) >= 0.5
+	-- As an entry's start: where the client shows the exit from its first frame.
+	local startAt = Rules.entryStart(at, nil, oneWay(player))
 	CarState.write(car.model, {
 		entry = "Exit",
-		entryAt = at,
+		entryAt = startAt,
 		entryDoorOpen = doorOpen,
 		door = "Closed",
-		doorAt = at,
+		doorAt = startAt,
 		engine = "Off",
 		engineAt = at,
 	})
-	task.delay(Rules.length(Rules.steps("Exit", doorOpen)), finishExit, car, player, at)
+	task.delay(startAt - at + Rules.length(Rules.steps("Exit", doorOpen)), finishExit, car, player, startAt)
 end
 
 -- Anyone leaving the seat other than through a finished exit (a reset, a death, a player
