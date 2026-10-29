@@ -27,9 +27,6 @@ local ROOT_HEIGHT = 3
 -- Seconds after getting out during which the body is put back where it was placed if something
 -- other than the player moves it.
 local HOLD_OUT = 0.6
--- Studs in one frame toward the seat, getting in before the weld: more than a walk covers, so
--- the server moved the root.
-local DISPLACED = 0.6
 local MOVED = 0.05
 local SCALE_EPSILON = 1e-4
 -- Studs past the car's box that count as clear of it, and seconds at most a body the seat let go of
@@ -44,9 +41,8 @@ local placedOut: { car: Model, at: Vector3, untilClock: number }? = nil
 local standingUp = false
 -- The body's size last standing frame: a change plants the feet again.
 local lastScale: number? = nil
--- Where the root stood last standing frame, and whether it is held there for the seat's weld.
+-- Where the root stood last standing frame: where holdOnMark keeps it.
 local lastStanding: CFrame? = nil
-local holding = false
 -- The car whose seat last held the body, and when.
 local leftCar: Model? = nil
 local leftAt = 0
@@ -93,35 +89,30 @@ function SeatHandOver.seatedIn(current: Body, entering: Model?): Model?
 	return nil
 end
 
--- Getting into `entering`, before this client has the seat's weld. The server seats the body and
--- the root's new place can reach this client first, in the seat or part way there (measured: 3.9
--- studs in, with no weld and the full size, so no pose matched it): the root is put back where it
--- stood, posed standing, every frame until the weld arrives and the seated clips take it. It is
--- not anchored: a weld that joins an anchored root pulls the car to it (measured: 8.7 studs).
--- True while it holds.
-function SeatHandOver.holdForSeat(current: Body, entering: Model?): boolean
+-- Once a request has been sent from the mark, until the seat's weld holds the body or the request
+-- ends: the body stays where the placing put it, posed standing, every frame. The sequence is
+-- committed then, and the movement keys cannot be switched off: a body walked off the mark while
+-- the server confirmed was then seated from where it stood (measured: a 4.79-stud jump, poor
+-- network). And the server seats the body by moving its root, which can reach this client before
+-- the weld, in the seat or part way there (measured: 3.9 studs in, no weld, the full size): it is
+-- put back too. Not anchored: a weld that joins an anchored root pulls the car to it (measured:
+-- 8.7 studs). `car`: the pending request's car. True while it holds.
+function SeatHandOver.holdOnMark(current: Body, car: Model?): boolean
 	local root, spot = current.root, lastStanding
-	local seat = entering and entering:FindFirstChild("DriverSeat")
-	if spot and seat and seat:IsA("BasePart") and not weldHolds(current, seat) then
-		local towardSeat = flat(spot.Position - seat.Position).Magnitude
-			- flat(root.Position - seat.Position).Magnitude
-		if holding or towardSeat > DISPLACED then
-			holding = true
-			root.CFrame = spot
-			root.AssemblyLinearVelocity = Vector3.zero
-			root.AssemblyAngularVelocity = Vector3.zero
-			local scale = current.character:GetScale()
-			if lastScale ~= nil and scale ~= lastScale then
-				plantFeet(current, scale)
-				lastScale = scale
-				lastStanding = root.CFrame
-			end
-			return true
-		end
-	else
-		holding = false
+	local seat = car and car:FindFirstChild("DriverSeat")
+	if spot == nil or seat == nil or not seat:IsA("BasePart") or weldHolds(current, seat) then
+		return false
 	end
-	return false
+	root.CFrame = spot
+	root.AssemblyLinearVelocity = Vector3.zero
+	root.AssemblyAngularVelocity = Vector3.zero
+	local scale = current.character:GetScale()
+	if lastScale ~= nil and scale ~= lastScale then
+		plantFeet(current, scale)
+		lastScale = scale
+		lastStanding = root.CFrame
+	end
+	return true
 end
 
 -- Seated after getting in, the body has the driver's size. The server sets it before the seat's
@@ -302,7 +293,7 @@ end
 
 function SeatHandOver.reset()
 	heldWeld, heldRoot, placedOut, standingUp, lastScale = nil, nil, nil, false, nil
-	lastStanding, holding, leftCar = nil, false, nil
+	lastStanding, leftCar = nil, nil
 end
 
 return table.freeze(SeatHandOver)

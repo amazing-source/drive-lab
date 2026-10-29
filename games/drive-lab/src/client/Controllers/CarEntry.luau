@@ -260,8 +260,9 @@ local function update()
 	local at = now()
 	local car = SeatHandOver.seatedIn(current, entering())
 	posedSeated = car ~= nil
-	-- After the placing, getting in: on the mark until the seat's weld arrives.
-	local awaitingWeld = not walking and SeatHandOver.holdForSeat(current, entering())
+	-- After the placing: on the mark until the seat's weld holds the body or the request ends.
+	local request = pending
+	local awaitingWeld = not walking and SeatHandOver.holdOnMark(current, request and request.car)
 	SeatHandOver.collide(current, SeatHandOver.collision(current, car, pending ~= nil or walking))
 	if car and pending then
 		-- The seat holds the body: the entry is the server's now.
