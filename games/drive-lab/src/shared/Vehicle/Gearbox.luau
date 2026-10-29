@@ -86,6 +86,15 @@ function Gearbox.ratio(config: Types.GearboxConfig, gear: number): number
 	return 0
 end
 
+-- Share of the driver's throttle reverse lets through at `forwardSpeed` (m/s, negative going
+-- backwards): all of it until the last `reverseCutBand` before the top speed, none from there.
+function Gearbox.reverseCut(config: Types.GearboxConfig, gear: number, forwardSpeed: number): number
+	if gear >= 0 then
+		return 1
+	end
+	return math.clamp((config.reverseMaxSpeed + forwardSpeed) / config.reverseCutBand, 0, 1)
+end
+
 function Gearbox.isShifting(state: GearboxState): boolean
 	return state.phase ~= "engaged"
 end
@@ -136,6 +145,21 @@ function Gearbox.request(
 	elseif gear >= 0 and slow then
 		state.gear, state.target = gear - 1, gear - 1
 	end
+end
+
+-- Moves the selector straight to `gear` (reverse, or first from reverse) near a standstill, with
+-- no shift; refused during one. Returns whether it moved.
+function Gearbox.select(
+	config: Types.GearboxConfig,
+	state: GearboxState,
+	gear: number,
+	groundSpeed: number
+): boolean
+	if Gearbox.isShifting(state) or groundSpeed >= config.selectorMaxSpeed then
+		return false
+	end
+	state.gear, state.target = gear, gear
+	return true
 end
 
 local function autoShift(

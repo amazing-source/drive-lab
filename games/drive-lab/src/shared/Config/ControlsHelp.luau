@@ -13,6 +13,7 @@
 local CarEntry = require("./CarEntry")
 local CarLights = require("./CarLights")
 local DriverAssists = require("./DriverAssists")
+local InputHelp = require("./InputHelp")
 local Rules = require("../Rules/ControlsHelp")
 
 export type ControlsHelpConfig = {
@@ -167,6 +168,15 @@ local HELP: Rules.Help = {
 					controls = { "SHIFT_DOWN" },
 				},
 				{
+					label = "Reverse (automatic)",
+					text = "In automatic, hold the brake {REVERSE_HOLD} s at a standstill to select reverse (R on the display), where the brake drives backwards and the accelerator brakes; hold the accelerator at a standstill to go back to drive.",
+					controls = {},
+					keysOf = { "BRAKE" },
+					gamepad = { "ButtonL2" },
+					keyboardGesture = "Hold",
+					gamepadGesture = "Hold",
+				},
+				{
 					label = "Automatic / manual",
 					text = "Switches between the automatic gearbox (A on the display) and manual (M), where you change gear with the paddles.",
 					controls = { "GEARBOX_MODE" },
@@ -304,6 +314,7 @@ local HELP: Rules.Help = {
 		DOOR_KMH = CarEntry.DOOR_MAX_KMH,
 		ESC_HOLD = DriverAssists.offHoldSeconds,
 		PAD_HOLD = CarLights.PAD_HOLD_SECONDS,
+		REVERSE_HOLD = InputHelp.REVERSE_HOLD_SECONDS,
 	},
 	maxLabelLength = 26,
 	maxTextLength = 300,

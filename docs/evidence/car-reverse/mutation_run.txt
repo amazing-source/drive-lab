@@ -1,0 +1,59 @@
+[1 no hold time] 64 spec files, 513 passed, 4 failed
+    \Selector.spec:42: expected 1, got -1
+    \Selector.spec:55: expected 1, got -1
+    \Selector.spec:64: expected 1, got -1
+    \Selector.spec:153: expected true, got false
+[2 selector ignores speed] 64 spec files, 515 passed, 2 failed
+    \Selector.spec:55: expected 1, got -1
+    \Selector.spec:153: expected true, got false
+[3 gearbox.select ignores speed] 64 spec files, 516 passed, 1 failed
+    \Gearbox.spec:172: expected false, got true
+[4 gearbox.select ignores shift] 64 spec files, 515 passed, 2 failed
+    \Gearbox.spec:182: expected false, got true
+    \Selector.spec:103: expected 2, got -1
+[5 R with both pedals] 64 spec files, 516 passed, 1 failed
+    \Selector.spec:71: expected 1, got -1
+[6 D with both pedals] 64 spec files, 516 passed, 1 failed
+    \Selector.spec:74: expected -1, got 1
+[7 hold never restarts] 64 spec files, 516 passed, 1 failed
+    \Selector.spec:64: expected 1, got -1
+[8 selects in manual] 64 spec files, 514 passed, 3 failed
+    \Selector.spec:89: expected 1, got -1
+    \Selector.spec:206: expected -1, got 1
+    \Selector.spec:219: expected 1, got -1
+[9 swaps in manual] 64 spec files, 514 passed, 3 failed
+    \Selector.spec:121: expected 0.25, got 0.75
+    \Selector.spec:208: expected true, got false
+    \Selector.spec:228: expected true, got false
+[10 swaps without the help] 64 spec files, 515 passed, 2 failed
+    \Model.spec:105: expected a truthy value, got false
+    \Selector.spec:131: expected 0.25, got 0.75
+[11 never swaps] 64 spec files, 513 passed, 4 failed
+    \Selector.spec:113: expected 0.75, got 0.25
+    \Selector.spec:155: expected true, got false
+    \Selector.spec:165: expected true, got false
+    \Selector.spec:208: expected true, got false
+[12 model skips the selector] 64 spec files, 514 passed, 3 failed
+    \Selector.spec:152: the car stopped and reverse was selected
+    \Selector.spec:165: expected true, got false
+    \Selector.spec:206: expected -1, got 1
+[13 model filters the raw pedals] 64 spec files, 514 passed, 3 failed
+    \Selector.spec:155: expected true, got false
+    \Selector.spec:165: expected true, got false
+    \Selector.spec:208: expected true, got false
+[14 rule drops borrowed keys] 64 spec files, 516 passed, 1 failed
+    \ControlsHelp.spec:151: expected S,Down arrow, got 
+[15 rule skips the borrowed-key check] 64 spec files, 516 passed, 1 failed
+    \ControlsHelp.spec:163: expected true, got false
+[16 model skips the reverse cut] 64 spec files, 516 passed, 1 failed
+    \Selector.spec:207: expected true, got false
+[17 hard cut, no band] 64 spec files, 515 passed, 2 failed
+    \Gearbox.spec:194: expected 0.5 within 1e-09, got 1
+    \Selector.spec:207: expected true, got false
+[18 cut also in neutral] 64 spec files, 516 passed, 1 failed
+    \Gearbox.spec:202: expected 1, got 0
+[19 cut set 10 km/h too high] 64 spec files, 515 passed, 2 failed
+    \Gearbox.spec:194: expected 0.5 within 1e-09, got 1
+    \Selector.spec:207: expected true, got false
+[20 define accepts any cut] 64 spec files, 516 passed, 1 failed
+    \Cars.spec:54: expected the function to throw

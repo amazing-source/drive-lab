@@ -77,6 +77,10 @@ export type EngineConfig = {
 export type GearboxConfig = {
 	ratios: { number },
 	reverseRatio: number,
+	-- Reverse's top speed (m/s): the engine's torque fades to nothing over the last
+	-- `reverseCutBand` below it, as a limiter cuts, and never brakes the car.
+	reverseMaxSpeed: number,
+	reverseCutBand: number,
 	clutchTorque: number,
 	-- Engine speed the automatic clutch slips at while the car gets moving: this at a closed
 	-- throttle, the engine's launch speed at full throttle.
@@ -270,6 +274,10 @@ function Types.define(car: CarConfig): CarConfig
 	assert(
 		car.gearbox.shiftOpenShare + car.gearbox.shiftNeutralShare < 1,
 		"shift shares leave no time to close"
+	)
+	assert(
+		car.gearbox.reverseCutBand > 0 and car.gearbox.reverseCutBand < car.gearbox.reverseMaxSpeed,
+		"the reverse cut must fit between a standstill and reverse's top speed"
 	)
 	return deepFreeze(car)
 end
