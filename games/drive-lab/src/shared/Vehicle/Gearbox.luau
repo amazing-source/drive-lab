@@ -59,6 +59,8 @@ export type Context = {
 	brake: number,
 	mode: Types.ModeConfig,
 	gearboxMode: GearboxMode,
+	-- The automatic keeps its gear (a launch whose car does not shift up by itself).
+	holdGear: boolean,
 }
 
 local Gearbox = {}
@@ -175,7 +177,7 @@ local function autoShift(
 	context: Context
 )
 	local gear = state.gear
-	if gear < 1 then
+	if gear < 1 or context.holdGear then
 		return
 	end
 	local mode = context.mode

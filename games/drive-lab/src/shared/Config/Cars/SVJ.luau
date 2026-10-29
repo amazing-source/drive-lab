@@ -146,7 +146,8 @@ return Types.define({
 		-- PRESS, 02 E9 (fuel cut).
 		limiterRpm = 8700,
 		limiterHysteresis = 150,
-		-- EST: no launch-control rpm is published.
+		-- Anecdotal: no Lamborghini figure is published; one owner reports about 5,200 rpm held on
+		-- an LP700-4's launch control (research note 2026-10-29, section 1). Tunable.
 		launchRpm = 5000,
 	},
 
@@ -332,6 +333,18 @@ return Types.define({
 			escUndersteer = 0.15,
 			escSideslip = math.rad(8),
 		},
+	},
+
+	-- Launch control (research note 2026-10-29, section 1, the LP700-4's procedure; nothing
+	-- SVJ-specific was found). Corsa with ESC off, as documented. The slip is the tyres' own peak
+	-- (slipRatioAtPeak, front and rear). The 100 km/h end and the automatic's upshifts during a
+	-- launch are our choices (the coordinator's, 2026-10-29): the real Corsa is a manual mode and
+	-- whether it shifts by itself in a launch is undocumented.
+	launch = {
+		mode = "Corsa",
+		slipRatio = 0.10,
+		endSpeed = 100 / 3.6,
+		autoUpshift = true,
 	},
 
 	simulation = {

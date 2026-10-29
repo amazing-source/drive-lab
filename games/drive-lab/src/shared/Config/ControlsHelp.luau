@@ -12,6 +12,7 @@
 ]]
 local CarEntry = require("./CarEntry")
 local CarLights = require("./CarLights")
+local SVJ = require("./Cars/SVJ")
 local DriverAssists = require("./DriverAssists")
 local InputHelp = require("./InputHelp")
 local Rules = require("../Rules/ControlsHelp")
@@ -198,6 +199,15 @@ local HELP: Rules.Help = {
 					keyboardGesture = "Hold",
 					gamepadGesture = "Hold",
 				},
+				{
+					label = "Launch control",
+					text = "In Corsa with ESC off, stopped in first: hold the brake and floor the accelerator until LAUNCH shows and the engine holds {LAUNCH_RPM} rpm, then let go of the brake (in manual, shift up with E); lifting first cancels it, and the brake does not select reverse there.",
+					controls = {},
+					keysOf = { "BRAKE", "THROTTLE" },
+					gamepad = { "ButtonL2", "ButtonR2" },
+					keyboardGesture = "Hold",
+					gamepadGesture = "Hold",
+				},
 			},
 		},
 		{
@@ -315,6 +325,7 @@ local HELP: Rules.Help = {
 		ESC_HOLD = DriverAssists.offHoldSeconds,
 		PAD_HOLD = CarLights.PAD_HOLD_SECONDS,
 		REVERSE_HOLD = InputHelp.REVERSE_HOLD_SECONDS,
+		LAUNCH_RPM = SVJ.engine.launchRpm,
 	},
 	maxLabelLength = 26,
 	maxTextLength = 300,

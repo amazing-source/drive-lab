@@ -20,6 +20,7 @@ local function context(overrides: { [string]: any }?): Gearbox.Context
 		brake = 0,
 		mode = SVJ.modes.Corsa,
 		gearboxMode = "manual",
+		holdGear = false,
 	}
 	if overrides then
 		for key, value in overrides do

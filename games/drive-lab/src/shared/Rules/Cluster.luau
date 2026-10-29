@@ -2,9 +2,10 @@
 --[[
 	What the instrument cluster shows for a given state: how many rev cells are lit, which of them
 	sit in the red, how far to turn the wipe that reveals them, the start-up sweep, the gear's
-	label and the limiter's flashing.
+	label, the limiter's flashing and the text under the gear.
 ]]
 local Cluster = require("../Config/Cluster")
+local DriverAssists = require("./DriverAssists")
 
 local Rules = {}
 
@@ -43,6 +44,16 @@ function Rules.gearLabel(gear: number): string
 		return "N"
 	end
 	return tostring(gear)
+end
+
+-- The text under the gear: LAUNCH while launch control is armed or launching, else the ESC light.
+function Rules.lampText(lamp: DriverAssists.Lamp, launching: boolean): string
+	if launching then
+		return Cluster.LAUNCH_TEXT
+	elseif lamp == "EscOff" then
+		return "ESC OFF"
+	end
+	return if lamp == "Esc" then "ESC" else ""
 end
 
 -- Whether the lit cells show at time `now`: always, except flashing on the limiter.

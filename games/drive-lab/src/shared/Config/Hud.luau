@@ -51,6 +51,9 @@ export type HudConfig = {
 	OFF: Color3,
 	UPDATE_INTERVAL: number,
 	GEAR_POP: number,
+	-- Shown in the drive mode's place while launch control is armed or launching: our own UI, no
+	-- source shows the car's (#74).
+	LAUNCH_TEXT: string,
 }
 
 local Hud: HudConfig = table.freeze({
@@ -119,6 +122,7 @@ local Hud: HudConfig = table.freeze({
 	UPDATE_INTERVAL = 1 / 30,
 	-- Seconds the gear digit takes to settle after it pops on a change.
 	GEAR_POP = 0.12,
+	LAUNCH_TEXT = "LAUNCH",
 })
 
 return Hud

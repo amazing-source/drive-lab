@@ -187,11 +187,14 @@ describe("The drive modes' assists", function()
 end)
 
 describe("ESC off on the SVJ's physics", function()
-	it("smokes the rear tyres on a full-throttle launch in every mode", function()
+	it("smokes the rear tyres on a full-throttle launch in every mode, bar Corsa's launch control", function()
 		for _, mode: Types.DrivingMode in MODES do
 			expect(launchSmoke(mode, true, false) > 0.9).toBe(true)
-			expect(launchSmoke(mode, true, true) > 0.9).toBe(true)
 		end
+		-- Held on the brake in Corsa with ESC off, the start is launch control (#74), whose traction
+		-- control holds the slip: tests/Launch.spec.luau.
+		expect(launchSmoke("Strada", true, true) > 0.9).toBe(true)
+		expect(launchSmoke("Sport", true, true) > 0.9).toBe(true)
 	end)
 
 	it("makes no smoke launching in Strada with ESC on", function()
