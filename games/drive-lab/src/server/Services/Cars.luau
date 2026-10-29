@@ -48,6 +48,9 @@ local function setupCollisionGroups()
 	PhysicsService:RegisterCollisionGroup(CarRig.RAY_GROUP)
 	PhysicsService:RegisterCollisionGroup(CarRig.CHARACTER_GROUP)
 	PhysicsService:CollisionGroupSetCollidable(CarRig.RAY_GROUP, CarRig.CHARACTER_GROUP, false)
+	PhysicsService:RegisterCollisionGroup(CarRig.DOOR_GROUP)
+	PhysicsService:CollisionGroupSetCollidable(CarRig.RAY_GROUP, CarRig.DOOR_GROUP, false)
+	PhysicsService:CollisionGroupSetCollidable("Default", CarRig.DOOR_GROUP, false)
 	local function enlist(part: Instance)
 		if part:IsA("BasePart") then
 			part.CollisionGroup = CarRig.CHARACTER_GROUP
@@ -89,7 +92,7 @@ local function carry(car: Car, character: Model?)
 	end
 end
 
--- Services/CarEntry seats the driver, and eases their size down before and back after.
+-- Services/CarEntry seats the driver, and sets their size down before and back after.
 local function park(car: Car)
 	carry(car, nil)
 	car.driver = nil

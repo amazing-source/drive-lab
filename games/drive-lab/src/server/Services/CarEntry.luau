@@ -4,9 +4,11 @@
 	writer of each car's state (Car/CarState), which every client turns into the same body
 	animation, door angle and start-up (Rules/CarEntry). A prompt holds the seat or the door for
 	one player while their client walks them to the door mark; the client then asks, and the
-	request is checked against the rules and where the character stands. The body changes
-	between its own size and the seated size here, eased, so every player sees one smooth
-	change instead of a jump.
+	request is checked against the rules and against where this server sees the character, which
+	lags the client's own view by the network: a request from outside waits for that view to reach
+	the mark. The body changes size only where this server knows where it is: down in the step
+	that seats it, back up in the step that puts it outside after getting out. Scaling a body the
+	client is walking would move it back to where this server last saw it.
 ]]
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -26,8 +28,12 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rules = require(ReplicatedStorage.Shared.Rules.CarEntry)
 local Units = require(ReplicatedStorage.Shared.Units)
 
+local CarBody = require(script.Parent.Parent.CarBody)
+
 type Intent = "Enter" | "Door"
-type Reservation = { player: Player, intent: Intent, at: number }
+-- `character` is the body that pressed: a reservation ends with it. `asked` once its request
+-- has arrived: a repeat of it is ignored.
+type Reservation = { player: Player, character: Model, intent: Intent, at: number, asked: boolean }
 type Car = {
 	model: Model,
 	seat: Seat,
@@ -38,17 +44,17 @@ type Car = {
 	-- The character in the seat, remembered so it can be resized once it has left.
 	occupant: Model?,
 }
-type Resize = { character: Model, from: number, to: number, at: number }
-type Request = { car: Model, action: Rules.Action }
+-- `at` is the server time the client asked an entry to start; nil for the other actions.
+type Request = { car: Model, action: Rules.Action, at: number? }
 
 local ATTRIBUTE = Config.ATTRIBUTES
 local ACTION_LIMIT = { perSecond = 4, burst = 6 }
 local PROMPT_LIMIT = { perSecond = 2, burst = 3 }
--- R6 standing: two studs of leg and half the torso under the root's centre, times the scale.
-local ROOT_HEIGHT = 3
 -- Studs past the prompt distance allowed for a character still moving when it pressed.
 local DISTANCE_SLACK = 2
-local SCALE_EPSILON = 1e-3
+-- Seconds past a standing door clip's end its body still goes through the car's box here: this
+-- server poses the body from its client's animation, behind it by the network.
+local CLIP_THROUGH_MARGIN = 0.5
 local REST: Rules.State = {
 	entry = "None",
 	entryAt = 0,
@@ -61,10 +67,15 @@ local REST: Rules.State = {
 
 local log = Log.scope("CarEntry")
 local cars: { [Model]: Car } = {}
-local resizes: { [Player]: Resize } = {}
 
 local function now(): number
 	return Workspace:GetServerTimeNow()
+end
+
+-- The delay a sequence's start allows for its state to reach `player`: its measured round trip,
+-- twice the one-way delay (for jitter and a resent packet), and a margin.
+local function oneWay(player: Player): number
+	return player:GetNetworkPing() + Config.LATENCY_MARGIN
 end
 
 local function body(player: Player): (Model?, Humanoid?, BasePart?)
@@ -83,10 +94,10 @@ local function body(player: Player): (Model?, Humanoid?, BasePart?)
 	return character, humanoid, root
 end
 
-local function resize(player: Player, to: number)
-	local character = player.Character
-	if character and math.abs(character:GetScale() - to) > SCALE_EPSILON then
-		resizes[player] = { character = character, from = character:GetScale(), to = to, at = now() }
+local function setScale(player: Player, to: number)
+	local character, _, root = body(player)
+	if character and root then
+		CarBody.scaleAboutRoot(character, root, to)
 	end
 end
 
@@ -108,25 +119,65 @@ local function release(car: Car)
 	car.model:SetAttribute(ATTRIBUTE.RESERVED_BY, 0)
 end
 
--- The root's frame standing on the ground at the mark.
-local function standingFrame(car: Car, scale: number): CFrame
-	local mark = DoorMark.frame(car.seat)
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { car.model }
-	-- Passes through characters, as the wheels' rays do.
-	params.CollisionGroup = CarRig.RAY_GROUP
-	local hit = Workspace:Raycast(mark.Position + Vector3.new(0, 4, 0), Vector3.new(0, -30, 0), params)
-	local height = if hit then hit.Position.Y + ROOT_HEIGHT * scale else mark.Position.Y
-	return mark.Rotation + Vector3.new(mark.Position.X, height, mark.Position.Z)
+local function reservedFor(car: Car, player: Player, intent: Intent): boolean
+	local reservation = car.reservation
+	return reservation ~= nil
+		and reservation.player == player
+		and reservation.intent == intent
+		and reservation.character == player.Character
+end
+
+-- Claims the reservation for its one request; false if it is not this player's or was claimed.
+local function claim(car: Car, player: Player, intent: Intent): boolean
+	local reservation = car.reservation
+	if reservation == nil or reservation.asked or not reservedFor(car, player, intent) then
+		return false
+	end
+	reservation.asked = true
+	return true
+end
+
+-- Waits, at most ARRIVAL_WAIT, for this server's view of the player to reach the mark while the
+-- reservation holds; the client stops there before this server can see it.
+local function awaitArrival(car: Car, player: Player, intent: Intent): boolean
+	local deadline = now() + Config.ARRIVAL_WAIT
+	while reservedFor(car, player, intent) do
+		local _, _, root = body(player)
+		if root == nil then
+			return false
+		end
+		if atMark(car, root) then
+			return true
+		end
+		if now() > deadline then
+			return false
+		end
+		RunService.Heartbeat:Wait()
+	end
+	return false
+end
+
+-- A sequence that ends other than as authored (the occupant left, died or never sat): the door
+-- settles at its nearer rest and the engine stops.
+local function cutShort(car: Car, at: number)
+	local state = CarState.read(car.model)
+	CarState.write(car.model, {
+		entry = "None",
+		entryAt = at,
+		entryDoorOpen = false,
+		door = Rules.nearestRest(state, at),
+		doorAt = at,
+		engine = "Off",
+		engineAt = at,
+	})
 end
 
 local function onPrompt(car: Car, player: Player, intent: Intent)
 	if not Net.allow(player, "CarPrompt", PROMPT_LIMIT) or car.reservation ~= nil then
 		return
 	end
-	local _, humanoid, root = body(player)
-	if humanoid == nil or root == nil or humanoid.SeatPart ~= nil then
+	local character, humanoid, root = body(player)
+	if character == nil or humanoid == nil or root == nil or humanoid.SeatPart ~= nil then
 		return
 	end
 	if DoorMark.distance(car.seat, root.Position) > Config.PROMPT_DISTANCE + DISTANCE_SLACK then
@@ -139,73 +190,116 @@ local function onPrompt(car: Car, player: Player, intent: Intent)
 	if not allowed then
 		return
 	end
-	car.reservation = { player = player, intent = intent, at = at }
+	car.reservation = { player = player, character = character, intent = intent, at = at, asked = false }
 	car.model:SetAttribute(ATTRIBUTE.RESERVED_AT, at)
 	car.model:SetAttribute(ATTRIBUTE.RESERVED_BY, player.UserId)
-	if intent == "Enter" then
-		resize(player, Driving.DRIVER_SCALE)
+end
+
+-- At the entry's start: the body takes the seated size and the root goes to the seat, where the
+-- first clip's frame shows it standing on the mark, as the client placed it. Anything that
+-- changed since the request cuts the entry short.
+local function seat(car: Car, player: Player, startedAt: number)
+	local state = CarState.read(car.model)
+	if state.entry ~= "Enter" or state.entryAt ~= startedAt then
+		return
 	end
-end
-
-local function reservedFor(car: Car, player: Player, intent: Intent): boolean
-	local reservation = car.reservation
-	return reservation ~= nil and reservation.player == player and reservation.intent == intent
-end
-
-local function enter(car: Car, player: Player)
 	local character, humanoid, root = body(player)
-	local state, at = CarState.read(car.model), now()
-	if character == nil or humanoid == nil or root == nil or not reservedFor(car, player, "Enter") then
+	if
+		character == nil
+		or humanoid == nil
+		or root == nil
+		or humanoid.SeatPart ~= nil
+		or car.seat.Occupant ~= nil
+	then
+		cutShort(car, now())
 		return
 	end
-	if car.seat.Occupant ~= nil or not atMark(car, root) or not Rules.canEnter(state, at) then
-		return
-	end
-	release(car)
-	-- The clips are authored at the seated size; a client that asked early is snapped to it.
-	resizes[player] = nil
-	if math.abs(character:GetScale() - Driving.DRIVER_SCALE) > SCALE_EPSILON then
-		character:ScaleTo(Driving.DRIVER_SCALE)
-	end
-	-- State first: a client seeing the seat before the state would play nothing.
-	CarState.write(car.model, {
-		entry = "Enter",
-		entryAt = at,
-		entryDoorOpen = Rules.doorOpenness(state, at) >= 0.5,
-		door = "Closed",
-		doorAt = at,
-		engine = "Off",
-		engineAt = state.engineAt,
-	})
+	-- The client has stopped the body on the mark; resized there in the same step as the weld.
+	CarBody.resizeOn(car.model, character, root, DoorMark.frame(car.seat), Driving.DRIVER_SCALE)
 	car.seat:Sit(humanoid)
 end
 
-local function moveDoor(car: Car, player: Player)
-	local state, at = CarState.read(car.model), now()
-	local inside = driver(car) == player
-	if inside then
-		if not Rules.canMoveDoor(state, at, speedKmh(car), true) then
-			return
-		end
-	else
-		local _, _, root = body(player)
-		if root == nil or not reservedFor(car, player, "Door") or not atMark(car, root) then
-			return
-		end
-		if not Rules.canMoveDoor(state, at, speedKmh(car), false) then
-			return
-		end
-		release(car)
+local function enter(car: Car, player: Player, request: Request)
+	if not claim(car, player, "Enter") then
+		return
 	end
-	car.model:SetAttribute(ATTRIBUTE.DOOR_AT, at)
-	car.model:SetAttribute(ATTRIBUTE.DOOR, Rules.doorClip(state, at, inside))
+	local arrived = awaitArrival(car, player, "Enter")
+	local _, humanoid = body(player)
+	local state, at = CarState.read(car.model), now()
+	if not arrived or humanoid == nil or not reservedFor(car, player, "Enter") then
+		if reservedFor(car, player, "Enter") then
+			release(car)
+		end
+		return
+	end
+	release(car)
+	if car.seat.Occupant ~= nil or humanoid.SeatPart ~= nil or not Rules.canEnter(state, at) then
+		return
+	end
+	local startAt = Rules.entryStart(at, request.at, oneWay(player))
+	-- State first, for the whole sequence's timing. The seat goes as early as the client allows,
+	-- at the time it asked, when its placing on the mark has ended (sooner, the body never reached
+	-- the mark: 0.2 to 0.3 studs off at the hand-over, measured with no network simulation), so
+	-- its weld reaches the client before the sequence starts and the first clip holds its first
+	-- frame until then. Sent later, it arrived after the start and the client showed the clip
+	-- already under way (measured: 0.42 to 0.45 studs in one frame, poor network).
+	local seatAt = Rules.entryStart(at, request.at, 0)
+	CarState.write(car.model, {
+		entry = "Enter",
+		entryAt = startAt,
+		entryDoorOpen = Rules.doorOpenness(state, at) >= 0.5,
+		door = "Closed",
+		doorAt = startAt,
+		engine = "Off",
+		engineAt = state.engineAt,
+	})
+	task.delay(seatAt - at, seat, car, player, startAt)
 end
 
-local function start(car: Car, player: Player)
+local function moveDoor(car: Car, player: Player, request: Request)
+	local inside = driver(car) == player
+	if not inside then
+		if not claim(car, player, "Door") then
+			return
+		end
+		local arrived = awaitArrival(car, player, "Door")
+		if reservedFor(car, player, "Door") then
+			release(car)
+		end
+		if not arrived then
+			return
+		end
+	end
+	local state, at = CarState.read(car.model), now()
+	if not Rules.canMoveDoor(state, at, speedKmh(car), inside) then
+		return
+	end
+	local clip: Config.ClipName = Rules.doorClip(state, at, inside)
+	-- From where the client can show it from its start (as an entry's start, Rules/CarEntry).
+	local startAt = Rules.entryStart(at, request.at, oneWay(player))
+	local character = player.Character
+	if not inside and character then
+		-- The clip leans the body into the car's box to reach the door, and this server, which
+		-- moves the parked car, pushed the car away from it (measured: 1.14 studs over OutsideOpen).
+		CarBody.passThrough(character, startAt - at + Config.CLIPS[clip].duration + CLIP_THROUGH_MARGIN)
+	end
+	car.model:SetAttribute(ATTRIBUTE.DOOR_AT, startAt)
+	car.model:SetAttribute(ATTRIBUTE.DOOR, clip)
+end
+
+local function start(car: Car, player: Player, _request: Request)
 	local state, at = CarState.read(car.model), now()
 	if driver(car) == player and Rules.canStart(state, at) then
 		car.model:SetAttribute(ATTRIBUTE.ENGINE_AT, at)
 		car.model:SetAttribute(ATTRIBUTE.ENGINE, "On")
+	end
+end
+
+-- The player walked away or gave up before asking: their hold on the car ends.
+local function cancel(car: Car, player: Player, _request: Request)
+	local reservation = car.reservation
+	if reservation and reservation.player == player then
+		release(car)
 	end
 end
 
@@ -223,35 +317,40 @@ local function finishExit(car: Car, player: Player, startedAt: number)
 		engine = "Off",
 		engineAt = state.engineAt,
 	})
-	local character, humanoid = body(player)
-	if character == nil or humanoid == nil or car.seat.Occupant ~= humanoid then
+	local character, humanoid, root = body(player)
+	if character == nil or humanoid == nil or root == nil or car.seat.Occupant ~= humanoid then
 		return
 	end
+	CarBody.leaveSeat(car.model, player, character)
 	local weld = car.seat:FindFirstChild("SeatWeld")
 	if weld then
 		weld:Destroy()
 	end
 	humanoid.Sit = false
-	character:PivotTo(standingFrame(car, character:GetScale()))
-	resize(player, 1)
+	-- The client, which owns the body, puts it standing where the last clip frame shows it
+	-- (Controllers/SeatHandOver): a placement from here alone does not take on that client
+	-- (measured). It regains its size on that same spot.
+	CarBody.resizeOn(car.model, character, root, DoorMark.exitFrame(car.seat), 1)
 end
 
-local function exit(car: Car, player: Player)
+local function exit(car: Car, player: Player, _request: Request)
 	local state, at = CarState.read(car.model), now()
 	if driver(car) ~= player or not Rules.canExit(state, at, speedKmh(car)) then
 		return
 	end
 	local doorOpen = Rules.doorOpenness(state, at) >= 0.5
+	-- As an entry's start: where the client shows the exit from its first frame.
+	local startAt = Rules.entryStart(at, nil, oneWay(player))
 	CarState.write(car.model, {
 		entry = "Exit",
-		entryAt = at,
+		entryAt = startAt,
 		entryDoorOpen = doorOpen,
 		door = "Closed",
-		doorAt = at,
+		doorAt = startAt,
 		engine = "Off",
 		engineAt = at,
 	})
-	task.delay(Rules.length(Rules.steps("Exit", doorOpen)), finishExit, car, player, at)
+	task.delay(startAt - at + Rules.length(Rules.steps("Exit", doorOpen)), finishExit, car, player, startAt)
 end
 
 -- Anyone leaving the seat other than through a finished exit (a reset, a death, a player
@@ -264,29 +363,25 @@ local function onOccupant(car: Car)
 	end
 	local previous = car.occupant
 	car.occupant = nil
-	local state, at = CarState.read(car.model), now()
-	if state.entry ~= "None" then
-		CarState.write(car.model, {
-			entry = "None",
-			entryAt = at,
-			entryDoorOpen = false,
-			door = Rules.nearestRest(state, at),
-			doorAt = at,
-			engine = "Off",
-			engineAt = at,
-		})
+	if previous then
+		CarBody.leaveSeat(car.model, Players:GetPlayerFromCharacter(previous), previous)
+	end
+	local at = now()
+	if CarState.read(car.model).entry ~= "None" then
+		cutShort(car, at)
 	end
 	local player = if previous then Players:GetPlayerFromCharacter(previous) else nil
-	if player and resizes[player] == nil then
-		resize(player, 1)
+	if player and player.Character == previous then
+		setScale(player, 1)
 	end
 end
 
-local HANDLERS: { [Rules.Action]: (Car, Player) -> () } = {
+local HANDLERS: { [Rules.Action]: (Car, Player, Request) -> () } = {
 	Enter = enter,
 	Exit = exit,
 	Door = moveDoor,
 	Start = start,
+	Cancel = cancel,
 }
 
 local function parseRequest(payload: unknown): Request?
@@ -299,37 +394,22 @@ local function parseRequest(payload: unknown): Request?
 	if action == nil or typeof(model) ~= "Instance" or not model:IsA("Model") or cars[model] == nil then
 		return nil
 	end
-	return { car = model, action = action }
-end
-
-local function updateSizes(at: number)
-	for player, job in resizes do
-		if job.character.Parent == nil or player.Character ~= job.character then
-			resizes[player] = nil
-			continue
-		end
-		local done = at - job.at >= Config.SCALE_SECONDS
-		local scale = if done then job.to else Rules.scale(job.from, job.to, at - job.at)
-		if
-			math.abs(job.character:GetScale() - scale) > SCALE_EPSILON
-			or (done and job.character:GetScale() ~= scale)
-		then
-			job.character:ScaleTo(scale)
-		end
-		if done then
-			resizes[player] = nil
-		end
-	end
+	local asked = fields.at
+	return { car = model, action = action, at = if typeof(asked) == "number" then asked else nil }
 end
 
 local function updateCar(car: Car, at: number)
 	local reservation = car.reservation
-	if reservation and (at - reservation.at > Config.RESERVE_SECONDS or reservation.player.Parent == nil) then
+	if
+		reservation
+		and (
+			at - reservation.at > Config.RESERVE_SECONDS
+			or reservation.player.Parent == nil
+			or reservation.player.Character ~= reservation.character
+			or body(reservation.player) == nil
+		)
+	then
 		release(car)
-		local _, humanoid = body(reservation.player)
-		if reservation.intent == "Enter" and humanoid and humanoid.SeatPart == nil then
-			resize(reservation.player, 1)
-		end
 	end
 	local state = CarState.read(car.model)
 	local free = car.reservation == nil
@@ -402,7 +482,7 @@ function Service.start()
 		ACTION_LIMIT,
 		parseRequest,
 		function(player: Player, request: Request)
-			HANDLERS[request.action](cars[request.car], player)
+			HANDLERS[request.action](cars[request.car], player, request)
 		end
 	)
 	for _, model in CollectionService:GetTagged(CarRig.TAG) do
@@ -411,7 +491,6 @@ function Service.start()
 	CollectionService:GetInstanceAddedSignal(CarRig.TAG):Connect(setup)
 	RunService.Heartbeat:Connect(function()
 		local at = now()
-		updateSizes(at)
 		for _, car in cars do
 			updateCar(car, at)
 		end

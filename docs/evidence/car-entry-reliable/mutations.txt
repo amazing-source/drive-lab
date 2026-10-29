@@ -1,0 +1,94 @@
+Deliberate breaks of the rules this branch adds or changes, one at a time (each applied by exact
+text, the specs run, the file restored and checked by hash). Run on 2a78b33, 2026-10-29; the
+rules are unchanged since.
+
+clean: exit 0, 60 spec files, 477 passed, 0 failed
+
+## crosses never sees the box
+   exit 1, 60 spec files, 474 passed, 3 failed, restored byte for byte: True
+   FAIL Approach path > tells a segment through the box from one beside or along it: games\drive-lab\tests\ApproachPath.spec:29: expected true, got false
+   FAIL Approach path > goes round the near corner from in front of or behind the car: games\drive-lab\tests\ApproachPath.spec:44: expected 2, got 1
+   FAIL Approach path > goes round two corners, the shorter way, from the far side: games\drive-lab\tests\ApproachPath.spec:53: expected 3, got 1
+
+## find ignores the corners (straight to the goal)
+   exit 1, 60 spec files, 474 passed, 3 failed, restored byte for byte: True
+   FAIL Approach path > goes round the near corner from in front of or behind the car: games\drive-lab\tests\ApproachPath.spec:44: expected 2, got 1
+   FAIL Approach path > goes round two corners, the shorter way, from the far side: games\drive-lab\tests\ApproachPath.spec:53: expected 3, got 1
+   FAIL Approach path > never crosses the box, from anywhere around the car: games\drive-lab\tests\ApproachPath.spec:68: expected false, got true
+
+## a start inside the margin does not step out
+   exit 1, 60 spec files, 476 passed, 1 failed, restored byte for byte: True
+   FAIL Approach path > steps out through the nearest side first when starting inside the margin: games\drive-lab\tests\ApproachPath.spec:80: expected 4, got 
+
+## stepOut picks the farther side
+   exit 1, 60 spec files, 476 passed, 1 failed, restored byte for byte: True
+   FAIL Approach path > steps out through the nearest side first when starting inside the margin: games\drive-lab\tests\ApproachPath.spec:79: expected true, g
+
+## corners on the box itself, no slack
+   exit 1, 60 spec files, 475 passed, 2 failed, restored byte for byte: True
+   FAIL Approach path > goes round the near corner from in front of or behind the car: games\drive-lab\tests\ApproachPath.spec:45: expected true, got false
+   FAIL Approach path > goes round two corners, the shorter way, from the far side: games\drive-lab\tests\ApproachPath.spec:54: expected true, got false
+
+## approachPlan never settles
+   exit 1, 60 spec files, 476 passed, 1 failed, restored byte for byte: True
+   FAIL Walking to the mark > places, walks straight in, or goes round to the front of the mark first: games\drive-lab\tests\CarEntry.spec:332: expected Settl
+
+## approachPlan ignores the corridor
+   exit 1, 60 spec files, 476 passed, 1 failed, restored byte for byte: True
+   FAIL Walking to the mark > places, walks straight in, or goes round to the front of the mark first: games\drive-lab\tests\CarEntry.spec:335: expected LineU
+
+## approachPlan turns close to the car
+   exit 1, 60 spec files, 476 passed, 1 failed, restored byte for byte: True
+   FAIL Walking to the mark > places, walks straight in, or goes round to the front of the mark first: games\drive-lab\tests\CarEntry.spec:338: expected LineU
+
+## parseAction drops Cancel
+   exit 1, 60 spec files, 476 passed, 1 failed, restored byte for byte: True
+   FAIL Car entry requests > reads only the five actions: games\drive-lab\tests\CarEntry.spec:248: expected Cancel, got nil
+
+## entryStart lets a start lie in the past
+   exit 1, 60 spec files, 475 passed, 2 failed, restored byte for byte: True
+   FAIL Walking to the mark > starts an entry when the client asked, never in the past nor too far ahead: games\drive-lab\tests\CarEntry.spec:380: expected 10
+   FAIL Walking to the mark > starts no sooner than the state can reach the client that asked: games\drive-lab\tests\CarEntry.spec:390: expected 10.2 within 1
+
+## entryStart takes any start ahead
+   exit 1, 60 spec files, 475 passed, 2 failed, restored byte for byte: True
+   FAIL Walking to the mark > starts an entry when the client asked, never in the past nor too far ahead: games\drive-lab\tests\CarEntry.spec:381: expected 10
+   FAIL Walking to the mark > starts no sooner than the state can reach the client that asked: games\drive-lab\tests\CarEntry.spec:393: expected 10.5 within 1
+
+## entryStart ignores the one-way delay
+   exit 1, 60 spec files, 476 passed, 1 failed, restored byte for byte: True
+   FAIL Walking to the mark > starts no sooner than the state can reach the client that asked: games\drive-lab\tests\CarEntry.spec:390: expected 10.2 within 1
+
+## entryStart trusts any one-way delay
+   exit 1, 60 spec files, 476 passed, 1 failed, restored byte for byte: True
+   FAIL Walking to the mark > starts no sooner than the state can reach the client that asked: games\drive-lab\tests\CarEntry.spec:396: expected 10.5 within 1
+
+## a door clip ahead of its start plays from before its first frame
+   exit 1, 60 spec files, 476 passed, 1 failed, restored byte for byte: True
+   FAIL Door from outside > holds the clip's first frame until a start the server set ahead: games\drive-lab\tests\CarEntry.spec:271: expected 0, got -0.30000
+
+## entryStart takes a NaN
+   exit 1, 60 spec files, 476 passed, 1 failed, restored byte for byte: True
+   FAIL Walking to the mark > starts an entry when the client asked, never in the past nor too far ahead: games\drive-lab\tests\CarEntry.spec:382: expected 10
+
+## settleShare is linear
+   exit 1, 60 spec files, 476 passed, 1 failed, restored byte for byte: True
+   FAIL Walking to the mark > eases the placing from its start to the mark: games\drive-lab\tests\CarEntry.spec:365: expected 0.15625 within 1e-09, got 0.25
+
+## settleSeconds has no cap
+   exit 1, 60 spec files, 476 passed, 1 failed, restored byte for byte: True
+   FAIL Walking to the mark > places the body on the mark at walking and turning pace, never longer than the cap: games\drive-lab\tests\CarEntry.spec:349: exp
+
+## exitHeld fires on a tap
+   exit 1, 60 spec files, 476 passed, 1 failed, restored byte for byte: True
+   FAIL Getting out > needs the exit key held, so a tap stays a gear change: games\drive-lab\tests\CarEntry.spec:321: expected false, got true
+
+## getting out runs the whole OutsideClose
+   exit 1, 60 spec files, 476 passed, 1 failed, restored byte for byte: True
+   FAIL Getting out > ends in OutsideClose's stance clear of the car, before its walk back in to the mark: games\drive-lab\tests\CarEntry.spec:299: expected 3
+
+## the walk in stops 0.6 short (less than a frame of sprinting at 30 fps)
+   exit 1, 60 spec files, 476 passed, 1 failed, restored byte for byte: True
+   FAIL Walking to the mark > stops the walk in short of the mark by a frame of sprinting, within the placing's reach: games\drive-lab\tests\CarEntry.spec:358
+
+clean again: exit 0, 60 spec files, 477 passed, 0 failed

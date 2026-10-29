@@ -66,6 +66,37 @@ export type CarEntry = {
 	-- Where the character stands to use the door, from the driver's seat in the car frame
 	-- (metres, right and forward), facing the seat.
 	MARK: { right: number, forward: number },
+	-- Getting out ends `at` seconds into OutsideClose, before its last steps back in to the mark:
+	-- there its walk back passes a stance with the feet together, facing the car, clear of the
+	-- car's collision box at any heading. The root is put there (metres, as MARK), facing as at
+	-- the mark. Opening or shutting the door from outside still plays the whole clip.
+	EXIT_END: { at: number, right: number, forward: number },
+	-- The walk to the mark, in studs, radians and seconds. Unless it already stands in the
+	-- corridor straight out from the mark (`lineUpAngle` either side, at least `lineUp` out), the
+	-- body walks round the car's collision box grown by `margin` (Rules/ApproachPath) to `lineUp`
+	-- studs in front of the mark, turns there to face the car, clear of it, and walks straight in
+	-- to `short` studs in front of the mark, never to the mark itself: a walk that overshoots it
+	-- presses the torso into the car's box, and the server, which moves the parked car, pushes the
+	-- car away. It turns from one waypoint to the next within `pass` of it; it is stopped on a point within
+	-- `arrived`; a leg that has not closed in by `progress` for `stallSeconds` is blocked, and
+	-- the walk tries again from where it stands, `tries` times in all. Stopped within `reach` of
+	-- the mark, it is placed exactly: moved and turned at `settleSpeed` and `turnSpeed`, eased,
+	-- over at most `settleSeconds`.
+	APPROACH: {
+		lineUp: number,
+		lineUpAngle: number,
+		short: number,
+		margin: number,
+		pass: number,
+		arrived: number,
+		progress: number,
+		stallSeconds: number,
+		tries: number,
+		reach: number,
+		settleSpeed: number,
+		turnSpeed: number,
+		settleSeconds: number,
+	},
 	-- Studs: how close to the mark the server accepts a character, and how close it must be
 	-- to the door to be offered the prompts.
 	MARK_TOLERANCE: number,
@@ -78,8 +109,18 @@ export type CarEntry = {
 	-- skew allowed between the client's request time and the server's start of the motion.
 	REFUSED_SECONDS: number,
 	REQUEST_SLACK: number,
-	-- Seconds over which the body changes between its own size and the seated size.
-	SCALE_SECONDS: number,
+	-- Seconds ahead of the server's clock an entry may be asked to start: the client asks as its
+	-- settle at the mark begins, for the moment it ends, so the round trip runs alongside it.
+	ENTRY_LEAD: number,
+	-- Seconds: the longest delay to a client a sequence's start waits for, and the margin added to
+	-- twice a client's measured one-way delay. On the poor network profile a start that allowed
+	-- only the measured delay and 0.1 s still reached the client late 2 times in 10 door clips
+	-- from outside, which then began 0.6 to 0.8 studs under way (measured in Play).
+	MAX_ONE_WAY: number,
+	LATENCY_MARGIN: number,
+	-- Seconds the server waits for its own copy of the body to reach the mark (it lags the
+	-- client's by the network) before it refuses a request from outside.
+	ARRIVAL_WAIT: number,
 	-- Speeds (km/h) at or below which one may get out, or open or shut the door from inside.
 	EXIT_MAX_KMH: number,
 	DOOR_MAX_KMH: number,
@@ -209,16 +250,42 @@ local CarEntry: CarEntry = {
 		brake = 0.6,
 	}),
 	MARK = table.freeze({ right = -0.88, forward = 0 }),
+	-- OutsideClose's bake frame 271, from tools/anim/car_entry_exit_end.py: the torso at standing
+	-- height, every part within 0.093 studs of the rest pose, 1.132 studs further out than the
+	-- mark (docs/evidence/car-entry-pacing/).
+	EXIT_END = table.freeze({ at = 3.433, right = -1.0913, forward = 0.5492 }),
+	-- Measured in Play (2026-10-28): Humanoid:MoveTo stops 0.76 to 0.92 studs short of its
+	-- target, and its own turn leaves 36 degrees of a half turn after 0.3 s. On the mark at full
+	-- size the torso clears the collision box by 0.16 studs facing the car and touches it turned
+	-- 10 degrees, so the body turns only clear of the car, or held.
+	APPROACH = table.freeze({
+		lineUp = 1.5,
+		lineUpAngle = math.rad(10),
+		short = 0.9,
+		margin = 0.75,
+		pass = 0.5,
+		arrived = 0.25,
+		progress = 0.1,
+		stallSeconds = 0.4,
+		tries = 2,
+		reach = 2,
+		settleSpeed = 12.5,
+		turnSpeed = math.rad(600),
+		settleSeconds = 0.2,
+	}),
 	MARK_TOLERANCE = 2,
 	PROMPT_DISTANCE = 6,
-	RESERVE_SECONDS = 4,
+	RESERVE_SECONDS = 6,
 	APPROACH_SECONDS = 3,
-	REFUSED_SECONDS = 1.5,
+	REFUSED_SECONDS = 3,
 	REQUEST_SLACK = 1,
-	SCALE_SECONDS = 0.8,
+	ENTRY_LEAD = 0.3,
+	MAX_ONE_WAY = 0.5,
+	LATENCY_MARGIN = 0.1,
+	ARRIVAL_WAIT = 1.5,
 	EXIT_MAX_KMH = 3,
 	DOOR_MAX_KMH = 5,
-	EXIT_HOLD_SECONDS = 0.6,
+	EXIT_HOLD_SECONDS = 0.35,
 }
 
 return table.freeze(CarEntry)

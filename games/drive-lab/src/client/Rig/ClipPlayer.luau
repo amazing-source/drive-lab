@@ -36,8 +36,20 @@ local function load(self: ClipPlayer, id: string, looped: boolean): AnimationTra
 	return track
 end
 
--- An empty or nil `id` stops the clip. `into` nil plays a loop left to run on its own.
-function ClipPlayer.set(self: ClipPlayer, id: string?, into: number?, fade: number)
+-- Loads clips ahead of their first use: a clip played before its asset has loaded has no length
+-- and no pose for its first frames (measured: a seated body shown in the seat for a frame, 5.6
+-- studs from where the clip puts it). `looped` names the ids that play as loops.
+function ClipPlayer.preload(self: ClipPlayer, ids: { string }, looped: { [string]: boolean })
+	for _, id in ids do
+		if id ~= "" then
+			load(self, id, looped[id] == true)
+		end
+	end
+end
+
+-- An empty or nil `id` stops the clip. `into` nil plays a loop left to run on its own. `holdAt`
+-- holds the clip at that time instead of its last frame (a sequence ending it early).
+function ClipPlayer.set(self: ClipPlayer, id: string?, into: number?, fade: number, holdAt: number?)
 	if id == nil or id == "" then
 		if self.playing then
 			self.playing:Stop(fade)
@@ -59,12 +71,21 @@ function ClipPlayer.set(self: ClipPlayer, id: string?, into: number?, fade: numb
 	if into == nil or length <= 0 then
 		return
 	end
-	local holding = into >= length - LAST_FRAME
-	local target = if holding then length - LAST_FRAME else into
+	local hold = math.min(holdAt or length, length - LAST_FRAME)
+	local holding = into >= hold
+	local target = if holding then hold else into
 	track:AdjustSpeed(if holding then 0 else 1)
 	if holding or math.abs(track.TimePosition - target) > DRIFT then
 		track.TimePosition = target
 	end
+end
+
+-- Stops every clip at once, those still fading out included.
+function ClipPlayer.stopAll(self: ClipPlayer)
+	for _, track in self.tracks do
+		track:Stop(0)
+	end
+	self.playing, self.playingId = nil, nil
 end
 
 function ClipPlayer.destroy(self: ClipPlayer)

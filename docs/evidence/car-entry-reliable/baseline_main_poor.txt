@@ -1,0 +1,64 @@
+Baseline: main (62fed58) in solo Play, 2026-10-28 23:17-23:24, under the network simulation the
+Studio had on (a leftover "poor" profile: 150 ms delay, up to 100 ms jitter, 0.5% loss, each way;
+ping 0.37 s). Harness: harness/MatrixClient.luau as committed in b65938d (the first version).
+Times are seconds from the press; "standJump" the largest jump of the standing root between two
+frames (a pull back to the server's stale view shows here); "handOver" the torso's jump across the
+frame the body was seated.
+
+EnterShut straight-out-4      | FAIL | walk 0.02, never seated within 22 s | standJump 3.11 | 1 Enter request reached the server
+EnterShut straight-out-4-away | FAIL | walk 0.02, never seated            | standJump 3.06 | 1 Enter request
+EnterShut close-0.9           | FAIL | seated 3.90, first clip 4.25       | handOver 5.61 (the welded body shown in the seat before the clip loaded) | 1 Enter request
+EnterShut on-mark-away        | FAIL | never seated                       | standJump 1.59 | 1 Enter request
+EnterShut angle-45            | FAIL | never seated                       | standJump 3.04 | 0 Enter requests
+EnterShut beside-front-4      | FAIL | never seated                       | standJump 3.28 | 1 Enter request
+EnterShut beside-rear-4       | FAIL | never seated                       | standJump 3.17 | 1 Enter request
+EnterShut far-5.5             | FAIL | never seated                       | standJump 4.61 | 1 Enter request
+EnterShut front-corner        | PASS | out of the prompt's reach (7.3 studs > 6): nothing happened, as it should
+EnterShut rear-corner         | PASS | out of reach (7.3): nothing happened
+EnterShut far-side            | PASS | out of reach (10.8): nothing happened
+EnterOpen straight-out-4      | FAIL | never seated                       | standJump 3.22 | 0 Enter requests
+
+Not valid (harness faults, fixed afterwards): OpenOutside and CloseOutside straight-out-4 and
+CloseInside ended at once (their end condition was already true before anything happened);
+OpenInside's set-up found the car still busy from that; ExitShut called DoorMark.exitFrame, which
+main does not have. These cases are re-run on main with the fixed harness.
+
+What it shows: under this latency main's entry fails from 8 of 9 starts in reach. Its eased
+scale-down (ScaleTo every frame for 0.8 s from the press) pulls the walking player back 1.6 to
+4.6 studs to where the server last saw it; MoveTo stops about 0.85 studs short, so main's walk
+never meets its 0.6-stud arrival and waits out its 3 s timeout before asking. That the server
+then refuses because it sees the player more than 2 studs (MARK_TOLERANCE) from the mark is an
+inference, not measured here: this run kept only the count of requests, not the server's distance
+at each (the harness keeps it since). The one start that worked (0.9 studs in front) took 4.25 s
+from the press to the first clip frame.
+
+Re-run with the fixed harness (2026-10-28 23:37-23:47), main (62fed58).
+Poor profile:
+OpenOutside straight-out-4  | PASS | door clip 3.91 s after the press (3 s walk timeout + round trip) | server saw 0.80 from the mark
+CloseOutside straight-out-4 | PASS | door clip 3.89 s | server saw 0.83
+CloseInside                 | PASS | clip 0.57 s after the request
+ExitShut                    | FAIL | standJump 2.45, ends 0.57 from the mark, pushed 2.98 studs in the second after getting out
+ExitOpen                    | FAIL | standJump 2.83, ends 0.53 from the mark, overlapping the collision box, pushed 2.47
+(OpenInside: harness set-up fault, the seat fixture sat before the seat was free; fixed.)
+
+No network simulation (all six NetworkSettings at 0, edit and client):
+EnterShut straight-out-4      | FAIL | never seated; the server saw the body still 4.00 studs from the mark when Enter arrived (refused, > 2)
+EnterShut straight-out-4-away | FAIL | never seated; server saw 4.00
+EnterShut close-0.9           | FAIL | seated 3.05 s, first clip 3.27 s (the 3 s timeout); handOver 5.61 (the clip not loaded on first play)
+EnterShut on-mark-away        | FAIL | no Enter request at all: main's walk "arrives" at once, before the reservation replicates, and then skips the request
+EnterShut beside-front-4      | FAIL | never seated; standJump 1.38; server saw 4.21
+EnterShut beside-rear-4       | FAIL | never seated; standJump 6.50; server saw 3.44
+EnterShut far-5.5             | FAIL | never seated; server saw 5.50
+EnterOpen straight-out-4      | FAIL | never seated; standJump 1.06; server saw 4.00
+OpenOutside straight-out-4    | PASS | door clip 3.44 s after the press
+CloseOutside straight-out-4   | PASS | door clip 3.47 s
+CloseInside                   | PASS | clip 0.24 s after the request
+OpenInside                    | PASS | clip 0.19 s
+ExitShut                      | FAIL | standJump 2.42; ends 4.96 studs from the mark, overlapping the collision box; pushed 2.23
+ExitOpen                      | FAIL | standJump 2.42; ends 5.13 from the mark, overlapping the collision box; pushed 2.20
+
+Measured now, not inferred: with no simulation too, main's server saw the walking player still at
+its starting distance (3.4 to 5.5 studs) when the Enter request arrived, and refused it. Main's
+eased scale-down calls ScaleTo every frame for 0.8 s from the press, and each call re-places the
+root (the player pivots on its head) from the server's view, a few frames late: the walk is
+pinned near where it began. Main gets in only from right beside the door, after its 3 s timeout.

@@ -242,9 +242,10 @@ describe("Car entry requests", function()
 		expect(Rules.canMoveDoor(state({}), 0, 0, true)).toBe(false)
 	end)
 
-	it("reads only the four actions", function()
+	it("reads only the five actions", function()
 		expect(Rules.parseAction("Enter")).toBe("Enter")
 		expect(Rules.parseAction("Start")).toBe("Start")
+		expect(Rules.parseAction("Cancel")).toBe("Cancel")
 		expect(Rules.parseAction("Fly")).toBe(nil)
 		expect(Rules.parseAction(3)).toBe(nil)
 		expect(Rules.parseAction(nil)).toBe(nil)
@@ -263,6 +264,15 @@ describe("Door from outside", function()
 		expect(done.finished).toBe(true)
 	end)
 
+	it("holds the clip's first frame until a start the server set ahead", function()
+		local ahead = state({ door = "OutsideOpen", doorAt = 10.4 })
+		local waiting = Rules.outsideRequest(ahead, 10.1, 10)
+		expect(waiting.clip).toBe("OutsideOpen")
+		expect(waiting.into).toBe(0)
+		expect(waiting.finished).toBe(false)
+		expect(Rules.outsideRequest(ahead, 10.5, 10).into).toBeNear(0.1, 1e-9)
+	end)
+
 	it("finishes a request the server never acted on, after the refusal time", function()
 		local untouched = state({ door = "Closed", doorAt = 0 })
 		expect(Rules.outsideRequest(untouched, 10 + Config.REFUSED_SECONDS - 0.01, 10).finished).toBe(false)
@@ -278,17 +288,114 @@ describe("Door from outside", function()
 	end)
 end)
 
-describe("Driver scale", function()
-	it("eases from one size to the other over the configured time", function()
-		expect(Rules.scale(1, 0.8, 0)).toBe(1)
-		expect(Rules.scale(1, 0.8, Config.SCALE_SECONDS / 2)).toBeNear(0.9, 1e-9)
-		expect(Rules.scale(1, 0.8, Config.SCALE_SECONDS)).toBeNear(0.8, 1e-9)
-		expect(Rules.scale(1, 0.8, Config.SCALE_SECONDS * 3)).toBeNear(0.8, 1e-9)
-		local previous = 1
+describe("Getting out", function()
+	it("ends in OutsideClose's stance clear of the car, before its walk back in to the mark", function()
+		local close, finish = Config.CLIPS.OutsideClose, Config.EXIT_END.at
+		expect(finish < close.duration).toBe(true)
+		for _, doorOpen in { false, true } do
+			local steps = Rules.steps("Exit", doorOpen)
+			local last = steps[#steps]
+			expect(last.clip).toBe("OutsideClose")
+			expect(last.duration).toBeNear(finish, 1e-9)
+			expect(Rules.length(steps)).toBeNear(last.start + finish, 1e-9)
+			local held, into = Rules.stepAt(steps, 1000)
+			expect(held and held.clip).toBe("OutsideClose")
+			expect(into).toBeNear(finish, 1e-9)
+		end
+		expect(Rules.length(Rules.steps("Exit", false))).toBeNear(
+			Config.CLIPS.InsideOpen.duration + Config.CLIPS.GetOut.duration + finish,
+			1e-9
+		)
+	end)
+
+	it("has shut the door before it ends, and stands further out than the mark", function()
+		local curve = Config.CLIPS.OutsideClose.door
+		assert(curve, "OutsideClose has no door curve")
+		expect(curve.times[#curve.times] <= Config.EXIT_END.at).toBe(true)
+		local exiting = state({ entry = "Exit", entryAt = 0 })
+		expect(Rules.doorOpenness(exiting, Rules.length(Rules.steps("Exit", false)) - 1e-3)).toBe(0)
+		expect(Config.EXIT_END.right < Config.MARK.right).toBe(true)
+	end)
+
+	it("needs the exit key held, so a tap stays a gear change", function()
+		expect(Rules.exitHeld(0.2)).toBe(false)
+		expect(Rules.exitHeld(0.34)).toBe(false)
+		expect(Rules.exitHeld(0.35)).toBe(true)
+		expect(Rules.exitHeld(2)).toBe(true)
+	end)
+end)
+
+describe("Walking to the mark", function()
+	it("places, walks straight in, or goes round to the front of the mark first", function()
+		local approach = Config.APPROACH
+		local slope = math.tan(approach.lineUpAngle)
+		expect(Rules.approachPlan(0, approach.arrived * 0.5, math.pi)).toBe("Settle")
+		expect(Rules.approachPlan(0, 3, math.pi)).toBe("Straight")
+		expect(Rules.approachPlan(3 * slope * 0.9, 3, 0)).toBe("Straight")
+		expect(Rules.approachPlan(3 * slope * 1.1, 3, 0)).toBe("LineUp")
+		expect(Rules.approachPlan(-3 * slope * 1.1, 3, 0)).toBe("LineUp")
+		expect(Rules.approachPlan(0, approach.lineUp * 0.5, 0)).toBe("Straight")
+		expect(Rules.approachPlan(0, approach.lineUp * 0.5, math.rad(90))).toBe("LineUp")
+		expect(Rules.approachPlan(4, 0.2, 0)).toBe("LineUp")
+		expect(Rules.approachPlan(0.5, -0.4, 0)).toBe("LineUp")
+	end)
+
+	it("places the body on the mark at walking and turning pace, never longer than the cap", function()
+		local approach = Config.APPROACH
+		expect(Rules.settleSeconds(0, 0)).toBe(0)
+		expect(Rules.settleSeconds(0.1, 0)).toBeNear(0.1 / approach.settleSpeed, 1e-9)
+		expect(Rules.settleSeconds(0, math.rad(20))).toBeNear(math.rad(20) / approach.turnSpeed, 1e-9)
+		expect(Rules.settleSeconds(0, -math.rad(20))).toBeNear(math.rad(20) / approach.turnSpeed, 1e-9)
+		expect(Rules.settleSeconds(approach.reach, math.pi)).toBe(approach.settleSeconds)
+		expect(approach.settleSeconds <= 0.2).toBe(true)
+	end)
+
+	it("stops the walk in short of the mark by a frame of sprinting, within the placing's reach", function()
+		local approach = Config.APPROACH
+		-- Halted, the body can still cover one frame: sprinting, at 30 frames a second. That is
+		-- Config/Movement's SPRINT_SPEED, which Lune cannot load (it names Enum values).
+		local sprintSpeed = 26
+		expect(approach.short > sprintSpeed / 30).toBe(true)
+		expect(approach.short + approach.arrived < approach.reach).toBe(true)
+		expect(approach.short < approach.lineUp).toBe(true)
+	end)
+
+	it("eases the placing from its start to the mark", function()
+		expect(Rules.settleShare(0, 0.2)).toBe(0)
+		expect(Rules.settleShare(0.05, 0.2)).toBeNear(0.15625, 1e-9)
+		expect(Rules.settleShare(0.1, 0.2)).toBeNear(0.5, 1e-9)
+		expect(Rules.settleShare(0.2, 0.2)).toBe(1)
+		expect(Rules.settleShare(5, 0.2)).toBe(1)
+		expect(Rules.settleShare(0, 0)).toBe(1)
+		local previous = 0
 		for step = 1, 20 do
-			local value = Rules.scale(1, 0.8, Config.SCALE_SECONDS * step / 20)
-			expect(value <= previous).toBe(true)
+			local value = Rules.settleShare(0.2 * step / 20, 0.2)
+			expect(value >= previous).toBe(true)
 			previous = value
 		end
+	end)
+
+	it("starts an entry when the client asked, never in the past nor too far ahead", function()
+		expect(Rules.entryStart(10, 10.1, 0)).toBeNear(10.1, 1e-9)
+		expect(Rules.entryStart(10, 9, 0)).toBe(10)
+		expect(Rules.entryStart(10, 50, 0)).toBeNear(10 + Config.ENTRY_LEAD, 1e-9)
+		expect(Rules.entryStart(10, 0 / 0, 0)).toBe(10)
+		expect(Rules.entryStart(10, math.huge, 0)).toBe(10)
+		expect(Rules.entryStart(10, "soon", 0)).toBe(10)
+		expect(Rules.entryStart(10, nil, 0)).toBe(10)
+		expect(Config.ENTRY_LEAD >= Config.APPROACH.settleSeconds).toBe(true)
+	end)
+
+	it("starts no sooner than the state can reach the client that asked", function()
+		expect(Rules.entryStart(10, 9, 0.2)).toBeNear(10.2, 1e-9)
+		expect(Rules.entryStart(10, 10.1, 0.2)).toBeNear(10.2, 1e-9)
+		expect(Rules.entryStart(10, 10.35, 0.2)).toBeNear(10.35, 1e-9)
+		expect(Rules.entryStart(10, 50, 0.2)).toBeNear(10.2 + Config.ENTRY_LEAD, 1e-9)
+		expect(Rules.entryStart(10, nil, 0.2)).toBeNear(10.2, 1e-9)
+		-- A delay out of bounds or unusable is bounded, never trusted as given.
+		expect(Rules.entryStart(10, 10.1, 30)).toBeNear(10 + Config.MAX_ONE_WAY, 1e-9)
+		expect(Rules.entryStart(10, 10.1, -1)).toBeNear(10.1, 1e-9)
+		expect(Rules.entryStart(10, 10.1, 0 / 0)).toBeNear(10.1, 1e-9)
+		expect(Rules.entryStart(10, 10.1, "slow")).toBeNear(10.1, 1e-9)
 	end)
 end)
