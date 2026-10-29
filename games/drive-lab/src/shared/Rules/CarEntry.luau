@@ -252,10 +252,12 @@ function CarEntry.canEnter(state: State, now: number): boolean
 	return CarEntry.phase(state, now) == "Outside" and CarEntry.doorIdle(state, now)
 end
 
+-- Not while the door moves: the exit starts from the door at rest, shut or open.
 function CarEntry.canExit(state: State, now: number, speedKmh: number): boolean
 	return CarEntry.phase(state, now) == "Seated"
 		and speedKmh <= Config.EXIT_MAX_KMH
 		and not midStartup(state, now)
+		and CarEntry.doorIdle(state, now)
 end
 
 function CarEntry.canStart(state: State, now: number): boolean
@@ -353,6 +355,21 @@ end
 -- A held exit key gets out once held this long; a shorter tap stays a gear change.
 function CarEntry.exitHeld(heldFor: number): boolean
 	return heldFor >= Config.EXIT_HOLD_SECONDS
+end
+
+-- An exit key held `heldFor` seconds: whether it asks to get out this frame, and whether it has
+-- asked by the end of it (`asked` is the previous frame's). It waits for the door to stop, since
+-- the server refuses an exit while the door moves. A door seen moving after it asked reached the
+-- server first and had the exit refused, so it asks again once the door stops. Once getting out
+-- (or still getting in) it asks nothing more.
+function CarEntry.heldExit(state: State, now: number, heldFor: number, asked: boolean): (boolean, boolean)
+	if CarEntry.phase(state, now) ~= "Seated" then
+		return false, true
+	elseif not CarEntry.doorIdle(state, now) then
+		return false, false
+	end
+	local ask = not asked and CarEntry.exitHeld(heldFor)
+	return ask, asked or ask
 end
 
 function CarEntry.parseAction(payload: unknown): Action?
