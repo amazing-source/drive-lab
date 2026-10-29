@@ -77,9 +77,10 @@ local function measuredOneWay(player: Player): number
 	return player:GetNetworkPing() / 2
 end
 
--- The one-way delay a sequence's start allows for: measured, and a margin for its jitter.
+-- The delay a sequence's start allows for its state to reach `player`: twice the measured one-way
+-- delay (jitter and a resent packet), and a margin.
 local function oneWay(player: Player): number
-	return measuredOneWay(player) + Config.LATENCY_MARGIN
+	return 2 * measuredOneWay(player) + Config.LATENCY_MARGIN
 end
 
 local function body(player: Player): (Model?, Humanoid?, BasePart?)

@@ -112,9 +112,10 @@ export type CarEntry = {
 	-- Seconds ahead of the server's clock an entry may be asked to start: the client asks as its
 	-- settle at the mark begins, for the moment it ends, so the round trip runs alongside it.
 	ENTRY_LEAD: number,
-	-- Seconds: the longest one-way delay to a client a sequence's start waits for, and the margin
-	-- added to a client's measured delay for its jitter (the poor network profile's 100 ms:
-	-- without it a door clip from outside still began 0.53 studs under way, measured in Play).
+	-- Seconds: the longest delay to a client a sequence's start waits for, and the margin added to
+	-- twice a client's measured one-way delay. On the poor network profile a start that allowed
+	-- only the measured delay and 0.1 s still reached the client late 2 times in 10 door clips
+	-- from outside, which then began 0.6 to 0.8 studs under way (measured in Play).
 	MAX_ONE_WAY: number,
 	LATENCY_MARGIN: number,
 	-- Seconds the server waits for its own copy of the body to reach the mark (it lags the
