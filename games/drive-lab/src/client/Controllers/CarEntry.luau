@@ -8,7 +8,8 @@
 	the seat. Getting in asks as the final placing begins, so the round trip runs alongside it. A
 	movement key during the walk gives it up, and so does a refusal: the body is left standing,
 	free. Seated: the door key moves the door, the start key starts the engine, holding the exit
-	key gets out (Config/Controls). Clips played on one's own character replicate to the others.
+	key gets out once the door has stopped (Config/Controls). Clips played on one's own character
+	replicate to the others.
 ]]
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -78,7 +79,7 @@ local body: Body? = nil
 local walking = false
 local walkedAway = false
 local pending: Pending? = nil
-local exitHeld: { key: Enum.KeyCode, since: number }? = nil
+local exitHeld: { key: Enum.KeyCode, since: number, asked: boolean }? = nil
 -- The car the body was getting out of on its last frame in the seat.
 local exiting: Model? = nil
 -- Whether this frame's clips were chosen with the body in a seat.
@@ -270,18 +271,21 @@ local function update()
 	end
 	if car then
 		-- Kept once set: the car's state can read None a frame before its seat lets go.
-		local entry = CarState.read(car).entry
-		if entry == "Exit" then
+		local state = CarState.read(car)
+		if state.entry == "Exit" then
 			exiting = car
-		elseif entry == "Enter" then
+		elseif state.entry == "Enter" then
 			exiting = nil
 			SeatHandOver.seatedSize(current)
 		end
 		seatedClips(current, car, at)
 		local held = exitHeld
-		if held and Rules.exitHeld(os.clock() - held.since) then
-			exitHeld = nil
-			send(car, "Exit")
+		if held then
+			local ask, asked = Rules.heldExit(state, at, os.clock() - held.since, held.asked)
+			held.asked = asked
+			if ask then
+				send(car, "Exit")
+			end
 		end
 		return
 	end
@@ -323,7 +327,7 @@ local function onInputBegan(input: InputObject)
 	elseif table.find(Controls.START_ENGINE, key) then
 		send(car, "Start")
 	elseif table.find(Controls.EXIT, key) then
-		exitHeld = { key = key, since = os.clock() }
+		exitHeld = { key = key, since = os.clock(), asked = false }
 	end
 end
 

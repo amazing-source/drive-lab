@@ -1,5 +1,6 @@
 --!strict
 local Config = require("../src/shared/Config/CarEntry")
+local Hinge = require("../src/shared/Rules/Hinge")
 local Rules = require("../src/shared/Rules/CarEntry")
 local T = require("../../../tools/test/T")
 
@@ -323,6 +324,153 @@ describe("Getting out", function()
 		expect(Rules.exitHeld(0.35)).toBe(true)
 		expect(Rules.exitHeld(2)).toBe(true)
 	end)
+end)
+
+local FRAME = 1 / 60
+local INSIDE_CLIPS: { Config.ClipName } = { "InsideOpen", "InsideClose" }
+-- Config/CarDoor.LEAD: the door's sounds play on its openness this far ahead. That module needs
+-- Roblox types, so the value is copied.
+local SOUND_LEAD = 0.1
+
+-- Seated long before time 0 with the engine running, the door on its own motion from `doorAt`; an
+-- inside clip starts from the rest it ends opposite to.
+local function seatedWithDoor(door: Config.DoorMotion, doorAt: number): Rules.State
+	return state({
+		entry = "Enter",
+		entryAt = -100,
+		engine = "On",
+		engineAt = -50,
+		door = door,
+		doorAt = doorAt,
+	})
+end
+
+-- Services/CarEntry's exit: the state it writes once it has allowed one (copied, as that module
+-- needs Roblox).
+local function exitWrite(before: Rules.State, at: number, oneWay: number): Rules.State
+	local startAt = Rules.entryStart(at, nil, oneWay)
+	return {
+		entry = "Exit",
+		entryAt = startAt,
+		entryDoorOpen = Rules.doorOpenness(before, at) >= 0.5,
+		door = "Closed",
+		doorAt = startAt,
+		engine = "Off",
+		engineAt = at,
+	}
+end
+
+-- Frames of a client holding the exit key from `pressedAt`, its state `stateAt(at)`; the times it
+-- asked the server to get out.
+local function holdTimeline(stateAt: (number) -> Rules.State, pressedAt: number, untilAt: number): { number }
+	local asks: { number } = {}
+	local asked = false
+	for frame = 0, math.floor((untilAt - pressedAt) / FRAME) do
+		local at = pressedAt + frame * FRAME
+		local ask
+		ask, asked = Rules.heldExit(stateAt(at), at, at - pressedAt, asked)
+		if ask then
+			table.insert(asks, at)
+		end
+	end
+	return asks
+end
+
+describe("Getting out while the door moves", function()
+	it("is refused from the door's request until its clip ends, then allowed", function()
+		for _, clip in INSIDE_CLIPS do
+			local doorAt, duration = 1000, Config.CLIPS[clip].duration
+			-- The server starts a clip from inside ahead of its request (Rules.entryStart).
+			for frame = -30, math.floor(duration / FRAME) - 1 do
+				local at = doorAt + frame * FRAME
+				if Rules.canExit(seatedWithDoor(clip, doorAt), at, 0) then
+					error(
+						`exit allowed {string.format("%.3f", at - doorAt)} s into {clip}, the door still moving`
+					)
+				end
+			end
+			expect(Rules.canExit(seatedWithDoor(clip, doorAt), doorAt + duration + 1e-6, 0)).toBe(true)
+		end
+	end)
+
+	it("starts every exit it allows from the door where it stood, with no shut sound", function()
+		for _, clip in INSIDE_CLIPS do
+			local doorAt, duration = 1000, Config.CLIPS[clip].duration
+			local allowed = 0
+			for frame = -30, math.floor((duration + 0.5) / FRAME) do
+				local at = doorAt + frame * FRAME
+				local before = seatedWithDoor(clip, doorAt)
+				if Rules.canExit(before, at, 0) then
+					allowed += 1
+					local after = exitWrite(before, at, 0.2)
+					local was, now = Rules.doorOpenness(before, at), Rules.doorOpenness(after, at + FRAME)
+					if math.abs(now - was) > 0.05 then
+						error(
+							`{clip} exit at {string.format("%.3f", at - doorAt)} s: door {was} -> {now} in one frame`
+						)
+					end
+					local sound = Hinge.sound(
+						Rules.doorOpenness(before, at + SOUND_LEAD),
+						Rules.doorOpenness(after, at + FRAME + SOUND_LEAD)
+					)
+					expect(sound).toBe(nil)
+				end
+			end
+			-- Every frame from the clip's end on: the check above is never vacuous.
+			expect(allowed > 0).toBe(true)
+		end
+	end)
+
+	it("waits for the door to stop, then asks once while the key is still held", function()
+		for _, clip in INSIDE_CLIPS do
+			local rest: Config.DoorMotion = if clip == "InsideOpen" then "Closed" else "Open"
+			-- F at 10; the door's state reaches the client at 10.05 for a start at 10.2; E from 10.1.
+			local doorAt = 10.2
+			local asks = holdTimeline(function(at: number): Rules.State
+				return if at < 10.05 then seatedWithDoor(rest, 0) else seatedWithDoor(clip, doorAt)
+			end, 10.1, 15)
+			expect(#asks).toBe(1)
+			local stopped = doorAt + Config.CLIPS[clip].duration
+			-- On the first frame with the door at rest (a frame's float rounding either side).
+			expect(asks[1] >= stopped - 1e-9).toBe(true)
+			expect(asks[1] - stopped <= FRAME + 1e-9).toBe(true)
+			expect(Rules.canExit(seatedWithDoor(clip, doorAt), asks[1], 0)).toBe(true)
+		end
+	end)
+
+	it("asks again once the door stops when the door's request reached the server first", function()
+		-- Held from 0 with the door at rest: it asks at the hold time. The server had the door's
+		-- request already and refused the exit; the door's state reaches the client at 0.4.
+		local doorAt = 0.45
+		local asks = holdTimeline(function(at: number): Rules.State
+			return if at < 0.4 then seatedWithDoor("Closed", 0) else seatedWithDoor("InsideOpen", doorAt)
+		end, 0, 4)
+		expect(#asks).toBe(2)
+		expect(asks[1]).toBeNear(Config.EXIT_HOLD_SECONDS, FRAME)
+		expect(asks[2] >= doorAt + Config.CLIPS.InsideOpen.duration).toBe(true)
+	end)
+
+	it(
+		"asks on the hold time with the door at rest, never on a tap, and never while getting in or out",
+		function()
+			local resting = seatedWithDoor("Closed", 0)
+			expect(holdTimeline(function(): Rules.State
+				return resting
+			end, 1000, 1000 + Config.EXIT_HOLD_SECONDS - 2 * FRAME)[1]).toBe(nil)
+			local asks = holdTimeline(function(): Rules.State
+				return resting
+			end, 1000, 1002)
+			expect(#asks).toBe(1)
+			expect(asks[1] - 1000).toBeNear(Config.EXIT_HOLD_SECONDS, FRAME)
+			for _, moving in
+				{ state({ entry = "Enter", entryAt = 999 }), state({ entry = "Exit", entryAt = 999 }) }
+			do
+				local ask, asked = Rules.heldExit(moving, 1000, 2, false)
+				expect(ask).toBe(false)
+				expect(asked).toBe(true)
+			end
+		end
+	)
 end)
 
 describe("Walking to the mark", function()
