@@ -48,4 +48,18 @@ describe("CarAudio config", function()
 		end
 		expect((crossover :: number) > idle.rpm).toBeTruthy()
 	end)
+
+	it("keeps Strada the most restrained mode for every pop", function()
+		local triggers = CarAudio.POP_TRIGGERS
+		for _, chance in { triggers.liftChance, triggers.upshiftChance, triggers.downshiftChance } do
+			expect(chance.Strada >= 0 and chance.Strada <= chance.Sport).toBeTruthy()
+			expect(chance.Sport <= chance.Corsa and chance.Corsa <= 1).toBeTruthy()
+		end
+	end)
+
+	it("puts every lift the events report on the overrun, so its train can start", function()
+		local triggers, events = CarAudio.POP_TRIGGERS, CarAudio.EVENTS
+		expect(events.liftMinRpm >= triggers.minRpm).toBeTruthy()
+		expect(events.liftTo <= triggers.closedThrottle).toBeTruthy()
+	end)
 end)

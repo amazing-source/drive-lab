@@ -1,0 +1,48 @@
+Mutation proof for #63, branch agent/audio-pops-flames. Each break applied alone, tests run, file restored.
+== M1 a train survives off the overrun
+FAIL ExhaustPops > stops a lift's train when the throttle opens or the overrun falls under the floor: tests/ExhaustPops.spec:121: expected false, got true
+63 spec files, 501 passed, 1 failed
+== M2 an upshift cracks at the shift cut
+FAIL ExhaustPops > cracks once as an upshift engages under load, from its rpm, and not at the shift's cut: tests/ExhaustPops.spec:106: expected 1, got 0
+63 spec files, 501 passed, 1 failed
+== M3 every mode takes Corsa's chance
+FAIL ExhaustPops > takes each drive mode's own chance: tests/ExhaustPops.spec:94: expected 0, got 3
+63 spec files, 501 passed, 1 failed
+== M4 the overrun ignores an open throttle
+FAIL ExhaustPops > does not pop a downshift with the throttle open or under the floor: tests/ExhaustPops.spec:81: expected 0, got 3
+FAIL ExhaustPops > stops a lift's train when the throttle opens or the overrun falls under the floor: tests/ExhaustPops.spec:120: expected false, got true
+63 spec files, 500 passed, 2 failed
+== M5 no gap between pops
+FAIL ExhaustPops > pops a train after a downshift with the throttle closed, above the floor: tests/ExhaustPops.spec:74: expected 3, got 12
+FAIL ExhaustPops > takes each drive mode's own chance: tests/ExhaustPops.spec:94: expected 3, got 20
+FAIL ExhaustPops > stops a lift's train when the throttle opens or the overrun falls under the floor: tests/ExhaustPops.spec:115: expected 5, got 20
+63 spec files, 499 passed, 3 failed
+== M6 an upshift cracks at any rpm
+FAIL ExhaustPops > cracks once as an upshift engages under load, from its rpm, and not at the shift's cut: tests/ExhaustPops.spec:108: expected 0, got 1
+63 spec files, 501 passed, 1 failed
+== M7 a downshift never starts a train
+FAIL ExhaustPops > pops a train after a downshift with the throttle closed, above the floor: tests/ExhaustPops.spec:74: expected 3, got 0
+FAIL ExhaustPops > takes each drive mode's own chance: tests/ExhaustPops.spec:94: expected 3, got 0
+63 spec files, 500 passed, 2 failed
+== M8 the overrun ignores the rpm floor
+FAIL ExhaustPops > does not pop a downshift with the throttle open or under the floor: tests/ExhaustPops.spec:81: expected 0, got 3
+FAIL ExhaustPops > stops a lift's train when the throttle opens or the overrun falls under the floor: tests/ExhaustPops.spec:120: expected false, got true
+63 spec files, 500 passed, 2 failed
+== M9 an upshift cracks at any throttle
+FAIL ExhaustPops > cracks once as an upshift engages under load, from its rpm, and not at the shift's cut: tests/ExhaustPops.spec:110: expected 0, got 1
+63 spec files, 501 passed, 1 failed
+== C1 Strada cracks upshifts more than Sport
+FAIL CarAudio config > keeps Strada the most restrained mode for every pop: tests/CarAudio.spec:55: expected a truthy value, got false
+63 spec files, 501 passed, 1 failed
+== C2 the train floor above the lift rpm
+FAIL CarAudio config > puts every lift the events report on the overrun, so its train can start: tests/CarAudio.spec:62: expected a truthy value, got false
+63 spec files, 501 passed, 1 failed
+== C3 the overrun throttle under the lift's
+FAIL CarAudio config > puts every lift the events report on the overrun, so its train can start: tests/CarAudio.spec:63: expected a truthy value, got false
+63 spec files, 501 passed, 1 failed
+== restored
+63 spec files, 502 passed, 0 failed
+== M2 rerun after the spec's cut frame was put under load (throttle 1), so the cut case no longer leans on the load check
+FAIL ExhaustPops > cracks once as an upshift engages under load, from its rpm, and not at the shift's cut: tests/ExhaustPops.spec:105: expected 0, got 1
+63 spec files, 501 passed, 1 failed
+== restored: 63 spec files, 502 passed, 0 failed
