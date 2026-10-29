@@ -148,4 +148,22 @@ function Roadside.lay(frame: Frame, from: number, to: number, seed: number, pare
 	layGantries(frame, from, to, seed, parent)
 end
 
+-- Closes the road's start, whose centre and direction are given (studs, unit), with a line of
+-- guardrail `width` metres long across it, its beam facing the road and a terminal at each end.
+function Roadside.layRoadEnd(centre: Vector3, along: Vector3, width: number, parent: Instance)
+	local section = Config.GUARDRAILS.section
+	local right = rightOf(along)
+	local line = centre - along * studs(Config.ROAD_END_SETBACK)
+	local function at(offset: number): CFrame
+		return CFrame.fromMatrix(line + right * studs(offset), right, Vector3.yAxis)
+	end
+	local lefts = Rules.roadEnd(width, section)
+	local names = Config.ASSETS.sections
+	for index, left in lefts do
+		place(names[(index - 1) % #names + 1], at(left), parent)
+	end
+	place(Config.ASSETS.start, at(lefts[1]), parent)
+	place(Config.ASSETS.finish, at(lefts[#lefts] + section), parent)
+end
+
 return Roadside
