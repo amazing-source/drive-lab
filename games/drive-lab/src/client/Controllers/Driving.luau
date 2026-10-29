@@ -118,6 +118,7 @@ local function publish(model: Model, result: Interface.StepResult, current: Vehi
 	model:SetAttribute("TcActive", telemetry.tcActive)
 	model:SetAttribute("EscActive", telemetry.escActive)
 	model:SetAttribute("EscOff", escSwitch.off)
+	model:SetAttribute("Launch", telemetry.launch)
 	-- Per tyre, for the smoke: read from the model, never written back.
 	for wheel, reading in TyreSmoke.measure(current.state, result.wheels, tyreReadings) do
 		model:SetAttribute(TyreSmokeConfig.SLIP_ATTRIBUTES[wheel], reading.slip)

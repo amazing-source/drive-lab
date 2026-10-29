@@ -196,6 +196,18 @@ export type ModeConfig = {
 
 export type Modes = { Strada: ModeConfig, Sport: ModeConfig, Corsa: ModeConfig }
 
+-- Launch control (Vehicle/Launch). The rpm it holds is the engine's `launchRpm`.
+export type LaunchConfig = {
+	-- The drive mode it arms in; ESC must be switched off too.
+	mode: DrivingMode,
+	-- Slip ratio traction control holds the tyres at during a launch, even with TC off.
+	slipRatio: number,
+	-- Ground speed (m/s) past which the launch ends and the assists are the driver's again.
+	endSpeed: number,
+	-- Whether the automatic shifts up by itself during a launch; manual never does.
+	autoUpshift: boolean,
+}
+
 export type SimulationConfig = {
 	maxSubstep: number,
 	solverIterations: number,
@@ -226,6 +238,7 @@ export type CarConfig = {
 	aero: AeroConfig,
 	steering: SteeringConfig,
 	modes: Modes,
+	launch: LaunchConfig,
 	simulation: SimulationConfig,
 }
 
@@ -278,6 +291,10 @@ function Types.define(car: CarConfig): CarConfig
 	assert(
 		car.gearbox.reverseCutBand > 0 and car.gearbox.reverseCutBand < car.gearbox.reverseMaxSpeed,
 		"the reverse cut must fit between a standstill and reverse's top speed"
+	)
+	assert(
+		car.launch.slipRatio > 0 and car.launch.endSpeed > 0,
+		"launch control needs a slip and an end speed"
 	)
 	return deepFreeze(car)
 end

@@ -312,8 +312,12 @@ local function refresh(current: Ui, model: Model)
 	current.gear.TextColor3 = if flash then Config.BLUE else Config.WHITE
 	current.box.Text = if manual then "M" else "A"
 	current.speed.Text = tostring(math.round(number(model, "SpeedKmh")))
-	local modeName = model:GetAttribute("DrivingMode")
-	current.mode.Text = if typeof(modeName) == "string" then string.upper(modeName) else ""
+	local launch = model:GetAttribute("Launch")
+	current.mode.Text = Rules.modeText(
+		model:GetAttribute("DrivingMode"),
+		launch == "Armed" or launch == "Launching",
+		Config.LAUNCH_TEXT
+	)
 
 	local assists = DriverAssists.assists(model:GetAttribute("EscOff") == true, DriverAssistsConfig)
 	paint(

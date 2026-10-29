@@ -9,6 +9,9 @@ local Types = require("../Config/Cars/Types")
 
 export type Assists = { abs: boolean, tc: boolean, esc: boolean }
 
+-- Launch control (Vehicle/Launch): armed on the brake, then launching once it is released.
+export type LaunchPhase = "Off" | "Armed" | "Launching"
+
 export type DriverInput = {
 	-- Raw device values; the input filter runs inside the step.
 	throttle: number,
@@ -82,6 +85,7 @@ export type Telemetry = {
 	limiter: boolean,
 	-- 0 closed (high downforce) to 1 open (low drag).
 	alaOpen: number,
+	launch: LaunchPhase,
 	-- Steering input after the input filter, in [−1, 1]; times the lock gives the wheel angle.
 	steer: number,
 	rearSteerAngle: number,

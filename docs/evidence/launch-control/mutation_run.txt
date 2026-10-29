@@ -1,0 +1,48 @@
+[1 arms on a part throttle] 66 spec files, 536 passed, 1 failed
+    \Launch.spec:76: expected Off, got Armed
+[2 arms without the brake] 66 spec files, 533 passed, 4 failed
+    \DriverAssists.spec:192: expected true, got false
+    \Launch.spec:72: expected Off, got Armed
+    \Launch.spec:209: expected true, got false
+    \Launch.spec:209: expected true, got false
+[3 a lift does not cancel] 66 spec files, 536 passed, 1 failed
+    \Launch.spec:88: expected Off, got Armed
+[4 launches before the release] 66 spec files, 536 passed, 1 failed
+    \Launch.spec:97: expected Armed, got Launching
+[5 a lift does not end it] 66 spec files, 536 passed, 1 failed
+    \Launch.spec:133: expected Off, got Launching
+[6 no end speed] 66 spec files, 534 passed, 3 failed
+    \Launch.spec:133: expected Off, got Launching
+    \Launch.spec:214: the launch ended
+    \Launch.spec:214: the launch ended
+[7 arms with ESC on] 66 spec files, 533 passed, 4 failed
+    \Launch.spec:60: expected false, got true
+    \Selector.spec:165: the car stopped and reverse was selected
+    \Selector.spec:178: expected true, got false
+    \Selector.spec:219: expected -1, got 1
+[8 arms in any mode] 66 spec files, 534 passed, 3 failed
+    \DriverAssists.spec:196: expected true, got false
+    \Launch.spec:58: expected false, got true
+    \Selector.spec:245: expected -1, got 1
+[9 no traction control with TC off] 66 spec files, 534 passed, 3 failed
+    \Launch.spec:208: expected true, got false
+    \Launch.spec:208: expected true, got false
+    \Launch.spec:225: expected true, got false
+[10 the mode's slip, not the launch's] 66 spec files, 536 passed, 1 failed
+    \Launch.spec:225: expected true, got false
+[11 the automatic never holds its gear] 66 spec files, 536 passed, 1 failed
+    \Launch.spec:235: expected 1, got 3
+[12 the flag is ignored] 66 spec files, 536 passed, 1 failed
+    \Launch.spec:235: expected 1, got 3
+[13 the brake selects R while a launch can arm] 66 spec files, 535 passed, 2 failed
+    \Selector.spec:73: expected 1, got -1
+    \Selector.spec:242: expected 1, got -1
+[14 the model never runs the launch] 66 spec files, 533 passed, 4 failed
+    \Launch.spec:208: expected true, got false
+    \Launch.spec:208: expected true, got false
+    \Launch.spec:225: expected true, got false
+    \Launch.spec:235: expected 1, got 3
+[15 HUD ignores the launch] 66 spec files, 536 passed, 1 failed
+    \Hud.spec:37: expected LAUNCH, got CORSA
+[16 cluster ignores the launch] 66 spec files, 536 passed, 1 failed
+    \Cluster.spec:74: expected LAUNCH, got ESC OFF

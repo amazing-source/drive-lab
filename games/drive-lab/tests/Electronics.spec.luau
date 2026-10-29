@@ -71,7 +71,7 @@ describe("Traction control", function()
 		for _ = 1, steps do
 			Electronics.updateTc(
 				config,
-				(SVJ.modes :: any)[mode],
+				(SVJ.modes :: any)[mode].tcSlipRatio,
 				state,
 				true,
 				1,
@@ -111,7 +111,16 @@ describe("Traction control", function()
 		local state = Electronics.newState()
 		local allowed = SVJ.modes.Corsa.tcSlipRatio * config.tcSpeedFloor * 0.9
 		for _ = 1, 20 do
-			Electronics.updateTc(config, SVJ.modes.Corsa, state, true, 1, uniform(allowed), uniform(0), STEP)
+			Electronics.updateTc(
+				config,
+				SVJ.modes.Corsa.tcSlipRatio,
+				state,
+				true,
+				1,
+				uniform(allowed),
+				uniform(0),
+				STEP
+			)
 		end
 		expect(state.tcFactor).toBe(1)
 	end)
