@@ -1,9 +1,10 @@
 --!strict
 --[[
 	Plays the car the local player drives: the engine loops mixed by rpm and throttle, the
-	limiter, the start-up, gear changes, the shift cut and the pops after a lift. The readouts
-	come from the attributes Driving sets on the car every frame, and only the driver's client
-	has them, so other players' cars stay silent for now.
+	limiter, the start-up, gear changes, the shift cut and the exhaust's pops, each with its
+	flame (Rules/ExhaustPops decides when). The readouts come from the attributes Driving sets
+	on the car every frame, and only the driver's client has them, so other players' cars stay
+	silent for now.
 
 	Every sound hangs on an attachment on the chassis, so it is positional. The camera's
 	DriveLabView attribute picks the shaping: the engine loops are cabin recordings, dry in the
@@ -22,6 +23,7 @@ local CarEntry = require(ReplicatedStorage.Shared.Rules.CarEntry)
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local EngineSound = require(ReplicatedStorage.Shared.Rules.EngineSound)
+local ExhaustPops = require(ReplicatedStorage.Shared.Rules.ExhaustPops)
 local Types = require(ReplicatedStorage.Shared.Config.Cars.Types)
 local Units = require(ReplicatedStorage.Shared.Units)
 
@@ -56,8 +58,7 @@ type Session = {
 	dip: number,
 	limiterShare: number,
 	outside: number,
-	popsUntil: number,
-	nextPop: number,
+	pops: ExhaustPops.State,
 }
 
 local localPlayer = Players.LocalPlayer
@@ -95,12 +96,12 @@ local function drivingMode(model: Model): Types.DrivingMode
 	return "Strada"
 end
 
-local function forMode(values: CarAudio.ByMode, mode: Types.DrivingMode): number
-	return if mode == "Corsa" then values.Corsa elseif mode == "Sport" then values.Sport else values.Strada
+local function draw(): number
+	return random:NextNumber()
 end
 
 local function between(range: CarAudio.Region): number
-	return range.from + (range.to - range.from) * random:NextNumber()
+	return range.from + (range.to - range.from) * draw()
 end
 
 local function point(chassis: BasePart, name: string, position: { forward: number, up: number }): Attachment
@@ -281,29 +282,13 @@ local function update(current: Session, dt: number)
 	local viewShare = CarAudio.COCKPIT.far + (CarAudio.OUTSIDE.far - CarAudio.COCKPIT.far) * current.outside
 	current.far.Volume = far.volume * farShare * viewShare * master * loud
 
-	local pops = CarAudio.POPS
-	local now = os.clock()
 	if events.gear then
 		local gear = CarAudio.GEAR
 		local speed = if events.gear == "Up" then gear.upSpeed else gear.downSpeed
 		oneShot(gear.region, current.eventsGroup, current.enginePoint, gear.volume, speed)
 	end
-	if
-		events.cut
-		and car.rpm >= CarAudio.EVENTS.liftMinRpm
-		and random:NextNumber() < forMode(pops.upshiftChance, mode)
-	then
+	if ExhaustPops.step(current.pops, events, car, mode, os.clock(), draw) then
 		pop(current)
-	end
-	if events.lift and random:NextNumber() < forMode(pops.chance, mode) then
-		current.popsUntil = now + between(pops.trainSeconds)
-		current.nextPop = now
-	end
-	if car.throttle > CarAudio.EVENTS.liftTo or car.rpm < pops.minRpm then
-		current.popsUntil = 0
-	elseif now < current.popsUntil and now >= current.nextPop then
-		pop(current)
-		current.nextPop = now + between(pops.gapSeconds)
 	end
 end
 
@@ -377,8 +362,7 @@ local function start(model: Model, sincePress: number)
 		dip = 1,
 		limiterShare = 0,
 		outside = 1,
-		popsUntil = 0,
-		nextPop = 0,
+		pops = ExhaustPops.new(CarAudio.POP_TRIGGERS),
 	}
 	current.far.PlaybackSpeed = CarAudio.FAR.speed
 	session = current
