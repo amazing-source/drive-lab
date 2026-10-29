@@ -24,6 +24,8 @@ export type Controls = {
 	EXIT: { Enum.KeyCode },
 	-- Opens and closes the controls screen (Config/ControlsHelp).
 	CONTROLS_HELP: { Enum.KeyCode },
+	-- Steps the weather (Config/Atmosphere.WEATHER_KEY).
+	WEATHER: { Enum.KeyCode },
 	-- Analog sticks below this count as centred.
 	STICK_DEADZONE: number,
 }
@@ -62,6 +64,8 @@ local Controls: Controls = table.freeze({
 	-- K sits in the same place on QWERTY and AZERTY and is bound to nothing else. The pad has no
 	-- button left, so a tap of B opens it (ControlsHelp.TAP_SECONDS) and B's hold stays the exit.
 	CONTROLS_HELP = { Enum.KeyCode.K, Enum.KeyCode.ButtonB },
+	-- N sits in the same place on QWERTY and AZERTY and is bound to nothing else.
+	WEATHER = { Enum.KeyCode.N },
 	STICK_DEADZONE = 0.12,
 })
 

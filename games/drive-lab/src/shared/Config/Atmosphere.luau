@@ -216,6 +216,7 @@ export type Atmosphere = {
 	PRESETS: { Preset },
 	START_PRESET: PresetName,
 	START_WETNESS: number,
+	WEATHER_KEY: { cycle: { PresetName }, seconds: number, labelSeconds: number },
 	TRANSITION_SECONDS: number,
 	TRANSITION_MIN: number,
 	TRANSITION_MAX: number,
@@ -440,7 +441,7 @@ local STREAK_SOFT: Sprite =
 local RIPPLE_A: Sprite = table.freeze({ image = "rbxassetid://70432373652095", along = 0.65, across = 0.65 })
 local RIPPLE_B: Sprite = table.freeze({ image = "rbxassetid://80995121905887", along = 0.67, across = 0.67 })
 
-local START_PRESET: PresetName = "Overcast"
+local START_PRESET: PresetName = "ClearDay"
 local DEFAULT_TIER: Tier = "Medium"
 
 local Atmosphere: Atmosphere = table.freeze({
@@ -448,6 +449,14 @@ local Atmosphere: Atmosphere = table.freeze({
 	-- The preset the client starts in, and the road's wetness then.
 	START_PRESET = START_PRESET,
 	START_WETNESS = 0,
+	-- The player's weather key (Config/Controls.WEATHER) steps through these, each blended in
+	-- over `seconds`, its name shown for `labelSeconds`. Overcast stays a developer-panel preset:
+	-- the owner wants a clear day, rain by day and rain by night, without the overcast haze.
+	WEATHER_KEY = table.freeze({
+		cycle = table.freeze({ "ClearDay", "Rain", "NightRain" } :: { PresetName }),
+		seconds = 10,
+		labelSeconds = 2.5,
+	}),
 	-- Seconds from one preset to the next, smoothstepped. The handoff's window is 10 to 30 s; a
 	-- request outside it is clamped.
 	TRANSITION_SECONDS = 20,
