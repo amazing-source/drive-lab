@@ -1,6 +1,6 @@
 --!strict
 --[[
-	Weather and atmosphere on this client: the preset blend, the road's wetness, the lighting,
+	Weather and atmosphere on this client: the player's weather key, the preset blend, the road's wetness, the lighting,
 	the wet road, the rain, the water on the car, and the rain on the camera (lens drops, a
 	contact blur, a light far depth of field) and, in the cockpit, on the windscreen. The only writer of Workspace's RainIntensity and Wetness
 	attributes, which the car's grip reads on the driver's client; set here they are local, so a
@@ -11,11 +11,14 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local Config = require(ReplicatedStorage.Shared.Config.Atmosphere)
+local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local Trove = require(ReplicatedStorage.Packages.Trove)
+local WeatherCycle = require(ReplicatedStorage.Shared.Rules.WeatherCycle)
 
 local CarWater = require(script.CarWater)
 local DeveloperPanel = require(script.DeveloperPanel)
@@ -25,6 +28,7 @@ local PresetBlend = require(script.PresetBlend)
 local Rain = require(script.Rain)
 local RainDensity = require(script.RainDensity)
 local Weather = require(script.Weather)
+local WeatherLabel = require(script.WeatherLabel)
 local WetSurfaces = require(script.WetSurfaces)
 local Wetness = require(script.Wetness)
 local Windshield = require(script.Windshield)
@@ -45,6 +49,7 @@ type State = {
 	windshield: Windshield.Windshield,
 	optics: Optics.Optics,
 	lens: Lens.Lens?,
+	weatherLabel: WeatherLabel.WeatherLabel?,
 	cars: { [Model]: Car },
 	-- The nearest car to the camera this frame, and its speed (km/h, never negative).
 	nearest: Car?,
@@ -65,13 +70,17 @@ local VIEWS: { [string]: Rain.View } =
 local localPlayer = Players.LocalPlayer
 local state: State? = nil
 
-local function presetLook(name: Config.PresetName): Config.Look
+local function presetOf(name: Config.PresetName): Config.Preset
 	for _, preset in Config.PRESETS do
 		if preset.name == name then
-			return preset.look
+			return preset
 		end
 	end
 	error(`unknown preset {name}`)
+end
+
+local function presetLook(name: Config.PresetName): Config.Look
+	return presetOf(name).look
 end
 
 local function savedTier(): Config.Tier
@@ -317,6 +326,25 @@ local function mountLens(current: State)
 	current.lens = Lens.new(playerGui)
 end
 
+-- The player's weather key: the next preset of the cycle, and its name on screen.
+local function stepWeather(current: State)
+	local key = Config.WEATHER_KEY
+	local name: Config.PresetName = key.cycle[WeatherCycle.nextIndex(key.cycle, current.target)]
+	Atmosphere.choose(name, key.seconds)
+	local label = current.weatherLabel
+	if label then
+		WeatherLabel.show(label, presetOf(name).label, key.labelSeconds)
+	end
+end
+
+local function mountWeatherLabel(current: State)
+	local playerGui = localPlayer:WaitForChild("PlayerGui")
+	if state ~= current then
+		return
+	end
+	current.weatherLabel = WeatherLabel.new(playerGui)
+end
+
 local function mountPanel(current: State)
 	local playerGui = localPlayer:WaitForChild("PlayerGui")
 	if state ~= current then
@@ -345,6 +373,7 @@ function Atmosphere.start()
 		windshield = Windshield.new(),
 		optics = Optics.new(),
 		lens = nil,
+		weatherLabel = nil,
 		cars = {},
 		nearest = nil,
 		speedKmh = 0,
@@ -402,6 +431,15 @@ function Atmosphere.start()
 	)
 	trove:Add(task.spawn(WetSurfaces.prepare, current.surfaces))
 	trove:Add(task.spawn(mountLens, current))
+	trove:Add(task.spawn(mountWeatherLabel, current))
+	trove:Connect(UserInputService.InputBegan, function(input: InputObject, processed: boolean)
+		if processed or UserInputService:GetFocusedTextBox() ~= nil then
+			return
+		end
+		if table.find(Controls.WEATHER, input.KeyCode) then
+			stepWeather(current)
+		end
+	end)
 	if RunService:IsStudio() and Config.DEV_PANEL then
 		trove:Add(task.spawn(mountPanel, current))
 	end
@@ -424,6 +462,9 @@ function Atmosphere.stop()
 	end
 	if current.lens then
 		Lens.destroy(current.lens)
+	end
+	if current.weatherLabel then
+		WeatherLabel.destroy(current.weatherLabel)
 	end
 	Optics.destroy(current.optics)
 	CarWater.destroy(current.water)
