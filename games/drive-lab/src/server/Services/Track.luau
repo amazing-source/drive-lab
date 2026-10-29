@@ -302,6 +302,12 @@ function Service.start()
 			log.warn("could not find the pad's surface; lane lines may sit off the road")
 		end
 		lay(chunks[1])
+		-- Behind the start there is only the pad, then nothing; this stays when chunks are cleared.
+		local roadEnd = Instance.new("Folder")
+		roadEnd.Name = "RoadEnd"
+		local centre, along = frameAt(chunks[1], 0)
+		Roadside.layRoadEnd(centre, along, Track.ROAD_WIDTH + 2 * Track.VERGE_WIDTH, roadEnd)
+		roadEnd.Parent = Workspace
 		local baseplate = Workspace:FindFirstChild("Baseplate")
 		if baseplate then
 			baseplate:Destroy()

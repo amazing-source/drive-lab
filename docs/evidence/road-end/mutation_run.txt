@@ -1,0 +1,9 @@
+[1 one section short] 63 spec files, 499 passed, 2 failed
+    \Roadside.spec:165: expected 1, got 0
+    \Roadside.spec:178: expected true, got false
+[2 not centred] 63 spec files, 500 passed, 1 failed
+    \Roadside.spec:168: expected 0 within 1e-09, got 1
+[3 gaps between sections] 63 spec files, 500 passed, 1 failed
+    \Roadside.spec:168: expected 0 within 1e-09, got 1.200000000000001
+[4 no setback] 63 spec files, 500 passed, 1 failed
+    \Roadside.spec:180: expected true, got false

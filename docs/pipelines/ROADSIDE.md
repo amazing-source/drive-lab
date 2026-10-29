@@ -61,6 +61,10 @@ the name prefix into Models under `ReplicatedStorage.DriveLabAssets` (`Delineato
   and about one mark every 30 m a lane, each kind with its own size, place and turn.
 - The server's `Roadside` lays them with each chunk (`Services/Track`), yielding every 40
   pieces, and they go with the chunk.
+- The road's start is closed by the same guardrail (`Roadside.layRoadEnd`, #69): whole sections
+  across the road and both verges (`Rules/Roadside.roadEnd`), 1 m behind the first metre of
+  asphalt, the beam facing the road and a terminal at each end. `Services/Track` lays it once at
+  start into `Workspace.RoadEnd`; it stays when chunks are cleared.
 - `Controllers/Reflectors` (each client) turns reflectors to neon in the driven car's
   headlights: in the beams, facing the car, fading to 320 m, in four steps. A reflector is
   under a pixel past 40 m, so the 40 nearest lit ones also get a round billboard dot of 5 to 2
