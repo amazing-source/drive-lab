@@ -70,7 +70,7 @@ local function weldHolds(current: Body, seat: BasePart): boolean
 	return weld ~= nil and weld:IsA("Weld") and weld.Part1 == current.root
 end
 
--- The server changes the body's size about its root (Services/CarEntry), which leaves the feet
+-- The server changes the body's size about its root (CarBody), which leaves the feet
 -- in or above the ground: the root is set back above the ground for the new size.
 local function plantFeet(current: Body, scale: number)
 	local params = RaycastParams.new()
