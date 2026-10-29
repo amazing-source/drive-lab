@@ -1,0 +1,8 @@
+Deliberate breaks of Vehicle/InputFilter.luau, each run against the full suite (lune run tools/test/run), restored after each.
+Baseline: 66 spec files, 548 passed, 0 failed.
+
+1 no easing (easeShare = 0)                   -> 546 passed, 2 failed: "eases in ... never passes its target", "moves the wheel only a little on a short tap"
+2 return uses the turn-in time                -> 547 passed, 1 failed: "returns slowly at rest and quickly on the move"
+3 no opposite-side factor                     -> 547 passed, 1 failed: "turns toward the other side faster than it turns in"
+4 no internal steps (one step per frame)      -> 547 passed, 1 failed: Frame-rate consistency "... within 2 % of 240 FPS at 30 FPS"
+5 no stop on the target (overshoot allowed)   -> 545 passed, 3 failed: short tap; returns slowly/quickly; slows as speed rises

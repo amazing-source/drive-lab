@@ -2,9 +2,12 @@
 --[[
 	The input layer (01 §4): turns raw device values into what the driver's hands and feet would
 	do. Steering is shaped, clamped to the angle that puts the front axle at a share of its peak
-	slip, then rate-limited, returning to centre faster than it turns in and slower as speed
-	rises. Pedals ramp. Nothing here changes the car; every rate is exact in dt, so a frame rate
-	changes nothing either.
+	slip, then moved there as a hand turns a wheel: it speeds up, holds a capped rate and slows
+	into the target, never past it (a trapezoid in time). Turning in takes longer as speed
+	rises; the return to centre is slow at rest and quick on the move; turning toward the other
+	side is quicker than turning in. Pedals ramp. Nothing here changes the car. The steering
+	runs in internal steps of at most STEER_STEP, so every frame rate follows the same path and
+	lands within a frame of the same time; the pedal ramps are exact in dt.
 ]]
 local Geometry = require("./Geometry")
 local InputHelp = require("../Config/InputHelp")
@@ -13,6 +16,8 @@ local Types = require("../Config/Cars/Types")
 
 export type Controls = {
 	steer: number,
+	-- Rate of `steer` (per second), carried between frames so the steering eases.
+	steerVelocity: number,
 	throttle: number,
 	brake: number,
 	handbrake: number,
@@ -28,8 +33,11 @@ export type RawControls = {
 
 local InputFilter = {}
 
+-- Longest internal step of the steering (s): 240 Hz, the frame-rate spec's reference.
+local STEER_STEP = 1 / 240
+
 function InputFilter.newState(): Controls
-	return { steer = 0, throttle = 0, brake = 0, handbrake = 0 }
+	return { steer = 0, steerVelocity = 0, throttle = 0, brake = 0, handbrake = 0 }
 end
 
 function InputFilter.shape(help: InputHelp.InputHelp, value: number): number
@@ -62,6 +70,65 @@ function InputFilter.steerBounds(
 	return (heading - slip) * perRadian, (heading + slip) * perRadian
 end
 
+-- Seconds a move from `current` toward `target` would take across full lock: a return toward
+-- centre, a turn toward the other side (no slower than a return while it heads back to centre),
+-- or a turn in.
+function InputFilter.moveTime(
+	help: InputHelp.InputHelp,
+	current: number,
+	target: number,
+	speed: number
+): number
+	local speedAbs = math.abs(speed)
+	local blend = help.returnBlend
+	local share = math.clamp((speedAbs - blend.from) / (blend.to - blend.from), 0, 1)
+	local back = help.returnTimeStill + (help.returnTimeMoving - help.returnTimeStill) * share
+	if target * current >= 0 and math.abs(target) < math.abs(current) then
+		return back
+	end
+	local turnIn = help.lockTime * (1 + speedAbs / help.rateHalvingSpeed)
+	if target * current < 0 then
+		return math.min(back, turnIn / help.oppositeFactor)
+	end
+	return turnIn
+end
+
+-- One step of the eased move from `current` toward `target` over `time` per full lock: the
+-- speed builds and falls at the rate that spends `easeShare` of the time speeding up and as
+-- much slowing down, capped in between, and the step stops on the target rather than past it.
+local function steerStep(
+	current: number,
+	velocity: number,
+	target: number,
+	time: number,
+	easeShare: number,
+	dt: number
+): (number, number)
+	if time <= 0 then
+		return target, 0
+	end
+	local ease = time * easeShare
+	local topSpeed = 1 / (time - ease)
+	local accel = if ease > 0 then topSpeed / ease else math.huge
+	local error = target - current
+	local distance = math.abs(error)
+	-- The fastest speed from which this step's braking still stops on the target.
+	local stopSpeed = if accel == math.huge
+		then math.huge
+		else math.sqrt((accel * dt / 2) ^ 2 + 2 * accel * distance) - accel * dt / 2
+	local wanted = math.sign(error) * math.min(stopSpeed, topSpeed)
+	local change = if accel == math.huge
+		then wanted - velocity
+		else math.clamp(wanted - velocity, -accel * dt, accel * dt)
+	local nextVelocity = velocity + change
+	-- Moved at the step's new speed, as the stopping speed above assumes.
+	local nextValue = current + nextVelocity * dt
+	if (target - nextValue) * error <= 0 then
+		return target, 0
+	end
+	return nextValue, nextVelocity
+end
+
 local function ramp(current: number, target: number, riseTime: number, fallTime: number, dt: number): number
 	if target > current then
 		return if riseTime <= 0 then target else math.min(target, current + dt / riseTime)
@@ -87,14 +154,15 @@ function InputFilter.update(
 	elseif target < 0 then
 		target = math.max(target, math.min(0, low))
 	end
-	local current = state.steer
-	local rate = help.steerRate / (1 + math.abs(forwardSpeed) / help.rateHalvingSpeed)
-	local turningIn = math.abs(target) > math.abs(current) and target * current >= 0
-	if not turningIn then
-		rate *= help.returnRateFactor
-	end
-	local step = rate * dt
-	state.steer = current + math.clamp(target - current, -step, step)
+	local easeShare = if help.lockTime > 0 then math.min(help.easeTime / help.lockTime, 0.5) else 0
+	local remaining = dt
+	repeat
+		local step = math.min(remaining, STEER_STEP)
+		local time = InputFilter.moveTime(help, state.steer, target, forwardSpeed)
+		state.steer, state.steerVelocity =
+			steerStep(state.steer, state.steerVelocity, target, time, easeShare, step)
+		remaining -= step
+	until remaining <= 1e-12
 
 	state.throttle =
 		ramp(state.throttle, math.clamp(raw.throttle, 0, 1), help.throttleRiseTime, help.throttleFallTime, dt)

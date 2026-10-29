@@ -25,12 +25,72 @@ local function timeTo(state: InputFilter.Controls, steer: number, target: number
 end
 
 describe("Input filter steering", function()
-	it("returns to centre faster than it turns in", function()
+	it("reaches full lock at a standstill in its lock time", function()
+		expect(timeTo(InputFilter.newState(), 1, 1, 0)).toBeNear(keyboard.lockTime, 0.005)
+	end)
+
+	it("eases in, as a hand speeds the wheel up, and never passes its target", function()
 		local state = InputFilter.newState()
-		local turnIn = timeTo(state, 1, 1, 0)
-		local back = timeTo(state, 0, 0, 0)
-		expect(turnIn).toBeNear(1 / keyboard.steerRate, 0.002)
-		expect(back).toBeNear(turnIn / keyboard.returnRateFactor, 0.002)
+		local topRate = 1 / (keyboard.lockTime - keyboard.easeTime)
+		local early = keyboard.easeTime / 2
+		local elapsed, highest = 0, 0
+		while elapsed < early - 1e-9 do
+			InputFilter.update(keyboard, SVJ, state, raw(1), 0, 0, 0, 0.001)
+			elapsed += 0.001
+		end
+		expect(state.steer < topRate * early / 2).toBe(true)
+		for _ = 1, 2000 do
+			InputFilter.update(keyboard, SVJ, state, raw(1), 0, 0, 0, 0.001)
+			highest = math.max(highest, state.steer)
+		end
+		expect(highest).toBe(1)
+	end)
+
+	it("moves the wheel only a little on a short tap", function()
+		local state = InputFilter.newState()
+		local peak = 0
+		for step = 1, 600 do
+			InputFilter.update(keyboard, SVJ, state, raw(if step <= 100 then 1 else 0), 0, 0, 0, 0.001)
+			peak = math.max(peak, state.steer)
+		end
+		-- The constant 2.5 of lock a second this replaced reached 0.25 on the same 0.1 s tap.
+		expect(peak < 0.1).toBe(true)
+		expect(state.steer >= 0).toBe(true)
+	end)
+
+	it("returns slowly at rest and quickly on the move", function()
+		local function back(speed: number): number
+			local state = InputFilter.newState()
+			state.steer = 1
+			return timeTo(state, 0, 0, speed)
+		end
+		expect(back(0)).toBeNear(keyboard.returnTimeStill, 0.005)
+		expect(back(keyboard.returnBlend.to)).toBeNear(keyboard.returnTimeMoving, 0.005)
+		expect(keyboard.returnTimeStill >= keyboard.lockTime).toBe(true)
+	end)
+
+	it("turns toward the other side faster than it turns in", function()
+		local opposite = InputFilter.moveTime(keyboard, -1, 1, 0)
+		expect(opposite).toBeNear(keyboard.lockTime / keyboard.oppositeFactor, 1e-12)
+		expect(opposite < InputFilter.moveTime(keyboard, 0, 1, 0)).toBe(true)
+		-- On the move it is never slower than letting the wheel return.
+		expect(InputFilter.moveTime(keyboard, -1, 1, 30)).toBe(keyboard.returnTimeMoving)
+	end)
+
+	it("keeps its timing within a frame at 30, 60 and 240 FPS", function()
+		local function lockAt(dt: number): number
+			local state, elapsed = InputFilter.newState(), 0
+			while state.steer < 1 and elapsed < 5 do
+				InputFilter.update(keyboard, SVJ, state, raw(1), 0, 0, 0, dt)
+				elapsed += dt
+			end
+			return elapsed
+		end
+		local reference = lockAt(1 / 240)
+		for _, fps in { 30, 60, 240 } do
+			local dt = 1 / fps
+			expect(math.abs(lockAt(dt) - reference) <= dt).toBe(true)
+		end
 	end)
 
 	it("slows as speed rises, halving at the configured speed", function()
