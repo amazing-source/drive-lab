@@ -72,10 +72,14 @@ local function now(): number
 	return Workspace:GetServerTimeNow()
 end
 
--- Seconds a change made here takes to reach `player`: half its measured round trip, and a margin
--- for its jitter.
+-- Seconds a change made here takes to reach `player`: half its measured round trip.
+local function measuredOneWay(player: Player): number
+	return player:GetNetworkPing() / 2
+end
+
+-- The one-way delay a sequence's start allows for: measured, and a margin for its jitter.
 local function oneWay(player: Player): number
-	return player:GetNetworkPing() / 2 + Config.LATENCY_MARGIN
+	return measuredOneWay(player) + Config.LATENCY_MARGIN
 end
 
 local function body(player: Player): (Model?, Humanoid?, BasePart?)
@@ -236,11 +240,14 @@ local function enter(car: Car, player: Player, request: Request)
 	if car.seat.Occupant ~= nil or humanoid.SeatPart ~= nil or not Rules.canEnter(state, at) then
 		return
 	end
-	local delay = oneWay(player)
-	local startAt = Rules.entryStart(at, request.at, delay)
+	local startAt = Rules.entryStart(at, request.at, oneWay(player))
 	-- State first, for the whole sequence's timing. The seat follows so that its weld reaches the
 	-- client as the sequence starts there: sent at the start, it arrived a one-way delay late and
-	-- the client showed the clip already under way (measured: 0.45 studs in one frame, poor network).
+	-- the client showed the clip already under way (measured: 0.45 studs in one frame, poor
+	-- network). Never before the time the client asked, when its placing on the mark has ended
+	-- (sent earlier by the jitter margin too, the body never reached the mark: 0.2 to 0.3 studs
+	-- off at the hand-over, measured with no network simulation).
+	local seatAt = math.max(startAt - measuredOneWay(player), Rules.entryStart(at, request.at, 0))
 	CarState.write(car.model, {
 		entry = "Enter",
 		entryAt = startAt,
@@ -250,7 +257,7 @@ local function enter(car: Car, player: Player, request: Request)
 		engine = "Off",
 		engineAt = state.engineAt,
 	})
-	task.delay(math.max(startAt - delay - at, 0), seat, car, player, startAt)
+	task.delay(seatAt - at, seat, car, player, startAt)
 end
 
 local function moveDoor(car: Car, player: Player, request: Request)
