@@ -154,6 +154,11 @@ return Types.define({
 		-- OEM-S, 02 T2/T3.
 		ratios = { 3.909, 2.438, 1.810, 1.458, 1.185, 0.967, 0.844 },
 		reverseRatio = 2.929,
+		-- Not a car figure: no reverse limit is documented for the Aventador (research note
+		-- 2026-10-29, §3). 40 km/h is the owner's choice (#70); the cut over the last 4 km/h is
+		-- the systems agent's, so the car settles on the limit without a step.
+		reverseMaxSpeed = 40 / 3.6,
+		reverseCutBand = 4 / 3.6,
 		-- EST: dry twin-plate, 235 mm (02 T7); capacity about 1.4 × peak engine torque.
 		clutchTorque = 1000,
 		clutchCreepRpm = 1500,

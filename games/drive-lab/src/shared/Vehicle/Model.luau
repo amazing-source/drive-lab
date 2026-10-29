@@ -22,6 +22,7 @@ local Geometry = require("./Geometry")
 local InputFilter = require("./InputFilter")
 local InputHelp = require("../Config/InputHelp")
 local Interface = require("./Interface")
+local Selector = require("./Selector")
 local Steering = require("./Steering")
 local Suspension = require("./Suspension")
 local Tyre = require("./Tyre")
@@ -49,6 +50,9 @@ export type VehicleState = {
 	driveline: Driveline.Driveline,
 	brakes: Brakes.Brakes,
 	controls: InputFilter.Controls,
+	selector: Selector.SelectorState,
+	-- The device's pedals after the selector's swap, for the input filter.
+	pedals: InputFilter.RawControls,
 	engineState: Engine.EngineState,
 	gearbox: Gearbox.GearboxState,
 	drive: Driveline.DrivelineState,
@@ -104,6 +108,8 @@ function Model.new(car: CarConfig, help: InputHelp.InputHelp?): VehicleState
 		driveline = Driveline.prepare(car, car.engine.inertia),
 		brakes = Brakes.prepare(car.brakes),
 		controls = InputFilter.newState(),
+		selector = Selector.newState(),
+		pedals = { steer = 0, throttle = 0, brake = 0, handbrake = 0 },
 		engineState = Engine.newState(engine),
 		gearbox = Gearbox.newState(),
 		drive = Driveline.newState(engine.idleSpeed),
@@ -198,8 +204,8 @@ local function updateCorners(
 	end
 end
 
--- The engine's throttle this substep: the driver's after TC and ESC, the gearbox's cut or
--- blip, the idle governor, then the limiter.
+-- The engine's throttle this substep: the driver's after TC, ESC and reverse's top speed, the
+-- gearbox's cut or blip, the idle governor, then the limiter.
 local function engineThrottle(
 	state: VehicleState,
 	input: DriverInput,
@@ -208,7 +214,10 @@ local function engineThrottle(
 ): number
 	local electronics, engine = state.electronics, state.engine
 	local engineSpeed = state.drive.speeds[1]
-	local driver = state.controls.throttle * electronics.tcFactor * electronics.escFactor
+	local driver = state.controls.throttle
+		* electronics.tcFactor
+		* electronics.escFactor
+		* Gearbox.reverseCut(state.car.gearbox, state.gearbox.gear, prediction.forward)
 	local driveTorque = Engine.output(engine, engineSpeed, driver)
 	local context = gearboxContext(state, input, math.abs(prediction.forward), driveTorque)
 	local cut, blip = Gearbox.update(state.car.gearbox, state.car.engine, state.gearbox, context, dt)
@@ -423,7 +432,9 @@ function Model.step(
 	dt = math.clamp(dt, 1e-5, car.simulation.maxFrameTime)
 	local mode = car.modes[input.drivingMode]
 	local forward, right, yaw = chassis.forwardSpeed, chassis.rightSpeed, chassis.yawRate
-	InputFilter.update(state.help, car, state.controls, input, forward, right, yaw, dt)
+	Selector.update(state.help, car.gearbox, state.gearbox, state.selector, input, math.abs(forward), dt)
+	local pedals = Selector.pedals(state.help, state.gearbox, input, state.pedals)
+	InputFilter.update(state.help, car, state.controls, pedals, forward, right, yaw, dt)
 	Steering.update(car, state.steering, state.controls.steer, forward, dt)
 	updateCorners(state, wheels, mode, dt)
 	local alaTarget =

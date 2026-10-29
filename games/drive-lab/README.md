@@ -10,7 +10,7 @@ checkout (`00_PLAN.md`, `11_ROADMAP.md`, reports 01 to 10).
 | Layer | Where | What it does |
 |---|---|---|
 | Units | `src/shared/Units.luau`, `Config/World.luau` | studs ↔ metres, mass units ↔ kg; real gravity (9.81 m/s² in studs) so car data needs no scaling. The world is `WORLD_SCALE` (1.5) times Roblox's: cars are scaled up at rig time and a stud is 0.28 / 1.5 m, so the physics still sees the real car |
-| Physics core | `src/shared/Vehicle/*`, `Config/Cars/SVJ.luau` | pure Luau, Lune-tested: tyres, suspension, engine, 7-speed gearbox, AWD, brakes, ABS/TC/ESC, aero, steering, input help. SI units |
+| Physics core | `src/shared/Vehicle/*`, `Config/Cars/SVJ.luau` | pure Luau, Lune-tested: tyres, suspension, engine, 7-speed gearbox, AWD, brakes, ABS/TC/ESC, aero, steering, input help (with the automatic's reverse on the pedals, `Vehicle/Selector`). SI units |
 | Car rig | `src/shared/Car/CarRig.luau` | turns the imported model into one mass box with the car's real mass and inertia, everything else welded on massless, wheel mounts, collision shell, seat |
 | Runner | `src/shared/Car/VehicleRunner.luau` | each frame: wheel raycasts → physics model → one force and one torque. Runs on the driver's client while driving, on the server while the car stands empty |
 | Server cars | `src/server/Services/Cars.luau` | rigs tagged cars, seats drivers, hands over network ownership, keeps driven cars inside a speed envelope, makes seated drivers massless |
@@ -72,7 +72,8 @@ judgements and open gaps are in the commit that added it.
 | Throttle / brake | W / S | RT / LT |
 | Steer | A / D | left stick |
 | Handbrake | Space | X |
-| Paddles | E up, Q down (at a standstill Q goes to neutral, then reverse) | RB / LB |
+| Reverse (automatic) | at a standstill hold S 0.3 s for R; in R, S drives backwards (up to 40 km/h) and W brakes; hold W at a standstill for D | hold LT; in R, LT backwards and RT brakes; hold RT for D |
+| Paddles | E up, Q down (at a standstill Q goes to neutral, then reverse; the way to reverse in manual) | RB / LB |
 | Auto / manual | T | Y |
 | Strada / Sport / Corsa | M | D-pad up |
 | ESC and TC off / on | hold G 3 s / press G | hold View |
@@ -130,5 +131,7 @@ changes: sync, then hand over.
 | 2026-10-28 | The cockpit's field of view narrows to the sims' 56–60° (60° set: from the default seat, 56° put the cluster against the frame's bottom edge); the eye and the seat adjustment stay as the owner set them. |
 | 2026-10-27 | Rain, blur and the weather: built here from ChatGPT's atmosphere brief; the car camera is ours too. |
 | 2026-10-28 | Car lights after the real SVJ (#41): the Y running light goes out on the side whose indicator flashes; the bumper's side marker stays steady (the EU car); a high beam on its own control (J; on the pad, a step of D-pad down's cycle). |
+| 2026-10-29 | Reverse in automatic as in GTA or Forza (#67): at a standstill a held brake selects R, where the brake key drives backwards and the accelerator brakes, and a held accelerator selects D again; nothing selects R while moving. Manual keeps the paddles' N and R. The 0.3 s hold is the systems agent's first value, the owner's to tune. The real Aventador selects R with a button on the centre console and returns to first with the right paddle; the held brake is our gesture for a keyboard and a pad. |
+| 2026-10-29 | Reverse tops out at 40 km/h (#70), in both gearbox modes: the engine's torque fades out over the last 4 km/h, as a limiter cuts, and never brakes. No reverse limit is documented for the real car; this is our choice. |
 
 Asset pipelines (how the walk, the car and the effects were made): `docs/pipelines/`.

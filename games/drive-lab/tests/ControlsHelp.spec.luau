@@ -137,6 +137,32 @@ describe("ControlsHelp", function()
 		expect(has(ControlsHelp.problems(twice, realBindings()), "HUD_MODE is explained twice")).toBe(true)
 	end)
 
+	it("shows the brake's keys on the reverse row without explaining the brake twice", function()
+		local reverse: ControlsHelp.Row? = nil
+		for _, group in Config.HELP.groups do
+			for _, row in group.rows do
+				if row.keysOf and table.find(row.keysOf, "BRAKE") then
+					reverse = row
+				end
+			end
+		end
+		assert(reverse, "a row shows the brake's keys for reverse")
+		local keyboard, gamepad = ControlsHelp.inputs(reverse, realBindings(), Config.HELP.keyNames)
+		expect(table.concat(keyboard.keys, ",")).toBe("S,Down arrow")
+		expect(keyboard.gesture).toBe("Hold")
+		expect(table.concat(gamepad.keys, ",")).toBe("LT")
+		expect(firstRow(Config.HELP, "BRAKE").label).toBe("Brake")
+
+		local stale = copy(Config.HELP)
+		firstRow(stale, "HEADLIGHTS").keysOf = { "FOG_LIGHTS" }
+		expect(
+			has(
+				ControlsHelp.problems(stale, realBindings()),
+				"the keys of FOG_LIGHTS, which is not a control"
+			)
+		).toBe(true)
+	end)
+
 	it("names every gamepad and multi-letter key a player reads", function()
 		local bindings = realBindings()
 		bindings.HEADLIGHTS = { "ButtonL2" }

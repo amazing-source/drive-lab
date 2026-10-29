@@ -10,6 +10,9 @@ export type Row = {
 	text: string,
 	-- Config/Controls entries this row explains: their keys are shown, keyboard and gamepad apart.
 	controls: { string },
+	-- Config/Controls entries another row explains whose keys this row shows too, for another
+	-- use of them (reverse is the brake held at a standstill).
+	keysOf: { string }?,
 	-- Inputs bound outside Config/Controls (Roblox's defaults, the prompts, the mouse, the
 	-- triggers and sticks Driving reads itself), shown after the controls' own keys.
 	keyboard: { string }?,
@@ -58,13 +61,16 @@ local function add(list: { string }, keyNames: { [string]: string }, name: strin
 	end
 end
 
--- What a row shows on each side: its controls' keys, then the inputs it declares itself.
+-- What a row shows on each side: its controls' keys and the keys it borrows, then the inputs it
+-- declares itself.
 function ControlsHelp.inputs(row: Row, bindings: Bindings, keyNames: { [string]: string }): (Shown, Shown)
 	local keyboard: { string } = {}
 	local gamepad: { string } = {}
-	for _, control in row.controls do
-		for _, key in bindings[control] or NONE do
-			add(if ControlsHelp.isGamepadKey(key) then gamepad else keyboard, keyNames, key)
+	for _, list in { row.controls, row.keysOf or NONE } do
+		for _, control in list do
+			for _, key in bindings[control] or NONE do
+				add(if ControlsHelp.isGamepadKey(key) then gamepad else keyboard, keyNames, key)
+			end
 		end
 	end
 	for _, name in row.keyboard or NONE do
@@ -154,6 +160,11 @@ local function rowProblems(
 			table.insert(found, `{control} is explained twice, by {covered[control]} and {name}`)
 		else
 			covered[control] = name
+		end
+	end
+	for _, control in row.keysOf or NONE do
+		if bindings[control] == nil then
+			table.insert(found, `{name} shows the keys of {control}, which is not a control`)
 		end
 	end
 	local keyboard, gamepad = ControlsHelp.inputs(row, bindings, help.keyNames)

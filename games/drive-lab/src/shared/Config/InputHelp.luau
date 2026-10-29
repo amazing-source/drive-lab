@@ -23,9 +23,20 @@ export type InputHelp = {
 	throttleFallTime: number,
 	brakeRiseTime: number,
 	brakeFallTime: number,
+	-- Seconds the brake, held on its own at a standstill in automatic, takes to select reverse,
+	-- and the accelerator in reverse to select first; in reverse the pedals swap, as GTA and Forza
+	-- do (Vehicle/Selector). nil: the pedals select nothing and keep their meaning.
+	reverseHoldTime: number?,
 }
 
+-- Longer than a tap (Config/ControlsHelp.TAP_SECONDS), so a dab of the brake at a standstill
+-- selects nothing; shorter than the exit's hold (Config/CarEntry), so reversing is not slower
+-- than getting out.
+local REVERSE_HOLD_SECONDS = 0.3
+
 local InputHelp = {}
+
+InputHelp.REVERSE_HOLD_SECONDS = REVERSE_HOLD_SECONDS
 
 InputHelp.keyboard = table.freeze({
 	steerRate = 2.5,
@@ -40,6 +51,7 @@ InputHelp.keyboard = table.freeze({
 	throttleFallTime = 0.1,
 	brakeRiseTime = 0.12,
 	brakeFallTime = 0.08,
+	reverseHoldTime = REVERSE_HOLD_SECONDS,
 }) :: InputHelp
 
 InputHelp.gamepad = table.freeze({
@@ -55,6 +67,7 @@ InputHelp.gamepad = table.freeze({
 	throttleFallTime = 0.05,
 	brakeRiseTime = 0.05,
 	brakeFallTime = 0.05,
+	reverseHoldTime = REVERSE_HOLD_SECONDS,
 }) :: InputHelp
 
 InputHelp.direct = table.freeze({
