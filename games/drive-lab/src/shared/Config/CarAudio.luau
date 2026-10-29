@@ -7,6 +7,7 @@
 ]]
 local CarAudioEvents = require("../Rules/CarAudioEvents")
 local EngineSound = require("../Rules/EngineSound")
+local ExhaustPops = require("../Rules/ExhaustPops")
 
 export type EngineLayer = {
 	name: string,
@@ -17,8 +18,6 @@ export type EngineLayer = {
 	volume: number,
 	crossoverRpm: number?,
 }
-
-export type ByMode = { Strada: number, Sport: number, Corsa: number }
 
 -- Seconds into the packed events file, or any other range.
 export type Region = { from: number, to: number }
@@ -44,16 +43,8 @@ export type CarAudio = {
 	STARTUP: { region: Region, boostDb: number, handOver: number, abortRpm: number, abortHalfLife: number },
 	GEAR: { region: Region, volume: number, upSpeed: number, downSpeed: number },
 	SHIFT_DIP: { gain: number, downHalfLife: number, upHalfLife: number },
-	POPS: {
-		regions: { Region },
-		chance: ByMode,
-		upshiftChance: ByMode,
-		trainSeconds: Region,
-		gapSeconds: Region,
-		minRpm: number,
-		volume: Region,
-		speed: Region,
-	},
+	POPS: { regions: { Region }, volume: Region, speed: Region },
+	POP_TRIGGERS: ExhaustPops.Tuning,
 	EVENTS: CarAudioEvents.Tuning,
 	VIEW_ATTRIBUTE: string,
 	COCKPIT_VIEW: string,
@@ -140,16 +131,21 @@ local CarAudio: CarAudio = {
 			{ from = 16.0495, to = 16.3969 },
 			{ from = 16.8969, to = 18.1001 },
 		},
-		-- Chance that a lift pops; the exhaust valve opens earlier in the sportier modes.
-		chance = { Strada = 0.35, Sport = 0.8, Corsa = 1 },
-		upshiftChance = { Strada = 0, Sport = 0.25, Corsa = 0.6 },
-		trainSeconds = { from = 0.35, to = 1.1 },
-		gapSeconds = { from = 0.06, to = 0.22 },
-		-- A train stops once the overrun falls below this or the throttle opens.
-		minRpm = 3500,
 		-- Pops are cut 2 dB below the loops and need to stand out of them.
 		volume = { from = 1, to = 1.8 },
 		speed = { from = 0.92, to = 1.08 },
+	},
+	POP_TRIGGERS = {
+		-- The exhaust valve opens earlier in the sportier modes.
+		liftChance = { Strada = 0.35, Sport = 0.8, Corsa = 1 },
+		upshiftChance = { Strada = 0, Sport = 0.25, Corsa = 0.6 },
+		downshiftChance = { Strada = 0, Sport = 0, Corsa = 0 },
+		liftTrain = { from = 0.35, to = 1.1 },
+		downshiftTrain = { from = 0.35, to = 1.1 },
+		gap = { from = 0.06, to = 0.22 },
+		upshiftMinRpm = 5000,
+		minRpm = 3500,
+		closedThrottle = 0.1,
 	},
 	EVENTS = { liftFrom = 0.6, liftTo = 0.1, liftMinRpm = 5000, limiterHold = 0.15 },
 	VIEW_ATTRIBUTE = "DriveLabView",
