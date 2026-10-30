@@ -166,18 +166,21 @@ describe("DR458 binding", function()
 		expect(table.concat(ModelPending, "; ")).toBe(table.concat(pending, "; "))
 	end)
 
-	it("lists what it still lacks: the windscreen's corners, the lamps, the pedals' sense", function()
-		local pending = table.concat(ModelPending, "\n")
-		expect(#Model.windshield == 0 and string.find(pending, "windshield", 1, true) ~= nil).toBe(true)
-		expect(string.find(pending, "lamps", 1, true) ~= nil).toBe(true)
-		local pedals = Model.pedals
-		assert(pedals, "the DR458 has pedals")
-		for _, hinge in pedals do
-			if part(hinge.part).positive == nil then
-				expect(string.find(pending, hinge.part, 1, true) ~= nil).toBe(true)
+	it(
+		"lists what it still lacks: the windscreen's corners, the lamps, a pedal with no turning sense",
+		function()
+			local pending = table.concat(ModelPending, "\n")
+			expect(#Model.windshield == 0 and string.find(pending, "windshield", 1, true) ~= nil).toBe(true)
+			expect(string.find(pending, "lamps", 1, true) ~= nil).toBe(true)
+			local pedals = Model.pedals
+			assert(pedals, "the DR458 has pedals")
+			for _, hinge in pedals do
+				if part(hinge.part).positive == nil then
+					expect(string.find(pending, hinge.part, 1, true) ~= nil).toBe(true)
+				end
 			end
 		end
-	end)
+	)
 
 	it("moves every point from the rear axle on the ground to the centre of mass", function()
 		local centre = ManifestBinding.centreOfMass(DR458)
@@ -310,6 +313,33 @@ describe("DR458 binding: which way each part turns, as the rig turns it", functi
 			local pivot = metres(modelled.Position)
 			expect(carried(tip, modelled, rest).up < pivot.up).toBe(true)
 			expect(carried(tip, modelled, on).up > pivot.up).toBe(true)
+		end
+	)
+
+	it(
+		"presses each pedal through its travel (Controllers/DriverLegs): the hanging brake pad and the throttle pad move toward the nose, the throttle's down",
+		function()
+			local pedals = Model.pedals
+			assert(pedals, "the DR458 has pedals")
+			-- The brake's pad hangs below its pivot; the organ throttle's rises from its floor hinge,
+			-- the heel at the hinge and the toes ahead of it.
+			local pads = {
+				Pedal_Brake = { forward = 0, up = -0.35 },
+				Pedal_Throttle = { forward = 0.05, up = 0.09 },
+			}
+			for _, pedal in pedals do
+				expect(pedal.axis.right).toBe(1)
+				local rest = hingeRest(pedal.pivot, pedal.axis)
+				local spot = pads[pedal.part]
+				assert(spot, `a pad point for {pedal.part}`)
+				local pad = beside(rest, spot.forward, 0, spot.up)
+				local free = metres(pad)
+				local pressed = carried(pad, rest, rest * CFrame.Angles(pedal.travel or 0, 0, 0))
+				expect(pressed.forward > free.forward + 0.005).toBe(true)
+				if pedal.part == "Pedal_Throttle" then
+					expect(pressed.up < free.up).toBe(true)
+				end
+			end
 		end
 	)
 

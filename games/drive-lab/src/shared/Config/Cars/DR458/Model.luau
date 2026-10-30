@@ -67,13 +67,13 @@ local Model: Binding.CarModel = {
 		{
 			part = "Pedal_Throttle",
 			pivot = { forward = 1.282, right = -0.106, up = -0.28 },
-			axis = { forward = 0, right = -1, up = 0 },
-			travel = 0.18,
+			axis = { forward = 0, right = 1, up = 0 },
+			travel = -0.18,
 		},
 		{
 			part = "Pedal_Brake",
 			pivot = { forward = 1.387, right = -0.246, up = 0.155 },
-			axis = { forward = 0, right = -1, up = 0 },
+			axis = { forward = 0, right = 1, up = 0 },
 			travel = 0.1,
 		},
 	},

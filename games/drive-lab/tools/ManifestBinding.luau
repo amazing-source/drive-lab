@@ -262,9 +262,18 @@ function ManifestBinding.binding(
 		local state = need(settings.controlStates[name], `{name} has no rest and other end`)
 		controls[name] = hinge(byName, name, centre, state)
 	end
+	-- Controllers/DriverLegs turns a pedal about the seat's x, the car's right, by its footwell's
+	-- signed travel; so every pedal's axis points right, and its travel carries the sign that presses
+	-- it (a manifest's positive turn presses it).
 	local pedals: { Binding.Hinge } = {}
 	for _, name in settings.pedals do
-		table.insert(pedals, hinge(byName, name, centre))
+		local pedal = hinge(byName, name, centre)
+		if pedal.axis.right < 0 then
+			local axis = pedal.axis
+			pedal.axis = { forward = -axis.forward + 0, right = -axis.right, up = -axis.up + 0 }
+			pedal.travel = if pedal.travel then -pedal.travel else nil
+		end
+		table.insert(pedals, pedal)
 		if byName[name].positive == nil then
 			table.insert(pending, `{name}: no "positive" note; which way presses it is unchecked`)
 		end

@@ -807,7 +807,7 @@
     {
       "axis": {
         "forward": -0.0,
-        "right": -1,
+        "right": 1,
         "up": 0
       },
       "group": "Pedal_Brake",
@@ -818,6 +818,7 @@
         "right": -0.246,
         "up": 0.575
       },
+      "positive": "pressed: the pad swings forward, away from the driver (axis toward the car's right)",
       "range": 0.1
     },
     {
@@ -839,6 +840,7 @@
         "right": -0.106,
         "up": 0.14
       },
+      "positive": "pressed: the pad moves forward and down, away from the driver",
       "range": 0.18
     },
     {
