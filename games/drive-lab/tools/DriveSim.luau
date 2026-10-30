@@ -227,18 +227,27 @@ function DriveSim.frame(sim: Sim, input: Model.DriverInput, dt: number): Model.S
 	return result
 end
 
+-- The mode the scenarios below run in unless told: the one a test driver launches in, or the
+-- car's first.
+local function defaultMode(car: Types.CarConfig): Types.DrivingMode
+	local launch = car.launch
+	return if launch then launch.mode else car.modeOrder[1]
+end
+
 -- Launch control, as a test driver does it: brake and full throttle held until the engine
--- settles at its launch speed, then the brake released. Times are from the release.
+-- settles at its launch speed, then the brake released. Times are from the release. A car without
+-- launch control makes the same start on the brake alone.
 export type LaunchResult = { time100: number, time200: number }
 
 function DriveSim.launch(car: Types.CarConfig, dt: number, options: InputOptions?): LaunchResult
 	local sim = DriveSim.new(car)
 	local o: InputOptions = options or {}
-	local hold = DriveSim.input({ throttle = 1, brake = 1, drivingMode = o.drivingMode })
+	local mode = o.drivingMode or defaultMode(car)
+	local hold = DriveSim.input({ throttle = 1, brake = 1, drivingMode = mode, esc = o.esc })
 	while sim.time < 1.5 do
 		DriveSim.frame(sim, hold, dt)
 	end
-	local go = DriveSim.input({ throttle = 1, drivingMode = o.drivingMode, tc = o.tc })
+	local go = DriveSim.input({ throttle = 1, drivingMode = mode, tc = o.tc, esc = o.esc })
 	local start = sim.time
 	local result = { time100 = math.huge, time200 = math.huge }
 	while sim.time - start < 20 do
@@ -267,11 +276,12 @@ function DriveSim.brake(car: Types.CarConfig, speed: number, dt: number, options
 	local sim = DriveSim.new(car)
 	local o: InputOptions = options or {}
 	DriveSim.setSpeed(sim, speed, 3)
-	local coast = DriveSim.input({ drivingMode = o.drivingMode })
+	local mode = o.drivingMode or defaultMode(car)
+	local coast = DriveSim.input({ drivingMode = mode, esc = o.esc })
 	while sim.time < 0.5 do
 		DriveSim.frame(sim, coast, dt)
 	end
-	local stop = DriveSim.input({ brake = 1, drivingMode = o.drivingMode, abs = o.abs })
+	local stop = DriveSim.input({ brake = 1, drivingMode = mode, abs = o.abs, esc = o.esc })
 	local startX, start = sim.body.x, sim.time
 	local window = math.max(1, math.floor(0.1 / dt + 0.5))
 	local history: { number } = {}
@@ -297,7 +307,7 @@ function DriveSim.gearTop(car: Types.CarConfig, gear: number, dt: number): numbe
 	local ratio = car.gearbox.ratios[gear] * car.driveline.rearReduction
 	local limiter = car.engine.limiterRpm * 2 * math.pi / 60
 	DriveSim.setSpeed(sim, limiter * car.rear.tyre.radius / ratio * 0.7, gear)
-	local drive = DriveSim.input({ throttle = 1, gearboxMode = "manual" })
+	local drive = DriveSim.input({ throttle = 1, gearboxMode = "manual", drivingMode = defaultMode(car) })
 	local best, firstCut = 0, math.huge
 	while sim.time < 60 and sim.time < firstCut + 2 do
 		local result = DriveSim.frame(sim, drive, dt)
@@ -314,7 +324,7 @@ end
 function DriveSim.topSpeed(car: Types.CarConfig, fromSpeed: number, dt: number): (number, number, number)
 	local sim = DriveSim.new(car)
 	DriveSim.setSpeed(sim, fromSpeed, #car.gearbox.ratios)
-	local drive = DriveSim.input({ throttle = 1 })
+	local drive = DriveSim.input({ throttle = 1, drivingMode = defaultMode(car) })
 	local result = DriveSim.frame(sim, drive, dt)
 	local last, lastTime = DriveSim.forwardSpeed(sim), sim.time
 	while sim.time < 300 do
@@ -359,6 +369,7 @@ function DriveSim.skidpad(
 	drivingMode: Types.DrivingMode?
 ): number
 	local sim = DriveSim.new(car)
+	local mode = drivingMode or defaultMode(car)
 	local startSpeed = math.sqrt(0.6 * World.GRAVITY_MPS2 * radius)
 	DriveSim.setSpeed(sim, startSpeed, 2)
 	local window = math.max(1, math.floor(1 / dt + 0.5))
@@ -370,7 +381,7 @@ function DriveSim.skidpad(
 		local input = DriveSim.input({
 			throttle = math.clamp(0.3 + 0.8 * (target - forward), 0, 1),
 			steer = pursue(sim, radius, 0.4 * radius),
-			drivingMode = drivingMode,
+			drivingMode = mode,
 			abs = false,
 			tc = false,
 			esc = false,
@@ -400,7 +411,7 @@ end
 function DriveSim.rest(car: Types.CarConfig, seconds: number, dt: number): (number, number)
 	local sim = DriveSim.new(car)
 	sim.body.heave = 0.02
-	local idle = DriveSim.input({})
+	local idle = DriveSim.input({ drivingMode = defaultMode(car) })
 	local drift, jitter = 0, 0
 	while sim.time < seconds do
 		DriveSim.frame(sim, idle, dt)

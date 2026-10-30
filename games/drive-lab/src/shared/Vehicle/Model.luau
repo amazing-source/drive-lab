@@ -167,7 +167,8 @@ local function gearboxContext(
 	context.brake = state.controls.brake
 	context.mode = state.car.modes[input.drivingMode]
 	context.gearboxMode = input.gearboxMode
-	context.holdGear = state.launch.phase == "Launching" and not state.car.launch.autoUpshift
+	local launch = state.car.launch
+	context.holdGear = state.launch.phase == "Launching" and launch ~= nil and not launch.autoUpshift
 	return context
 end
 
@@ -272,10 +273,11 @@ local function runElectronics(
 		dt
 	)
 	-- A launch works the tyres at its own slip, even with TC switched off.
+	local launch = car.launch
 	local launching = state.launch.phase == "Launching"
 	Electronics.updateTc(
 		car.electronics,
-		if launching then car.launch.slipRatio else mode.tcSlipRatio,
+		if launching and launch then launch.slipRatio else mode.tcSlipRatio,
 		electronics,
 		input.assists.tc or launching,
 		state.controls.throttle,

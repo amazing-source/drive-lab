@@ -19,6 +19,7 @@ local DriveModes = require(ReplicatedStorage.Shared.Rules.DriveModes)
 local DriverAssists = require(ReplicatedStorage.Shared.Rules.DriverAssists)
 local InputHelp = require(ReplicatedStorage.Shared.Config.InputHelp)
 local Interface = require(ReplicatedStorage.Shared.Vehicle.Interface)
+local PitLimiter = require(ReplicatedStorage.Shared.Rules.PitLimiter)
 local TyreSmoke = require(ReplicatedStorage.Shared.Rules.TyreSmoke)
 local TyreSmokeConfig = require(ReplicatedStorage.Shared.Config.TyreSmoke)
 local Types = require(ReplicatedStorage.Shared.Config.Cars.Types)
@@ -29,11 +30,13 @@ local runner: VehicleRunner.Runner? = nil
 local connection: RBXScriptConnection? = nil
 local pressed = { shiftUp = false, shiftDown = false }
 local gearboxMode: "auto" | "manual" = "auto"
--- The entry of the car being driven.
+-- The entry and model of the car being driven.
 local driven: Catalog.Entry? = nil
+local drivenModel: Model? = nil
 -- The drive mode each car was left in, by its name, so a car keeps it from one drive to the next.
 local chosenMode: { [string]: Types.DrivingMode } = {}
 local escSwitch = DriverAssists.newSwitch()
+local pitLimiter = PitLimiter.newState()
 local tyreReadings: { TyreSmoke.Wheel } = {}
 
 local function held(keys: { Enum.KeyCode }): boolean
@@ -108,6 +111,27 @@ local function gated(entry: Catalog.Entry, model: Model, input: Interface.Driver
 	return input
 end
 
+-- The driven car's readouts from the frame before, for the switches that act on them.
+local function published(model: Model, name: string): number
+	local value = model:GetAttribute(name)
+	return if typeof(value) == "number" then value else 0
+end
+
+-- On a car with a pit limiter: releases it out of the arming gear and caps the throttle while it
+-- is armed.
+local function limitPit(
+	entry: Catalog.Entry,
+	model: Model,
+	input: Interface.DriverInput
+): Interface.DriverInput
+	local tuning = entry.switches.pitLimiter
+	if tuning then
+		PitLimiter.update(pitLimiter, tuning, published(model, "Gear"))
+		input.throttle = PitLimiter.throttle(pitLimiter, tuning, input.throttle, published(model, "SpeedKmh"))
+	end
+	return input
+end
+
 local function publish(
 	model: Model,
 	result: Interface.StepResult,
@@ -133,6 +157,7 @@ local function publish(
 	model:SetAttribute("EscActive", telemetry.escActive)
 	model:SetAttribute("EscOff", escSwitch.off)
 	model:SetAttribute("Launch", telemetry.launch)
+	model:SetAttribute("PitLimiter", pitLimiter.armed)
 	-- Per tyre, for the smoke: read from the model, never written back.
 	for wheel, reading in TyreSmoke.measure(current.state, result.wheels, tyreReadings) do
 		model:SetAttribute(TyreSmokeConfig.SLIP_ATTRIBUTES[wheel], reading.slip)
@@ -143,7 +168,9 @@ end
 local function stop()
 	-- ESC is back on for the next drive, as at a new ignition cycle (the car's assists).
 	escSwitch = DriverAssists.newSwitch()
+	pitLimiter = PitLimiter.newState()
 	driven = nil
+	drivenModel = nil
 	if connection then
 		connection:Disconnect()
 		connection = nil
@@ -167,9 +194,11 @@ local function start(seat: Seat)
 	local current = VehicleRunner.new(rig, entry.physics, help)
 	runner = current
 	driven = entry
+	drivenModel = model
 	connection = RunService.PreSimulation:Connect(function(dt: number)
 		local mode = modeOf(entry)
-		local result = VehicleRunner.step(current, gated(entry, model, readInput(entry, mode)), dt)
+		local input = limitPit(entry, model, readInput(entry, mode))
+		local result = VehicleRunner.step(current, gated(entry, model, input), dt)
 		VehicleRunner.animate(current, dt)
 		publish(model, result, current, mode)
 	end)
@@ -212,6 +241,12 @@ function Controller.start()
 			local entry = driven
 			if entry then
 				chosenMode[entry.physics.name] = DriveModes.after(entry.physics.modeOrder, modeOf(entry))
+			end
+		elseif contains(Controls.PIT_LIMITER, key) then
+			local entry, model = driven, drivenModel
+			local tuning = entry and entry.switches.pitLimiter
+			if tuning and model then
+				PitLimiter.press(pitLimiter, tuning, published(model, "Gear"), published(model, "SpeedKmh"))
 			end
 		end
 	end)

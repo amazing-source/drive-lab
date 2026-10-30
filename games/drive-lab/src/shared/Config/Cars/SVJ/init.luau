@@ -14,6 +14,7 @@ local Model = require("@self/Model")
 local Physics = require("@self/Physics")
 local RimBlur = require("@self/RimBlur")
 local Startup = require("@self/Startup")
+local Switches = require("@self/Switches")
 
 return Contract.define({
 	physics = Physics,
@@ -28,4 +29,5 @@ return Contract.define({
 	lights = Lights,
 	cluster = Cluster,
 	assists = Assists,
+	switches = Switches,
 })

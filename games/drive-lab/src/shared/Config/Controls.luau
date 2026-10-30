@@ -17,6 +17,13 @@ export type Controls = {
 	LIGHTS_PAD: { Enum.KeyCode },
 	INDICATOR_LEFT: { Enum.KeyCode },
 	INDICATOR_RIGHT: { Enum.KeyCode },
+	-- On a car that has them (Config/CarSwitches): the pit limiter, the display's pages, the wiper,
+	-- its washer (held) and the rain light.
+	PIT_LIMITER: { Enum.KeyCode },
+	DISPLAY_PAGE: { Enum.KeyCode },
+	WIPER: { Enum.KeyCode },
+	WASHER: { Enum.KeyCode },
+	RAIN_LIGHT: { Enum.KeyCode },
 	HUD_MODE: { Enum.KeyCode },
 	-- Seated: open or shut the driver's door, start the engine, and (held) get out.
 	DOOR: { Enum.KeyCode },
@@ -30,6 +37,9 @@ export type Controls = {
 	STICK_DEADZONE: number,
 }
 
+-- KeyCodes name a key by where it sits on a US QWERTY keyboard, whatever the player's layout; the
+-- controls screen shows each key as the player's own keyboard prints it. The keys added for the
+-- DR458 were chosen by the owner on an AZERTY keyboard (2026-10-30, #96).
 local Controls: Controls = table.freeze({
 	THROTTLE = { Enum.KeyCode.W, Enum.KeyCode.Up },
 	BRAKE = { Enum.KeyCode.S, Enum.KeyCode.Down },
@@ -39,7 +49,9 @@ local Controls: Controls = table.freeze({
 	SHIFT_UP = { Enum.KeyCode.E, Enum.KeyCode.ButtonR1 },
 	SHIFT_DOWN = { Enum.KeyCode.Q, Enum.KeyCode.ButtonL1 },
 	GEARBOX_MODE = { Enum.KeyCode.T, Enum.KeyCode.ButtonY },
-	DRIVING_MODE = { Enum.KeyCode.M, Enum.KeyCode.DPadUp },
+	-- M on QWERTY, and the key AZERTY prints M (QWERTY's semicolon), so the key marked M works on
+	-- both.
+	DRIVING_MODE = { Enum.KeyCode.M, Enum.KeyCode.Semicolon, Enum.KeyCode.DPadUp },
 	-- Held to switch ESC (and traction control) off, pressed to switch it back on. G sits in the
 	-- same place on QWERTY and AZERTY; View is the one gamepad button free while driving.
 	ESC_OFF = { Enum.KeyCode.G, Enum.KeyCode.ButtonSelect },
@@ -53,6 +65,13 @@ local Controls: Controls = table.freeze({
 	LIGHTS_PAD = { Enum.KeyCode.DPadDown },
 	INDICATOR_LEFT = { Enum.KeyCode.X, Enum.KeyCode.DPadLeft },
 	INDICATOR_RIGHT = { Enum.KeyCode.C, Enum.KeyCode.DPadRight },
+	-- P, Y, O and B sit in the same place on QWERTY and AZERTY; One is the key AZERTY prints 1
+	-- (with &). Z is not free: AZERTY's Z is the throttle, W.
+	PIT_LIMITER = { Enum.KeyCode.P },
+	DISPLAY_PAGE = { Enum.KeyCode.Y },
+	WIPER = { Enum.KeyCode.O },
+	WASHER = { Enum.KeyCode.B },
+	RAIN_LIGHT = { Enum.KeyCode.One },
 	-- The driving HUD: full, minimal, off.
 	HUD_MODE = { Enum.KeyCode.U },
 	-- F and R sit in the same place on QWERTY and AZERTY. E is also the upshift paddle: a tap

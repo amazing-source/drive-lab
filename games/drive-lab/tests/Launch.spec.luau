@@ -9,7 +9,7 @@ local Types = require("../src/shared/Config/Cars/Types")
 
 local describe, it, expect = T.describe, T.it, T.expect
 
-local config = SVJ.launch
+local config = assert(SVJ.launch, "the SVJ has launch control")
 local STANDSTILL = SVJ.gearbox.selectorMaxSpeed
 
 local function copy<V>(value: V): V
@@ -234,5 +234,18 @@ describe("Launch control in the car", function()
 		local _, holding = corsaStart(Types.define(held), true, 1 / 60)
 		expect(holding.model.gearbox.gear).toBe(1)
 		expect(holding.model.launch.phase).toBe("Launching")
+	end)
+end)
+
+describe("A car without launch control", function()
+	it("never arms one, whatever the pedals and the drive mode", function()
+		local state = Launch.newState()
+		local input = DriveSim.input({ throttle = 1, brake = 1, drivingMode = "Corsa", esc = false })
+		expect(Launch.selected(nil, input)).toBe(false)
+		expect(Launch.available(nil, input, 1, false, 0, STANDSTILL)).toBe(false)
+		for _ = 1, 10 do
+			Launch.update(nil, state, false, false, 1, 1, 1, 0)
+			expect(state.phase).toBe("Off")
+		end
 	end)
 end)

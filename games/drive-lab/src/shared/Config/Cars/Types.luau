@@ -250,7 +250,8 @@ export type CarConfig = {
 	modes: Modes,
 	-- The order the drive-mode control steps through the modes; a car starts in the first.
 	modeOrder: { DrivingMode },
-	launch: LaunchConfig,
+	-- A car without launch control never arms one.
+	launch: LaunchConfig?,
 	simulation: SimulationConfig,
 }
 
@@ -286,10 +287,13 @@ local function checkModes(car: CarConfig)
 	for name in car.modes do
 		assert(listed[name], `the mode order leaves out the "{name}" mode`)
 	end
-	assert(
-		car.modes[car.launch.mode],
-		`launch control arms in "{car.launch.mode}", which the car has no mode for`
-	)
+	local launch = car.launch
+	if launch then
+		assert(
+			car.modes[launch.mode],
+			`launch control arms in "{launch.mode}", which the car has no mode for`
+		)
+	end
 end
 
 -- Validates a car and freezes it. Errors name the field, so a bad config fails at load time.
@@ -321,10 +325,10 @@ function Types.define(car: CarConfig): CarConfig
 		car.gearbox.reverseCutBand > 0 and car.gearbox.reverseCutBand < car.gearbox.reverseMaxSpeed,
 		"the reverse cut must fit between a standstill and reverse's top speed"
 	)
-	assert(
-		car.launch.slipRatio > 0 and car.launch.endSpeed > 0,
-		"launch control needs a slip and an end speed"
-	)
+	local launch = car.launch
+	if launch then
+		assert(launch.slipRatio > 0 and launch.endSpeed > 0, "launch control needs a slip and an end speed")
+	end
 	checkModes(car)
 	return deepFreeze(car)
 end
