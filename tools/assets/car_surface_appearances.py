@@ -1,15 +1,17 @@
 """Write the Roblox-ready maps and the SurfaceAppearance contract for the material sets a car uses.
 
-    python -I tools/assets/car_surface_appearances.py <map.json> <out dir> [<apply report.json> ...] [--break size]
+    python -I tools/assets/car_surface_appearances.py <map.json> <out dir> [<apply report.json> ...]
+        [--sets a,b] [--break size]
 
-Sets come from the apply reports' `materials_built` (or every set the map names when none is
-given). Per set, as the SVJ was done (docs/pipelines/HERO_CAR.md sections 5-6):
+Sets come from the apply reports' `materials_built` plus `--sets` (sets built by another step, such
+as the livery bake), or every set the map names when no report is given. Per set, as the SVJ was done (docs/pipelines/HERO_CAR.md sections 5-6):
 - tiled sets: ColorMap (opaque RGB, so the default Overlay mode cannot show the part's Color
   through), NormalMap (OpenGL), RoughnessMap and MetalnessMap; a map with one value everywhere is
   written as a 16 x 16 uniform map; identical files are written once (content hash in the name),
   so a map two sets share (carbon gloss and satin colour) uploads once;
 - source-derived sets (a source texture on the mesh's own UVs): with alpha (the stitch strip) the
   ColorMap keeps it, AlphaMode Transparency, MeshPart Transparency >= 0.02; without, opaque Overlay;
+- baked sets (a livery bake): ColorMap and RoughnessMap from the bake, metalness 0, no NormalMap;
 - flat sets: no SurfaceAppearance, the MeshPart's Material, Color and Transparency only.
 `surface_appearances.json` maps each set to its files and properties; the upload step swaps file
 names for asset ids. Checks (exit 1): every map at most 1024 px and square power of two, colour
@@ -38,8 +40,9 @@ SETS.update(M.get("derived", {}))
 maps_dir = out / "maps"
 maps_dir.mkdir(parents=True, exist_ok=True)
 
+extra = set(args[args.index("--sets") + 1].split(",")) if "--sets" in args else set()
 if reports:
-    used = sorted({n for r in reports for n in json.loads(r.read_text()).get("materials_built", {})})
+    used = sorted({n for r in reports for n in json.loads(r.read_text()).get("materials_built", {})} | extra)
 else:
     used = sorted({r["set"] for r in M.get("objects", {}).values() if "set" in r}
                   | {v for r in M.get("objects", {}).values() if "split_by_normal" in r
@@ -110,6 +113,15 @@ for name in used:
         part = {"Material": "SmoothPlastic", "Transparency": 0.02} if blended else {"Material": "SmoothPlastic"}
         contract[name] = {"kind": kind, "SurfaceAppearance": sa, "MeshPart": part,
                           "note": "UVs kept from the mesh (one stitch per UV unit along U)"}
+        continue
+    if kind == "baked":
+        col = Image.open(spec["color"]).convert("RGB")
+        check(col, name, "ColorMap")
+        flat = Image.fromarray(np.zeros((16, 16), np.uint8), "L")
+        sa = {"ColorMap": write(col, name, "color"), "RoughnessMap": scalar(spec["roughness"], "RoughnessMap", name),
+              "MetalnessMap": write(flat, name, "metalness"), "AlphaMode": "Overlay"}
+        contract[name] = {"kind": kind, "SurfaceAppearance": sa, "MeshPart": {"Material": "SmoothPlastic"},
+                          "note": "UVs from the livery bake (one non-overlapping atlas per side), not tiled"}
         continue
     col = Image.open(lib_path(name, "color")).convert("RGB")
     if BREAK == "size" and not fail:

@@ -1,7 +1,7 @@
 """Give a car's meshes their library materials from a material map, with UVs at real scale.
 
     blender -b --factory-startup --python-exit-code 1 -P tools/blender/car_materials_apply.py -- <car.blend> <map.json> --out <out.blend>
-            [--report <report.json>] [--break uv|set|images]
+            [--report <report.json>] [--break uv|set|images|linked|merge]
 
 The map names a library directory and three tables:
 - `objects`: object name -> {"set": name} (every slot of the object) or
@@ -35,10 +35,16 @@ Materials tagged with a set the library does not hold (a baked livery) are left 
 `--python-exit-code 1` makes Blender exit 1 when the script itself raises (Blender exits 0 otherwise).
 
 Self-check at the end, exit code 1 on failure: every planned slot carries its set's material,
-every tiled face group passes the UV check, and no material of this file still reads a replaced
-file (materials linked from another .blend are listed apart: they are checked in their own file).
+every tiled face group passes the UV check, no material of this file still reads a replaced file
+(materials linked from another .blend are listed apart: they are checked in their own file), and
+no built material reads an image linked from another .blend (it would resolve to nothing once the
+objects are appended elsewhere; a reused material's linked images are re-pointed to local ones).
 `--break uv` skips the first UV regeneration, `--break set` misassigns the first slot and
-`--break images` skips the replacement, so each check can be seen failing.
+`--break images` skips the replacement, `--break linked` the re-pointing of linked images and
+`--break merge` the slot merge, so each check can be seen failing.
+
+After assignment, slots of one object that point to the same material are merged into one (faces
+re-indexed), so an exporter that splits by slot makes one piece per material.
 """
 import json
 import math
@@ -99,9 +105,21 @@ def map_paths(name):
     return paths
 
 
-def image_node(nodes, path, colour_space, x, y):
-    img = bpy.data.images.load(str(path), check_existing=True)
+def local_image(path, colour_space):
+    """This file's own image for the path: never a datablock linked from another .blend, which would
+    resolve to nothing once the objects are appended elsewhere."""
+    want = str(Path(path).resolve()).lower()
+    for img in bpy.data.images:
+        if img.library is None and img.source == "FILE" and img.colorspace_settings.name == colour_space:
+            if str(Path(bpy.path.abspath(img.filepath)).resolve()).lower() == want:
+                return img
+    img = bpy.data.images.load(str(path), check_existing=False)
     img.colorspace_settings.name = colour_space
+    return img
+
+
+def image_node(nodes, path, colour_space, x, y):
+    img = local_image(path, colour_space)
     n = nodes.new("ShaderNodeTexImage")
     n.image, n.location = img, (x, y)
     return n
@@ -114,8 +132,13 @@ def build(name):
     if name in BUILT:
         return BUILT[name]
     spec, k = SETS[name], kind(name)
-    old = bpy.data.materials.get(name)
+    # Only this file's own material: one linked from another .blend can be neither reused nor renamed.
+    old = next((m for m in bpy.data.materials if m.name == name and m.library is None), None)
     if old and old.get("dl_set") == name:
+        for n in old.node_tree.nodes if old.node_tree and BREAK != "linked" else []:
+            if n.type == "TEX_IMAGE" and n.image and n.image.library is not None:
+                n.image = local_image(bpy.path.abspath(n.image.filepath, library=n.image.library),
+                                      n.image.colorspace_settings.name)
         BUILT[name] = old
         return old
     if old:
@@ -209,8 +232,7 @@ if REPLACE and BREAK != "images":
         if not new.is_file():
             report["problems"].append(f"replacement missing: {new}")
             continue
-        rep = bpy.data.images.load(str(new), check_existing=True)
-        rep.colorspace_settings.name = img.colorspace_settings.name
+        rep = local_image(new, img.colorspace_settings.name)
         rep.alpha_mode = img.alpha_mode
         swap[img.name] = rep
     for mat in bpy.data.materials:
@@ -294,6 +316,42 @@ if BREAK == "set" and expected:
     wrong = next(n for n in SETS if n != expected[0][2] and kind(n) == "flat")
     o.material_slots[expected[0][1]].material = build(wrong)
     print("APPLY --break set:", o.name, "slot", expected[0][1], "->", wrong)
+
+# What each face must end up with, by face, so the check survives the slot merge below.
+want_face = {}
+for name, i, s in expected:
+    me = bpy.data.objects[name].data
+    want_face.setdefault(name, {}).update({p.index: s for p in me.polygons if p.material_index == i})
+
+
+def merge_slots(o):
+    """One slot per material: slots that now point to the same material are merged (an exporter that
+    splits by slot would otherwise make two pieces of one material). Mesh-linked slots only."""
+    me = o.data
+    if any(sl.link == "OBJECT" for sl in o.material_slots) or len(me.materials) < 2:
+        return 0
+    mats = list(me.materials)
+    uniq = []
+    for m in mats:
+        if m not in uniq:
+            uniq.append(m)
+    if len(uniq) == len(mats):
+        return 0
+    remap = [uniq.index(m) for m in mats]
+    idx = [remap[p.material_index] if p.material_index < len(remap) else 0 for p in me.polygons]
+    me.materials.clear()
+    for m in uniq:
+        me.materials.append(m)
+    for p, k in zip(me.polygons, idx):
+        p.material_index = k
+    return len(mats) - len(uniq)
+
+
+merged = {} if BREAK == "merge" else {e["object"]: merge_slots(bpy.data.objects[e["object"]]) for e in report["objects"]}
+merged = {k: v for k, v in merged.items() if v}
+report["slots_merged"] = merged
+for e in report["objects"]:
+    e["after"] = [sl.material.name if sl.material else None for sl in bpy.data.objects[e["object"]].material_slots]
 
 
 # 3. UVs at metres / tile_m.
@@ -415,10 +473,22 @@ for entry in report["objects"]:
 
 # 4. Self-check.
 fail = []
-for name, i, s in expected:
-    m = bpy.data.objects[name].material_slots[i].material
-    if not m or m.get("dl_set") != s:
-        fail.append(f"{name} slot {i}: wants {s}, has {m.name if m else None}")
+for name, faces in want_face.items():
+    o = bpy.data.objects[name]
+    wrong = {}
+    for p in o.data.polygons:
+        s = faces.get(p.index)
+        if s is None:
+            continue
+        m = o.material_slots[p.material_index].material if p.material_index < len(o.material_slots) else None
+        if not m or m.get("dl_set") != s:
+            wrong[(s, m.name if m else None)] = wrong.get((s, m.name if m else None), 0) + 1
+    for (s, has), n in wrong.items():
+        fail.append(f"{name}: {n} faces want {s}, have {has}")
+for name in {e["object"] for e in report["objects"]}:
+    mats = [sl.material for sl in bpy.data.objects[name].material_slots if sl.material]
+    if len(mats) != len(set(mats)) and not any(sl.link == "OBJECT" for sl in bpy.data.objects[name].material_slots):
+        fail.append(f"{name}: two slots hold the same material")
 for entry in report["objects"]:
     o = bpy.data.objects[entry["object"]]
     for rec in entry["uv"]:
@@ -441,6 +511,10 @@ for mat in bpy.data.materials:
                 else:
                     fail.append(f"material {mat.name} still reads {file_name(n.image)}")
 report["linked_not_checked"] = linked
+for n, m in BUILT.items():
+    for nd in m.node_tree.nodes if m.node_tree else []:
+        if nd.type == "TEX_IMAGE" and nd.image and nd.image.library is not None:
+            fail.append(f"material {n} reads an image linked from {nd.image.library.filepath}")
 report["problems"] += fail
 report["materials_built"] = {n: {k: str(v) for k, v in m["dl_maps"].items()} for n, m in BUILT.items()}
 bpy.ops.file.make_paths_absolute()
