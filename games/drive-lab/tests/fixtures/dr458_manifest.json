@@ -1,0 +1,1341 @@
+{
+  "parts": [
+    {
+      "axis": {
+        "forward": 0,
+        "right": -1,
+        "up": 0
+      },
+      "group": "Wheel_FL",
+      "motion": "spin",
+      "name": "Wheel_FL",
+      "pivot": {
+        "forward": 2.65,
+        "right": -0.8325,
+        "up": 0.325
+      },
+      "positive": "rolls forward (top of the wheel moves toward the nose)"
+    },
+    {
+      "group": "Wheel_FL",
+      "motion": "static",
+      "name": "Wheel_FL_Tyre"
+    },
+    {
+      "group": "Wheel_FL",
+      "motion": "static",
+      "name": "Wheel_FL_Disc"
+    },
+    {
+      "group": "Wheel_FL",
+      "motion": "static",
+      "name": "Wheel_FL_DiscBell"
+    },
+    {
+      "group": "Wheel_FL",
+      "motion": "static",
+      "name": "Wheel_FL_Nut"
+    },
+    {
+      "group": "Caliper_FL",
+      "motion": "static",
+      "name": "Caliper_FL"
+    },
+    {
+      "axis": {
+        "forward": 0,
+        "right": -1,
+        "up": 0
+      },
+      "group": "Wheel_FR",
+      "motion": "spin",
+      "name": "Wheel_FR",
+      "pivot": {
+        "forward": 2.65,
+        "right": 0.8325,
+        "up": 0.325
+      },
+      "positive": "rolls forward (top of the wheel moves toward the nose)"
+    },
+    {
+      "group": "Wheel_FR",
+      "motion": "static",
+      "name": "Wheel_FR_Tyre"
+    },
+    {
+      "group": "Wheel_FR",
+      "motion": "static",
+      "name": "Wheel_FR_Disc"
+    },
+    {
+      "group": "Wheel_FR",
+      "motion": "static",
+      "name": "Wheel_FR_DiscBell"
+    },
+    {
+      "group": "Wheel_FR",
+      "motion": "static",
+      "name": "Wheel_FR_Nut"
+    },
+    {
+      "group": "Caliper_FR",
+      "motion": "static",
+      "name": "Caliper_FR"
+    },
+    {
+      "axis": {
+        "forward": 0,
+        "right": -1,
+        "up": 0
+      },
+      "group": "Wheel_RL",
+      "motion": "spin",
+      "name": "Wheel_RL",
+      "pivot": {
+        "forward": -0.0,
+        "right": -0.7984,
+        "up": 0.345
+      },
+      "positive": "rolls forward (top of the wheel moves toward the nose)"
+    },
+    {
+      "group": "Wheel_RL",
+      "motion": "static",
+      "name": "Wheel_RL_Tyre"
+    },
+    {
+      "group": "Wheel_RL",
+      "motion": "static",
+      "name": "Wheel_RL_Disc"
+    },
+    {
+      "group": "Wheel_RL",
+      "motion": "static",
+      "name": "Wheel_RL_DiscBell"
+    },
+    {
+      "group": "Wheel_RL",
+      "motion": "static",
+      "name": "Wheel_RL_Nut"
+    },
+    {
+      "group": "Caliper_RL",
+      "motion": "static",
+      "name": "Caliper_RL"
+    },
+    {
+      "axis": {
+        "forward": 0,
+        "right": -1,
+        "up": 0
+      },
+      "group": "Wheel_RR",
+      "motion": "spin",
+      "name": "Wheel_RR",
+      "pivot": {
+        "forward": -0.0,
+        "right": 0.7984,
+        "up": 0.345
+      },
+      "positive": "rolls forward (top of the wheel moves toward the nose)"
+    },
+    {
+      "group": "Wheel_RR",
+      "motion": "static",
+      "name": "Wheel_RR_Tyre"
+    },
+    {
+      "group": "Wheel_RR",
+      "motion": "static",
+      "name": "Wheel_RR_Disc"
+    },
+    {
+      "group": "Wheel_RR",
+      "motion": "static",
+      "name": "Wheel_RR_DiscBell"
+    },
+    {
+      "group": "Wheel_RR",
+      "motion": "static",
+      "name": "Wheel_RR_Nut"
+    },
+    {
+      "group": "Caliper_RR",
+      "motion": "static",
+      "name": "Caliper_RR"
+    },
+    {
+      "axis": {
+        "forward": -0.0853,
+        "right": 0.0035,
+        "up": -0.9963
+      },
+      "group": "Door_L",
+      "motion": "hinge",
+      "name": "Door_L_Skin",
+      "pivot": {
+        "forward": 2.2131,
+        "right": -0.9205,
+        "up": 0.392
+      },
+      "positive": "opens: the door's rear edge swings out to the car's left",
+      "range": 1.309
+    },
+    {
+      "group": "Door_L",
+      "motion": "static",
+      "name": "Door_L_Glass"
+    },
+    {
+      "group": "Door_L",
+      "motion": "static",
+      "name": "Door_L_Mirror"
+    },
+    {
+      "group": "Door_R",
+      "motion": "static",
+      "name": "Door_R_Skin"
+    },
+    {
+      "group": "Door_R",
+      "motion": "static",
+      "name": "Door_R_Glass"
+    },
+    {
+      "group": "Door_R",
+      "motion": "static",
+      "name": "Door_R_Mirror"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Glass_Windscreen"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Glass_RearScreen"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Glass_CabinRear"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Glass_Quarter_L"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Glass_Quarter_R"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Exhaust_Outlet_L",
+      "outlet": {
+        "axis": {
+          "forward": -1,
+          "right": 0,
+          "up": 0
+        },
+        "centre": {
+          "forward": -0.7315,
+          "right": -0.1333,
+          "up": 0.3341
+        },
+        "diameter_m": 0.0989
+      }
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Exhaust_Outlet_R",
+      "outlet": {
+        "axis": {
+          "forward": -1,
+          "right": 0,
+          "up": 0
+        },
+        "centre": {
+          "forward": -0.7315,
+          "right": 0.1333,
+          "up": 0.334
+        },
+        "diameter_m": 0.0989
+      }
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Padding_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_02"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_03"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_04"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_05"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_06"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_07"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_08"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_09"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_10"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_11"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_12"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_13"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_14"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_15"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_16"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_17"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_Foot01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_Foot02"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_Foot03"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_Foot04"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_Node01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_Node02"
+    },
+    {
+      "group": "Door_L",
+      "motion": "static",
+      "name": "Door_L_Card"
+    },
+    {
+      "group": "Door_L",
+      "motion": "static",
+      "name": "Door_L_PullLoop"
+    },
+    {
+      "group": "Door_R",
+      "motion": "static",
+      "name": "Door_R_Card"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Body_AirJack"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Body_FuelCap"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Body_HoodPin_FL"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Body_HoodPin_FR"
+    },
+    {
+      "axis": {
+        "forward": 1,
+        "right": -0.0,
+        "up": -0.0
+      },
+      "group": "Chassis",
+      "motion": "hinge",
+      "name": "WindowNet",
+      "pivot": {
+        "forward": 1.50808,
+        "right": -0.64936,
+        "up": 0.47344
+      },
+      "range": 1.7453292519943295
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "WindowNet_Stowed"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_Battery_Case"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_Battery_Straps"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_Battery_Terminals"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_Battery_Tray"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_BoschModule"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_Decal_BatteryLabel"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_Decal_BoschLabel"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_Decal_ExtinguisherLabel"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_Decal_FireSense"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_Decal_FireSenseWarning"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_ElectricsPanel"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_Extinguisher_Bottle"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_Extinguisher_Pipe"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_Extinguisher_Straps"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_Extinguisher_Valve"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_FireSense"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_FireSense_Lamps"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_FireSense_Switch"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_Radio"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_Radio_Buttons"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_Radio_Knob"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_Steel_01"
+    },
+    {
+      "axis": {
+        "forward": -0.0,
+        "right": -0.0,
+        "up": -1
+      },
+      "group": "Chassis",
+      "motion": "press",
+      "name": "TunnelButton_Extinguisher",
+      "pivot": {
+        "forward": 1.322,
+        "right": -0.0,
+        "up": 0.326
+      },
+      "range": 0.003
+    },
+    {
+      "axis": {
+        "forward": -0.53126,
+        "right": 0,
+        "up": -0.84721
+      },
+      "group": "Chassis",
+      "motion": "press",
+      "name": "TunnelButton_Reverse",
+      "pivot": {
+        "forward": 1.86287,
+        "right": -0.0,
+        "up": 0.40078
+      },
+      "range": 0.003
+    },
+    {
+      "axis": {
+        "forward": -0.06238,
+        "right": 0,
+        "up": 0.99805
+      },
+      "group": "Chassis",
+      "motion": "removable",
+      "name": "TunnelKey_Master",
+      "pivot": {
+        "forward": 1.61925,
+        "right": -0.0,
+        "up": 0.37648
+      },
+      "range": [
+        0,
+        1.5707963267948966
+      ]
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Tunnel_Carbon_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Tunnel_Carbon_02"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Tunnel_Decal_E"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Tunnel_Decal_R"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Tunnel_PlasticRed_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Tunnel_Cover"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Binnacle_Aluminium_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Binnacle_Housing"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Binnacle_Screen",
+      "screen": {
+        "centre": {
+          "forward": 2.09094,
+          "right": -0.34463,
+          "up": 0.76306
+        },
+        "height_m": 0.0645,
+        "normal": {
+          "forward": -0.99452,
+          "right": -0.0,
+          "up": 0.10453
+        },
+        "tilt_back_deg": 6,
+        "width_m": 0.1643
+      }
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Binnacle_Stainless_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "ShiftLight_1",
+      "pivot": {
+        "forward": 2.0941,
+        "right": -0.38849,
+        "up": 0.81224
+      }
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "ShiftLight_2",
+      "pivot": {
+        "forward": 2.09417,
+        "right": -0.36833,
+        "up": 0.81294
+      }
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "ShiftLight_3",
+      "pivot": {
+        "forward": 2.09417,
+        "right": -0.35913,
+        "up": 0.81294
+      }
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "ShiftLight_4",
+      "pivot": {
+        "forward": 2.09417,
+        "right": -0.34994,
+        "up": 0.81294
+      }
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "ShiftLight_5",
+      "pivot": {
+        "forward": 2.09417,
+        "right": -0.34057,
+        "up": 0.81294
+      }
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "ShiftLight_6",
+      "pivot": {
+        "forward": 2.09417,
+        "right": -0.33137,
+        "up": 0.81294
+      }
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "ShiftLight_7",
+      "pivot": {
+        "forward": 2.09417,
+        "right": -0.32218,
+        "up": 0.81294
+      }
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "ShiftLight_8",
+      "pivot": {
+        "forward": 2.0941,
+        "right": -0.30219,
+        "up": 0.81224
+      }
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cooler_PlasticBlack_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cooler_PlasticWhite_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cooler_Stainless_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Duct_AluminiumBrushed_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Duct_AluminiumPerforated_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Duct_PlasticWhite_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Duct_Rubber_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Harness_AluminiumBrushed_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Harness_WebbingRed_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Harness_WebbingYellow_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Pedal_Box_AnodisedBlack_01"
+    },
+    {
+      "axis": {
+        "forward": -0.0,
+        "right": 1,
+        "up": 0
+      },
+      "group": "Pedal_Brake",
+      "motion": "hinge",
+      "name": "Pedal_Brake",
+      "pivot": {
+        "forward": 2.5,
+        "right": -0.246,
+        "up": 0.575
+      },
+      "positive": "pressed: the pad swings forward, away from the driver (axis toward the car's right)",
+      "range": 0.1
+    },
+    {
+      "group": "Pedal_Brake",
+      "motion": "static",
+      "name": "Pedal_Brake_Arm"
+    },
+    {
+      "axis": {
+        "forward": -0.0,
+        "right": -1,
+        "up": 0
+      },
+      "group": "Pedal_Throttle",
+      "motion": "hinge",
+      "name": "Pedal_Throttle",
+      "pivot": {
+        "forward": 2.395,
+        "right": -0.106,
+        "up": 0.14
+      },
+      "positive": "pressed: the pad moves forward and down, away from the driver",
+      "range": 0.18
+    },
+    {
+      "group": "Pedal_Throttle",
+      "motion": "static",
+      "name": "Pedal_Throttle_Arm"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Seat_AnodisedBlack_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Seat_CarbonSatin_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Seat_SeatFabricRed_01"
+    },
+    {
+      "axis": {
+        "forward": 0.99027,
+        "right": -0.0,
+        "up": -0.13917
+      },
+      "group": "Chassis",
+      "motion": "press",
+      "name": "PanelButton_EngineStart",
+      "pivot": {
+        "forward": 1.9371,
+        "right": -0.04846,
+        "up": 0.41354
+      },
+      "range": 0.003
+    },
+    {
+      "group": "PanelButton_EngineStart",
+      "motion": "static",
+      "name": "PanelButton_EngineStart_Label"
+    },
+    {
+      "axis": {
+        "forward": -0.0,
+        "right": -1,
+        "up": 0
+      },
+      "group": "Chassis",
+      "motion": "hinge",
+      "name": "PanelGuard_Ignition",
+      "pivot": {
+        "forward": 1.94426,
+        "right": -0.06064,
+        "up": 0.47886
+      },
+      "range": 1.75
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "PanelLamp_AC",
+      "pivot": {
+        "forward": 1.94397,
+        "right": 0.06683,
+        "up": 0.45521
+      }
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "PanelLamp_Light",
+      "pivot": {
+        "forward": 1.94406,
+        "right": -0.00646,
+        "up": 0.45586
+      }
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "PanelLamp_RainLight",
+      "pivot": {
+        "forward": 1.938,
+        "right": -0.00415,
+        "up": 0.41276
+      }
+    },
+    {
+      "axis": {
+        "forward": -0.99027,
+        "right": -0.0,
+        "up": 0.13917
+      },
+      "group": "Chassis",
+      "motion": "rotary",
+      "name": "PanelRotary_ACFan",
+      "pivot": {
+        "forward": 1.93813,
+        "right": 0.08825,
+        "up": 0.40652
+      },
+      "range": [
+        0,
+        -0.6,
+        -1.2,
+        -1.8
+      ]
+    },
+    {
+      "axis": {
+        "forward": -0.0,
+        "right": 1,
+        "up": 0
+      },
+      "group": "Chassis",
+      "motion": "toggle",
+      "name": "PanelSwitch_AC",
+      "pivot": {
+        "forward": 1.94283,
+        "right": 0.08825,
+        "up": 0.45428
+      },
+      "range": [
+        -0.35,
+        0.35
+      ]
+    },
+    {
+      "axis": {
+        "forward": -0.0,
+        "right": 1,
+        "up": 0
+      },
+      "group": "Chassis",
+      "motion": "toggle",
+      "name": "PanelSwitch_Ignition",
+      "pivot": {
+        "forward": 1.94402,
+        "right": -0.06064,
+        "up": 0.46273
+      },
+      "range": [
+        -0.35,
+        0.35
+      ]
+    },
+    {
+      "axis": {
+        "forward": -0.0,
+        "right": 1,
+        "up": 0
+      },
+      "group": "Chassis",
+      "motion": "toggle",
+      "name": "PanelSwitch_Light",
+      "pivot": {
+        "forward": 1.94283,
+        "right": 0.01412,
+        "up": 0.45428
+      },
+      "range": [
+        -0.35,
+        0.35
+      ]
+    },
+    {
+      "axis": {
+        "forward": -0.0,
+        "right": 1,
+        "up": 0
+      },
+      "group": "Chassis",
+      "motion": "toggle",
+      "name": "PanelSwitch_RainLight",
+      "pivot": {
+        "forward": 1.93638,
+        "right": 0.0158,
+        "up": 0.4084
+      },
+      "range": [
+        -0.35,
+        0.35
+      ]
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "SwitchPanel_AnodisedBlack_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "SwitchPanel_Body"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "SwitchPanel_Chrome_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "SwitchPanel_Labels"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "SwitchPanel_PlasticBlack_01"
+    },
+    {
+      "axis": {
+        "forward": 0.33592,
+        "right": 0.20773,
+        "up": 0.9187
+      },
+      "group": "SteeringColumn",
+      "motion": "hinge",
+      "name": "Paddle_Downshift",
+      "pivot": {
+        "forward": 1.96162,
+        "right": -0.39326,
+        "up": 0.70341
+      },
+      "range": 0.1
+    },
+    {
+      "group": "Paddle_Downshift",
+      "motion": "static",
+      "name": "Paddle_Downshift_Label"
+    },
+    {
+      "axis": {
+        "forward": -0.3357,
+        "right": 0.20809,
+        "up": -0.9187
+      },
+      "group": "SteeringColumn",
+      "motion": "hinge",
+      "name": "Paddle_Upshift",
+      "pivot": {
+        "forward": 1.96167,
+        "right": -0.29544,
+        "up": 0.70341
+      },
+      "range": 0.1
+    },
+    {
+      "group": "Paddle_Upshift",
+      "motion": "static",
+      "name": "Paddle_Upshift_Label"
+    },
+    {
+      "group": "SteeringColumn",
+      "motion": "static",
+      "name": "SteeringColumn_AnodisedBlack_01"
+    },
+    {
+      "group": "SteeringColumn",
+      "motion": "static",
+      "name": "SteeringColumn_Rubber_01"
+    },
+    {
+      "group": "SteeringWheel",
+      "motion": "static",
+      "name": "SteeringWheel_AnodisedBlack_01"
+    },
+    {
+      "group": "SteeringWheel",
+      "motion": "static",
+      "name": "SteeringWheel_Chrome_01"
+    },
+    {
+      "group": "SteeringWheel",
+      "motion": "static",
+      "name": "SteeringWheel_Decal_Labels"
+    },
+    {
+      "group": "SteeringWheel",
+      "motion": "static",
+      "name": "SteeringWheel_PlasticRed_01"
+    },
+    {
+      "group": "SteeringWheel",
+      "motion": "static",
+      "name": "SteeringWheel_Plate"
+    },
+    {
+      "group": "SteeringWheel",
+      "motion": "static",
+      "name": "SteeringWheel_Rim"
+    },
+    {
+      "group": "SteeringWheel",
+      "motion": "static",
+      "name": "SteeringWheel_Stainless_01"
+    },
+    {
+      "axis": {
+        "forward": 0.93922,
+        "right": -0.0005,
+        "up": -0.34331
+      },
+      "group": "SteeringWheel",
+      "motion": "press",
+      "name": "WheelButton_Flash",
+      "pivot": {
+        "forward": 1.90573,
+        "right": -0.43316,
+        "up": 0.76757
+      },
+      "range": 0.002
+    },
+    {
+      "axis": {
+        "forward": 0.93922,
+        "right": -0.0005,
+        "up": -0.34331
+      },
+      "group": "SteeringWheel",
+      "motion": "press",
+      "name": "WheelButton_IndicatorLeft",
+      "pivot": {
+        "forward": 1.88261,
+        "right": -0.44592,
+        "up": 0.72084
+      },
+      "range": 0.002
+    },
+    {
+      "axis": {
+        "forward": 0.93922,
+        "right": -0.0005,
+        "up": -0.34331
+      },
+      "group": "SteeringWheel",
+      "motion": "press",
+      "name": "WheelButton_IndicatorRight",
+      "pivot": {
+        "forward": 1.88278,
+        "right": -0.24298,
+        "up": 0.72063
+      },
+      "range": 0.002
+    },
+    {
+      "axis": {
+        "forward": 0.93922,
+        "right": -0.0005,
+        "up": -0.34331
+      },
+      "group": "SteeringWheel",
+      "motion": "press",
+      "name": "WheelButton_Pit",
+      "pivot": {
+        "forward": 1.90585,
+        "right": -0.40599,
+        "up": 0.76785
+      },
+      "range": 0.002
+    },
+    {
+      "axis": {
+        "forward": 0.93922,
+        "right": -0.0005,
+        "up": -0.34331
+      },
+      "group": "SteeringWheel",
+      "motion": "press",
+      "name": "WheelButton_Radio",
+      "pivot": {
+        "forward": 1.9061,
+        "right": -0.25735,
+        "up": 0.76832
+      },
+      "range": 0.002
+    },
+    {
+      "axis": {
+        "forward": 0.93922,
+        "right": -0.0005,
+        "up": -0.34331
+      },
+      "group": "SteeringWheel",
+      "motion": "press",
+      "name": "WheelButton_Scroll",
+      "pivot": {
+        "forward": 1.90576,
+        "right": -0.28482,
+        "up": 0.76743
+      },
+      "range": 0.002
+    },
+    {
+      "axis": {
+        "forward": 0.93922,
+        "right": -0.0005,
+        "up": -0.34331
+      },
+      "group": "SteeringWheel",
+      "motion": "press",
+      "name": "WheelButton_Water",
+      "pivot": {
+        "forward": 1.8723,
+        "right": -0.41543,
+        "up": 0.67607
+      },
+      "range": 0.002
+    },
+    {
+      "axis": {
+        "forward": 0.93922,
+        "right": -0.0005,
+        "up": -0.34331
+      },
+      "group": "SteeringWheel",
+      "motion": "press",
+      "name": "WheelButton_Wiper",
+      "pivot": {
+        "forward": 1.87301,
+        "right": -0.38894,
+        "up": 0.67799
+      },
+      "range": 0.002
+    },
+    {
+      "axis": {
+        "forward": -0.93922,
+        "right": 0.0005,
+        "up": 0.34331
+      },
+      "group": "SteeringWheel",
+      "motion": "toggle",
+      "name": "WheelRotary_Manettino",
+      "pivot": {
+        "forward": 1.87273,
+        "right": -0.27808,
+        "up": 0.67415
+      },
+      "range": [
+        0,
+        0.785,
+        1.45
+      ]
+    },
+    {
+      "group": "WheelRotary_Manettino",
+      "motion": "static",
+      "name": "WheelRotary_Manettino_Tip"
+    },
+    {
+      "axis": {
+        "forward": -0.93922,
+        "right": 0.0005,
+        "up": 0.34331
+      },
+      "group": "Chassis",
+      "mesh": false,
+      "motion": "hinge",
+      "name": "SteeringWheel",
+      "pivot": {
+        "forward": 1.8712,
+        "right": -0.3443,
+        "up": 0.7254
+      },
+      "positive": "right-hand rule about the axis, which points to the driver: a positive turn is anticlockwise as the driver sees it"
+    },
+    {
+      "axis": {
+        "forward": -0.93922,
+        "right": 0.0005,
+        "up": 0.34331
+      },
+      "group": "Chassis",
+      "mesh": false,
+      "motion": "static",
+      "name": "SteeringColumn",
+      "pivot": {
+        "forward": 1.8712,
+        "right": -0.3443,
+        "up": 0.7254
+      }
+    }
+  ],
+  "points": {
+    "Driver_Eye": {
+      "forward": 1.3731,
+      "right": -0.3443,
+      "up": 0.9416
+    },
+    "Driver_HPoint": {
+      "forward": 1.5001,
+      "right": -0.3443,
+      "up": 0.3165
+    }
+  }
+}
