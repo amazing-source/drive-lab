@@ -34,6 +34,15 @@ describe("CarAudio config", function()
 	for _, car in PACKS do
 		local Pack = car.pack
 
+		it(`{car.name}: points every loop and its events file at an uploaded asset`, function()
+			for _, layer in Pack.engineLayers do
+				expect(uploaded(layer.soundId)).toBeTruthy()
+			end
+			expect(uploaded(Pack.limiter.soundId)).toBeTruthy()
+			expect(uploaded(Pack.far.soundId)).toBeTruthy()
+			expect(uploaded(Pack.eventsSoundId)).toBeTruthy()
+		end)
+
 		it(`{car.name}: keeps every one-shot region inside the events file, in order and apart`, function()
 			local regions = { Pack.startup.region, Pack.gear.region }
 			for _, region in Pack.pops.regions do

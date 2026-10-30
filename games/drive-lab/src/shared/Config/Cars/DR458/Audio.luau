@@ -4,8 +4,6 @@
 	Corsa 458 Italia banks and shaped toward the Challenge's race exhaust (manifest.json beside the
 	files). The loops are cabin recordings at the rpm their 4th engine order gives; every file is
 	loudness-matched (loops at -18 LUFS, pops at -20 LUFS on their loudest 400 ms).
-
-	The sound ids stay empty until the owner approves the upload: an empty id plays nothing.
 ]]
 local CarAudio = require("../../CarAudio")
 
@@ -13,20 +11,57 @@ local Audio: CarAudio.Pack = {
 	engineLayers = {
 		-- The bank has no loop between 800 and 2,000 rpm: through this hand-over the loudest loop
 		-- plays up to 58 % fast (the idle) or 45 % slow (the 2,100 rpm loops).
-		{ name = "Idle", soundId = "", rpm = 799, load = "Both", volume = 1, crossoverRpm = 1175 },
-		{ name = "On2100", soundId = "", rpm = 2124, load = "On", volume = 1 },
-		{ name = "On2900", soundId = "", rpm = 2826, load = "On", volume = 1 },
-		{ name = "On4900", soundId = "", rpm = 4929, load = "On", volume = 1 },
-		{ name = "On5900", soundId = "", rpm = 5902, load = "On", volume = 1 },
-		{ name = "On6900", soundId = "", rpm = 6932, load = "On", volume = 1 },
-		{ name = "On8100", soundId = "", rpm = 8057, load = "On", volume = 1 },
+		{
+			name = "Idle",
+			soundId = "rbxassetid://76328100926971",
+			rpm = 799,
+			load = "Both",
+			volume = 1,
+			crossoverRpm = 1175,
+		},
+		{ name = "On2100", soundId = "rbxassetid://126505420610187", rpm = 2124, load = "On", volume = 1 },
+		{ name = "On2900", soundId = "rbxassetid://107339137326473", rpm = 2826, load = "On", volume = 1 },
+		{ name = "On4900", soundId = "rbxassetid://83543110847082", rpm = 4929, load = "On", volume = 1 },
+		{ name = "On5900", soundId = "rbxassetid://115953926555510", rpm = 5902, load = "On", volume = 1 },
+		{ name = "On6900", soundId = "rbxassetid://99354028570947", rpm = 6932, load = "On", volume = 1 },
+		{ name = "On8100", soundId = "rbxassetid://108261031727266", rpm = 8057, load = "On", volume = 1 },
 		-- The bank's off-throttle takes are this much quieter than its on-throttle ones at the
 		-- same rpm; the files themselves are matched.
-		{ name = "Off2000", soundId = "", rpm = 2026, load = "Off", volume = 0.477 },
-		{ name = "Off3800", soundId = "", rpm = 3838, load = "Off", volume = 0.47 },
-		{ name = "Off5000", soundId = "", rpm = 5029, load = "Off", volume = 0.485 },
-		{ name = "Off7000", soundId = "", rpm = 7004, load = "Off", volume = 0.672 },
-		{ name = "Off9000", soundId = "", rpm = 9005, load = "Off", volume = 0.674 },
+		{
+			name = "Off2000",
+			soundId = "rbxassetid://138317459424823",
+			rpm = 2026,
+			load = "Off",
+			volume = 0.477,
+		},
+		{
+			name = "Off3800",
+			soundId = "rbxassetid://97883472987350",
+			rpm = 3838,
+			load = "Off",
+			volume = 0.47,
+		},
+		{
+			name = "Off5000",
+			soundId = "rbxassetid://129930475034531",
+			rpm = 5029,
+			load = "Off",
+			volume = 0.485,
+		},
+		{
+			name = "Off7000",
+			soundId = "rbxassetid://109696677626619",
+			rpm = 7004,
+			load = "Off",
+			volume = 0.672,
+		},
+		{
+			name = "Off9000",
+			soundId = "rbxassetid://88011935964948",
+			rpm = 9005,
+			load = "Off",
+			volume = 0.674,
+		},
 	},
 	engineTuning = {
 		crossfadeOctaves = 0.5,
@@ -43,11 +78,23 @@ local Audio: CarAudio.Pack = {
 	},
 	engineVolume = 1,
 	-- The top on loop raised to 9,000 rpm and gated at 15 Hz.
-	limiter = { soundId = "", rpm = 9000, volume = 1, onDuck = 0.3, halfLife = 0.03 },
+	limiter = {
+		soundId = "rbxassetid://95790750398183",
+		rpm = 9000,
+		volume = 1,
+		onDuck = 0.3,
+		halfLife = 0.03,
+	},
 	-- The bank's exterior on-throttle loops from 4,300 to 7,000 rpm summed and low-passed: no
 	-- single pitch, so it plays at its own speed.
-	far = { soundId = "", speed = 1, volume = 0.7, fromDistance = 60, toDistance = 250 },
-	eventsSoundId = "",
+	far = {
+		soundId = "rbxassetid://89771951443554",
+		speed = 1,
+		volume = 0.7,
+		fromDistance = 60,
+		toDistance = 250,
+	},
+	eventsSoundId = "rbxassetid://133337454246288",
 	-- Synthesised: the starter cranks for 0.85 s, then the engine flares to 3,200 rpm and settles
 	-- to 1,000; its last 2 s fade out while the idle loop fades in.
 	startup = {
@@ -57,7 +104,7 @@ local Audio: CarAudio.Pack = {
 		abortRpm = 1400,
 		abortHalfLife = 0.08,
 	},
-	gear = { region = { from = 11.5, to = 11.7205 }, volume = 0.6, upSpeed = 1, downSpeed = 0.92 },
+	gear = { region = { from = 11.5, to = 11.7205 }, volume = 0.38, upSpeed = 1, downSpeed = 0.92 },
 	shiftDip = { gain = 0.5, downHalfLife = 0.012, upHalfLife = 0.05 },
 	pops = {
 		regions = {
