@@ -27,7 +27,13 @@ export type Hinge = {
 	part: string,
 	pivot: { forward: number, right: number, up: number },
 	axis: { forward: number, right: number, up: number },
+	-- Where the model gives them (radians): the turn from its modelled pose to its rest, where it
+	-- sits before anything moves it, and from its rest to its other end.
+	rest: number?,
+	travel: number?,
 }
+
+export type CarPoint = { forward: number, right: number, up: number }
 
 -- Where the exhaust's flames come out: two outlets either side of the midpoint of the rear
 -- light clusters, each a housing part and the pieces named after it (tools/blender/split_lights.py),
@@ -87,6 +93,23 @@ export type CarModel = {
 	cabinLight: { forward: number, right: number, up: number }?,
 	-- Optional: a model without it throws no flames.
 	exhaust: Exhaust?,
+	-- Parts that ride another part rather than the body, each by name to the part it rides: a
+	-- wheel's rim on its tyre, a pedal's arm on its pedal, a button on the steering wheel. They
+	-- move with it. Optional.
+	parents: { [string]: string }?,
+	-- A steering wheel the model has no part for: a hub at this pivot, turning about this axis (it
+	-- points to the driver), which its parts ride (`parents`). Optional.
+	steeringHub: { pivot: CarPoint, axis: CarPoint }?,
+	-- The drive-mode knob on the wheel and the angle of each of the car's modes from its modelled
+	-- rest. Optional.
+	modeKnob: { hinge: Hinge, positions: { [string]: number } }?,
+	-- The exhaust's outlets: where each opens, the way it points out of the pipe, its bore (metres).
+	-- Optional.
+	exhaustOutlets: { { centre: CarPoint, axis: CarPoint, diameter: number } }?,
+	-- The shift lights left to right, and the switch panel's tell-tales by the switch they show.
+	-- Optional.
+	shiftLights: { string }?,
+	panelLamps: { [string]: string }?,
 }
 
 return table.freeze({})
