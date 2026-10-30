@@ -5,7 +5,7 @@ race bucket). Every point is a car landmark in metres (Blender frame: x = the ca
 z up, origin the rear-axle midpoint on the ground) moved into the authoring frame, so a cockpit move
 is a re-run.
 
-  python -I car_entry_dr458.py <scene.npz> <seated_pose.json> <out dir>
+  python car_entry_dr458.py <scene.npz> <seated_pose.json> <footwell.json> <out dir>
 
 The DR458 is entered as a caged race car with a front-hinged door: the right hand takes the handle at
 the door's rear edge and swings the door open while the body steps back out of its arc; the body
@@ -121,141 +121,158 @@ def facing_right(yaw):
     return np.array([np.cos(a), 0.0, -np.sin(a)])
 
 
-def stance(car, centre_car, yaw, spread=0.5):
-    """Right and left soles on the ground either side of a car point, across the body at `yaw`."""
-    c = car.p(centre_car)
-    c[1] = 0.0
-    r = facing_right(yaw)
-    return c + r * spread, c - r * spread
-
-
 def both(b, start, end):
     b.support.append((start, end, ["right_leg", "left_leg"]))
 
 
-def entry(car):
+def thigh_points(footwell_path):
+    """Where the blocky hands rest at the end: on the custom thighs' tops, 45 % from hip to knee
+    (as the start-up's resting hands), car metres."""
+    legs = json.load(open(footwell_path, encoding="utf-8"))["poses_blender"]
+    out = {}
+    for side, label in (("right", "right on the brake, rest"), ("left", "left on the floor")):
+        hip, knee = np.array(legs[label]["hip"]), np.array(legs[label]["knee"])
+        out[side] = hip + (knee - hip) * 0.45 + np.array([0.0, 0.0, 0.085])
+        out[side + "_knee"] = knee
+    return out
+
+
+def entry(car, footwell_path):
     s = car.seated()
     yaw_out = car.yaw_facing(car.outboard)
     yaw_seat = s["yaw"]
-    seat_limbs = seated_limb_targets(car, s)
-    open_end, total = 72, 72 + 150
+    thighs = thigh_points(footwell_path)
+    end_arms = {"right_arm": car.p(thighs["right"]), "left_arm": car.p(thighs["left"])}
+    end_legs = {"right_leg": car.p(thighs["right_knee"] + np.array([0.0, -0.10, -0.12])), "left_leg": car.p(thighs["left_knee"] + np.array([0.0, -0.10, -0.12]))}
+    open_end = 72
+    walk0, sit0, legs0, hoist0, drop0, settle0 = 72, 102, 114, 140, 160, 196
+    total = 210
     b = Body(total, FPS)
     start_idle(b, 0)
     b.door.at(0, (0.0,))
     b.neck_loc.at(0, (0.0, 0.0, 0.0))
 
     # -- OutsideOpen (0..72): the right foot steps toward the door, the right hand takes the handle
-    # at its rear edge and pulls; the door's rear edge comes past in front as the foot steps back;
-    # the door swings on to its stop; back to the mark facing the opening.
-    handle = car.riding(b, DOOR_HANDLE)
+    # at its rear edge (the arm's end on the skin) and pulls; the body steps well back as the
+    # door's rear edge comes past; the door swings on to its stop; back to the mark.
+    handle = car.riding(b, DOOR_HANDLE + np.array([0.04, 0.0, 0.0]))
     fwd = np.array([0.15, 0.0, -0.65])
+    back = np.array([0.55, 0.0, 0.55])
     both(b, 0, 1)
     side_step(b, "right_leg", 2, 11, IDLE["right_leg"], IDLE["right_leg"] + fwd)
     b.pelvis.at(2, IDLE_PELVIS).at(11, IDLE_PELVIS + fwd * np.array([0.5, 0, 0.5]))
-    both(b, 11, 25)
-    b.torso.at(2, (0, 0, 0)).at(14, (-20, -6, 3)).at(26, (-16, -4, 2))
+    both(b, 11, 24)
+    b.torso.at(2, (0, 0, 0)).at(14, (-20, -6, 3)).at(24, (-16, -4, 2))
     b.targets["right_arm"].at(4, IDLE["right_arm"])
-    b.targets["right_arm"].attach(15, 42, handle)
-    b.contact.append((15, 42))
-    b.door.at(18, (0.0,)).at(24, (0.05,)).at(42, (0.30,)).at(56, (0.92,)).at(62, (1.0,))
-    side_step(b, "right_leg", 26, 36, IDLE["right_leg"] + fwd, IDLE["right_leg"])
-    b.pelvis.at(26, IDLE_PELVIS + fwd * np.array([0.5, 0, 0.5])).at(36, IDLE_PELVIS)
-    both(b, 36, 73)
-    b.torso.at(42, (-6, 10, 0)).at(58, (0, 8, 0)).at(open_end, (0, 0, 0))
-    b.targets["right_arm"].at(54, IDLE["right_arm"])
-    b.hang("left_arm", 0, 120)
-    b.neck.at(0, (0, 0, 0)).at(12, (-15, -5, 0)).at(44, (-5, 15, 0)).at(open_end, (0, 0, 0))
+    b.targets["right_arm"].attach(15, 38, handle)
+    b.contact.append((15, 38))
+    b.door.at(18, (0.0,)).at(24, (0.05,)).at(38, (0.24,)).at(54, (0.92,)).at(60, (1.0,))
+    side_step(b, "right_leg", 24, 33, IDLE["right_leg"] + fwd, IDLE["right_leg"] + back)
+    side_step(b, "left_leg", 32, 41, IDLE["left_leg"], IDLE["left_leg"] + back)
+    b.pelvis.at(24, IDLE_PELVIS + fwd * np.array([0.5, 0, 0.5])).at(41, IDLE_PELVIS + back)
+    both(b, 41, 50)
+    b.torso.at(34, (2, 4, 0)).at(44, (4, 10, 0)).at(56, (0, 8, 0))
+    b.targets["right_arm"].at(48, IDLE["right_arm"] + back)
+    b.hang("left_arm", 0, walk0 + 20)
+    side_step(b, "left_leg", 50, 59, IDLE["left_leg"] + back, IDLE["left_leg"])
+    side_step(b, "right_leg", 58, 67, IDLE["right_leg"] + back, IDLE["right_leg"])
+    b.pelvis.at(50, IDLE_PELVIS + back).at(67, IDLE_PELVIS)
+    both(b, 67, walk0 + 1)
+    b.torso.at(open_end, (0, 0, 0))
+    b.neck.at(0, (0, 0, 0)).at(12, (-15, -5, 0)).at(40, (-5, 15, 0)).at(open_end, (0, 0, 0))
     b.pelvis.at(open_end, IDLE_PELVIS)
     for limb in ("right_arm", "right_leg", "left_leg"):
         b.targets[limb].at(open_end, IDLE[limb])
 
-    # -- GetIn (72..222).
-    # 1. Pivot steps from the mark to stand with the back to the cage's upper door bar, the feet on
-    #    the ground outside the sill, turning to face out.
-    feet_r, feet_l = stance(car, [1.02, STANCE_Y, 0.0], yaw_out)
-    path = [(IDLE["right_leg"], IDLE["left_leg"], 0.0)]
+    # -- GetIn.
+    # 1. Pivot steps from the mark to stand beside the sill facing out, the feet where straight legs
+    #    will hold the bottom on the sill.
+    stand = np.array([1.126, -1.45, 0.0])
+    feet_r = car.p(stand) + facing_right(yaw_out) * 0.5
+    feet_l = car.p(stand) - facing_right(yaw_out) * 0.5
+    feet_r[1] = feet_l[1] = 0.0
     centre0 = (IDLE["right_leg"] + IDLE["left_leg"]) / 2
     centre1 = (feet_r + feet_l) / 2
+    away = car.outboard * 0.6
+    path = [(IDLE["right_leg"], IDLE["left_leg"], 0.0)]
     for k, yaw in ((1, yaw_out * 0.35), (2, yaw_out * 0.7), (3, yaw_out)):
-        c = centre0 + (centre1 - centre0) * k / 3
+        c = centre0 + (centre1 - centre0) * k / 3 + away * np.sin(np.pi * k / 3)
         r = facing_right(yaw) * 0.5
         path.append((c + r, c - r, yaw))
-    f = 74
+    f = walk0 + 2
     for k in range(1, 4):
         (r0, l0, _), (r1, l1, yaw) = path[k - 1], path[k]
         for limb, frm, to in (("left_leg", l0, l1), ("right_leg", r0, r1)):
-            side_step(b, limb, f, f + 7, frm, to)
+            side_step(b, limb, f, f + 4, frm, to)
             sign = 1.0 if limb == "right_leg" else -1.0
-            b.torso.at(f + 1, (-2, yaw - 15, sign * 5)).at(f + 6, (-2, yaw, sign * 4))
-            f += 7
+            b.torso.at(f + 1, (-2, yaw - 12, sign * 5)).at(f + 4, (-2, yaw, sign * 4))
+            f += 5
         mid = (r1 + l1) / 2
         b.pelvis.at(f - 1, (mid[0], 2.0, mid[2]))
         both(b, f - 1, f - 1)
-    stand_start = f
-    both(b, stand_start, stand_start + 12)
-    b.neck.at(stand_start - 30, (-10, 30, 0)).at(stand_start, (-5, 0, 0))
-    # 2. Back up to the bar: lean back onto it, hands on the bar beside the hips.
-    hips_stance = car.p([0.78, STANCE_Y, 0.37])
-    b.pelvis.at(stand_start + 6, hips_stance)
-    b.torso.at(stand_start, (0, yaw_out, 0)).at(stand_start + 10, (6, yaw_out, 0))
-    bar_front = car.p(UPPER_BAR + np.array([0.0, STANCE_Y - 0.22, 0.02])) + np.array([0, 0.15, 0])
-    bar_rear = car.p(UPPER_BAR + np.array([0.0, STANCE_Y + 0.22, 0.02])) + np.array([0, 0.15, 0])
-    b.targets["right_arm"].at(stand_start + 2, IDLE["right_arm"] + (centre1 - centre0) * np.array([1, 0, 1]))
-    b.targets["right_arm"].at(stand_start + 10, bar_front)
-    b.targets["left_arm"].at(stand_start + 10, bar_rear)
-    b.contact.append((stand_start + 10, stand_start + 46))
-    # 3. Hoist onto the bar, leaning out so the head clears the roof edge; the feet leave the ground.
-    up = stand_start + 12
-    on_bar = car.p([0.66, STANCE_Y, 0.481])
-    b.pelvis.at(up + 10, on_bar)
-    b.torso.at(up + 10, (-22, yaw_out, 0))
-    for limb, foot in (("right_leg", feet_r), ("left_leg", feet_l)):
-        b.targets[limb].at(up, foot).at(up + 10, foot + np.array([0, 0.3, 0]) + car.outboard * 0.4)
-    # 4. Lift the legs over the bar and turn to face the nose, ducking deeper (the head goes
-    #    forward over the knees, under the cage's side rail).
-    sw = up + 10
+    b.targets["right_arm"].at(walk0 + 10, IDLE["right_arm"])
+    b.neck.at(walk0 + 8, (-10, 30, 0)).at(sit0, (-5, 0, 0))
+    # 2. Sit down on the sill: the bottom moves in over the sill and the straight legs lower it;
+    #    the hands reach back to the upper door bar.
+    both(b, sit0 - 2, legs0)
+    b.pelvis.at(sit0, car.p([1.05, -1.45, 0.43])).at(legs0, car.p([0.80, -1.45, 0.29]))
+    b.torso.at(sit0, (0, yaw_out, 0)).at(legs0, (-4, yaw_out, 0))
+    bar_f = car.p([0.636, -1.45 - 0.22, 0.55])
+    bar_r = car.p([0.636, -1.45 + 0.22, 0.55])
+    b.targets["right_arm"].at(sit0 + 4, IDLE["right_arm"] + (centre1 - centre0)).at(legs0, bar_f)
+    b.targets["left_arm"].at(sit0 + 4, car.p([1.0, -1.25, 0.35])).at(legs0, bar_r)
+    b.contact.append((legs0, hoist0 + 6))
+    # 3. Lean back on the bars and lift the legs steeply over them, turning to face the nose; the
+    #    bottom pivots on the sill.
     mid_yaw = (yaw_out + yaw_seat) / 2
-    b.pelvis.at(sw + 26, on_bar)
-    b.torso.at(sw + 12, (-18, mid_yaw, 0)).at(sw + 26, (-34, yaw_seat, 0))
-    over = car.p([0.66, STANCE_Y - 0.35, 0.78])
-    for limb, side in (("right_leg", 1), ("left_leg", -1)):
-        b.targets[limb].at(sw + 12, over + facing_right(mid_yaw) * side * 0.5)
-        b.targets[limb].at(sw + 26, car.p([0.3443 - side * 0.12, -2.05, 0.42]))
-    b.targets["left_arm"].at(sw + 20, bar_rear)
-    # 5. Slide down into the bucket, rising from the duck to the seat's recline as the bottom
-    #    drops below the rail.
-    sl = sw + 26
-    b.pelvis.at(sl + 14, car.p([0.50, -1.47, 0.43])).at(sl + 34, s["pelvis"])
-    b.torso.at(sl + 14, (-24, yaw_seat, 0)).at(sl + 34, (s["torso"][0], yaw_seat, 0))
-    b.targets["right_arm"].at(sl + 4, bar_front).at(sl + 30, seat_limbs["right_arm"])
-    for limb in ("right_leg", "left_leg"):
-        b.targets[limb].at(sl + 34, seat_limbs[limb])
-    b.neck.at(sw + 26, (-10, 0, 0)).at(sl + 34, s["neck"])
+    b.pelvis.at(legs0 + 26, car.p([0.78, -1.47, 0.30]))
+    b.torso.at(legs0 + 10, (10, (yaw_out * 2 + yaw_seat) / 3, 0)).at(legs0 + 26, (14, yaw_seat, 0))
+    for limb, side in (("right_leg", -1), ("left_leg", 1)):
+        b.targets[limb].at(legs0, feet_r if limb == "right_leg" else feet_l)
+        b.targets[limb].at(legs0 + 10, car.p([0.92 + side * 0.05, -1.75, 0.70]))
+        b.targets[limb].at(legs0 + 26, car.p([0.52 + side * 0.06, -1.95, 0.98]))
+    b.targets["left_arm"].at(legs0 + 26, car.p([0.636, -1.30, 0.55]))
+    b.targets["right_arm"].at(legs0 + 26, car.p([0.636, -1.62, 0.55]))
+    # 4. Hoist the bottom over the bars, leaning inboard so the head passes under the roof, away
+    #    from the side rail, short of the wheel.
+    b.pelvis.at(hoist0 + 8, car.p([0.70, -1.50, 0.56])).at(drop0, car.p([0.52, -1.50, 0.56]))
+    b.torso.at(hoist0 + 8, (-6, yaw_seat, -26)).at(drop0, (0, yaw_seat, -30))
+    for limb, side in (("right_leg", -1), ("left_leg", 1)):
+        b.targets[limb].at(drop0, car.p([0.40 + side * 0.10, -2.05, 0.62]))
+    b.targets["right_arm"].at(hoist0 + 6, car.p([0.30, -1.55, 0.48])).at(drop0, car.p([0.20, -1.60, 0.42]))
+    b.targets["left_arm"].at(drop0, car.p([0.636, -1.40, 0.55]))
+    # 5. Drop into the bucket and straighten into its recline.
+    b.pelvis.at(drop0 + 20, s["pelvis"])
+    b.torso.at(drop0 + 10, (8, yaw_seat, -12)).at(drop0 + 20, s["torso"])
+    for limb in end_legs:
+        b.targets[limb].at(drop0 + 20, end_legs[limb])
+    b.neck.at(hoist0, (-15, 0, -10)).at(drop0, (-20, 10, 0)).at(drop0 + 20, s["neck"])
     # 6. The door: it starts in as the left hand reaches out for it at full stretch; the hand meets
     #    the card's top edge and rides it shut.
-    meet = sl + 20
-    b.door.at(sl + 6, (1.0,)).at(meet, (0.40,)).at(meet + 14, (0.0,))
-    b.targets["left_arm"].at(sl + 6, bar_rear + np.array([0, 0.5, 0]))
+    meet = drop0 + 16
+    b.door.at(drop0 + 4, (1.0,)).at(meet, (0.40,)).at(meet + 14, (0.0,))
+    b.targets["left_arm"].at(drop0 + 6, car.p([0.85, -1.55, 0.70]))
     b.targets["left_arm"].attach(meet, meet + 14, car.riding(b, CARD_TOP))
     b.contact.append((meet, meet + 14))
+    b.targets["right_arm"].at(drop0 + 18, end_arms["right_arm"])
+    # 7. Settle on the seated pose, hands on the thighs (where the start-up's resting hands are).
     end = total - 1
-    b.targets["left_arm"].at(end - 2, seat_limbs["left_arm"])
-    # 7. Settle on the seated pose (SeatedPose).
+    b.targets["left_arm"].at(end - 2, end_arms["left_arm"])
     b.pelvis.at(end, s["pelvis"])
     b.torso.at(end, s["torso"])
     b.neck.at(end, s["neck"])
-    b.neck_loc.at(sl + 10, (0.0, 0.0, 0.0)).at(end, s["neck_loc"])
-    for limb in seat_limbs:
-        b.targets[limb].at(end, seat_limbs[limb])
-    print(f"walk ends f{stand_start}, hoist f{up}..{up + 10}, swing f{sw}..{sw + 26}, slide f{sl}..{sl + 34}, door meets the hand f{meet}, end f{end}")
+    b.neck_loc.at(drop0, (0.0, 0.0, 0.0)).at(end, s["neck_loc"])
+    for limb, t in list(end_arms.items()) + list(end_legs.items()):
+        b.targets[limb].at(end, t)
+    print(f"walk f{walk0}..{sit0}, sit ..{legs0}, legs in ..{hoist0}, hoist ..{drop0}, drop ..{drop0 + 20}, door meets the hand f{meet}, end f{end}")
     return b, s, yaw_out, yaw_seat, (0, open_end, total)
 
 
 def main(argv):
-    scene, pose, out_dir = argv
+    scene, pose, footwell, out_dir = argv
     car = Car(scene, pose)
     os.makedirs(out_dir, exist_ok=True)
-    b, s, yaw_out, yaw_seat, (o0, o1, total) = entry(car)
+    b, s, yaw_out, yaw_seat, (o0, o1, total) = entry(car, footwell)
     print("seated yaw", round(yaw_seat, 1), "outboard yaw", round(yaw_out, 1))
     b.solve()
     clips = [{"name": "OutsideOpen", "start": o0, "end": o1}, {"name": "GetIn", "start": o1, "end": total - 1}]
