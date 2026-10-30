@@ -38,7 +38,7 @@ export type ViewProfile = {
 -- in which it fades out while the engine loops fade in.
 export type StartupSound = {
 	id: string,
-	-- Linear, over the level the idle loop plays at at idle, as `boostDb` is for the region.
+	-- Linear, over the idle loop's level at idle, as `boostDb` is for the region.
 	volume: number,
 	from: number,
 	starterEnds: number,
