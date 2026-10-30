@@ -69,7 +69,9 @@ image ids, and keep each hand as an anchored, non-colliding MeshPart with a Surf
 and the sleeves at `ReplicatedStorage.DriveLabAssets.Sleeves.UpperArm` / `Forearm`. That folder is outside the synced
 tree, so a sync never removes it; it lives in the place file, which has to be saved.
 
-Put the right hand's numbers from `hands.json` into `Config/DriverArms.luau`. The arm
+Put the right hand's numbers from `hands.json` into the car's grip (`grip` in
+`Config/Cars/SVJ/Driver.luau`, typed by `Config/DriverArms`), with `meshes` naming the folder the
+hand meshes posed for that rim are kept in. The arm
 controller reaches each forearm to the wrist (`Rules/ArmIK.luau`), bending the elbow toward where
 the forearm would lie straight down the hand's axis.
 
@@ -119,12 +121,14 @@ the resting hand sat 4 cm off the thigh's centre.
 
 `SEAT_WELD.json` is the seated R6 measured in Studio (the SeatWeld puts the torso's centre at
 (0, 1.557, 0) studs in the DriverSeat frame at driver scale, upright). The script places each
-hand's palm on its thigh 45 % of the way from hip to knee (thighs from `Config/DriverLegs`, the
+hand's palm on its thigh 45 % of the way from hip to knee (thighs from `Config/DriverLegs` and
+the SVJ's footwell in `Config/Cars/SVJ/Driver`, the
 right foot on the throttle, the left on the footrest), pitched so palm and fingertips both lie on
 the cloth. `REST_POSE.json` also gives, for the entry animation's blocky arms, the palm's centre
 and where an R6 arm aimed at it ends. Shoulders are 0.82 + 0.77 studs from the hand: the hands
-cannot reach the knees on real-length legs. Its leg numbers (lengths, `KNEE_TOWARD`, the pedals'
-heel and ball points) are copies of `Config/DriverLegs`; change them together.
+cannot reach the knees on real-length legs. Its leg numbers (lengths from `Config/DriverLegs`;
+`KNEE_TOWARD` and the pedals' heel and ball points from the footwell's `kneeToward`, `throttle`,
+`brake` and `footrest`) are copies; change them together.
 
 ### 8c. Keyed paths
 
@@ -184,7 +188,7 @@ be visible: minimized, it renders no frame, so `RenderStepped` and captures both
 ## 9. Gloves, and only the gloves in the cockpit view
 
 The seated driver wears racing gloves in every view (`Config/DriverArms.GLOVES`, `Rig/Gloves`):
-the same hand meshes, their near-white skin detail map tinted `GLOVE_COLOR` instead of the
+the same hand meshes, their near-white skin detail map tinted `GLOVE_RGB` instead of the
 avatar's arm colour, so the knuckles and creases shape the glove; the wrist cuffs (`Cuff_*`,
 `WristCuff_*`, already closed oval tubes 9 cm long) take the glove's colour and read as the
 gauntlet, which FIA 8856-2018 gloves (Alpinestars' Tech-1 Race, for one) run over the suit's

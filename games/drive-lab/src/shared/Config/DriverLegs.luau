@@ -1,11 +1,12 @@
 --!strict
 --[[
-	The driver's legs, drawn in place of the avatar's blocky ones while seated, and the SVJ's
-	footwell they work in. Unlike the arms the legs are real length, in metres: the feet sit on
-	the car's real pedals, which are 0.85 m ahead of the hips, three times an R6 leg. Points are
-	in the driver's seat frame (the DriverSeat part: x right, y up, z back), measured on the car's
-	interior mesh (tools/blender/footwell.py prints them). The trousers and shoes are meshes
-	kept in the place at ReplicatedStorage.DriveLabAssets.Legs.
+	The driver's legs, drawn in place of the avatar's blocky ones while seated, and the shape of
+	a car's footwell they work in (its entry's driver.footwell). Unlike the arms the legs are real
+	length, in metres: the feet sit on the car's real pedals, which are 0.85 m ahead of the hips in
+	the SVJ, three times an R6 leg. Points are in the driver's seat frame (the DriverSeat part:
+	x right, y up, z back), measured on the car's interior mesh (tools/blender/footwell.py prints
+	them). The trousers and shoes are meshes kept in the place at
+	ReplicatedStorage.DriveLabAssets.Legs.
 ]]
 export type Point = { x: number, y: number, z: number }
 
@@ -20,15 +21,22 @@ export type Pedal = {
 	ball: Point,
 }
 
+-- One car's footwell: the pedals the right foot works, the footrest the left foot rests on, and
+-- the point each knee bends toward: the knee stays in the plane through the hip, the ankle and
+-- this point.
+export type Footwell = {
+	throttle: Pedal,
+	brake: Pedal,
+	footrest: { heel: Point, ball: Point },
+	kneeToward: { right: Point, left: Point },
+}
+
 export type DriverLegs = {
 	THIGH: number,
 	SHIN: number,
 	-- The hip joint in the R6 torso's own space, studs at character scale 1 (with PELVIS_CENTRE,
 	-- the points not in metres).
 	HIP: Point,
-	-- The point each knee bends toward, in the seat frame: the knee stays in the plane through the
-	-- hip, the ankle and this point.
-	KNEE_TOWARD: { right: Point, left: Point },
 	-- The trousers' seat: cloth from inside the torso's bottom and the thighs down into the bucket,
 	-- shaped to the car's cushion (tools/blender/seat_fill.py): its box centre in the torso's
 	-- space (studs at character scale 1). Its mesh is modelled for Driving.DRIVER_SCALE.
@@ -37,10 +45,6 @@ export type DriverLegs = {
 	-- sole toward the toes and up off it.
 	ANKLE_ALONG: number,
 	ANKLE_UP: number,
-	THROTTLE: Pedal,
-	BRAKE: Pedal,
-	-- The left foot's rest on the footrest, which does not move.
-	FOOTREST: { heel: Point, ball: Point },
 	-- Seconds the right foot takes between the pedals, and how far the ball of the foot lifts on
 	-- the way, the heel staying on the floor.
 	SWITCH_SECONDS: number,
@@ -70,41 +74,9 @@ local DriverLegs: DriverLegs = table.freeze({
 	-- lay the thighs on the cushion put them out of the R6 arms' reach; the trousers' seat fills
 	-- the room down to the cushion instead.
 	HIP = table.freeze({ x = 0.5, y = -1.05, z = 0.05 }),
-	-- The right knee rides the gap between the steering column and the centre console, below the
-	-- dash; the left leans out toward the door, where there is room. Fitted against the cabin
-	-- (tools/blender/leg_clearance.py): the right leg touches the console and the column (at most
-	-- 0.6 cm into them on a pedal, 1.0 cm at worst crossing between them), as a real driver's
-	-- knee rests on the tunnel; the knee has 1.7 cm under the dash at full braking. Bent straight
-	-- out instead, the knee sat 5 cm inside the console. The left clears everything by 5 cm.
-	KNEE_TOWARD = table.freeze({
-		right = table.freeze({ x = 0.17, y = 0.15, z = -0.4 }),
-		left = table.freeze({ x = -0.58, y = 0.62, z = 0.008 }),
-	}),
 	PELVIS_CENTRE = table.freeze({ x = 0, y = -2.1129, z = -0.75 }),
 	ANKLE_ALONG = 0.075,
 	ANKLE_UP = 0.085,
-	-- Measured on the SVJ's interior mesh (tools/blender/footwell.py): an organ throttle hinged on
-	-- the floor, the foot lying on its plate with the heel at the hinge; a brake hanging from
-	-- under the dash, the heel on the floor behind it; a fixed footrest. 16 and 12 degrees of
-	-- travel: 5.8 and 4.0 cm at the ball of the foot (measured on the rigged pedals in Studio).
-	THROTTLE = table.freeze({
-		part = "Pedal_Throttle",
-		hinge = table.freeze({ x = 0.1761, y = -0.2364, z = -0.8354 }),
-		travel = -math.rad(16),
-		heel = table.freeze({ x = 0.1761, y = -0.2275, z = -0.8354 }),
-		ball = table.freeze({ x = 0.2044, y = -0.0482, z = -0.924 }),
-	}),
-	BRAKE = table.freeze({
-		part = "Pedal_Brake",
-		hinge = table.freeze({ x = 0.0304, y = 0.0956, z = -0.9992 }),
-		travel = math.rad(12),
-		heel = table.freeze({ x = 0.0308, y = -0.2334, z = -0.794 }),
-		ball = table.freeze({ x = 0.0308, y = -0.0486, z = -0.8705 }),
-	}),
-	FOOTREST = table.freeze({
-		heel = table.freeze({ x = -0.1012, y = -0.2352, z = -0.8776 }),
-		ball = table.freeze({ x = -0.1012, y = -0.0519, z = -0.9575 }),
-	}),
 	SWITCH_SECONDS = 0.18,
 	SWITCH_LIFT = 0.035,
 	BRAKE_THRESHOLD = 0.02,

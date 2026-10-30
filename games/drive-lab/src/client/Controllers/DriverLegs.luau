@@ -199,8 +199,8 @@ local function build(model: Model, entry: Catalog.Entry, character: Model): Driv
 		sides = sides,
 		pelvis = cloth(pelvis),
 		over = 0,
-		throttle = hinged(model, DriverLegs.THROTTLE.part),
-		brake = hinged(model, DriverLegs.BRAKE.part),
+		throttle = hinged(model, entry.driver.footwell.throttle.part),
+		brake = hinged(model, entry.driver.footwell.brake.part),
 	}
 end
 
@@ -242,7 +242,8 @@ local function pose(driver: Driver, state: CarEntry.State, now: number, dt: numb
 		throttle, brake = 0, math.max(brake, held)
 	end
 	driver.over = Legs.approach(driver.over, Legs.wantsBrake(brake), dt)
-	local throttleAngle, brakeAngle = Legs.pedalAngles(driver.over, throttle, brake)
+	local footwell = driver.entry.driver.footwell
+	local throttleAngle, brakeAngle = Legs.pedalAngles(footwell, driver.over, throttle, brake)
 	turn(driver.throttle, throttleAngle)
 	turn(driver.brake, brakeAngle)
 	local seat = driver.seat.CFrame
@@ -258,8 +259,8 @@ local function pose(driver: Driver, state: CarEntry.State, now: number, dt: numb
 		) / STUDS_PER_METRE
 		local hipPoint = { x = at.X, y = at.Y, z = at.Z }
 		local leg = if side.sign > 0
-			then Legs.right(hipPoint, driver.over, throttleAngle, brakeAngle)
-			else Legs.left(hipPoint)
+			then Legs.right(footwell, hipPoint, driver.over, throttleAngle, brakeAngle)
+			else Legs.left(footwell, hipPoint)
 		draw(side, seat, leg)
 	end
 end

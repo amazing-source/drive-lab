@@ -39,13 +39,14 @@ export type Kick = { perG: number, max: number, attack: number, hold: number, re
 -- Each view's field of view at rest, and the share of the kick it takes.
 export type ViewFov = { base: number, kickShare: number }
 
+-- One car's own camera points (its entry's camera), metres: the cockpit eye ahead of and above
+-- the head's centre, and the hood camera from the centre of mass, along the car and up.
+export type CarViews = { eye: { forward: number, up: number }, hood: { forward: number, up: number } }
+
 export type CarCamera = {
 	VIEWS: { View },
 	CHASE: Chase,
-	HOOD_FORWARD: number,
-	HOOD_HEIGHT: number,
-	EYE_FORWARD: number,
-	EYE_UP: number,
+	-- How far the player may move the car's cockpit eye from where it sits, metres.
 	EYE_RANGE: { forward: { number }, up: { number }, step: number },
 	FOV: { [View]: ViewFov },
 	FOV_KICK: Kick,
@@ -96,16 +97,6 @@ local CarCamera: CarCamera = table.freeze({
 		-- turn by 2 * yaw rate / (2 pi hz): 1.9 degrees at 30 degrees a second and 5 Hz.
 		yawSpring = table.freeze({ enabled = false, hz = 5 }),
 	}),
-	-- From the centre of mass, along the car: just ahead of the windscreen, above the bonnet.
-	HOOD_FORWARD = 1.15,
-	HOOD_HEIGHT = 0.62,
-	-- The cockpit eye, metres ahead of the head's centre. Behind it: the seated R6 driver's head
-	-- already touches the headrest, so the eye moves back inside the hidden head to sit 0.38 m
-	-- from the wheel (0.24 m at +0.08, the owner found the view too close, 2026-10-27).
-	EYE_FORWARD = 0,
-	-- And raised, metres, so the eye looks down over the forearms onto the hands on the rim; level
-	-- with the forearms, they hid the hands.
-	EYE_UP = 0.07,
 	-- The player sets the seat, as in a sim: the mouse wheel moves the eye forward and back,
 	-- with Shift up and down, a centimetre a notch within these limits (metres, about the
 	-- defaults). The owner found +0.08 too close and -0.065 too far (2026-10-27/28).

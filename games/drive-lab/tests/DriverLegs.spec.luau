@@ -1,9 +1,12 @@
 --!strict
 local Config = require("../src/shared/Config/DriverLegs")
 local Legs = require("../src/shared/Rules/DriverLegs")
+local SVJ = require("../src/shared/Config/Cars/SVJ")
 local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect
+
+local FOOTWELL = SVJ.driver.footwell
 
 type Vector = Legs.Vector
 
@@ -44,22 +47,22 @@ describe("Driver legs: the right foot between the pedals", function()
 	end)
 
 	it("lies on the throttle, then on the brake, rocking on its heel between them", function()
-		local heel, ball = Legs.rightSole(0, 0, 0)
-		expect(distance(heel, Config.THROTTLE.heel)).toBeNear(0, 1e-9)
-		expect(distance(ball, Config.THROTTLE.ball)).toBeNear(0, 1e-9)
-		heel, ball = Legs.rightSole(1, 0, 0)
-		expect(distance(heel, Config.BRAKE.heel)).toBeNear(0, 1e-9)
-		expect(distance(ball, Config.BRAKE.ball)).toBeNear(0, 1e-9)
-		local midHeel, midBall = Legs.rightSole(0.5, 0, 0)
-		local straight = (Config.THROTTLE.ball.y + Config.BRAKE.ball.y) / 2
+		local heel, ball = Legs.rightSole(FOOTWELL, 0, 0, 0)
+		expect(distance(heel, FOOTWELL.throttle.heel)).toBeNear(0, 1e-9)
+		expect(distance(ball, FOOTWELL.throttle.ball)).toBeNear(0, 1e-9)
+		heel, ball = Legs.rightSole(FOOTWELL, 1, 0, 0)
+		expect(distance(heel, FOOTWELL.brake.heel)).toBeNear(0, 1e-9)
+		expect(distance(ball, FOOTWELL.brake.ball)).toBeNear(0, 1e-9)
+		local midHeel, midBall = Legs.rightSole(FOOTWELL, 0.5, 0, 0)
+		local straight = (FOOTWELL.throttle.ball.y + FOOTWELL.brake.ball.y) / 2
 		expect(midBall.y > straight + Config.SWITCH_LIFT / 2).toBe(true)
-		expect(midHeel.y).toBeNear((Config.THROTTLE.heel.y + Config.BRAKE.heel.y) / 2, 1e-9)
+		expect(midHeel.y).toBeNear((FOOTWELL.throttle.heel.y + FOOTWELL.brake.heel.y) / 2, 1e-9)
 	end)
 end)
 
 describe("Driver legs: pedals", function()
 	it("pushes each pedal's face toward the nose, about its hinge", function()
-		for _, pedal in { Config.THROTTLE, Config.BRAKE } do
+		for _, pedal in { FOOTWELL.throttle, FOOTWELL.brake } do
 			local pressed = Legs.turned(pedal, pedal.ball, pedal.travel)
 			expect(pressed.z < pedal.ball.z - 0.02).toBe(true)
 			expect(distance(pressed, pedal.hinge)).toBeNear(distance(pedal.ball, pedal.hinge), 1e-9)
@@ -67,20 +70,20 @@ describe("Driver legs: pedals", function()
 	end)
 
 	it("moves only the pedal under the foot, by its readout", function()
-		local throttle, brake = Legs.pedalAngles(0, 1, 0)
-		expect(throttle).toBeNear(Config.THROTTLE.travel, 1e-9)
+		local throttle, brake = Legs.pedalAngles(FOOTWELL, 0, 1, 0)
+		expect(throttle).toBeNear(FOOTWELL.throttle.travel, 1e-9)
 		expect(brake).toBe(0)
-		throttle, brake = Legs.pedalAngles(1, 1, 0.5)
+		throttle, brake = Legs.pedalAngles(FOOTWELL, 1, 1, 0.5)
 		expect(throttle).toBe(0)
-		expect(brake).toBeNear(Config.BRAKE.travel / 2, 1e-9)
-		throttle, brake = Legs.pedalAngles(0, 0, 1)
+		expect(brake).toBeNear(FOOTWELL.brake.travel / 2, 1e-9)
+		throttle, brake = Legs.pedalAngles(FOOTWELL, 0, 0, 1)
 		expect(throttle).toBe(0)
 		expect(brake).toBe(0)
 	end)
 
 	it("carries the foot down with the throttle", function()
-		local _, rest = Legs.rightSole(0, 0, 0)
-		local _, floored = Legs.rightSole(0, Config.THROTTLE.travel, 0)
+		local _, rest = Legs.rightSole(FOOTWELL, 0, 0, 0)
+		local _, floored = Legs.rightSole(FOOTWELL, 0, FOOTWELL.throttle.travel, 0)
 		expect(floored.z < rest.z).toBe(true)
 		expect(floored.y < rest.y).toBe(true)
 	end)
@@ -89,10 +92,13 @@ end)
 describe("Driver legs: the reach from the hip", function()
 	it("keeps the thigh and shin lengths and bends each knee up, toward its point", function()
 		local cases = {
-			{ leg = Legs.right(RIGHT_HIP, 0, 0, 0), toward = Config.KNEE_TOWARD.right },
-			{ leg = Legs.right(RIGHT_HIP, 1, 0, Config.BRAKE.travel), toward = Config.KNEE_TOWARD.right },
-			{ leg = Legs.right(RIGHT_HIP, 0.5, 0, 0), toward = Config.KNEE_TOWARD.right },
-			{ leg = Legs.left(LEFT_HIP), toward = Config.KNEE_TOWARD.left },
+			{ leg = Legs.right(FOOTWELL, RIGHT_HIP, 0, 0, 0), toward = FOOTWELL.kneeToward.right },
+			{
+				leg = Legs.right(FOOTWELL, RIGHT_HIP, 1, 0, FOOTWELL.brake.travel),
+				toward = FOOTWELL.kneeToward.right,
+			},
+			{ leg = Legs.right(FOOTWELL, RIGHT_HIP, 0.5, 0, 0), toward = FOOTWELL.kneeToward.right },
+			{ leg = Legs.left(FOOTWELL, LEFT_HIP), toward = FOOTWELL.kneeToward.left },
 		}
 		for _, case in cases do
 			local leg = case.leg
@@ -110,18 +116,18 @@ describe("Driver legs: the reach from the hip", function()
 			expect(cosine).toBeNear(1, 1e-9)
 			expect(knee.y > 0).toBe(true)
 		end
-		local right = Legs.right(RIGHT_HIP, 0, 0, 0)
-		local left = Legs.left(LEFT_HIP)
+		local right = Legs.right(FOOTWELL, RIGHT_HIP, 0, 0, 0)
+		local left = Legs.left(FOOTWELL, LEFT_HIP)
 		expect(right.knee.x > left.knee.x + 0.3).toBe(true)
 	end)
 
 	it("reaches every foot position from the seated hips with the knee still bent", function()
 		local cases = {
-			Legs.right(RIGHT_HIP, 0, 0, 0),
-			Legs.right(RIGHT_HIP, 0, Config.THROTTLE.travel, 0),
-			Legs.right(RIGHT_HIP, 1, 0, Config.BRAKE.travel),
-			Legs.right(RIGHT_HIP, 0.5, 0, 0),
-			Legs.left(LEFT_HIP),
+			Legs.right(FOOTWELL, RIGHT_HIP, 0, 0, 0),
+			Legs.right(FOOTWELL, RIGHT_HIP, 0, FOOTWELL.throttle.travel, 0),
+			Legs.right(FOOTWELL, RIGHT_HIP, 1, 0, FOOTWELL.brake.travel),
+			Legs.right(FOOTWELL, RIGHT_HIP, 0.5, 0, 0),
+			Legs.left(FOOTWELL, LEFT_HIP),
 		}
 		for _, leg in cases do
 			local asked = distance(leg.hip, leg.ankle)
@@ -131,10 +137,62 @@ describe("Driver legs: the reach from the hip", function()
 	end)
 
 	it("stands the shoe on its sole: the ankle above the heel and up out of the instep", function()
-		local leg = Legs.right(RIGHT_HIP, 0, 0, 0)
+		local leg = Legs.right(FOOTWELL, RIGHT_HIP, 0, 0, 0)
 		expect(leg.up.y > 0.3).toBe(true)
 		expect(leg.forward.z < 0).toBe(true)
-		local heel = Legs.rightSole(0, 0, 0)
+		local heel = Legs.rightSole(FOOTWELL, 0, 0, 0)
 		expect(leg.ankle.y > heel.y).toBe(true)
+	end)
+end)
+
+local function copy(value: any): any
+	if type(value) ~= "table" then
+		return value
+	end
+	local out = {}
+	for key, child in value do
+		out[key] = copy(child)
+	end
+	return out
+end
+
+describe("Driver legs, per car", function()
+	it("presses the car's own pedals by their own travel", function()
+		-- A throttle with twice the travel, set 2 cm further right.
+		local other = copy(FOOTWELL)
+		other.throttle.travel *= 2
+		for _, point in { other.throttle.hinge, other.throttle.heel, other.throttle.ball } do
+			point.x += 0.02
+		end
+		local throttle = Legs.pedalAngles(other, 0, 1, 0)
+		expect(throttle).toBeNear(FOOTWELL.throttle.travel * 2, 1e-9)
+		local heel, ball = Legs.rightSole(other, 0, 0, 0)
+		expect(distance(heel, other.throttle.heel)).toBeNear(0, 1e-9)
+		expect(distance(ball, other.throttle.ball)).toBeNear(0, 1e-9)
+	end)
+
+	it("rests the left foot on the car's own footrest", function()
+		local other = copy(FOOTWELL)
+		for _, point in { other.footrest.heel, other.footrest.ball } do
+			point.x -= 0.03
+		end
+		local ankle = Legs.left(other, LEFT_HIP).ankle
+		expect(distance(ankle, Legs.ankleFor(other.footrest.heel, other.footrest.ball))).toBeNear(0, 1e-6)
+		expect(ankle.x).toBeNear(Legs.left(FOOTWELL, LEFT_HIP).ankle.x - 0.03, 1e-6)
+	end)
+
+	it("bends each knee toward the car's own point", function()
+		local other = copy(FOOTWELL)
+		other.kneeToward.right.y += 0.2
+		other.kneeToward.left.y += 0.2
+		local pairs = {
+			{ Legs.right(FOOTWELL, RIGHT_HIP, 0, 0, 0), Legs.right(other, RIGHT_HIP, 0, 0, 0) },
+			{ Legs.left(FOOTWELL, LEFT_HIP), Legs.left(other, LEFT_HIP) },
+		}
+		for _, pair in pairs do
+			local mine, theirs = pair[1], pair[2]
+			expect(distance(mine.ankle, theirs.ankle)).toBeNear(0, 1e-9)
+			expect(distance(mine.knee, theirs.knee) > 0.005).toBe(true)
+		end
 	end)
 end)

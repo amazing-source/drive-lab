@@ -9,11 +9,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DriverArms = require(ReplicatedStorage.Shared.Config.DriverArms)
 
+local GLOVE = Color3.fromRGB(DriverArms.GLOVE_RGB[1], DriverArms.GLOVE_RGB[2], DriverArms.GLOVE_RGB[3])
+local SLEEVE = Color3.fromRGB(DriverArms.SLEEVE_RGB[1], DriverArms.SLEEVE_RGB[2], DriverArms.SLEEVE_RGB[3])
+
 local Gloves = {}
 
 function Gloves.hand(template: BasePart, skin: Color3): BasePart
 	local part = template:Clone()
-	local color = if DriverArms.GLOVES then DriverArms.GLOVE_COLOR else skin
+	local color = if DriverArms.GLOVES then GLOVE else skin
 	local surface = part:FindFirstChildOfClass("SurfaceAppearance")
 	if surface then
 		surface.Color = color
@@ -25,7 +28,7 @@ end
 
 function Gloves.cuff(template: BasePart): BasePart
 	local part = template:Clone()
-	part.Color = if DriverArms.GLOVES then DriverArms.GLOVE_COLOR else DriverArms.SLEEVE_COLOR
+	part.Color = if DriverArms.GLOVES then GLOVE else SLEEVE
 	return part
 end
 

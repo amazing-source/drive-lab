@@ -17,6 +17,9 @@ local Driving = require("../../games/drive-lab/src/shared/Config/Driving")
 local Legs = require("../../games/drive-lab/src/shared/Rules/DriverLegs")
 local Units = require("../../games/drive-lab/src/shared/Units")
 
+-- The SVJ's footwell: leg_clearance.py fits the legs against its cabin.
+local FOOTWELL = require("../../games/drive-lab/src/shared/Config/Cars/SVJ/Driver").footwell
+
 type Vector = Legs.Vector
 
 local seatWeld = serde.decode("json", fs.readFile(process.args[1]))
@@ -46,16 +49,20 @@ end
 local right, left = hip(1), hip(-1)
 for step = 0, 20 do
 	local over = step / 20
-	local throttleAngle, brakeAngle = Legs.pedalAngles(over, 0, 0)
-	add(string.format("across %.2f", over), Legs.right(right, over, throttleAngle, brakeAngle), "right")
+	local throttleAngle, brakeAngle = Legs.pedalAngles(FOOTWELL, over, 0, 0)
+	add(
+		string.format("across %.2f", over),
+		Legs.right(FOOTWELL, right, over, throttleAngle, brakeAngle),
+		"right"
+	)
 end
 for _, press in { 0.5, 1 } do
-	local throttleAngle, brakeAngle = Legs.pedalAngles(0, press, 0)
-	add(`throttle {press}`, Legs.right(right, 0, throttleAngle, brakeAngle), "right")
-	throttleAngle, brakeAngle = Legs.pedalAngles(1, 0, press)
-	add(`brake {press}`, Legs.right(right, 1, throttleAngle, brakeAngle), "right")
+	local throttleAngle, brakeAngle = Legs.pedalAngles(FOOTWELL, 0, press, 0)
+	add(`throttle {press}`, Legs.right(FOOTWELL, right, 0, throttleAngle, brakeAngle), "right")
+	throttleAngle, brakeAngle = Legs.pedalAngles(FOOTWELL, 1, 0, press)
+	add(`brake {press}`, Legs.right(FOOTWELL, right, 1, throttleAngle, brakeAngle), "right")
 end
-add("footrest", Legs.left(left), "left")
+add("footrest", Legs.left(FOOTWELL, left), "left")
 -- The R6 torso (2 x 2 x 1 studs at character scale 1) the trousers' seat hangs from.
 local torsoScale = Driving.DRIVER_SCALE * Units.METRES_PER_STUD
 table.insert(poses, {

@@ -29,15 +29,15 @@ local Units = require(ReplicatedStorage.Shared.Units)
 
 local EntryView = require(script.Parent.EntryView)
 
-type Drive = { model: Model, chassis: BasePart, bodyRaise: number }
+type Drive = { model: Model, chassis: BasePart, bodyRaise: number, views: CarCamera.CarViews }
 
 local localPlayer = Players.LocalPlayer
 local viewIndex = 1
 local active = false
 local looking = false
 local lookYaw, lookPitch = 0, 0
--- The seat the player has set for the cockpit view, metres; kept for the session.
-local eyeForward, eyeUp = CarCamera.EYE_FORWARD, CarCamera.EYE_UP
+-- How far the player has moved the cockpit eye from the car's own, metres; kept for the session.
+local eyeForward, eyeUp = 0, 0
 local hidden: { BasePart } = {}
 local shake = CarShake.new()
 local kick = Rules.newKick()
@@ -60,7 +60,7 @@ local function currentDrive(): Drive?
 	if chassis == nil or not chassis:IsA("BasePart") or entry == nil then
 		return nil
 	end
-	return { model = model, chassis = chassis, bodyRaise = entry.model.bodyRaise }
+	return { model = model, chassis = chassis, bodyRaise = entry.model.bodyRaise, views = entry.camera }
 end
 
 local function number(model: Model, name: string): number
@@ -130,13 +130,16 @@ local function cockpit(drive: Drive): CFrame
 	local character = localPlayer.Character
 	local headPart = character and character:FindFirstChild("Head")
 	local base = if headPart and headPart:IsA("BasePart") then headPart.Position else frame.Position
-	local eye = base + frame.LookVector * studs(eyeForward) + frame.UpVector * studs(eyeUp)
+	local at = drive.views.eye
+	local eye = base
+		+ frame.LookVector * studs(at.forward + eyeForward)
+		+ frame.UpVector * studs(at.up + eyeUp)
 	return CFrame.new(eye) * frame.Rotation * CFrame.Angles(0, lookYaw, 0) * CFrame.Angles(lookPitch, 0, 0)
 end
 
 local function hood(drive: Drive): CFrame
-	local offset =
-		CFrame.new(0, studs(CarCamera.HOOD_HEIGHT + drive.bodyRaise), -studs(CarCamera.HOOD_FORWARD))
+	local at = drive.views.hood
+	local offset = CFrame.new(0, studs(at.up + drive.bodyRaise), -studs(at.forward))
 	return drive.chassis.CFrame * offset * CFrame.Angles(lookPitch, 0, 0) * CFrame.Angles(0, lookYaw, 0)
 end
 
@@ -235,14 +238,9 @@ function Controller.start()
 			local range = CarCamera.EYE_RANGE
 			local notch = math.sign(input.Position.Z) * range.step
 			if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
-				eyeUp =
-					math.clamp(eyeUp + notch, CarCamera.EYE_UP + range.up[1], CarCamera.EYE_UP + range.up[2])
+				eyeUp = math.clamp(eyeUp + notch, range.up[1], range.up[2])
 			else
-				eyeForward = math.clamp(
-					eyeForward + notch,
-					CarCamera.EYE_FORWARD + range.forward[1],
-					CarCamera.EYE_FORWARD + range.forward[2]
-				)
+				eyeForward = math.clamp(eyeForward + notch, range.forward[1], range.forward[2])
 			end
 		end
 		if looking and input.UserInputType == Enum.UserInputType.MouseMovement then

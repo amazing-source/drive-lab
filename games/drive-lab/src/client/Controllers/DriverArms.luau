@@ -8,7 +8,7 @@
 	way (past that the wheel slides through them), and an upper arm and a forearm reaching each
 	wrist from the shoulder, the elbow bending down and out (Rules/ArmIK).
 
-	The hands are meshes posed around the SVJ's rim (tools/blender/hand_grip.py), gloved or in
+	The hands are meshes posed around each car's rim (tools/blender/hand_grip.py), gloved or in
 	the avatar's skin colour (Rig/Gloves). The sleeves are modelled tubes
 	(tools/blender/driver_sleeves.py) stretched to each bone, the forearm turned so its cuff lies
 	flat with the hand, and a ball of the same cloth fills the elbow; in the cockpit view the
@@ -72,6 +72,8 @@ local LIMBS: { { sign: number, joint: string, arm: string } } = {
 	{ sign = -1, joint = "Left Shoulder", arm = "Left Arm" },
 }
 
+local SLEEVE = Color3.fromRGB(DriverArms.SLEEVE_RGB[1], DriverArms.SLEEVE_RGB[2], DriverArms.SLEEVE_RGB[3])
+
 local log = Log.scope("DriverArms")
 local folder: Folder? = nil
 local warned = false
@@ -95,7 +97,7 @@ end
 
 local function sleeve(from: BasePart): BasePart
 	local part = from:Clone()
-	part.Color = DriverArms.SLEEVE_COLOR
+	part.Color = SLEEVE
 	part.Parent = folder
 	return part
 end
@@ -105,7 +107,7 @@ local function elbowBall(scale: number): BasePart
 	part.Name = "Elbow"
 	part.Shape = Enum.PartType.Ball
 	part.Size = Vector3.one * DriverArms.ELBOW_SIZE * scale
-	part.Color = DriverArms.SLEEVE_COLOR
+	part.Color = SLEEVE
 	part.Material = Enum.Material.Fabric
 	part.Anchored = true
 	part.CanCollide = false
@@ -140,8 +142,8 @@ local function build(model: Model, character: Model): Driver?
 	local torso = character:FindFirstChild("Torso")
 	local chassis = model:FindFirstChild("Chassis")
 	local seat = model:FindFirstChild("DriverSeat")
-	local wheel = chassis and chassis:FindFirstChild("SteeringWheel")
 	local entry = Catalog.of(model)
+	local wheel = chassis and entry and chassis:FindFirstChild(entry.model.steeringWheel)
 	if
 		torso == nil
 		or not torso:IsA("BasePart")
@@ -170,7 +172,8 @@ local function build(model: Model, character: Model): Driver?
 		local joint = torso:FindFirstChild(limb.joint)
 		local arm = character:FindFirstChild(limb.arm)
 		local letter = if limb.sign > 0 then "R" else "L"
-		local hand, cuff = template("Hands", "Hand_" .. letter), template("Hands", "Cuff_" .. letter)
+		local meshes = entry.driver.grip.meshes
+		local hand, cuff = template(meshes, "Hand_" .. letter), template(meshes, "Cuff_" .. letter)
 		if
 			joint == nil
 			or not joint:IsA("Motor6D")
@@ -210,14 +213,7 @@ local function build(model: Model, character: Model): Driver?
 			elbow = elbowBall(scale),
 			hand = hand,
 			cuff = cuff,
-			hands = StartupHands.build(
-				entry.driver.startupPaths,
-				limb.sign,
-				hand,
-				cuff,
-				arm.Color,
-				folder :: Folder
-			),
+			hands = StartupHands.build(entry.driver, limb.sign, hand, cuff, arm.Color, folder :: Folder),
 		})
 		arm.Transparency = 1
 	end
