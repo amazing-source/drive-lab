@@ -30,5 +30,9 @@ jobs:
       - name: Unit tests
         run: lune run tools/test/run
 
+      # The unit tests never load the game's tools; run each once so a moved module breaks the gate.
+      - name: Tools
+        run: lune run tools/test/tools
+
       - name: Build
         run: rojo build games/drive-lab/default.project.json -o drive-lab.rbxl

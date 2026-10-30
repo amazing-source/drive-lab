@@ -20,7 +20,7 @@ local Config = require("../src/shared/Config/RoadAudio")
 local DriveSim = require("./DriveSim")
 local EngineSound = require("../src/shared/Rules/EngineSound")
 local RoadAudio = require("../src/shared/Rules/RoadAudio")
-local SVJ = require("../src/shared/Config/Cars/SVJ")
+local SVJ = require("../src/shared/Config/Cars/SVJ/Physics")
 local process = require("@lune/process")
 local serde = require("@lune/serde")
 
