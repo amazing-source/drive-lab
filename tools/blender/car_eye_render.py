@@ -1,6 +1,6 @@
 """Look-dev renders of the cockpit from fixed cameras, with fixed light, materials untouched.
 
-blender -b <car.blend> --factory-startup -P tools/blender/car_eye_render.py -- <out dir> [<view> ...]
+blender -b <car.blend> --factory-startup --python-exit-code 1 -P tools/blender/car_eye_render.py -- <out dir> [<view> ...]
         [--res 1280x720] [--light sun|overcast] [--views <views.json>]
 
 Views (the DR458's, in its metres; --views replaces them with {name: [[eye], [target], fov_deg]}):

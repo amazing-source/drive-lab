@@ -1,6 +1,6 @@
 """List every mesh the driver can see, with its materials and UV health.
 
-blender -b <assembled.blend> --factory-startup -P tools/blender/car_eye_inventory.py -- <out dir> --eye x,y,z
+blender -b <assembled.blend> --factory-startup --python-exit-code 1 -P tools/blender/car_eye_inventory.py -- <out dir> --eye x,y,z
 
 Visibility: object-ID renders (Workbench, flat, single-sided, glass hidden, no AA, Raw view) from
 a 3 x 3 grid over the cockpit eye range (Config/CarCamera EYE_RANGE: forward -0.15..0.12 m, up

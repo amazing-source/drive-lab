@@ -1,6 +1,6 @@
 """Give a car's meshes their library materials from a material map, with UVs at real scale.
 
-    blender -b --factory-startup -P tools/blender/car_materials_apply.py -- <car.blend> <map.json> --out <out.blend>
+    blender -b --factory-startup --python-exit-code 1 -P tools/blender/car_materials_apply.py -- <car.blend> <map.json> --out <out.blend>
             [--report <report.json>] [--break uv|set|images]
 
 The map names a library directory and three tables:
@@ -30,6 +30,9 @@ it otherwise (an atlas layout). Other faces' UVs are untouched; the object keeps
 
 Images: every path is made absolute and missing ones are found by name under the map's
 `image_roots` (car_resolve_images.py). The file is saved with absolute paths.
+
+Materials tagged with a set the library does not hold (a baked livery) are left as they are.
+`--python-exit-code 1` makes Blender exit 1 when the script itself raises (Blender exits 0 otherwise).
 
 Self-check at the end, exit code 1 on failure: every planned slot carries its set's material,
 every tiled face group passes the UV check, and no material of this file still reads a replaced
@@ -385,7 +388,7 @@ for entry in report["objects"]:
     for poly in me.polygons:
         mat = o.material_slots[poly.material_index].material if poly.material_index < len(o.material_slots) else None
         sname = mat.get("dl_set") if mat else None
-        if sname and kind(sname) == "tiled":
+        if sname in SETS and kind(sname) == "tiled":
             groups.setdefault(SETS[sname]["tile_m"], []).append(poly.index)
     if groups and not me.uv_layers:
         me.uv_layers.new(name="UVMap")

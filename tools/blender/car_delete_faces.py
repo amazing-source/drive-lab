@@ -1,6 +1,6 @@
 """Delete listed faces of one object (a car_find_islands.py result), for the mesh's owner to run.
 
-blender -b <file.blend> --factory-startup -P tools/blender/car_delete_faces.py -- <faces.json> --out <out.blend>
+blender -b <file.blend> --factory-startup --python-exit-code 1 -P tools/blender/car_delete_faces.py -- <faces.json> --out <out.blend>
 
 Refuses to run unless the object's face count equals the JSON's `mesh_faces` (indices from another
 version of the mesh would delete the wrong faces). Loose vertices left behind are removed too.

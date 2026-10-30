@@ -1,6 +1,6 @@
 """Find raised lettering in a mesh: small connected islands inside a box, for the mesh's owner to delete.
 
-blender -b <car.blend> --factory-startup -P tools/blender/car_find_islands.py -- <object> <out.json> <xmin,ymin,zmin,xmax,ymax,zmax>
+blender -b <car.blend> --factory-startup --python-exit-code 1 -P tools/blender/car_find_islands.py -- <object> <out.json> <xmin,ymin,zmin,xmax,ymax,zmax>
         [--max-size 0.06] [--no-weld] [--render <out.png> --view down]
 
 Islands are face groups connected through shared vertices welded by position (1e-5 m), so a
