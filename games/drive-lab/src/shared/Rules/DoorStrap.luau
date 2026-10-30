@@ -57,16 +57,16 @@ end
 
 -- The clip moving the door now: a running entry or exit sequence's step, or the door's own
 -- motion while it plays; nil when the door is at rest.
-function DoorStrap.clip(state: Entry.State, now: number): Config.ClipName?
+function DoorStrap.clip(car: Entry.Car, state: Entry.State, now: number): Config.ClipName?
 	if state.entry ~= "None" then
-		local steps = Entry.steps(state.entry, state.entryDoorOpen)
+		local steps = Entry.steps(car, state.entry, state.entryDoorOpen)
 		if now - state.entryAt < Entry.length(steps) then
 			local step = Entry.stepAt(steps, now - state.entryAt)
 			return if step then step.clip else nil
 		end
 	end
 	local clip: Config.ClipName? = CLIP_NAMES[state.door]
-	if clip == nil or now - state.doorAt >= Config.CLIPS[clip].duration then
+	if clip == nil or now - state.doorAt >= car.door.clips[clip].duration then
 		return nil
 	end
 	return clip

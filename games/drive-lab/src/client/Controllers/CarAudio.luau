@@ -22,6 +22,7 @@ local CarAudioEvents = require(ReplicatedStorage.Shared.Rules.CarAudioEvents)
 local CarEntry = require(ReplicatedStorage.Shared.Rules.CarEntry)
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local CarState = require(ReplicatedStorage.Shared.Car.CarState)
+local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local EngineSound = require(ReplicatedStorage.Shared.Rules.EngineSound)
 local ExhaustPops = require(ReplicatedStorage.Shared.Rules.ExhaustPops)
 local Types = require(ReplicatedStorage.Shared.Config.Cars.Types)
@@ -376,10 +377,11 @@ end
 -- The engine sounds from the moment START is pressed until it is switched off.
 local function follow()
 	local model = seated
-	if model == nil then
+	local entry = model and Catalog.of(model)
+	if model == nil or entry == nil then
 		return
 	end
-	local startup = CarEntry.startup(CarState.read(model), Workspace:GetServerTimeNow())
+	local startup = CarEntry.startup(entry, CarState.read(model), Workspace:GetServerTimeNow())
 	if session == nil and startup.sincePress then
 		start(model, startup.sincePress)
 	elseif session and startup.stage == "Off" then

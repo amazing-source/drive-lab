@@ -1,6 +1,6 @@
 """
 Keys for getting in and out of the SVJ, one continuous timeline per direction, cut into the
-clips CarEntry plays (games/drive-lab/src/shared/Config/CarEntry.luau):
+clips CarEntry plays (games/drive-lab/src/shared/Config/Cars/SVJ/Door.luau):
 
   entry:  OutsideOpen | GetIn                      (GetIn ends seated with the door shut, #9)
   exit:   InsideOpen  | GetOut | OutsideClose

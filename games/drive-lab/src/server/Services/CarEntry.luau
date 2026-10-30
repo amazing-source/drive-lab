@@ -36,6 +36,7 @@ type Intent = "Enter" | "Door"
 type Reservation = { player: Player, character: Model, intent: Intent, at: number, asked: boolean }
 type Car = {
 	model: Model,
+	entry: Catalog.Entry,
 	seat: Seat,
 	chassis: BasePart,
 	enterPrompt: ProximityPrompt,
@@ -111,7 +112,7 @@ local function driver(car: Car): Player?
 end
 
 local function atMark(car: Car, root: BasePart): boolean
-	return DoorMark.distance(car.seat, root.Position) <= Config.MARK_TOLERANCE
+	return DoorMark.distance(car.entry.door, car.seat, root.Position) <= Config.MARK_TOLERANCE
 end
 
 local function release(car: Car)
@@ -165,7 +166,7 @@ local function cutShort(car: Car, at: number)
 		entry = "None",
 		entryAt = at,
 		entryDoorOpen = false,
-		door = Rules.nearestRest(state, at),
+		door = Rules.nearestRest(car.entry, state, at),
 		doorAt = at,
 		engine = "Off",
 		engineAt = at,
@@ -180,13 +181,16 @@ local function onPrompt(car: Car, player: Player, intent: Intent)
 	if character == nil or humanoid == nil or root == nil or humanoid.SeatPart ~= nil then
 		return
 	end
-	if DoorMark.distance(car.seat, root.Position) > Config.PROMPT_DISTANCE + DISTANCE_SLACK then
+	if
+		DoorMark.distance(car.entry.door, car.seat, root.Position)
+		> Config.PROMPT_DISTANCE + DISTANCE_SLACK
+	then
 		return
 	end
 	local state, at = CarState.read(car.model), now()
 	local allowed = if intent == "Enter"
-		then Rules.canEnter(state, at)
-		else Rules.canMoveDoor(state, at, speedKmh(car), false)
+		then Rules.canEnter(car.entry, state, at)
+		else Rules.canMoveDoor(car.entry, state, at, speedKmh(car), false)
 	if not allowed then
 		return
 	end
@@ -215,7 +219,13 @@ local function seat(car: Car, player: Player, startedAt: number)
 		return
 	end
 	-- The client has stopped the body on the mark; resized there in the same step as the weld.
-	CarBody.resizeOn(car.model, character, root, DoorMark.frame(car.seat), Driving.DRIVER_SCALE)
+	CarBody.resizeOn(
+		car.model,
+		character,
+		root,
+		DoorMark.frame(car.entry.door, car.seat),
+		Driving.DRIVER_SCALE
+	)
 	car.seat:Sit(humanoid)
 end
 
@@ -233,7 +243,7 @@ local function enter(car: Car, player: Player, request: Request)
 		return
 	end
 	release(car)
-	if car.seat.Occupant ~= nil or humanoid.SeatPart ~= nil or not Rules.canEnter(state, at) then
+	if car.seat.Occupant ~= nil or humanoid.SeatPart ~= nil or not Rules.canEnter(car.entry, state, at) then
 		return
 	end
 	local startAt = Rules.entryStart(at, request.at, oneWay(player))
@@ -247,7 +257,7 @@ local function enter(car: Car, player: Player, request: Request)
 	CarState.write(car.model, {
 		entry = "Enter",
 		entryAt = startAt,
-		entryDoorOpen = Rules.doorOpenness(state, at) >= 0.5,
+		entryDoorOpen = Rules.doorOpenness(car.entry, state, at) >= 0.5,
 		door = "Closed",
 		doorAt = startAt,
 		engine = "Off",
@@ -271,17 +281,20 @@ local function moveDoor(car: Car, player: Player, request: Request)
 		end
 	end
 	local state, at = CarState.read(car.model), now()
-	if not Rules.canMoveDoor(state, at, speedKmh(car), inside) then
+	if not Rules.canMoveDoor(car.entry, state, at, speedKmh(car), inside) then
 		return
 	end
-	local clip: Config.ClipName = Rules.doorClip(state, at, inside)
+	local clip: Config.ClipName = Rules.doorClip(car.entry, state, at, inside)
 	-- From where the client can show it from its start (as an entry's start, Rules/CarEntry).
 	local startAt = Rules.entryStart(at, request.at, oneWay(player))
 	local character = player.Character
 	if not inside and character then
 		-- The clip leans the body into the car's box to reach the door, and this server, which
 		-- moves the parked car, pushed the car away from it (measured: 1.14 studs over OutsideOpen).
-		CarBody.passThrough(character, startAt - at + Config.CLIPS[clip].duration + CLIP_THROUGH_MARGIN)
+		CarBody.passThrough(
+			character,
+			startAt - at + car.entry.door.clips[clip].duration + CLIP_THROUGH_MARGIN
+		)
 	end
 	car.model:SetAttribute(ATTRIBUTE.DOOR_AT, startAt)
 	car.model:SetAttribute(ATTRIBUTE.DOOR, clip)
@@ -289,7 +302,7 @@ end
 
 local function start(car: Car, player: Player, _request: Request)
 	local state, at = CarState.read(car.model), now()
-	if driver(car) == player and Rules.canStart(state, at) then
+	if driver(car) == player and Rules.canStart(car.entry, state, at) then
 		car.model:SetAttribute(ATTRIBUTE.ENGINE_AT, at)
 		car.model:SetAttribute(ATTRIBUTE.ENGINE, "On")
 	end
@@ -330,15 +343,15 @@ local function finishExit(car: Car, player: Player, startedAt: number)
 	-- The client, which owns the body, puts it standing where the last clip frame shows it
 	-- (Controllers/SeatHandOver): a placement from here alone does not take on that client
 	-- (measured). It regains its size on that same spot.
-	CarBody.resizeOn(car.model, character, root, DoorMark.exitFrame(car.seat), 1)
+	CarBody.resizeOn(car.model, character, root, DoorMark.exitFrame(car.entry.door, car.seat), 1)
 end
 
 local function exit(car: Car, player: Player, _request: Request)
 	local state, at = CarState.read(car.model), now()
-	if driver(car) ~= player or not Rules.canExit(state, at, speedKmh(car)) then
+	if driver(car) ~= player or not Rules.canExit(car.entry, state, at, speedKmh(car)) then
 		return
 	end
-	local doorOpen = Rules.doorOpenness(state, at) >= 0.5
+	local doorOpen = Rules.doorOpenness(car.entry, state, at) >= 0.5
 	-- As an entry's start: where the client shows the exit from its first frame.
 	local startAt = Rules.entryStart(at, nil, oneWay(player))
 	CarState.write(car.model, {
@@ -350,7 +363,13 @@ local function exit(car: Car, player: Player, _request: Request)
 		engine = "Off",
 		engineAt = at,
 	})
-	task.delay(startAt - at + Rules.length(Rules.steps("Exit", doorOpen)), finishExit, car, player, startAt)
+	task.delay(
+		startAt - at + Rules.length(Rules.steps(car.entry, "Exit", doorOpen)),
+		finishExit,
+		car,
+		player,
+		startAt
+	)
 end
 
 -- Anyone leaving the seat other than through a finished exit (a reset, a death, a player
@@ -413,9 +432,9 @@ local function updateCar(car: Car, at: number)
 	end
 	local state = CarState.read(car.model)
 	local free = car.reservation == nil
-	car.enterPrompt.Enabled = free and Rules.canEnter(state, at)
-	car.doorPrompt.Enabled = free and Rules.canMoveDoor(state, at, speedKmh(car), false)
-	local text = if Rules.doorOpenness(state, at) >= 0.5 then "Close door" else "Open door"
+	car.enterPrompt.Enabled = free and Rules.canEnter(car.entry, state, at)
+	car.doorPrompt.Enabled = free and Rules.canMoveDoor(car.entry, state, at, speedKmh(car), false)
+	local text = if Rules.doorOpenness(car.entry, state, at) >= 0.5 then "Close door" else "Open door"
 	if car.doorPrompt.ActionText ~= text then
 		car.doorPrompt.ActionText = text
 	end
@@ -441,7 +460,7 @@ local function setup(model: Instance)
 	end
 	local entry = Catalog.of(model)
 	local rig = if entry then CarRig.find(model, entry.model) else nil
-	if rig == nil then
+	if rig == nil or entry == nil then
 		log.warn(`{model:GetFullName()} is tagged but not rigged; no entry for it`)
 		return
 	end
@@ -451,6 +470,7 @@ local function setup(model: Instance)
 	enterPrompt.MaxActivationDistance = Config.PROMPT_DISTANCE
 	local car: Car = {
 		model = model,
+		entry = entry,
 		seat = rig.seat,
 		chassis = rig.chassis,
 		enterPrompt = enterPrompt,

@@ -24,6 +24,7 @@ local Log = require(ReplicatedStorage.Kit.Log)
 local CarEntry = require(ReplicatedStorage.Shared.Rules.CarEntry)
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local CarState = require(ReplicatedStorage.Shared.Car.CarState)
+local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local DriverLegs = require(ReplicatedStorage.Shared.Config.DriverLegs)
 local Legs = require(ReplicatedStorage.Shared.Rules.DriverLegs)
 local Units = require(ReplicatedStorage.Shared.Units)
@@ -42,6 +43,7 @@ type Side = {
 type Pedal = { weld: Weld, rest: CFrame, angle: number }
 
 type Driver = {
+	entry: Catalog.Entry,
 	character: Model,
 	torso: BasePart,
 	model: Model,
@@ -151,7 +153,7 @@ local function release(driver: Driver)
 	turn(driver.brake, 0)
 end
 
-local function build(model: Model, character: Model): Driver?
+local function build(model: Model, entry: Catalog.Entry, character: Model): Driver?
 	local torso = character:FindFirstChild("Torso")
 	local seat = model:FindFirstChild("DriverSeat")
 	if torso == nil or not torso:IsA("BasePart") or seat == nil or not seat:IsA("BasePart") then
@@ -188,6 +190,7 @@ local function build(model: Model, character: Model): Driver?
 		limb.leg.Transparency = 1
 	end
 	return {
+		entry = entry,
 		character = character,
 		torso = torso,
 		model = model,
@@ -234,7 +237,7 @@ end
 local function pose(driver: Driver, state: CarEntry.State, now: number, dt: number)
 	local model = driver.model
 	local throttle, brake = readout(model, "Throttle"), readout(model, "Brake")
-	local held = CarEntry.startupBrake(state, now)
+	local held = CarEntry.startupBrake(driver.entry, state, now)
 	if held then
 		throttle, brake = 0, math.max(brake, held)
 	end
@@ -266,8 +269,9 @@ local function update(dt: number)
 	for _, model in CollectionService:GetTagged(CarRig.TAG) do
 		if model:IsA("Model") and drivers[model] == nil then
 			local character = seatedCharacter(model)
-			if character and CarEntry.phase(CarState.read(model), now) == "Seated" then
-				local driver = build(model, character)
+			local entry = Catalog.of(model)
+			if character and entry and CarEntry.phase(entry, CarState.read(model), now) == "Seated" then
+				local driver = build(model, entry, character)
 				if driver then
 					drivers[model] = driver
 				end
@@ -282,7 +286,7 @@ local function update(dt: number)
 			model.Parent == nil
 			or seatedCharacter(model) ~= driver.character
 			or driver.torso.Parent == nil
-			or CarEntry.phase(state, now) ~= "Seated"
+			or CarEntry.phase(driver.entry, state, now) ~= "Seated"
 		then
 			release(driver)
 			drivers[model] = nil

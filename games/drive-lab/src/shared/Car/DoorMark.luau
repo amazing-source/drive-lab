@@ -2,7 +2,8 @@
 --[[
 	Where a character stands to use a car's driver's door: beside the seat, facing it. The
 	entry and exit clips are authored from here, so the server checks the character against
-	it; getting out ends a little further out (Config/CarEntry EXIT_END), facing the same way.
+	it; getting out ends a little further out (the door's exitEnd), facing the same way. Both
+	are the car's own (Config/CarEntry Door).
 ]]
 local Config = require("../Config/CarEntry")
 local Units = require("../Units")
@@ -17,20 +18,20 @@ local function beside(seat: BasePart, right: number, forward: number): Vector3
 end
 
 -- At the seat's height, turned to face the seat about the vertical.
-function DoorMark.frame(seat: BasePart): CFrame
-	local position = beside(seat, Config.MARK.right, Config.MARK.forward)
+function DoorMark.frame(door: Config.Door, seat: BasePart): CFrame
+	local position = beside(seat, door.mark.right, door.mark.forward)
 	local toward = seat.Position - position
 	return CFrame.lookAt(position, position + Vector3.new(toward.X, 0, toward.Z))
 end
 
 -- Where getting out ends, at the seat's height, facing as at the mark.
-function DoorMark.exitFrame(seat: BasePart): CFrame
-	return DoorMark.frame(seat).Rotation + beside(seat, Config.EXIT_END.right, Config.EXIT_END.forward)
+function DoorMark.exitFrame(door: Config.Door, seat: BasePart): CFrame
+	return DoorMark.frame(door, seat).Rotation + beside(seat, door.exitEnd.right, door.exitEnd.forward)
 end
 
 -- Distance across the ground from the mark, ignoring height.
-function DoorMark.distance(seat: BasePart, point: Vector3): number
-	local delta = point - DoorMark.frame(seat).Position
+function DoorMark.distance(door: Config.Door, seat: BasePart, point: Vector3): number
+	local delta = point - DoorMark.frame(door, seat).Position
 	return Vector3.new(delta.X, 0, delta.Z).Magnitude
 end
 

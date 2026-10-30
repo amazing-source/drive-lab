@@ -1,6 +1,6 @@
 """
-Finds where getting out ends and prints the EXIT_END field of
-games/drive-lab/src/shared/Config/CarEntry.luau from the exit timeline's bake.
+Finds where getting out ends and prints the exitEnd field of a car's door
+(games/drive-lab/src/shared/Config/Cars/<Car>/Door.luau) from the exit timeline's bake.
 
 OutsideClose shuts the door, then walks back in to the door mark, where the car's collision box
 is too close for the body to turn. Getting out ends earlier, at a frame of that walk back where
@@ -87,7 +87,7 @@ def main(argv):
     right = mark_right - torso[2] * DRIVER_SCALE * METRES_PER_STUD
     forward = mark_forward - torso[0] * DRIVER_SCALE * METRES_PER_STUD
     print(f"chosen frame {index}: pose {pose:.4f} studs off rest, torso height {torso[1]:.4f} (rest 3)")
-    print(f"\tEXIT_END = table.freeze({{ at = {at:.3f}, right = {right:.4f}, forward = {forward:.4f} }}),")
+    print(f"\texitEnd = table.freeze({{ at = {at:.3f}, right = {right:.4f}, forward = {forward:.4f} }}),")
 
 
 if __name__ == "__main__":

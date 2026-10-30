@@ -16,6 +16,7 @@ local Workspace = game:GetService("Workspace")
 local CarEntry = require(ReplicatedStorage.Shared.Rules.CarEntry)
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local CarState = require(ReplicatedStorage.Shared.Car.CarState)
+local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local Cluster = require(ReplicatedStorage.Shared.Config.Cluster)
 local ClusterTheme = require(ReplicatedStorage.Shared.Config.ClusterTheme)
 local DriverAssists = require(ReplicatedStorage.Shared.Rules.DriverAssists)
@@ -24,6 +25,7 @@ local Rules = require(ReplicatedStorage.Shared.Rules.Cluster)
 
 type Display = {
 	model: Model,
+	entry: Catalog.Entry,
 	gui: SurfaceGui,
 	lit: ImageLabel,
 	red: ImageLabel,
@@ -88,7 +90,7 @@ local function litLayer(parent: Instance, image: string): (ImageLabel, UIGradien
 	return layer, wipe
 end
 
-local function build(model: Model, screen: BasePart): Display
+local function build(model: Model, entry: Catalog.Entry, screen: BasePart): Display
 	local gui = Instance.new("SurfaceGui")
 	gui.Name = "LiveCluster"
 	gui.Face = Enum.NormalId.Back
@@ -122,6 +124,7 @@ local function build(model: Model, screen: BasePart): Display
 	gui.Parent = screen
 	return {
 		model = model,
+		entry = entry,
 		gui = gui,
 		face = face,
 		lit = lit,
@@ -167,10 +170,10 @@ local function refresh(current: Display)
 	-- Dark until START is pressed; from the press the dial sweeps, then shows the start-up's revs.
 	local serverNow = Workspace:GetServerTimeNow()
 	local state = CarState.read(model)
-	local sincePress = CarEntry.startup(state, serverNow).sincePress
+	local sincePress = CarEntry.startup(current.entry, state, serverNow).sincePress
 	current.face.Visible = sincePress ~= nil
 	local sweep = if sincePress then Rules.startupRpm(sincePress) else nil
-	local rpm = sweep or CarEntry.shownRpm(state, serverNow, number(model, "Rpm"))
+	local rpm = sweep or CarEntry.shownRpm(current.entry, state, serverNow, number(model, "Rpm"))
 	local cells = Rules.litCells(rpm)
 	if cells ~= current.cells then
 		current.cells = cells
@@ -222,10 +225,11 @@ local function update(dt: number)
 	end
 	if current == nil then
 		local screen = model:FindFirstChild("ClusterScreen")
-		if screen == nil or not screen:IsA("BasePart") then
+		local entry = Catalog.of(model)
+		if screen == nil or not screen:IsA("BasePart") or entry == nil then
 			return
 		end
-		current = build(model, screen)
+		current = build(model, entry, screen)
 		display = current
 	end
 	elapsed += dt

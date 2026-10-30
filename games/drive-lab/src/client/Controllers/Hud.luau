@@ -18,6 +18,7 @@ local Workspace = game:GetService("Workspace")
 local CarEntry = require(ReplicatedStorage.Shared.Rules.CarEntry)
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local CarState = require(ReplicatedStorage.Shared.Car.CarState)
+local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local ClusterRules = require(ReplicatedStorage.Shared.Rules.Cluster)
 local Config = require(ReplicatedStorage.Shared.Config.Hud)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
@@ -286,8 +287,9 @@ local function arrange(current: Ui)
 		else UDim2.new(0.5, 0, 1, -Config.MARGIN)
 end
 
-local function refresh(current: Ui, model: Model)
-	local rpm = CarEntry.shownRpm(CarState.read(model), Workspace:GetServerTimeNow(), number(model, "Rpm"))
+local function refresh(current: Ui, model: Model, entry: Catalog.Entry)
+	local rpm =
+		CarEntry.shownRpm(entry, CarState.read(model), Workspace:GetServerTimeNow(), number(model, "Rpm"))
 	local manual = model:GetAttribute("GearboxMode") == "manual"
 	local flash = Rules.shiftFlash(rpm, Config.REDLINE_RPM, manual, os.clock(), Config.FLASH_HZ)
 	for index, segment in current.segments do
@@ -344,14 +346,14 @@ local function update(dt: number)
 	if current == nil then
 		return
 	end
-	local driven = drivenModel()
+	local model = drivenModel()
+	local entry = model and Catalog.of(model)
 	-- Not while getting in or out (Rules/CarEntry).
-	local model = if driven
-			and CarEntry.phase(CarState.read(driven), Workspace:GetServerTimeNow()) == "Seated"
-		then driven
-		else nil
-	current.gui.Enabled = model ~= nil and hudMode ~= "Off"
-	if model == nil or hudMode == "Off" then
+	local seated = model ~= nil
+		and entry ~= nil
+		and CarEntry.phase(entry, CarState.read(model), Workspace:GetServerTimeNow()) == "Seated"
+	current.gui.Enabled = seated and hudMode ~= "Off"
+	if model == nil or entry == nil or not seated or hudMode == "Off" then
 		return
 	end
 	elapsed += dt
@@ -360,7 +362,7 @@ local function update(dt: number)
 	end
 	elapsed = 0
 	arrange(current)
-	refresh(current, model)
+	refresh(current, model, entry)
 end
 
 local Controller = {}

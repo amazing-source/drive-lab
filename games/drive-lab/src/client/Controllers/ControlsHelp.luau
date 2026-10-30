@@ -16,6 +16,7 @@ local Workspace = game:GetService("Workspace")
 local CarEntry = require(ReplicatedStorage.Shared.Rules.CarEntry)
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local CarState = require(ReplicatedStorage.Shared.Car.CarState)
+local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local Config = require(ReplicatedStorage.Shared.Config.ControlsHelp)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local Hud = require(ReplicatedStorage.Shared.Config.Hud)
@@ -240,10 +241,13 @@ local function watchSeat(humanoid: Humanoid)
 		task.spawn(function()
 			while true do
 				local car = drivenCar()
-				if car == nil then
+				local entry = car and Catalog.of(car)
+				if car == nil or entry == nil then
 					hinted.seat = false
 					return
-				elseif CarEntry.phase(CarState.read(car), Workspace:GetServerTimeNow()) == "Seated" then
+				elseif
+					CarEntry.phase(entry, CarState.read(car), Workspace:GetServerTimeNow()) == "Seated"
+				then
 					showHint()
 					return
 				end

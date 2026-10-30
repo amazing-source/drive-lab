@@ -1,6 +1,6 @@
 """
-Prints the CLIPS, SEATED_POSE and MARK fields of games/drive-lab/src/shared/Config/CarEntry.luau
-from an export (clips.json, car_entry_export.py) and the uploaded ids, formatted as stylua writes
+Prints the clips, seatedPose and mark fields of a car's door
+(games/drive-lab/src/shared/Config/Cars/<Car>/Door.luau) from an export (clips.json, car_entry_export.py) and the uploaded ids, formatted as stylua writes
 them, to paste over the old fields (the file's other fields are not this tool's).
 
   python car_entry_config.py <clips.json> <ids.json> --mark -0.88,0
@@ -26,7 +26,7 @@ def main(argv):
     clips = json.load(open(args.clips, encoding="utf-8"))
     ids = json.load(open(args.ids, encoding="utf-8"))
     right, forward = (float(v) for v in args.mark.split(","))
-    out = ["\tCLIPS = table.freeze({"]
+    out = ["\tclips = table.freeze({"]
     for name in ORDER:
         clip, asset = clips[name], ids[name]
         out.append(f"\t\t{name} = table.freeze({{")
@@ -44,8 +44,8 @@ def main(argv):
             out.append("\t\t\t}),")
         out.append("\t\t}),")
     out.append("\t}),")
-    out.append(f'\tSEATED_POSE = "{ids["SeatedPose"]["seated"]}",')
-    out.append(f"\tMARK = table.freeze({{ right = {number(right)}, forward = {number(forward)} }}),")
+    out.append(f'\tseatedPose = "{ids["SeatedPose"]["seated"]}",')
+    out.append(f"\tmark = table.freeze({{ right = {number(right)}, forward = {number(forward)} }}),")
     print("\n".join(out))
 
 

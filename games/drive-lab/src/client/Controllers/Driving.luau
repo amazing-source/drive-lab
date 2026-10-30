@@ -90,8 +90,8 @@ end
 
 -- Until the car is started, shut and its driver settled in (Rules/CarEntry), it stays parked:
 -- the runner still holds it on its suspension, and a tap meant for a pedal or a paddle is dropped.
-local function gated(model: Model, input: Interface.DriverInput): Interface.DriverInput
-	if CarEntry.drivable(CarState.read(model), Workspace:GetServerTimeNow()) then
+local function gated(entry: Catalog.Entry, model: Model, input: Interface.DriverInput): Interface.DriverInput
+	if CarEntry.drivable(entry, CarState.read(model), Workspace:GetServerTimeNow()) then
 		return input
 	end
 	input.throttle, input.brake, input.steer, input.handbrake = 0, 0, 0, 1
@@ -152,7 +152,7 @@ local function start(seat: Seat)
 	local current = VehicleRunner.new(rig, entry.physics, help)
 	runner = current
 	connection = RunService.PreSimulation:Connect(function(dt: number)
-		local result = VehicleRunner.step(current, gated(model, readInput()), dt)
+		local result = VehicleRunner.step(current, gated(entry, model, readInput()), dt)
 		VehicleRunner.animate(current, dt)
 		publish(model, result, current)
 	end)

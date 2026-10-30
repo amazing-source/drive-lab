@@ -153,10 +153,10 @@ local function attempt(walk: Walk, mark: CFrame, hull: BasePart?, deadline: numb
 	return outcome
 end
 
--- Walks to the mark in front of `seat`, round `hull` when it is in the way. Arrived means within
+-- Walks to the door's mark in front of `seat`, round `hull` when it is in the way. Arrived means within
 -- APPROACH.reach of the mark, for the caller to place the body on it.
-function EntryWalk.toMark(walk: Walk, seat: BasePart, hull: BasePart?): Outcome
-	local mark = DoorMark.frame(seat)
+function EntryWalk.toMark(walk: Walk, door: Config.Door, seat: BasePart, hull: BasePart?): Outcome
+	local mark = DoorMark.frame(door, seat)
 	local deadline = os.clock() + Config.APPROACH_SECONDS
 	for _ = 1, APPROACH.tries do
 		local outcome: Outcome = attempt(walk, mark, hull, deadline)
@@ -164,7 +164,9 @@ function EntryWalk.toMark(walk: Walk, seat: BasePart, hull: BasePart?): Outcome
 			return outcome
 		end
 	end
-	return if DoorMark.distance(seat, walk.root.Position) <= APPROACH.reach then "Arrived" else "Blocked"
+	return if DoorMark.distance(door, seat, walk.root.Position) <= APPROACH.reach
+		then "Arrived"
+		else "Blocked"
 end
 
 -- Gives the body back to the player: free, turning with its walk, and when standing, with no

@@ -2,7 +2,8 @@
 --[[
 	Everything about getting in, getting out, the door and the start-up that follows from the
 	car's replicated state and the server's clock: which clip plays, how open the door is,
-	where the start-up is, what the instruments show, and what a request may do now. The
+	where the start-up is, what the instruments show, and what a request may do now, for the
+	car whose door and start-up it is given (Config/CarEntry's Car: a catalog entry is one). The
 	server and every client call the same functions, so they agree without more messages.
 ]]
 local Config = require("../Config/CarEntry")
@@ -31,6 +32,8 @@ export type Step = { clip: Config.ClipName, start: number, duration: number }
 -- A door the local player asked to move from outside: the standing clip to play and how far
 -- into it, or finished (the clip has ended, or the server never moved the door: refused).
 export type OutsideRequest = { clip: Config.ClipName?, into: number, finished: boolean }
+
+export type Car = Config.Car
 
 export type Startup = {
 	stage: Stage,
@@ -67,11 +70,11 @@ function CarEntry.sample(curve: Config.Curve, t: number): number
 end
 
 -- `lastUntil` ends the last clip early, at that many seconds into it.
-local function chain(names: { Config.ClipName }, lastUntil: number?): { Step }
+local function chain(door: Config.Door, names: { Config.ClipName }, lastUntil: number?): { Step }
 	local steps: { Step } = table.create(#names)
 	local start = 0
 	for index, name: Config.ClipName in names do
-		local duration = Config.CLIPS[name].duration
+		local duration = door.clips[name].duration
 		if index == #names and lastUntil then
 			duration = math.min(duration, lastUntil)
 		end
@@ -84,11 +87,11 @@ end
 
 -- The clips a sequence plays in order; it skips opening a door that is already open. Getting in
 -- closes the door within GetIn itself; getting out ends in OutsideClose's stance clear of the car.
-function CarEntry.steps(kind: EntryKind, doorOpen: boolean): { Step }
+function CarEntry.steps(car: Car, kind: EntryKind, doorOpen: boolean): { Step }
 	if kind == "Enter" then
-		return chain(if doorOpen then ENTER_OPEN else ENTER_SHUT)
+		return chain(car.door, if doorOpen then ENTER_OPEN else ENTER_SHUT)
 	elseif kind == "Exit" then
-		return chain(if doorOpen then EXIT_OPEN else EXIT_SHUT, Config.EXIT_END.at)
+		return chain(car.door, if doorOpen then EXIT_OPEN else EXIT_SHUT, car.door.exitEnd.at)
 	end
 	return {}
 end
@@ -110,36 +113,37 @@ function CarEntry.stepAt(steps: { Step }, elapsed: number): (Step?, number)
 	return last, if last then last.duration else 0
 end
 
-function CarEntry.phase(state: State, now: number): Phase
+function CarEntry.phase(car: Car, state: State, now: number): Phase
 	if state.entry == "None" then
 		return "Outside"
 	end
-	local running = now - state.entryAt < CarEntry.length(CarEntry.steps(state.entry, state.entryDoorOpen))
+	local running = now - state.entryAt
+		< CarEntry.length(CarEntry.steps(car, state.entry, state.entryDoorOpen))
 	if state.entry == "Enter" then
 		return if running then "Entering" else "Seated"
 	end
 	return "Exiting"
 end
 
-function CarEntry.motionOpenness(motion: Config.DoorMotion, t: number): number
+function CarEntry.motionOpenness(car: Car, motion: Config.DoorMotion, t: number): number
 	if motion == "Closed" then
 		return 0
 	elseif motion == "Open" then
 		return 1
 	end
-	local curve = Config.CLIPS[motion].door
+	local curve = car.door.clips[motion].door
 	assert(curve, `{motion} does not move the door`)
 	return CarEntry.sample(curve, t)
 end
 
-local function sequenceOpenness(state: State, elapsed: number): number?
-	local steps = CarEntry.steps(state.entry, state.entryDoorOpen)
+local function sequenceOpenness(car: Car, state: State, elapsed: number): number?
+	local steps = CarEntry.steps(car, state.entry, state.entryDoorOpen)
 	if elapsed >= CarEntry.length(steps) then
 		return nil
 	end
 	local openness = if state.entryDoorOpen then 1 else 0
 	for _, step in steps do
-		local curve = Config.CLIPS[step.clip].door
+		local curve = car.door.clips[step.clip].door
 		if curve and elapsed >= step.start then
 			openness = CarEntry.sample(curve, elapsed - step.start)
 		end
@@ -148,43 +152,43 @@ local function sequenceOpenness(state: State, elapsed: number): number?
 end
 
 -- 0 shut to 1 fully open. A running sequence drives the door; otherwise its own motion does.
-function CarEntry.doorOpenness(state: State, now: number): number
+function CarEntry.doorOpenness(car: Car, state: State, now: number): number
 	if state.entry ~= "None" then
-		local during = sequenceOpenness(state, now - state.entryAt)
+		local during = sequenceOpenness(car, state, now - state.entryAt)
 		if during then
 			return during
 		end
 	end
-	return CarEntry.motionOpenness(state.door, now - state.doorAt)
+	return CarEntry.motionOpenness(car, state.door, now - state.doorAt)
 end
 
 -- The door is at rest: no sequence runs and its last motion has finished.
-function CarEntry.doorIdle(state: State, now: number): boolean
-	local phase = CarEntry.phase(state, now)
+function CarEntry.doorIdle(car: Car, state: State, now: number): boolean
+	local phase = CarEntry.phase(car, state, now)
 	if phase == "Entering" or phase == "Exiting" then
 		return false
 	end
 	if state.door == "Closed" or state.door == "Open" then
 		return true
 	end
-	return now - state.doorAt >= Config.CLIPS[state.door].duration
+	return now - state.doorAt >= car.door.clips[state.door].duration
 end
 
-function CarEntry.doorClosed(state: State, now: number): boolean
-	return CarEntry.doorIdle(state, now) and CarEntry.doorOpenness(state, now) <= 0
+function CarEntry.doorClosed(car: Car, state: State, now: number): boolean
+	return CarEntry.doorIdle(car, state, now) and CarEntry.doorOpenness(car, state, now) <= 0
 end
 
 -- The rest the door settles at when a sequence is cut short (the driver left or died).
-function CarEntry.nearestRest(state: State, now: number): Config.DoorMotion
-	return if CarEntry.doorOpenness(state, now) >= 0.5 then "Open" else "Closed"
+function CarEntry.nearestRest(car: Car, state: State, now: number): Config.DoorMotion
+	return if CarEntry.doorOpenness(car, state, now) >= 0.5 then "Open" else "Closed"
 end
 
-function CarEntry.startup(state: State, now: number): Startup
+function CarEntry.startup(car: Car, state: State, now: number): Startup
 	if state.engine == "Off" then
 		return { stage = "Off", sincePress = nil, drivable = false }
 	end
 	local t = now - state.engineAt
-	local settings = Config.STARTUP
+	local settings = car.startup
 	local drivable = t >= settings.drivableAt
 	if t < settings.pressAt then
 		return { stage = "Reaching", sincePress = nil, drivable = drivable }
@@ -199,13 +203,13 @@ end
 
 -- The revs the instruments show: none before START, the start-up's own revs while it runs
 -- (never below what the engine turns once it drives), then the engine's.
-function CarEntry.shownRpm(state: State, now: number, engineRpm: number): number
-	local startup = CarEntry.startup(state, now)
+function CarEntry.shownRpm(car: Car, state: State, now: number, engineRpm: number): number
+	local startup = CarEntry.startup(car, state, now)
 	local sincePress = startup.sincePress
 	if sincePress == nil then
 		return 0
 	end
-	local curve = Config.STARTUP.rpm
+	local curve = car.startup.rpm
 	if sincePress >= curve.times[#curve.times] then
 		return engineRpm
 	end
@@ -215,12 +219,12 @@ end
 
 -- How far the START flap is lifted, 0 to 1: the right hand lifts it before the press and lets
 -- it fall after.
-function CarEntry.flapOpenness(state: State, now: number): number
+function CarEntry.flapOpenness(car: Car, state: State, now: number): number
 	if state.engine == "Off" then
 		return 0
 	end
 	local t = now - state.engineAt
-	local settings = Config.STARTUP
+	local settings = car.startup
 	local move = settings.flapMove
 	if t < settings.flapDownAt then
 		return math.clamp((t - (settings.flapUpAt - move)) / move, 0, 1)
@@ -229,59 +233,59 @@ function CarEntry.flapOpenness(state: State, now: number): number
 end
 
 -- The brake the right foot holds while the car starts, until driving unlocks; nil otherwise.
-function CarEntry.startupBrake(state: State, now: number): number?
-	local startup = CarEntry.startup(state, now)
+function CarEntry.startupBrake(car: Car, state: State, now: number): number?
+	local startup = CarEntry.startup(car, state, now)
 	if startup.stage == "Off" or startup.drivable then
 		return nil
 	end
-	return Config.STARTUP.brake
+	return car.startup.brake
 end
 
-function CarEntry.drivable(state: State, now: number): boolean
-	return CarEntry.phase(state, now) == "Seated"
-		and CarEntry.startup(state, now).drivable
-		and CarEntry.doorClosed(state, now)
+function CarEntry.drivable(car: Car, state: State, now: number): boolean
+	return CarEntry.phase(car, state, now) == "Seated"
+		and CarEntry.startup(car, state, now).drivable
+		and CarEntry.doorClosed(car, state, now)
 end
 
-local function midStartup(state: State, now: number): boolean
-	local stage = CarEntry.startup(state, now).stage
+local function midStartup(car: Car, state: State, now: number): boolean
+	local stage = CarEntry.startup(car, state, now).stage
 	return stage == "Reaching" or stage == "Cranking"
 end
 
-function CarEntry.canEnter(state: State, now: number): boolean
-	return CarEntry.phase(state, now) == "Outside" and CarEntry.doorIdle(state, now)
+function CarEntry.canEnter(car: Car, state: State, now: number): boolean
+	return CarEntry.phase(car, state, now) == "Outside" and CarEntry.doorIdle(car, state, now)
 end
 
 -- Not while the door moves: the exit starts from the door at rest, shut or open.
-function CarEntry.canExit(state: State, now: number, speedKmh: number): boolean
-	return CarEntry.phase(state, now) == "Seated"
+function CarEntry.canExit(car: Car, state: State, now: number, speedKmh: number): boolean
+	return CarEntry.phase(car, state, now) == "Seated"
 		and speedKmh <= Config.EXIT_MAX_KMH
-		and not midStartup(state, now)
-		and CarEntry.doorIdle(state, now)
+		and not midStartup(car, state, now)
+		and CarEntry.doorIdle(car, state, now)
 end
 
-function CarEntry.canStart(state: State, now: number): boolean
-	return CarEntry.phase(state, now) == "Seated"
+function CarEntry.canStart(car: Car, state: State, now: number): boolean
+	return CarEntry.phase(car, state, now) == "Seated"
 		and state.engine == "Off"
-		and CarEntry.doorClosed(state, now)
+		and CarEntry.doorClosed(car, state, now)
 end
 
 -- From inside the seated driver may move the door; from outside, anyone at the mark while
 -- nobody is in a sequence.
-function CarEntry.canMoveDoor(state: State, now: number, speedKmh: number, inside: boolean): boolean
-	local phase = CarEntry.phase(state, now)
+function CarEntry.canMoveDoor(car: Car, state: State, now: number, speedKmh: number, inside: boolean): boolean
+	local phase = CarEntry.phase(car, state, now)
 	if inside then
 		return phase == "Seated"
 			and speedKmh <= Config.DOOR_MAX_KMH
-			and not midStartup(state, now)
-			and CarEntry.doorIdle(state, now)
+			and not midStartup(car, state, now)
+			and CarEntry.doorIdle(car, state, now)
 	end
-	return phase == "Outside" and CarEntry.doorIdle(state, now)
+	return phase == "Outside" and CarEntry.doorIdle(car, state, now)
 end
 
 -- The clip that moves the door from where it rests, from inside or outside.
-function CarEntry.doorClip(state: State, now: number, inside: boolean): Config.ClipName
-	local open = CarEntry.doorOpenness(state, now) >= 0.5
+function CarEntry.doorClip(car: Car, state: State, now: number, inside: boolean): Config.ClipName
+	local open = CarEntry.doorOpenness(car, state, now) >= 0.5
 	if inside then
 		return if open then "InsideClose" else "InsideOpen"
 	end
@@ -290,12 +294,12 @@ end
 
 -- `askedAt` is the server time of the request. A motion that started before it (less the clock
 -- slack) is someone else's.
-function CarEntry.outsideRequest(state: State, now: number, askedAt: number): OutsideRequest
+function CarEntry.outsideRequest(car: Car, state: State, now: number, askedAt: number): OutsideRequest
 	local clip: Config.ClipName? = OUTSIDE_CLIPS[state.door]
 	if clip ~= nil and state.doorAt >= askedAt - Config.REQUEST_SLACK then
 		-- Before its start the clip holds its first frame.
 		local into = math.max(now - state.doorAt, 0)
-		if into < Config.CLIPS[clip].duration then
+		if into < car.door.clips[clip].duration then
 			return { clip = clip, into = into, finished = false }
 		end
 		return { clip = nil, into = 0, finished = true }
@@ -362,10 +366,16 @@ end
 -- the server refuses an exit while the door moves. A door seen moving after it asked reached the
 -- server first and had the exit refused, so it asks again once the door stops. Once getting out
 -- (or still getting in) it asks nothing more.
-function CarEntry.heldExit(state: State, now: number, heldFor: number, asked: boolean): (boolean, boolean)
-	if CarEntry.phase(state, now) ~= "Seated" then
+function CarEntry.heldExit(
+	car: Car,
+	state: State,
+	now: number,
+	heldFor: number,
+	asked: boolean
+): (boolean, boolean)
+	if CarEntry.phase(car, state, now) ~= "Seated" then
 		return false, true
-	elseif not CarEntry.doorIdle(state, now) then
+	elseif not CarEntry.doorIdle(car, state, now) then
 		return false, false
 	end
 	local ask = not asked and CarEntry.exitHeld(heldFor)
