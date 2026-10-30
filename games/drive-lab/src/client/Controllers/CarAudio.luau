@@ -24,6 +24,7 @@ local CarEntry = require(ReplicatedStorage.Shared.Rules.CarEntry)
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
+local DriveModes = require(ReplicatedStorage.Shared.Rules.DriveModes)
 local EngineSound = require(ReplicatedStorage.Shared.Rules.EngineSound)
 local ExhaustPops = require(ReplicatedStorage.Shared.Rules.ExhaustPops)
 local Types = require(ReplicatedStorage.Shared.Config.Cars.Types)
@@ -40,6 +41,8 @@ local ONE_SHOT_GRACE = 5
 type Session = {
 	model: Model,
 	pack: CarAudio.Pack,
+	-- The car's drive modes, in order (Config/Cars).
+	modes: { Types.DrivingMode },
 	-- Where its pops throw flames; nil on a model with no outlets bound.
 	exhaust: Binding.Exhaust?,
 	chassis: BasePart,
@@ -89,16 +92,6 @@ local function readout(model: Model): CarAudioEvents.Readout?
 		limiter = model:GetAttribute("Limiter") == true,
 		tcActive = model:GetAttribute("TcActive") == true,
 	}
-end
-
-local function drivingMode(model: Model): Types.DrivingMode
-	local mode = model:GetAttribute("DrivingMode")
-	if mode == "Sport" then
-		return "Sport"
-	elseif mode == "Corsa" then
-		return "Corsa"
-	end
-	return "Strada"
 end
 
 local function draw(): number
@@ -255,7 +248,7 @@ local function update(current: Session, dt: number)
 	if car == nil then
 		return
 	end
-	local mode: Types.DrivingMode = drivingMode(current.model)
+	local mode = DriveModes.current(current.modes, current.model:GetAttribute("DrivingMode"))
 	local events = CarAudioEvents.step(current.events, car, dt)
 	-- The engine's throttle drops at every fuel cut; while the limiter bounces it counts as open.
 	local mix = EngineSound.step(current.engine, car.rpm, if events.limiter then 1 else car.throttle, dt)
@@ -360,6 +353,7 @@ local function start(model: Model, entry: Catalog.Entry, sincePress: number)
 	local current: Session = {
 		model = model,
 		pack = pack,
+		modes = entry.physics.modeOrder,
 		exhaust = entry.model.exhaust,
 		chassis = chassis,
 		owned = { engineGroup, eventsGroup, enginePoint, exhaustPoint },

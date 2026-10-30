@@ -99,6 +99,20 @@ describe("ExhaustPops", function()
 		)
 	end)
 
+	it("takes the chances of a car whose modes have other names", function()
+		local manettino = table.clone(TUNING)
+		manettino.downshiftChance = { OFF = 0.2, ["1"] = 0.7, ["2"] = 1 }
+		local expected: { { mode: Types.DrivingMode, pops: number } } = {
+			{ mode = "OFF", pops = 0 },
+			{ mode = "1", pops = 3 },
+			{ mode = "2", pops = 3 },
+		}
+		for _, case in expected do
+			local state = ExhaustPops.new(manettino)
+			expect(count(state, DOWNSHIFT, car(), car(), case.mode, 1, always(0.6))).toBe(case.pops)
+		end
+	end)
+
 	it("cracks once as an upshift engages under load, from its rpm, and not at the shift's cut", function()
 		local open = car({ rpm = 7000, throttle = 1 })
 		local state = ExhaustPops.new(TUNING)

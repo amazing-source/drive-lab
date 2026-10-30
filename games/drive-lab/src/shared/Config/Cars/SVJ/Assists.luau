@@ -14,9 +14,11 @@
 local DriverAssists = require("../../../Rules/DriverAssists")
 
 local Config: DriverAssists.Tuning = table.freeze({
-	offHoldSeconds = 3,
 	on = table.freeze({ abs = true, tc = true, esc = true }),
-	off = table.freeze({ abs = true, tc = false, esc = false }),
+	escButton = table.freeze({
+		holdSeconds = 3,
+		off = table.freeze({ abs = true, tc = false, esc = false }),
+	}),
 	lampFlashHz = 2,
 })
 
