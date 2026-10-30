@@ -103,3 +103,18 @@ describe("Car contract", function()
 		end).toThrow()
 	end)
 end)
+
+describe("Car contract: the driver", function()
+	it("refuses a footwell pedal the model binding does not hinge", function()
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				entry.driver.footwell.brake.part = "Pedal_Clutch"
+			end))
+		end).toThrow()
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				entry.model.pedals = nil
+			end))
+		end).toThrow()
+	end)
+end)

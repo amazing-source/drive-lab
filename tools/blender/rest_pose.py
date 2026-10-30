@@ -24,7 +24,7 @@ STUDS_PER_METRE = 1.5 / 0.28
 DRIVER_SCALE = 1.5 / 1.75
 # Config/DriverLegs.
 THIGH, SHIN = 0.46, 0.45
-# Where each knee bends toward (KNEE_TOWARD).
+# The SVJ's footwell (Config/Cars/SVJ/Driver): where each knee bends toward, the pedals, the footrest.
 KNEE_TOWARD = {1: (0.17, 0.15, -0.4), -1: (-0.58, 0.62, 0.008)}
 HIP = (0.5, -1.05, 0.05)
 ANKLE_ALONG, ANKLE_UP = 0.075, 0.085

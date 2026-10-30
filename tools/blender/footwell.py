@@ -15,7 +15,7 @@ With --save, each pedal's faces get the integer face attribute `door_part` (4 th
 that tools/blender/hero_car_door_export.py turns into parts, and the blend is saved under a new
 name; the source blend is never written. Prints and writes footwell.json: per pedal its hinge (a
 line along the car's width), the sole's heel and ball points at rest, in metres in the driver's
-seat frame (Config/DriverLegs), and a render of the selection.
+seat frame (the car's footwell in Config/Cars/<Car>/Driver), and a render of the selection.
 """
 
 import json
@@ -29,7 +29,7 @@ from mathutils import Matrix, Vector
 
 PEDAL_TAGS = {"throttle": 4, "brake": 5}
 # The DriverSeat part's origin in the blend (SVJModel.seat from the centre of mass, before the
-# body raise): the frame Config/DriverLegs is written in.
+# body raise): the frame the car's footwell is written in.
 SEAT = Vector((0.38, -0.061, 0.2814))
 BOXES = {
     "throttle": (Vector((0.13, -1.20, 0.025)), Vector((0.275, -0.88, 0.31))),

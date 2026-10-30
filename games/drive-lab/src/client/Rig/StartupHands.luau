@@ -10,6 +10,7 @@
 ]]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Contract = require(ReplicatedStorage.Shared.Config.Cars.Contract)
 local DriverArms = require(ReplicatedStorage.Shared.Config.DriverArms)
 local DriverStartup = require(ReplicatedStorage.Shared.Config.DriverStartup)
 local Gloves = require(script.Parent.Gloves)
@@ -52,10 +53,10 @@ local function hidden(part: BasePart, folder: Instance): BasePart
 	return part
 end
 
--- The grip hand's wrist frame in the steering wheel's frame (DriverArms' numbers, the left
--- hand mirrored).
-function StartupHands.gripWrist(sign: number): CFrame
-	local wrist, forearm, back = DriverArms.HAND_WRIST, DriverArms.HAND_FOREARM, DriverArms.HAND_BACK
+-- The grip hand's wrist frame in the steering wheel's frame (the car's grip, the left hand
+-- mirrored).
+function StartupHands.gripWrist(grip: DriverArms.Grip, sign: number): CFrame
+	local wrist, forearm, back = grip.wrist, grip.forearm, grip.back
 	local z = Vector3.new(sign * forearm.x, forearm.y, forearm.z).Unit
 	local up = Vector3.new(sign * back.x, back.y, back.z)
 	local y = (up - z * up:Dot(z)).Unit
@@ -80,7 +81,7 @@ local function toPose(frame: CFrame): StartupArms.Pose
 end
 
 function StartupHands.build(
-	paths: DriverStartup.Paths,
+	driver: Contract.Driver,
 	sign: number,
 	grip: BasePart,
 	gripCuff: BasePart,
@@ -90,9 +91,10 @@ function StartupHands.build(
 	local letter = if sign > 0 then "R" else "L"
 	local rest, point, cuff =
 		asset("HandRest_" .. letter), asset("HandPoint_" .. letter), asset("WristCuff_" .. letter)
-	local gripWrist = StartupHands.gripWrist(sign)
+	local paths = driver.startupPaths
+	local gripWrist = StartupHands.gripWrist(driver.grip, sign)
 	local fromWrist = gripWrist:Inverse()
-	local centre, cuffCentre = DriverArms.HAND_CENTRE, DriverArms.CUFF_CENTRE
+	local centre, cuffCentre = driver.grip.centre, driver.grip.cuff
 	local function offset(centreOf: DriverStartup.Point): CFrame
 		return CFrame.new(Vector3.new(sign * centreOf.x, centreOf.y, centreOf.z) * STUDS_PER_METRE)
 	end

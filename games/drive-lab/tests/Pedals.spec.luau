@@ -1,11 +1,12 @@
 --!strict
-local DriverLegs = require("../src/shared/Config/DriverLegs")
 local Hinge = require("../src/shared/Rules/Hinge")
 local Legs = require("../src/shared/Rules/DriverLegs")
 local SVJModel = require("../src/shared/Config/Cars/SVJ/Model")
 local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect
+
+local FOOTWELL = require("../src/shared/Config/Cars/SVJ/Driver").footwell
 
 type Binding = { part: string, pivot: Hinge.CarPoint, axis: Hinge.CarPoint }
 
@@ -35,14 +36,14 @@ end
 
 describe("SVJ pedals: the rig's hinges against the legs' footwell", function()
 	it("hangs each pedal on the hinge Config/DriverLegs measured", function()
-		for _, pedal in { DriverLegs.THROTTLE, DriverLegs.BRAKE } do
+		for _, pedal in { FOOTWELL.throttle, FOOTWELL.brake } do
 			local rigged = binding(pedal.part)
 			near(Hinge.chassis(rigged.pivot), fromSeat(pedal.hinge), 2e-4)
 		end
 	end)
 
 	it("turns the rigged pedal's face to where the rule puts the ball of the foot", function()
-		for _, pedal in { DriverLegs.THROTTLE, DriverLegs.BRAKE } do
+		for _, pedal in { FOOTWELL.throttle, FOOTWELL.brake } do
 			local rigged = binding(pedal.part)
 			for _, press in { 0.25, 0.5, 1 } do
 				local angle = pedal.travel * press

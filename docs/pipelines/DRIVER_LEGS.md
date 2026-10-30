@@ -77,14 +77,15 @@ The pedals are islands of the cabin mesh, found by box and, for the throttle, by
 few millimetres of its ribbed face's plane (its base, housing and rod stay with the cabin). The
 script prints, in metres in the driver's seat frame, each pedal's hinge (a line across the car)
 and where the sole meets it at rest (heel and ball, 20 cm apart), and the footrest's; these go
-into `Config/DriverLegs`. With `--save` it tags the pedals' faces (`door_part` 4 throttle, 5
+into the car's footwell (`footwell` in `Config/Cars/SVJ/Driver.luau`, typed by
+`Config/DriverLegs`). With `--save` it tags the pedals' faces (`door_part` 4 throttle, 5
 brake) for the cabin export (section 6). Its render colours the selection: read it.
 
 ## 5. Fit the legs
 
 `Rules/DriverLegs` places each sole, then the ankle 7.5 cm along it and 8.5 cm up off it, and
 reaches it from the hip with two bones (`Rules/ArmIK`), each knee bending up toward a point of
-its own (`KNEE_TOWARD`, seat frame):
+its own (the footwell's `kneeToward`, seat frame):
 - the throttle's sole lies on its plate and turns with it about the floor hinge; the brake's
   heel stays on the floor while the ball rides the pad about the top hinge; between them the
   foot crosses in 0.18 s, the heel sliding on the floor while the ball lifts 3.5 cm over the
