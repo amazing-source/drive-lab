@@ -133,7 +133,8 @@ end
 
 -- A binnacle screen has a page for each the SCROLL button steps through, a strip of a lamp, its
 -- rev lights in rising order and a lamp, its redline on its rpm bar, and the shape of the screen
--- it is drawn on.
+-- it is drawn on; each field has its slot (and its pill) on its page's design, and each lamp its
+-- lens and images.
 local function checkBinnacle(entry: Entry, screen: Binnacle.Screen)
 	assert(
 		#screen.pages == (entry.switches.displayPages or 1),
@@ -149,6 +150,21 @@ local function checkBinnacle(entry: Entry, screen: Binnacle.Screen)
 	local glass = entry.model.cluster
 	local shape = (screen.canvasWidth / screen.canvasHeight) / (glass.width / glass.height)
 	assert(math.abs(shape - 1) <= 0.05, "the binnacle's canvas is not the shape of its screen")
+	for _, page in screen.pages do
+		local art = page.art
+		for _, field in page.fields do
+			assert(art.slots[field.label], `the binnacle's {field.label} has no slot on its page`)
+			assert(
+				field.pill == nil or (art.pills and art.pills[field.label]),
+				`the binnacle's {field.label} has no pill on its page`
+			)
+		end
+	end
+	local lamps = #lights.colours + 2
+	assert(
+		#screen.lenses == lamps and #screen.lamps.off == lamps and #screen.lamps.on == lamps,
+		"the binnacle's strip needs a lens, an unlit and a lit image for each lamp"
+	)
 end
 
 local function checkDisplay(entry: Entry)

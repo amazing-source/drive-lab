@@ -13,6 +13,7 @@ decisions on feel, which numbers alone did not predict.
 | [Street lamp](STREET_LAMP.md) | a prop modelled from a photo, lit, and scattered along the road |
 | [Roadside](ROADSIDE.md) | road furniture modelled from the rules, road-surface decals, their placement, and the night look (reflectors, lamp flares, wet streaks) |
 | [Driving HUD](DRIVING_HUD.md) | a HUD design delivered as a picture, cut into a frame and live parts drawn over it |
+| [Binnacle display](BINNACLE.md) | a car screen with pages, a segmented rpm band and shift lamps, from a design pack delivered as pictures |
 
 Shared rules:
 - **Scripts over hand work.** Every step is a script with its usage in its header, so a result
