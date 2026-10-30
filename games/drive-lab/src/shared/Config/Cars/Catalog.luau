@@ -1,16 +1,25 @@
 --!strict
 --[[
-	Every car the place can rig, by the name a car model carries in its "Car" attribute. A new
-	car is a physics config, a model binding and one line here.
+	Every car the place can rig, by the name a car model carries in its "Car" attribute. A new car
+	is a folder beside this module whose init returns its Contract entry, and one line here.
 ]]
+local Contract = require("./Contract")
 local SVJ = require("./SVJ")
-local SVJModel = require("./SVJModel")
-local Types = require("./Types")
 
-export type Entry = { physics: Types.CarConfig, model: SVJModel.CarModel }
+export type Entry = Contract.Entry
 
-local Catalog: { [string]: Entry } = table.freeze({
-	SVJ = table.freeze({ physics = SVJ, model = SVJModel }),
+local ATTRIBUTE = "Car"
+
+local cars: { [string]: Entry } = table.freeze({
+	SVJ = SVJ,
 })
 
-return Catalog
+local Catalog = { cars = cars }
+
+-- The entry of the car `model` is, or nil for any other instance.
+function Catalog.of(model: Instance): Entry?
+	local name = model:GetAttribute(ATTRIBUTE)
+	return if typeof(name) == "string" then cars[name] else nil
+end
+
+return table.freeze(Catalog)

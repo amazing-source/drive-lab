@@ -57,8 +57,7 @@ local function vector(value: WindshieldDrops.Vector): Vector3
 end
 
 local function mountFor(model: Model): Mount?
-	local name = model:GetAttribute("Car")
-	local entry = if typeof(name) == "string" then Catalog[name] else nil
+	local entry = Catalog.of(model)
 	local chassis = model.PrimaryPart
 	if entry == nil or chassis == nil then
 		return nil

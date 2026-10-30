@@ -2,7 +2,7 @@
 local CarCamera = require("../src/shared/Config/CarCamera")
 local DriveSim = require("../tools/DriveSim")
 local Rules = require("../src/shared/Rules/CarCamera")
-local SVJ = require("../src/shared/Config/Cars/SVJ")
+local SVJ = require("../src/shared/Config/Cars/SVJ/Physics")
 local T = require("../../../tools/test/T")
 local Types = require("../src/shared/Config/Cars/Types")
 

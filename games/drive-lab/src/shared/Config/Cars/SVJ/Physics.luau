@@ -6,7 +6,7 @@
 	its table row or section. EST values are starting points for calibration, not data, and stay
 	marked as such. Tyre grip, aero and CG/inertia are the least certain inputs (02 §2.15).
 ]]
-local Types = require("./Types")
+local Types = require("../Types")
 
 return Types.define({
 	name = "Lamborghini Aventador SVJ",

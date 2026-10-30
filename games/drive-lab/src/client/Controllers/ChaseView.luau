@@ -44,8 +44,7 @@ end
 -- Once a frame in every view, so the chase is current whenever it is switched to.
 function ChaseView.step(state: State, model: Model, chassis: CFrame, dt: number)
 	if state.model ~= model then
-		local name = model:GetAttribute("Car")
-		local entry = if typeof(name) == "string" then Catalog[name] else nil
+		local entry = Catalog.of(model)
 		if entry == nil then
 			return
 		end

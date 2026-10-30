@@ -1,6 +1,6 @@
 --!strict
 local Hinge = require("../src/shared/Rules/Hinge")
-local SVJModel = require("../src/shared/Config/Cars/SVJModel")
+local SVJModel = require("../src/shared/Config/Cars/SVJ/Model")
 local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect

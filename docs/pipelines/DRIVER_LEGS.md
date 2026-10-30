@@ -132,7 +132,7 @@ the heel planted while crossing); the clearance itself is the tool's to measure.
 The pedals are cut out of the cabin piece that holds them by the same export that cuts the door
 (`tools/blender/hero_car_door_export.py`, tags 4 and 5), each its own MeshPart with the cabin's
 look; that piece is swapped in the place with `ApplyMesh`. The car's binding names them
-(`SVJModel.pedals`: part, hinge pivot, axis); `Car/CarRig` hangs each on a Weld named after it at
+(`Cars/SVJ/Model`'s `pedals`: part, hinge pivot, axis); `Car/CarRig` hangs each on a Weld named after it at
 its hinge (C0's x along the car's width), and `Controllers/DriverLegs` turns the welds' C0
 (`RestC0 * CFrame.Angles(angle, 0, 0)`). A car whose pedals are still part of its cabin has no
 such welds: the feet still work them, the pedals stay still. The binding and the rig's hook come

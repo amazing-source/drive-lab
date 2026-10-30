@@ -56,8 +56,7 @@ local function currentDrive(): Drive?
 		return nil
 	end
 	local chassis = model:FindFirstChild("Chassis")
-	local name = model:GetAttribute("Car")
-	local entry = if typeof(name) == "string" then Catalog[name] else nil
+	local entry = Catalog.of(model)
 	if chassis == nil or not chassis:IsA("BasePart") or entry == nil then
 		return nil
 	end

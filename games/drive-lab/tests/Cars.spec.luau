@@ -1,6 +1,6 @@
 --!strict
 local T = require("../../../tools/test/T")
-local SVJ = require("../src/shared/Config/Cars/SVJ")
+local SVJ = require("../src/shared/Config/Cars/SVJ/Physics")
 local Types = require("../src/shared/Config/Cars/Types")
 
 local describe, it, expect = T.describe, T.it, T.expect

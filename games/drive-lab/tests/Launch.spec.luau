@@ -1,7 +1,7 @@
 --!strict
 local DriveSim = require("../tools/DriveSim")
 local Launch = require("../src/shared/Vehicle/Launch")
-local SVJ = require("../src/shared/Config/Cars/SVJ")
+local SVJ = require("../src/shared/Config/Cars/SVJ/Physics")
 local T = require("../../../tools/test/T")
 local TyreSmoke = require("../src/shared/Rules/TyreSmoke")
 local TyreSmokeConfig = require("../src/shared/Config/TyreSmoke")

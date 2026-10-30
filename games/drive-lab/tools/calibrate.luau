@@ -7,7 +7,7 @@
 ]]
 local DriveSim = require("./DriveSim")
 local Model = require("../src/shared/Vehicle/Model")
-local SVJ = require("../src/shared/Config/Cars/SVJ")
+local SVJ = require("../src/shared/Config/Cars/SVJ/Physics")
 
 local KMH = 1 / 3.6
 local G = 9.81

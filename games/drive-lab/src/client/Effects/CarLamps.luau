@@ -139,8 +139,7 @@ end
 -- The roof console's lamp, from the binding's point (metres from the centre of mass, before the
 -- body was raised) on the rig's mass box, facing down.
 local function cabinLight(model: Model): Switch?
-	local name = model:GetAttribute("Car")
-	local entry = if typeof(name) == "string" then Catalog[name] else nil
+	local entry = Catalog.of(model)
 	local point = entry and entry.model.cabinLight
 	local chassis = model.PrimaryPart
 	if entry == nil or point == nil or chassis == nil then

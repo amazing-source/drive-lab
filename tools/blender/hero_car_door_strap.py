@@ -556,7 +556,7 @@ def build(manifest_path, out):
             "zAxis": to_roblox(frame.col[1].to_3d()),
             "note": "import studs and Roblox axes (to_roblox)",
         },
-        # The model binding's numbers (Config/Cars/SVJModel door.strap): car frame from the
+        # The model binding's numbers (Config/Cars/SVJ/Model door.strap): car frame from the
         # centre of mass, metres, door angles in radians.
         "binding": {
             "top": report["topCar"],

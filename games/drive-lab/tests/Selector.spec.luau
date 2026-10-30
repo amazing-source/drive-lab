@@ -4,7 +4,7 @@ local Gearbox = require("../src/shared/Vehicle/Gearbox")
 local InputHelp = require("../src/shared/Config/InputHelp")
 local Interface = require("../src/shared/Vehicle/Interface")
 local Selector = require("../src/shared/Vehicle/Selector")
-local SVJ = require("../src/shared/Config/Cars/SVJ")
+local SVJ = require("../src/shared/Config/Cars/SVJ/Physics")
 local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect

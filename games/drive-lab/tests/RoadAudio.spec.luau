@@ -3,7 +3,7 @@ local CarAudio = require("../src/shared/Config/CarAudio")
 local Config = require("../src/shared/Config/RoadAudio")
 local EngineSound = require("../src/shared/Rules/EngineSound")
 local RoadAudio = require("../src/shared/Rules/RoadAudio")
-local SVJ = require("../src/shared/Config/Cars/SVJ")
+local SVJ = require("../src/shared/Config/Cars/SVJ/Physics")
 local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect

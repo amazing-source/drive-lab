@@ -162,7 +162,7 @@ blender -b --factory-startup -P tools/blender/split_lights.py -- <car.glb> <ligh
   filtering it, so a white lamp face showed pink through the red lens), with the Roblox lights,
   scaled by 1 - daylight since a real lamp's light is lost in the sun's: headlight beams from the
   projectors, red tail glow, amber indicator glow, a reversing light and the cabin light in the
-  roof console (`SVJModel.cabinLight`). The roles, the rhythm and the sources per lamp are in
+  roof console (`cabinLight` in `Config/Cars/SVJ/Model.luau`). The roles, the rhythm and the sources per lamp are in
   `Config/CarLights.luau`. `Effects/ExhaustFlames` places its outlets from the union of each rear
   corner's pieces, which is the old cluster box.
 
@@ -279,7 +279,7 @@ its top about 12 degrees outboard (front view), measured on Commons photos (see 
 - New parts copy their SurfaceAppearance(s) and material settings from the place part they came
   from (same textures, same UVs). Door glass goes in the model binding's `glazing`.
 - Back up every part you change into ServerStorage first (`CarImport_door_backup`).
-- Binding (`Config/Cars/<Car>Model.luau`): `door = { parts, pivot, axis, openAngle }` and
+- Binding (`Config/Cars/<Car>/Model.luau`): `door = { parts, pivot, axis, openAngle }` and
   `flap = { part, pivot, axis }`, points in the car frame from the centre of mass (before the body
   raise, like `seat`). `CarRig` hangs the door on one Weld to an invisible `DoorHinge` part whose
   C0's X is the axis (door parts weld rigidly to it) and the flap on a `FlapHinge` Weld;
@@ -309,7 +309,7 @@ is soft, so it is modelled as what a soft strap does, not as a stiff tab: a stif
   length), so the game aims it by its weld's C0 and sets its length by `Size.Y`, and the door card
   without the model's old short strap, size and origin unchanged for `ApplyMesh`. The strap's UVs
   sit in the old strap's red island, so it takes the card's own SurfaceAppearance. The manifest
-  carries the place pose and the binding's numbers (`door.strap` in `Config/Cars/<Car>Model.luau`).
+  carries the place pose and the binding's numbers (`door.strap` in `Config/Cars/<Car>/Model.luau`).
 - In the game the strap hangs on its own Weld from the chassis (`CarRig`), and
   `Controllers/CarDoor` poses it every frame with `Rules/DoorStrap`: held while a clip that closes
   the door by it plays (InsideClose, GetIn) and the door is between the grab angle and shut, aimed at
