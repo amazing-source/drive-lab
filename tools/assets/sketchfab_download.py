@@ -72,6 +72,9 @@ def download(out: Path, label: str, uid: str, auth: dict) -> str:
 
 
 def main():
+    # A redirected stdout on Windows is cp1252; an author's name in another script would crash the
+    # print after the model is already written.
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     out = Path(sys.argv[1])
     auth = {"Authorization": f"Token {token()}"}
     for pair in sys.argv[2:]:
