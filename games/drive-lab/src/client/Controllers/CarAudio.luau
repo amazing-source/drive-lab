@@ -67,9 +67,8 @@ type Session = {
 	startupSound: CarAudio.StartupSound?,
 	-- The playing start-up's volume at a full share.
 	startupVolume: number,
-	-- How far the car's own start-up sound has played, nil until it has caught up with the
-	-- engine. Its playhead returns to the region's start as it ends, which must not hand back.
-	startupReached: number?,
+	-- The car's own start-up sound has caught up with the engine since it loaded.
+	startupCaughtUp: boolean,
 	startedAt: number,
 	-- os.clock() at the START press.
 	pressedAt: number,
@@ -248,7 +247,7 @@ local function playOwn(current: Session, own: CarAudio.StartupSound)
 	current.startup = startup
 	current.startupSound = own
 	current.startupVolume = volume
-	current.startupReached = nil
+	current.startupCaughtUp = false
 	current.startedAt = os.clock()
 	task.spawn(function()
 		ContentProvider:PreloadAsync({ startup }, function(_: string, status: Enum.AssetFetchStatus)
@@ -267,6 +266,14 @@ end
 local function startupShare(current: Session, rpm: number, dt: number): number
 	local startup = current.startup
 	if startup == nil then
+		return 1
+	end
+	-- Playing is set by Play() itself, so unlike IsPlaying it is not false while the sound loads.
+	local ended = startup.Parent == nil or not startup.Playing
+	-- The car's own sound is removed as it ends: the load timeout below must not take that for a
+	-- sound that never loaded, which hands the engine back from silence.
+	if current.startupSound and current.handedOver == nil and ended then
+		current.startup = nil
 		return 1
 	end
 	local settings = current.pack.startup
@@ -292,26 +299,22 @@ local function startupShare(current: Session, rpm: number, dt: number): number
 	if not startup.IsLoaded then
 		return 0
 	end
-	-- Playing is set by Play() itself, so unlike IsPlaying it is not false while the sound loads.
-	if startup.Parent == nil or not startup.Playing then
+	if ended then
 		current.startup = nil
 		return 1
 	end
 	-- The car's own sound is not faded in its file: it is faded here, against the engine.
 	local own = current.startupSound
 	if own then
-		local reached: number
-		local previous = current.startupReached
-		if previous == nil then
+		local position = startup.TimePosition
+		if not current.startupCaughtUp then
 			-- A time position set before the sound loads is lost: it catches up with the engine
 			-- here, the starter cut short by however late it loaded.
-			reached = own.from + os.clock() - current.pressedAt
-			startup.TimePosition = reached
-		else
-			reached = math.max(previous, startup.TimePosition)
+			current.startupCaughtUp = true
+			position = own.from + os.clock() - current.pressedAt
+			startup.TimePosition = position
 		end
-		current.startupReached = reached
-		local share, gain = EngineSound.handOver(own.handOver, own.to, reached)
+		local share, gain = EngineSound.handOver(own.handOver, own.to, position)
 		startup.Volume = current.startupVolume * gain
 		return share
 	end
@@ -454,7 +457,7 @@ local function start(model: Model, entry: Catalog.Entry, sincePress: number)
 		startup = nil,
 		startupSound = nil,
 		startupVolume = 0,
-		startupReached = nil,
+		startupCaughtUp = false,
 		startedAt = os.clock(),
 		pressedAt = os.clock() - sincePress,
 		handedOver = nil,
@@ -488,17 +491,6 @@ local function follow()
 	end
 end
 
--- The car's own start-up sound is fetched as the driver sits, so it is ready by the START press.
-local function preloadStartup(model: Model)
-	local entry = Catalog.of(model)
-	local own = entry and entry.audio.startup.sound
-	if own then
-		task.spawn(function()
-			ContentProvider:PreloadAsync({ own.id })
-		end)
-	end
-end
-
 local function onSeat(humanoid: Humanoid)
 	stop()
 	seated = nil
@@ -506,7 +498,6 @@ local function onSeat(humanoid: Humanoid)
 	local model = seat and seat.Parent
 	if seat and seat:IsA("Seat") and model and model:IsA("Model") and model:HasTag(CarRig.TAG) then
 		seated = model
-		preloadStartup(model)
 	end
 end
 
