@@ -18,3 +18,4 @@ levels.txt          The store sound's level against that idle per window, its 10
                     and the hand-over windows scored (handover.py, windows.py).
 pitch.txt           Engine order read by autocorrelation, and the rpm the start-up curve uses.
 mutations.txt       Each new rule broken on purpose and the spec that failed.
+playcheck.txt       The two session-only Play runs through Controllers/CarAudio and what each showed.
