@@ -118,3 +118,26 @@ describe("Car contract: the driver", function()
 		end).toThrow()
 	end)
 end)
+
+describe("Car contract: the display", function()
+	it("refuses a cluster without colours for one of the car's drive modes", function()
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				entry.cluster.modes.Corsa = nil
+			end))
+		end).toThrow()
+	end)
+
+	it("refuses a redline off the cluster's dial", function()
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				entry.cluster.redlineRpm = entry.cluster.dialMaxRpm
+			end))
+		end).toThrow()
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				entry.cluster.redlineRpm = 0
+			end))
+		end).toThrow()
+	end)
+end)

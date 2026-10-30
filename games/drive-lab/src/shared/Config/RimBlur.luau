@@ -9,15 +9,16 @@
 ]]
 local RimBlur = require("../Rules/RimBlur")
 
+-- One car's rims (its entry's rimBlur): the wheel spin over which the sharp face fades into
+-- the blurred disc, and how many times the rim repeats round, measured on its front-on render.
+export type Rims = { spin: RimBlur.Tuning, repeats: number }
+
 export type RimBlurConfig = {
-	SPIN: RimBlur.Tuning,
 	ASSETS_FOLDER: string,
 	PIECES: { tyre: string, face: string, disc: string },
 	OFFSET_ATTRIBUTE: string,
 	WHEEL_SIZE_ATTRIBUTE: string,
-	-- How many times the SVJ's rim repeats round, measured on its front-on render, and the frame
-	-- rate whose wagon-wheel effect the blur must hide.
-	RIM_REPEATS: number,
+	-- The frame rate whose wagon-wheel effect the blur must hide.
 	FRAME_RATE: number,
 	-- Smallest transparency change written, so a steady speed writes nothing.
 	STEP: number,
@@ -26,16 +27,10 @@ export type RimBlurConfig = {
 }
 
 local Config: RimBlurConfig = {
-	-- About 17 to 41 km/h on the front tyres (0.322 m), 19 to 44 on the rear (0.346 m). Ends
-	-- under 40 rad/s: ten spokes look still at 37.7 rad/s at 60 FPS.
-	SPIN = { from = 15, to = 35 },
 	ASSETS_FOLDER = "RimBlur",
 	PIECES = { tyre = "Tyre", face = "Face", disc = "Disc" },
 	OFFSET_ATTRIBUTE = "Offset",
 	WHEEL_SIZE_ATTRIBUTE = "WheelSize",
-	-- rim_blur.py, 2026-10-28: the coverage round the front and rear rims' mid radius has its
-	-- strongest harmonic at 10, and none at 5.
-	RIM_REPEATS = 10,
 	FRAME_RATE = 60,
 	STEP = 0.02,
 	RETRY_SECONDS = 1,

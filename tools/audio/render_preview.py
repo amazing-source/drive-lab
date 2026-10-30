@@ -7,7 +7,7 @@ without Studio; Roblox's own resampling and 3D panning are not reproduced.
     python -I tools/audio/render_preview.py <timeline.json> <loops dir> <out.mp3>
 
 <loops dir> holds the uploaded set (eng_idle.ogg, eng_on.ogg, eng_off.ogg, eng_limiter.ogg,
-events.ogg; tools/audio/cut_loops.py). Layers are taken in Config/CarAudio's order: idle, on,
+events.ogg; tools/audio/cut_loops.py). Layers are taken in the SVJ's pack's order (Config/Cars/SVJ/Audio): idle, on,
 off. Decoding and the MP3 go through ffmpeg.
 """
 

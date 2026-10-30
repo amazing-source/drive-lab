@@ -102,7 +102,8 @@ that file starts with `sc6969`, a version, then `count` textures stored as
 (int32 flag, int32 name length, name, int32 size, bytes).
 
 `python -I tools/assets/cluster_layers.py <display.png> <out dir> --erase x0,y0,x1,y1` cuts it
-into three images and prints the dial's geometry for `Config/Cluster.luau`:
+into three images and prints the dial's geometry for the car's face (`Config/Cars/<Car>/Cluster.luau`,
+typed by `Config/Cluster`):
 - `cluster_base.png`: the face, with each `--erase` box refilled from the rows above and below
   (the printed drive-mode name, which the game draws live);
 - `cluster_lit.png`: the rev cells lit in white, tinted per drive mode in game;
@@ -117,7 +118,7 @@ How the geometry is measured, so another car's face can go through the same tool
   exactly the cells before the edge. One gradient works because the dial sweeps less than half a
   turn; a dial sweeping more needs the lit image cut in two halves, each with its own gradient.
 
-Upload the three images as in step 6 and put the image ids in `Config/Cluster.luau`, with the
+Upload the three images as in step 6 and put the image ids in the car's face, with the
 positions of the live readouts (gear, speed, mode, tell-tales) in pixels of the face image.
 
 ## 8. Lights the game can drive
@@ -162,9 +163,10 @@ blender -b --factory-startup -P tools/blender/split_lights.py -- <car.glb> <ligh
   filtering it, so a white lamp face showed pink through the red lens), with the Roblox lights,
   scaled by 1 - daylight since a real lamp's light is lost in the sun's: headlight beams from the
   projectors, red tail glow, amber indicator glow, a reversing light and the cabin light in the
-  roof console (`cabinLight` in `Config/Cars/SVJ/Model.luau`). The roles, the rhythm and the sources per lamp are in
-  `Config/CarLights.luau`. `Effects/ExhaustFlames` places its outlets from the union of each rear
-  corner's pieces, which is the old cluster box.
+  roof console (`cabinLight` in `Config/Cars/SVJ/Model.luau`). The roles, the rhythm and the sources
+  per lamp are in `Config/CarLights.luau`; each lamp's glow and the lights' numbers are the car's
+  (`Config/Cars/SVJ/Lights.luau`). `Effects/ExhaustFlames` places its outlets from the union of each
+  rear corner's pieces, which is the old cluster box, as the binding's `exhaust` names them.
 
 ## 9. Exhaust flames
 

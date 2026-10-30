@@ -11,7 +11,7 @@
 	- Held about 3 s to switch off, as most cars' ESC OFF buttons are: the Aventador's own control
 	  and hold time were not found in a readable source. The flash rate is an estimate.
 ]]
-local DriverAssists = require("../Rules/DriverAssists")
+local DriverAssists = require("../../../Rules/DriverAssists")
 
 local Config: DriverAssists.Tuning = table.freeze({
 	offHoldSeconds = 3,

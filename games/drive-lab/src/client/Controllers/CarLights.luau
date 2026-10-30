@@ -46,7 +46,8 @@ local function track(model: Instance)
 		return
 	end
 	-- A car streamed in without its light pieces yet is picked up on a later scan.
-	local lamps = CarLamps.build(model)
+	local entry = Catalog.of(model)
+	local lamps = if entry then CarLamps.build(model, entry) else nil
 	if lamps then
 		cars[model] = lamps
 		waiting[model] = nil

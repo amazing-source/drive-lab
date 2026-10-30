@@ -6,11 +6,16 @@
 	at load time, and freezes it, so nothing can tune a car at run time.
 ]]
 local Binding = require("./Binding")
+local CarAudio = require("../CarAudio")
 local CarCamera = require("../CarCamera")
 local CarEntry = require("../CarEntry")
+local CarLights = require("../CarLights")
+local Cluster = require("../Cluster")
 local DriverArms = require("../DriverArms")
 local DriverLegs = require("../DriverLegs")
+local DriverAssists = require("../../Rules/DriverAssists")
 local DriverStartup = require("../DriverStartup")
+local RimBlur = require("../RimBlur")
 local Types = require("./Types")
 
 export type Driver = {
@@ -27,6 +32,11 @@ export type Entry = {
 	startup: CarEntry.Startup,
 	driver: Driver,
 	camera: CarCamera.CarViews,
+	rimBlur: RimBlur.Rims,
+	audio: CarAudio.Pack,
+	lights: CarLights.Lights,
+	cluster: Cluster.Face,
+	assists: DriverAssists.Tuning,
 }
 
 local Contract = {}
@@ -72,9 +82,24 @@ local function checkFootwell(entry: Entry)
 	end
 end
 
+-- The display draws every drive mode the car has in that mode's colours, and its red zone on its
+-- dial.
+local function checkCluster(entry: Entry)
+	local face = entry.cluster
+	for mode in entry.physics.modes do
+		local name = tostring(mode)
+		assert(face.modes[name], `the cluster has no colours for the {name} mode`)
+	end
+	assert(
+		face.redlineRpm > 0 and face.redlineRpm < face.dialMaxRpm,
+		"the cluster's redline lies off its dial"
+	)
+end
+
 function Contract.define(entry: Entry): Entry
 	checkStartup(entry)
 	checkFootwell(entry)
+	checkCluster(entry)
 	return deepFreeze(entry)
 end
 

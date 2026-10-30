@@ -23,7 +23,6 @@ local ClusterRules = require(ReplicatedStorage.Shared.Rules.Cluster)
 local Config = require(ReplicatedStorage.Shared.Config.Hud)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local DriverAssists = require(ReplicatedStorage.Shared.Rules.DriverAssists)
-local DriverAssistsConfig = require(ReplicatedStorage.Shared.Config.DriverAssists)
 local Rules = require(ReplicatedStorage.Shared.Rules.Hud)
 
 local MONTSERRAT = "rbxasset://fonts/families/Montserrat.json"
@@ -54,6 +53,8 @@ type Ui = {
 	left: TextLabel,
 	right: TextLabel,
 	flashing: boolean,
+	-- The redline the segments' zones were drawn for: the driven car's.
+	redline: number,
 }
 
 local localPlayer = Players.LocalPlayer
@@ -103,8 +104,8 @@ local function paint(label: TextLabel, line: Frame, state: DriverAssists.Telltal
 end
 
 -- The segment's colour along its length: yellow, then red from where the redline falls in it.
-local function zone(index: number): ColorSequence
-	local red = Rules.segmentShare(Config.REDLINE_RPM, index, Config.RPM_PER_SEGMENT)
+local function zone(redline: number, index: number): ColorSequence
+	local red = Rules.segmentShare(redline, index, Config.RPM_PER_SEGMENT)
 	if red >= 1 then
 		return ColorSequence.new(Config.YELLOW)
 	elseif red <= 0 then
@@ -170,7 +171,8 @@ local function build(parent: Instance): Ui
 		local image = part(frame, rect, box)
 		image.Visible = false
 		local gradient = Instance.new("UIGradient")
-		local colors = zone(index)
+		-- No car yet: all yellow, redrawn for the car on its first refresh.
+		local colors = zone(math.huge, index)
 		gradient.Color = colors
 		gradient.Parent = image
 		segments[index] = { image = image, gradient = gradient, zone = colors }
@@ -246,6 +248,7 @@ local function build(parent: Instance): Ui
 		left = arrow(readouts.indicatorLeft, "◀"),
 		right = arrow(readouts.indicatorRight, "▶"),
 		flashing = false,
+		redline = math.huge,
 	}
 	built.tc.Text = "TC"
 	built.abs.Text = "ABS"
@@ -291,7 +294,17 @@ local function refresh(current: Ui, model: Model, entry: Catalog.Entry)
 	local rpm =
 		CarEntry.shownRpm(entry, CarState.read(model), Workspace:GetServerTimeNow(), number(model, "Rpm"))
 	local manual = model:GetAttribute("GearboxMode") == "manual"
-	local flash = Rules.shiftFlash(rpm, Config.REDLINE_RPM, manual, os.clock(), Config.FLASH_HZ)
+	local redline = entry.cluster.redlineRpm
+	if redline ~= current.redline then
+		current.redline = redline
+		for index, segment in current.segments do
+			segment.zone = zone(redline, index)
+			if not current.flashing then
+				segment.gradient.Color = segment.zone
+			end
+		end
+	end
+	local flash = Rules.shiftFlash(rpm, redline, manual, os.clock(), Config.FLASH_HZ)
 	for index, segment in current.segments do
 		local lit = Rules.segmentShare(rpm, index, Config.RPM_PER_SEGMENT)
 		segment.image.Visible = lit > 0
@@ -321,7 +334,7 @@ local function refresh(current: Ui, model: Model, entry: Catalog.Entry)
 		Config.LAUNCH_TEXT
 	)
 
-	local assists = DriverAssists.assists(model:GetAttribute("EscOff") == true, DriverAssistsConfig)
+	local assists = DriverAssists.assists(model:GetAttribute("EscOff") == true, entry.assists)
 	paint(
 		current.tc,
 		current.tcLine,

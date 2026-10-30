@@ -1,7 +1,7 @@
 --!strict
 local Config = require("../src/shared/Config/RimBlur")
 local RimBlur = require("../src/shared/Rules/RimBlur")
-local SVJ = require("../src/shared/Config/Cars/SVJ/Physics")
+local SVJ = require("../src/shared/Config/Cars/SVJ")
 local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect
@@ -76,15 +76,15 @@ end)
 
 describe("RimBlur config", function()
 	it("is fully blurred before the SVJ's rim looks still at the frame rate", function()
-		local frozen = RimBlur.frozenSpin(Config.RIM_REPEATS, Config.FRAME_RATE)
-		expect(Config.SPIN.from > 0).toBeTruthy()
-		expect(Config.SPIN.to > Config.SPIN.from).toBeTruthy()
-		expect(Config.SPIN.to < frozen).toBeTruthy()
+		local frozen = RimBlur.frozenSpin(SVJ.rimBlur.repeats, Config.FRAME_RATE)
+		expect(SVJ.rimBlur.spin.from > 0).toBeTruthy()
+		expect(SVJ.rimBlur.spin.to > SVJ.rimBlur.spin.from).toBeTruthy()
+		expect(SVJ.rimBlur.spin.to < frozen).toBeTruthy()
 	end)
 
 	it("starts to blur above a walking pace on either axle", function()
-		for _, axle in { SVJ.front, SVJ.rear } do
-			local kmh = Config.SPIN.from * axle.tyre.radius * 3.6
+		for _, axle in { SVJ.physics.front, SVJ.physics.rear } do
+			local kmh = SVJ.rimBlur.spin.from * axle.tyre.radius * 3.6
 			expect(kmh > 10).toBeTruthy()
 		end
 	end)

@@ -32,7 +32,7 @@ type Wheel = {
 	shown: Rules.Layers,
 }
 
-type Car = { model: Model, chassis: BasePart, wheels: { Wheel }, owned: { Instance } }
+type Car = { model: Model, chassis: BasePart, spin: Rules.Tuning, wheels: { Wheel }, owned: { Instance } }
 
 local cars: { [Model]: Car } = {}
 local waiting: { [Model]: true } = {}
@@ -89,7 +89,7 @@ local function attach(model: Model): Car?
 	if entry == nil or set == nil or chassis == nil or not chassis:IsA("BasePart") then
 		return nil
 	end
-	local car: Car = { model = model, chassis = chassis, wheels = {}, owned = {} }
+	local car: Car = { model = model, chassis = chassis, spin = entry.rimBlur.spin, wheels = {}, owned = {} }
 	for index, wheelName in entry.model.wheels do
 		local weld = chassis:FindFirstChild(wheelName)
 		local part = if weld and weld:IsA("Weld") then weld.Part1 else nil
@@ -197,7 +197,7 @@ local function update()
 		local studs = math.abs(chassis.AssemblyLinearVelocity:Dot(chassis.CFrame.LookVector))
 		local speed = Units.studsToMetres(studs)
 		for _, wheel in car.wheels do
-			local layers = Rules.layers(Rules.share(Config.SPIN, Rules.spin(speed, wheel.radius)))
+			local layers = Rules.layers(Rules.share(car.spin, Rules.spin(speed, wheel.radius)))
 			if Rules.changed(wheel.shown, layers, Config.STEP) then
 				show(wheel, layers)
 			end

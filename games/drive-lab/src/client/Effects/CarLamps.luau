@@ -19,6 +19,7 @@ type Glow = { look: SurfaceAppearance, spec: Config.Glow, strength: number }
 type Switch = { light: Light, base: number, on: boolean, brightness: number }
 
 export type Lamps = {
+	lights: Config.Lights,
 	drlLeft: { Glow },
 	drlRight: { Glow },
 	projector: { Glow },
@@ -138,16 +139,15 @@ end
 
 -- The roof console's lamp, from the binding's point (metres from the centre of mass, before the
 -- body was raised) on the rig's mass box, facing down.
-local function cabinLight(model: Model): Switch?
-	local entry = Catalog.of(model)
-	local point = entry and entry.model.cabinLight
+local function cabinLight(model: Model, entry: Catalog.Entry): Switch?
+	local point = entry.model.cabinLight
 	local chassis = model.PrimaryPart
-	if entry == nil or point == nil or chassis == nil then
+	if point == nil or chassis == nil then
 		return nil
 	end
 	local offset = Vector3.new(point.right, point.up + entry.model.bodyRaise, -point.forward)
 		* Units.metresToStuds(1)
-	local settings = Config.CABIN
+	local settings = entry.lights.cabin
 	local at = attach(chassis, "CabinLight", CFrame.new(offset))
 	local spot = spotLight(
 		at,
@@ -210,7 +210,7 @@ local function required(model: Model): { [string]: BasePart }?
 end
 
 local function addSources(lamps: Lamps, parts: { [string]: BasePart })
-	local headlight, high, indicator = Config.HEADLIGHT, Config.HIGH_BEAM, Config.INDICATOR
+	local headlight, high, indicator = lamps.lights.headlight, lamps.lights.highBeam, lamps.lights.indicator
 	for _, side in SIDES do
 		local projector = parts[`Light_Front{side}_Projector`]
 		local front = CFrame.new(0, 0, -projector.Size.Z / 2) * CFrame.Angles(headlight.pitch, 0, 0)
@@ -230,7 +230,7 @@ local function addSources(lamps: Lamps, parts: { [string]: BasePart })
 			spotLight(reach, Enum.NormalId.Front, high.angle, high.brightness, high.range, headlight.color)
 		table.insert(lamps.highBeams, switchFor(far))
 		local tail = attach(parts[`Light_Rear{side}_Tail`], "TailGlow", CFrame.identity)
-		table.insert(lamps.tailGlows, pointLight(tail, 0, 0, Config.TAIL.color))
+		table.insert(lamps.tailGlows, pointLight(tail, 0, 0, lamps.lights.tail.color))
 		local blinks = if side == "Left" then lamps.blinksLeft else lamps.blinksRight
 		for _, name in { `Light_Front{side}_Modules`, `Light_Rear{side}_Indicator` } do
 			local glow = attach(parts[name], "IndicatorGlow", CFrame.identity)
@@ -241,10 +241,10 @@ local function addSources(lamps: Lamps, parts: { [string]: BasePart })
 end
 
 -- Between the two reversing lamps, facing back.
-local function reversingLight(parts: { [string]: BasePart }): Switch
+local function reversingLight(parts: { [string]: BasePart }, lights: Config.Lights): Switch
 	local left, right = parts.Light_RearLeft_Reverse, parts.Light_RearRight_Reverse
 	local middle = left.CFrame:PointToObjectSpace((left.Position + right.Position) / 2)
-	local settings = Config.REVERSE
+	local settings = lights.reverse
 	local at = attach(left, "ReverseLight", CFrame.new(middle))
 	local spot =
 		spotLight(at, Enum.NormalId.Back, settings.angle, settings.brightness, settings.range, settings.color)
@@ -254,7 +254,7 @@ end
 local CarLamps = {}
 
 -- The lamps of a car once its light pieces have streamed in; nil before that.
-function CarLamps.build(model: Model): Lamps?
+function CarLamps.build(model: Model, entry: Catalog.Entry): Lamps?
 	local parts = required(model)
 	if parts == nil then
 		return nil
@@ -266,8 +266,9 @@ function CarLamps.build(model: Model): Lamps?
 			look.EmissiveStrength = 0
 		end
 	end
-	local glow = Config.GLOW
+	local glow = entry.lights.glow
 	local lamps: Lamps = {
+		lights = entry.lights,
 		drlLeft = glows(model, { "Light_FrontLeft_Drl" }, glow.drl),
 		drlRight = glows(model, { "Light_FrontRight_Drl" }, glow.drl),
 		projector = glows(model, sides("Light_Front%s_Projector"), glow.projector),
@@ -292,8 +293,8 @@ function CarLamps.build(model: Model): Lamps?
 		tailGlows = {},
 		blinksLeft = {},
 		blinksRight = {},
-		reversing = reversingLight(parts),
-		cabin = cabinLight(model),
+		reversing = reversingLight(parts, entry.lights),
+		cabin = cabinLight(model, entry),
 		tailShown = -1,
 		nightShown = -1,
 		shadows = nil,
@@ -327,7 +328,7 @@ function CarLamps.apply(lamps: Lamps, lit: Rules.Lit, daylight: number, shadows:
 	if tail ~= lamps.tailShown or night ~= lamps.nightShown then
 		lamps.tailShown = tail
 		lamps.nightShown = night
-		local settings = Config.TAIL
+		local settings = lamps.lights.tail
 		for _, glow in lamps.tailGlows do
 			glow.Enabled = tail > 0 and night > 0.01
 			glow.Range = if lit.brake then settings.brakeRange else settings.range

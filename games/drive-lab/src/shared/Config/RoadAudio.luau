@@ -3,9 +3,9 @@
 	The sound of speed: the uploaded pack and the mix's tuning. The pack is one file made by
 	tools/audio/cut_road.py (manifest.json beside it, in drive-lab-assets/road_audio/cut): the wind
 	and the roar are regions of it, in seconds, both matched at -20 LUFS, so the volumes here are
-	the balance. The engine's loops are matched at -18 LUFS and play at 0 dB from 8000 rpm
-	(Config/CarAudio), and the SVJ is near 8000 rpm at its top speed in 7th, so at top speed
-	outside the wind sits 8 dB and the roar 12 dB under the engine, the two together 6.5 dB
+	the balance. The engine's loops are matched at -18 LUFS and play at 0 dB from 8000 rpm (the
+	SVJ's pack, Config/Cars/SVJ/Audio), and the SVJ is near 8000 rpm at its top speed in 7th, so
+	at top speed outside the wind sits 8 dB and the roar 12 dB under the engine, the two together 6.5 dB
 	under it; slower, the engine's lead only grows (tests/RoadAudio.spec.luau checks it in the
 	highest gear, where the engine is quietest). The offline render of a full-throttle run
 	measured the engine 7.4 dB over both at its closest, lifting at 319 km/h.

@@ -1,5 +1,5 @@
 --!strict
-local Config = require("../src/shared/Config/DriverAssists")
+local Config = require("../src/shared/Config/Cars/SVJ/Assists")
 local DriveSim = require("../tools/DriveSim")
 local DriverAssists = require("../src/shared/Rules/DriverAssists")
 local Electronics = require("../src/shared/Vehicle/Electronics")
