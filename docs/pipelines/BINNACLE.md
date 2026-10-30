@@ -41,6 +41,13 @@ How it finds things:
   projected onto the line through the segments' top edges, and the segments between two numbers
   share the thousand rpm evenly. The design's spacing is uneven (about 3 segments from 2 to 3,
   8.5 from 5 to 6), as on the real screen, where the low range is compressed.
+- **Below the first number** the pack says nothing, so the band follows the real screen: on the
+  458 Challenge Evo at rest (photo `011`, zoomed on the band's start) the first two segments are
+  lit and the third is dark. Those two (`IDLE_LIT`) light evenly up to `IDLE_LIT_RPM`, 450 and
+  900 rpm, under the lowest rpm the DR458 shows at idle: 1000.946 on its physics (DriveSim at
+  60 Hz, parked, every mode), and 1000 where its start-up curve ends. The cutter refuses
+  idle-lit segments that reach the first printed number. `Binnacle.spec` measures the idle on
+  DriveSim and checks both stay lit there, a tenth below it, and through the start-up's settle.
 - **A lit segment** is cut from the empty page's own unlit segment: alpha is how far each pixel
   is from the band's red toward the segment's black, inside the segment's shape grown 2 px, so
   the cell has exactly the design's outline and antialiasing. Tinted with the white sampled from

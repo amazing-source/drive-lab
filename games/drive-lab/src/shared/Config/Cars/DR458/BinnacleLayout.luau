@@ -54,7 +54,7 @@ local Layout: Binnacle.Layout = {
 			band = {
 				segments = {
 					{
-						rpm = 1428,
+						rpm = 450,
 						corners = { 0.01416, 0.41415, 0.02734, 0.41212, 0.02734, 0.49581, 0.01416, 0.51426 },
 						rect = { x = 0.01172, y = 0.40797, width = 0.01758, height = 0.10785 },
 						sprite = {
@@ -66,7 +66,7 @@ local Layout: Binnacle.Layout = {
 						},
 					},
 					{
-						rpm = 1755,
+						rpm = 900,
 						corners = { 0.0293, 0.372, 0.04248, 0.36837, 0.04248, 0.45407, 0.0293, 0.47418 },
 						rect = { x = 0.02734, y = 0.36342, width = 0.01758, height = 0.11254 },
 						sprite = {
