@@ -11,16 +11,15 @@
 	The mode is one of the car's (SVJ: Strada, Sport, Corsa, default Corsa; DR458: 1, 2, OFF,
 	default 1).
 
-	The SVJ drives DriveSim on its own physics: start-up, a moment at idle, full throttle from
-	rest, a lift at speed, hard braking. The DR458 has no physics yet, so its run is scripted on
-	the road 458's gearing and the 458 Challenge's mass and torque (DR458_RUN): start-up, idle,
-	a free rev to the limiter, full throttle from rest through five upshifts, a lift, braking
-	with downshifts to second, a stop. Mirrors Controllers/CarAudio's update with the same rules
-	and config; the cockpit view, so no far loop. Random draws are seeded, so a run repeats.
+	The car drives DriveSim on its own physics: start-up, a moment at idle, full throttle from
+	rest, a lift at speed, hard braking to a stop (the DR458's run is longer, to reach sixth).
+	Mirrors Controllers/CarAudio's update with the same rules and config; the cockpit view, so no
+	far loop. Random draws are seeded, so a run repeats.
 ]]
 local CarAudio = require("../src/shared/Config/CarAudio")
 local CarAudioEvents = require("../src/shared/Rules/CarAudioEvents")
 local DR458Pack = require("../src/shared/Config/Cars/DR458/Audio")
+local DR458Physics = require("../src/shared/Config/Cars/DR458/Physics")
 local DriveSim = require("./DriveSim")
 local EngineSound = require("../src/shared/Rules/EngineSound")
 local ExhaustPops = require("../src/shared/Rules/ExhaustPops")
@@ -68,174 +67,16 @@ local FILES = {
 	},
 }
 
--- The DR458's scripted run until it has physics. Mass: the Challenge's race minimum with its
--- driver (1,383 kg). Torque: 540 N·m at 6,000 rpm and 445 at 9,000 (570 CV there); 300 at
--- 1,000 and the rest of the curve are guesses. Gearing: the road 458's, the Challenge's being
--- unpublished. Shift times: the F430 Challenge's 60 ms. Idle, limiter, shift points, launch rpm,
--- grip, drag and braking are our choices.
-local DR458_RUN = {
-	mass = 1383,
-	torque = { { 1000, 300 }, { 3250, 432 }, { 6000, 540 }, { 9000, 445 }, { 9500, 420 } },
-	ratios = { 3.08, 2.18, 1.63, 1.29, 1.03, 0.84, 0.69 },
-	finalDrive = 5.14,
-	tyreRadius = 0.345,
-	efficiency = 0.9,
-	dragArea = 0.75,
-	rollingResistance = 0.015,
-	maxAcceleration = 12.5,
-	braking = 13,
-	idleRpm = 1000,
-	limiterRpm = 9000,
-	limiterResumeRpm = 8850,
-	launchRpm = 4500,
-	upshiftRpm = 8800,
-	downshiftRpm = 5200,
-	shiftSeconds = 0.06,
-	downshiftSeconds = 0.07,
-	blipThrottle = 0.8,
-	freeRevRate = 14000,
-	freeFallRate = 7000,
-}
-
-local function torqueAt(rpm: number): number
-	local points = DR458_RUN.torque
-	if rpm <= points[1][1] then
-		return points[1][2]
-	end
-	for index = 2, #points do
-		local low, high = points[index - 1], points[index]
-		if rpm <= high[1] then
-			return low[2] + (high[2] - low[2]) * (rpm - low[1]) / (high[1] - low[1])
-		end
-	end
-	return points[#points][2]
-end
-
-local function wheelRpm(speed: number, gear: number): number
-	return speed / DR458_RUN.tyreRadius * DR458_RUN.ratios[gear] * DR458_RUN.finalDrive * 60 / (2 * math.pi)
-end
-
-type Phase = { name: string, seconds: number, throttle: number, brake: number, neutral: boolean? }
-
--- Telemetry of the scripted DR458 run, one readout per frame.
-local function scriptedRun(): { Readout }
-	local phases: { Phase } = {
-		{ name = "startup", seconds = STARTUP_SECONDS, throttle = 0, brake = 0, neutral = true },
-		{ name = "idle", seconds = 2.0, throttle = 0, brake = 0, neutral = true },
-		{ name = "rev", seconds = 1.6, throttle = 1, brake = 0, neutral = true },
-		{ name = "settle", seconds = 2.5, throttle = 0, brake = 0, neutral = true },
-		{ name = "launch", seconds = 15.0, throttle = 1, brake = 0 },
-		{ name = "lift", seconds = 2.5, throttle = 0, brake = 0 },
-		{ name = "brake", seconds = 9.0, throttle = 0, brake = 1 },
-		{ name = "stopped", seconds = 2.0, throttle = 0, brake = 1, neutral = true },
-	}
-	local run = DR458_RUN
-	local readouts: { Readout } = {}
-	local speed, rpm, gear = 0, run.idleRpm, 0
-	local cutting = false
-	local shift: { from: number, to: number, startRpm: number, elapsed: number, seconds: number }? = nil
-	for _, phase in phases do
-		for _ = 1, math.round(phase.seconds / DT) do
-			local throttle = phase.throttle
-			local shifting, limiter = false, false
-			if phase.neutral or gear == 0 then
-				gear = if phase.neutral then 0 else 1
-				speed = if phase.neutral then math.max(0, speed - run.braking * DT) else speed
-				if gear == 0 then
-					if cutting and rpm <= run.limiterResumeRpm then
-						cutting = false
-					elseif rpm >= run.limiterRpm then
-						cutting = true
-					end
-					local driven = if cutting then 0 else throttle
-					limiter = cutting
-					local rate = if driven > 0 then run.freeRevRate * driven else -run.freeFallRate
-					rpm = math.max(run.idleRpm, rpm + rate * DT)
-					throttle = driven
-				end
-			end
-			if gear > 0 then
-				local active = shift
-				local floor = if throttle > 0 and gear == 1 then run.launchRpm else run.idleRpm
-				if active == nil then
-					if cutting and rpm <= run.limiterResumeRpm then
-						cutting = false
-					elseif rpm >= run.limiterRpm then
-						cutting = true
-					end
-				end
-				local driven = if active or cutting then 0 else throttle
-				local drive = torqueAt(rpm)
-					* driven
-					* run.ratios[gear]
-					* run.finalDrive
-					* run.efficiency
-					/ run.tyreRadius
-				local resist = 0.5 * 1.2 * run.dragArea * speed * speed
-					+ run.rollingResistance * run.mass * 9.81
-				local acceleration = if phase.brake > 0
-					then -run.braking * phase.brake
-					else math.min(drive / run.mass, run.maxAcceleration) - resist / run.mass
-				speed = math.max(0, speed + acceleration * DT)
-				if active then
-					active.elapsed += DT
-					shifting = true
-					local share = math.clamp(active.elapsed / active.seconds, 0, 1)
-					rpm = active.startRpm
-						+ (math.max(wheelRpm(speed, active.to), floor) - active.startRpm) * share
-					-- An upshift cuts the torque; a downshift blips toward the lower gear's speed.
-					throttle = if active.to < active.from and share < 0.8 then run.blipThrottle else 0
-					if share >= 1 then
-						gear = active.to
-						shift = nil
-					end
-				else
-					rpm = math.max(wheelRpm(speed, gear), floor)
-					throttle = driven
-					limiter = cutting
-					if throttle > 0 and rpm >= run.upshiftRpm and gear < #run.ratios then
-						shift = {
-							from = gear,
-							to = gear + 1,
-							startRpm = rpm,
-							elapsed = 0,
-							seconds = run.shiftSeconds,
-						}
-					elseif phase.brake > 0 and gear > 2 and rpm < run.downshiftRpm then
-						shift = {
-							from = gear,
-							to = gear - 1,
-							startRpm = rpm,
-							elapsed = 0,
-							seconds = run.downshiftSeconds,
-						}
-					end
-				end
-			end
-			table.insert(readouts, {
-				rpm = rpm,
-				throttle = throttle,
-				gear = gear,
-				shifting = shifting,
-				limiter = limiter,
-				tcActive = false,
-				speedKmh = speed * 3.6,
-			})
-		end
-	end
-	return readouts
-end
-
--- Telemetry of the SVJ on DriveSim, one readout per frame.
+-- Telemetry of the car on DriveSim, one readout per frame.
 local function simulatedRun(): { Readout }
 	local phases = {
 		{ seconds = STARTUP_SECONDS, throttle = 0, brake = 0 },
 		{ seconds = 1.0, throttle = 0, brake = 0 },
-		{ seconds = 10.0, throttle = 1, brake = 0 },
+		{ seconds = if car == "DR458" then 19.0 else 10.0, throttle = 1, brake = 0 },
 		{ seconds = 3.0, throttle = 0, brake = 0 },
-		{ seconds = 4.5, throttle = 0, brake = 1 },
+		{ seconds = if car == "DR458" then 6.0 else 4.5, throttle = 0, brake = 1 },
 	}
-	local sim = DriveSim.new(SVJPhysics)
+	local sim = DriveSim.new(if car == "DR458" then DR458Physics else SVJPhysics)
 	local readouts: { Readout } = {}
 	for _, phase in phases do
 		for _ = 1, math.round(phase.seconds / DT) do
@@ -258,7 +99,7 @@ local function simulatedRun(): { Readout }
 	return readouts
 end
 
-local readouts: { Readout } = if car == "DR458" then scriptedRun() else simulatedRun()
+local readouts = simulatedRun()
 
 local function between(range: CarAudio.Region): number
 	return range.from + (range.to - range.from) * math.random()

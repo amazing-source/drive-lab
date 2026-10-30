@@ -2,6 +2,7 @@
 local CarAudio = require("../src/shared/Config/CarAudio")
 local Catalog = require("../src/shared/Config/Cars/Catalog")
 local DR458 = require("../src/shared/Config/Cars/DR458/Audio")
+local DR458Physics = require("../src/shared/Config/Cars/DR458/Physics")
 local EngineSound = require("../src/shared/Rules/EngineSound")
 local SVJ = require("../src/shared/Config/Cars/SVJ/Audio")
 local T = require("../../../tools/test/T")
@@ -87,6 +88,18 @@ describe("CarAudio config", function()
 		end)
 	end
 
+	it("DR458: keys every pop chance by exactly the car's own modes", function()
+		local triggers = DR458.popTriggers
+		for _, chances in { triggers.liftChance, triggers.upshiftChance, triggers.downshiftChance } do
+			local count = 0
+			for mode in chances do
+				expect(table.find(DR458Physics.modeOrder, mode) ~= nil).toBeTruthy()
+				count += 1
+			end
+			expect(count).toBe(#DR458Physics.modeOrder)
+		end
+	end)
+
 	it("SVJ: keeps Strada the most restrained mode for every pop", function()
 		local triggers = SVJ.popTriggers
 		for _, chance in { triggers.liftChance, triggers.upshiftChance, triggers.downshiftChance } do
@@ -134,7 +147,7 @@ describe("CarAudio config", function()
 	it(
 		"DR458: plays its loudest loop within x0.7 to x1.4 of its pitch from 1,500 rpm to the limiter",
 		function()
-			local slowest, fastest = stretch(1500, DR458.limiter.rpm)
+			local slowest, fastest = stretch(1500, DR458Physics.engine.limiterRpm)
 			expect(slowest >= 0.7).toBeTruthy()
 			expect(fastest <= 1.4).toBeTruthy()
 		end
