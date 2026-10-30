@@ -5,16 +5,19 @@ blender -b <assembled car.blend> --factory-startup -P tools/blender/dr458/export
 Nothing is uploaded and the .blend is never saved. Steps:
 1. Every visible mesh outside Replaced_* has its modifiers applied (the auto-smooth node sets the
    sharp edges the glTF splits at).
-2. Each manifest part gathers its objects (its "objects" list, else the object of its own name);
-   pivots with no mesh are skipped. A part with one material keeps its name; a part with several
+2. Each manifest part gathers its objects (its "objects" list, else the object of its own name),
+   hidden alternatives included (the deployed window net); pivots with no mesh are skipped. A part with one material keeps its name; a part with several
    splits into <Name>_<Material>. Objects in no part merge per area (Body, Cabin, Engine, Evo,
    Lights, Glass, Wheels, Cockpit) and material into <Area>_<Material>_<nn>.
 3. A piece over --limit triangles (the plan's 10,000 per MeshPart; Roblox simplifies above 20,000)
    is halved along its longest axis by whole faces until it fits.
 4. Metres become studs (1 stud = 0.28 m) about the manifest's origin, the rear-axle midpoint on the
-   ground. Pieces are baked with their origin at their bounds centre, except a part whose manifest
-   entry has "lit_face": it keeps its rotation, so its +Z (Roblox's Back face) stays toward the driver.
-5. car.glb: normals and tangents, materials without images, extras Part / Group on every node.
+   ground. Pieces are baked with their origin at their bounds centre and no rotation, except a part
+   whose manifest entry has "lit_face": it is rotated so Roblox's Back face (+Z, Blender's +Y here)
+   is its lit face's normal toward the driver, with its up as close to the car's up as the lean allows.
+5. car.glb: normals and tangents, materials without images, extras Part / Group on every node. A
+   piece with no UV layer, or one whose UVs have no area, gets planar UVs in metres, in this export
+   only, so its tangents exist.
    export.json: each piece's name, part, group, material, triangles, origin and size in Roblox axes
    (studs; X right, Y up, -Z forward: to_roblox(v) = (-x, z, y), the importer's half turn).
 6. The glb is read back: node names, triangles per mesh, a TANGENT on every primitive, every
@@ -69,7 +72,9 @@ def select_only(objs):
     bpy.context.view_layer.objects.active = objs[0]
 
 
-live = [o for o in bpy.context.scene.objects if o.type == "MESH" and not o.hide_render and len(o.data.polygons)
+meta = json.load(open(manifest_path))
+wanted = {n for p in meta["parts"] if p.get("mesh") is not False for n in (p.get("objects") or [p["name"]])}
+live = [o for o in bpy.context.scene.objects if o.type == "MESH" and (not o.hide_render or o.name in wanted) and len(o.data.polygons)
         and not any(c.name.startswith("Replaced") for c in o.users_collection)
         and not o.name.endswith("__back") and not o.name.startswith("CONTROL")]
 select_only(live)
@@ -77,7 +82,6 @@ bpy.ops.object.convert(target="MESH")
 live = [o for o in bpy.context.scene.objects if o.type == "MESH" and o.name in {x.name for x in live}]
 by_name = {o.name: o for o in live}
 
-meta = json.load(open(manifest_path))
 owner, parts = {}, []
 for p in meta["parts"]:
     if p.get("mesh") is False:
@@ -102,22 +106,52 @@ for o in live:
 bpy.context.view_layer.update()
 
 
+def lit_frame(o):
+    """Rotation whose +Y (Roblox +Z, the Back face) is the lit face's normal toward the driver (+Y here)."""
+    n = Vector()
+    for f in o.data.polygons:
+        if f.normal.y > 0:
+            n += f.normal * f.area
+    y = n.normalized()
+    z = (Vector((0, 0, 1)) - y * y.z).normalized()
+    return Matrix((y.cross(z), y, z)).transposed()
+
+
 def bake(o, keep_rotation):
-    loc, rot, scl = o.matrix_world.decompose()
-    if keep_rotation:
-        o.data.transform(Matrix.Diagonal((*scl, 1.0)))
-        o.data.transform(Matrix.Scale(STUDS, 4))
-        o.matrix_world = Matrix.Translation(loc * STUDS) @ rot.to_matrix().to_4x4()
-    else:
-        o.data.transform(o.matrix_world)
-        o.data.transform(Matrix.Scale(STUDS, 4))
-        o.matrix_world = Matrix.Identity(4)
-    pts = [v.co for v in o.data.vertices]
+    o.data.transform(o.matrix_world)
+    o.data.transform(Matrix.Scale(STUDS, 4))
+    o.matrix_world = Matrix.Identity(4)
+    R = lit_frame(o) if keep_rotation else Matrix.Identity(3)
+    pts = [R.transposed() @ v.co for v in o.data.vertices]
     lo = Vector([min(p[i] for p in pts) for i in range(3)])
     hi = Vector([max(p[i] for p in pts) for i in range(3)])
-    c = (lo + hi) / 2
-    o.data.transform(Matrix.Translation(-c))
-    o.matrix_world = o.matrix_world @ Matrix.Translation(c)
+    c = R @ ((lo + hi) / 2)
+    o.data.transform(R.transposed().to_4x4() @ Matrix.Translation(-c))
+    o.matrix_world = Matrix.Translation(c) @ R.to_4x4()
+
+
+def uv_area(o):
+    uv = o.data.uv_layers.active.data
+    total = 0.0
+    for f in o.data.polygons:
+        a, b, c = (uv[f.loop_start + i].uv for i in (0, 1, 2)) if f.loop_total >= 3 else (Vector((0, 0)),) * 3
+        total += abs((b - a).cross(c - a))
+    return total
+
+
+def fallback_uv(o):
+    """Planar UVs in metres by each face's dominant axis, so glTF can write tangents (export copy only)."""
+    o.data.uv_layers.new(name="UVMap")
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    uv = bm.loops.layers.uv.active
+    for f in bm.faces:
+        ax = max(range(3), key=lambda i: abs(f.normal[i]))
+        a, b = [i for i in range(3) if i != ax]
+        for lp in f.loops:
+            lp[uv].uv = (lp.vert.co[a] / STUDS, lp.vert.co[b] / STUDS)
+    bm.to_mesh(o.data)
+    bm.free()
 
 
 def split_material(o):
@@ -183,14 +217,14 @@ def emit(objs, base, numbered, part=None, group=None, keep_rotation=False):
             pieces.append({"obj": f, "part": part, "group": group, "material": mat, "keep_rotation": keep_rotation})
 
 
-for p, objs in parts:
-    emit(objs, p["name"], False, p["name"], p.get("group"), bool(p.get("lit_face")))
 rest = {}
 for o in live:
-    if o.name not in owner and o.name in bpy.data.objects:
-        rest.setdefault(area_of(o), []).append(o)
-for area, objs in rest.items():
-    emit(objs, area, True, None, None, False)
+    if o.name not in owner:
+        rest.setdefault(area_of(o), []).append(o.name)
+for p, objs in parts:
+    emit(objs, p["name"], False, p["name"], p.get("group"), bool(p.get("lit_face")))
+for area, names_ in rest.items():
+    emit([bpy.data.objects[n] for n in names_], area, True, None, None, False)
 
 names = [x["obj"].name for x in pieces]
 dupes = sorted({n for n in names if names.count(n) > 1 or "." in n})
@@ -202,8 +236,19 @@ for x in pieces:
     bake(o, x["keep_rotation"])
     o["Part"] = x["part"] or o.name
     o["Group"] = x["group"] or "Chassis"
-    if not o.data.uv_layers:
+    ngons = [f.index for f in o.data.polygons if f.loop_total > 4]
+    if ngons:  # Blender computes tangents for triangles and quads only: an n-gon cap left the piece without any
+        bm = bmesh.new()
+        bm.from_mesh(o.data)
+        bm.faces.ensure_lookup_table()
+        bmesh.ops.triangulate(bm, faces=[bm.faces[i] for i in ngons])
+        bm.to_mesh(o.data)
+        bm.free()
+    if not o.data.uv_layers or uv_area(o) < 1e-10:
         no_uv.append(o.name)
+        while o.data.uv_layers:
+            o.data.uv_layers.remove(o.data.uv_layers[0])
+        fallback_uv(o)
 bpy.context.view_layer.update()
 
 
@@ -223,7 +268,7 @@ for x in pieces:
     if x["keep_rotation"]:
         q = o.matrix_world.to_quaternion()
         row["rotation_blender_wxyz"] = [round(q.w, 5), round(q.x, 5), round(q.y, 5), round(q.z, 5)]
-        row["lit_face_normal_roblox"] = to_roblox(o.matrix_world.to_3x3() @ Vector((0, 0, 1)))
+        row["lit_face_normal_roblox"] = to_roblox(o.matrix_world.to_3x3() @ Vector((0, 1, 0)))
     rows.append(row)
 select_only([x["obj"] for x in pieces])
 bpy.ops.export_scene.gltf(filepath=str(out / "car.glb"), export_format="GLB", use_selection=True, export_yup=True,
@@ -264,7 +309,7 @@ report = {"limit": LIMIT, "studs_per_metre": STUDS, "frame": "manifest frame sca
           "glb_bytes": len(raw), "no_uv": no_uv, "problems": problems, "parts": rows}
 (out / "export.json").write_text(json.dumps(report, indent=1))
 print(f"EXPORT {len(rows)} pieces, {report['triangles']} triangles, largest {report['largest']}, glb {len(raw) / 1e6:.1f} MB, "
-      f"{sum(1 for r in rows if r['uv_maps'] > 1)} with 2+ UV maps, {len(no_uv)} without UVs")
+      f"{sum(1 for r in rows if r['uv_maps'] > 1)} with 2+ UV maps, {len(no_uv)} without UVs (fallback UVs given)")
 for r in sorted(rows, key=lambda r: -r["triangles"])[:10]:
     print(f"EXPORT   {r['triangles']:6d}  {r['name']}  ({r['material']})")
 for r in rows:
