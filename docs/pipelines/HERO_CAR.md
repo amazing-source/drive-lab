@@ -325,11 +325,10 @@ When a car is built from several sources (a game rip for the body, own models fo
 cockpit), its surfaces get physically based sets from a shared library instead of baked atlases:
 tiling 1024 px maps (colour sRGB, OpenGL normal, roughness, metalness) with a real-world tile size
 `tile_m`, and flat sets (a Roblox Material and a Color, no SurfaceAppearance). Meshes carry
-`uv = metres / tile_m`. **Open:** that relies on UVs outside 0..1 repeating on a MeshPart, which is
-not verified: research 03 reads the import docs as 0..1 only and research 10 marks it [TEST].
-Settle it in Studio before the first export; if it does not repeat, bake each piece's sets into its
-own 0..1 atlas (as in section 3). The DR458's library builder and its sets live outside the repo
-(`drive-lab-assets/dr458/work/materials/`).
+`uv = metres / tile_m`, which relies on UVs outside 0..1 repeating on a MeshPart: measured in Studio
+edit mode on EditableMesh quads (research 10, section 3.1); an uploaded mesh in a live client is still
+to check. Were it ever to clamp, bake each piece's sets into its own 0..1 atlas (as in section 3).
+The DR458's library builder and its sets live outside the repo (`drive-lab-assets/dr458/work/materials/`).
 
 ```
 eye inventory ─► material map (+ photo per rule) ─► map check ─► apply (materials, UVs, debadged images) ─► eye renders
