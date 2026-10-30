@@ -2,7 +2,9 @@
 --[[
 	A binnacle display: a race car's screen behind the wheel with pages of readouts and a strip of
 	shift lights (Controllers/Binnacle, Rules/Binnacle), the other kind of car display beside
-	Config/Cluster's dial face. Pixels are the screen's canvas; colours are 0-255 channels.
+	Config/Cluster's dial face. Each page is a design image with the live values drawn over it.
+	Places on a page are normalised to the page image (0 to 1 from its top left); places in a
+	sheet are the sheet's pixels; colours are 0-255 channels.
 ]]
 local Cluster = require("./Cluster")
 
@@ -14,9 +16,54 @@ export type Field = {
 	reading: Reading,
 	-- The text a "static" field shows.
 	text: string?,
+	-- A field shown on a pill: the pill's colour for each text it shows.
+	pill: { [string]: Cluster.Rgb }?,
 }
 
-export type Page = { title: string, fields: { Field } }
+export type Rect = { x: number, y: number, width: number, height: number }
+
+-- A picture in an uploaded sheet.
+export type Sprite = { image: string, x: number, y: number, width: number, height: number }
+
+-- One segment of the rpm band: lit from `rpm`; its outline as four corners (x, y pairs, clockwise
+-- from the top left); where its lit image goes on the page.
+export type Segment = { rpm: number, corners: { number }, rect: Rect, sprite: Sprite }
+
+-- A printed mark of the band (rpm), where its number is printed.
+export type Mark = { rpm: number, x: number, y: number }
+
+export type Band = { segments: { Segment }, rgb: Cluster.Rgb, marks: { Mark } }
+
+-- A pill on the page: where it is, its colour in the design, and a white mask of its shape.
+export type Pill = { rect: Rect, rgb: Cluster.Rgb, sprite: Sprite }
+
+-- A page's design. The screen is wider than the page, so the sides beside it take its edge
+-- colour, and the title strip's colour across its top `height`. Per label: where the label is
+-- printed and the slot its value goes in (the value's capitals fill the slot's height, centred
+-- across its width).
+export type PageArt = {
+	art: Sprite,
+	edge: Cluster.Rgb,
+	title: { height: number, rgb: Cluster.Rgb }?,
+	labels: { [string]: Rect },
+	slots: { [string]: Rect },
+	pills: { [string]: Pill }?,
+	band: Band?,
+}
+
+-- Each lamp of the strip, left to right: its unlit image and its lit one (grey, tinted with the
+-- light's colour).
+export type LampArt = { off: { Sprite }, on: { Sprite } }
+
+-- What tools/assets/binnacle_layers.py measures on the design pack.
+export type Layout = {
+	pages: { [string]: PageArt },
+	valueRgb: Cluster.Rgb,
+	pillTextRgb: Cluster.Rgb,
+	lamps: LampArt,
+}
+
+export type Page = { title: string, fields: { Field }, art: PageArt }
 
 -- One light of the strip that is not a rev light: lit steady while its state holds.
 export type Lamp = { rgb: Cluster.Rgb, shows: "pitLimiter" | "fault" }
@@ -32,18 +79,34 @@ export type RevLights = {
 	flashHz: number,
 }
 
+export type Face = "Front" | "Back" | "Left" | "Right" | "Top" | "Bottom"
+
+export type Font = {
+	family: string,
+	weight: "Regular" | "Medium" | "SemiBold" | "Bold",
+	-- The capitals' height, and how far their middle sits below the middle of the label's box,
+	-- as shares of the TextSize.
+	capHeight: number,
+	capOffset: number,
+	-- A same-colour outline that thickens the glyphs toward the design's weight, as a share of
+	-- the capitals' height on each side; 0 for none.
+	stroke: number,
+}
+
 export type Screen = {
+	-- The screen's shape, which the pages are centred in at full height.
 	canvasWidth: number,
 	canvasHeight: number,
 	brightness: number,
+	-- The screen while it is off.
 	background: Cluster.Rgb,
-	text: Cluster.Rgb,
-	dim: Cluster.Rgb,
-	-- The rpm bar along the top of the first page: its range, its marks (x1000 rpm) and its fill.
+	font: Font,
+	valueRgb: Cluster.Rgb,
+	pillTextRgb: Cluster.Rgb,
+	-- The rpm range of the first page's band and its printed marks (x1000 rpm).
 	barFromRpm: number,
 	barToRpm: number,
 	barMarks: { number },
-	barRgb: Cluster.Rgb,
 	-- The red zone starts here; the HUD's rev segments turn red here too.
 	redlineRpm: number,
 	pages: { Page },
@@ -51,9 +114,11 @@ export type Screen = {
 	leftLamp: Lamp,
 	revLights: RevLights,
 	rightLamp: Lamp,
-	-- Canvas pixels of the strip, and of a light in it.
-	stripHeight: number,
-	lightSize: number,
+	-- The strip's lens parts on the car's model, left to right, the face each shows the driver,
+	-- and their images.
+	lenses: { string },
+	lensFace: Face,
+	lamps: LampArt,
 }
 
 return {}

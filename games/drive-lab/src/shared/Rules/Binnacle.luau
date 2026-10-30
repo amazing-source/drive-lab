@@ -1,7 +1,8 @@
 --!strict
 --[[
 	What a binnacle display shows (Config/Binnacle), without the engine: which shift lights are lit
-	and in what colour, how far the rpm bar is filled, which page is up and the text of each field.
+	and in what colour, how far the rpm bar is filled and how many of its segments are lit, which
+	page is up, where it sits on the screen, and the text and pill colour of each field.
 ]]
 local Binnacle = require("../Config/Binnacle")
 local Cluster = require("../Config/Cluster")
@@ -61,6 +62,35 @@ end
 -- How much of the rpm bar is filled, 0 to 1.
 function Rules.barShare(screen: Binnacle.Screen, rpm: number): number
 	return math.clamp((rpm - screen.barFromRpm) / (screen.barToRpm - screen.barFromRpm), 0, 1)
+end
+
+-- How many of the band's segments are lit at `rpm`, from the first: each lights at its own rpm.
+function Rules.litSegments(segments: { Binnacle.Segment }, rpm: number): number
+	local lit = 0
+	for _, segment in segments do
+		if rpm < segment.rpm then
+			break
+		end
+		lit += 1
+	end
+	return lit
+end
+
+-- The colour of a field's pill while it shows `text`, or nil when it has none for that text.
+function Rules.pillColour(field: Binnacle.Field, text: string): Cluster.Rgb?
+	local pill = field.pill
+	return if pill then pill[text] else nil
+end
+
+-- Where a page goes on the screen, as shares of the screen: as large as fits, centred. Aspects
+-- are width over height.
+function Rules.fitPage(screenAspect: number, pageAspect: number): Binnacle.Rect
+	if screenAspect >= pageAspect then
+		local width = pageAspect / screenAspect
+		return { x = (1 - width) / 2, y = 0, width = width, height = 1 }
+	end
+	local height = screenAspect / pageAspect
+	return { x = 0, y = (1 - height) / 2, width = 1, height = height }
 end
 
 -- The page shown for `page`, counted from 1 and wrapping round the display's pages.

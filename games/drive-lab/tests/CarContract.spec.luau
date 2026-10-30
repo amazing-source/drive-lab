@@ -334,4 +334,29 @@ describe("Car contract: a binnacle display", function()
 			end).toThrow()
 		end
 	end)
+
+	it("refuses a field with no slot or pill on its page, or a lamp with no lens", function()
+		local function withField(index: number, field: any): (any) -> ()
+			return function(entry)
+				local pages = table.clone(entry.binnacle.pages)
+				local page = table.clone(pages[index])
+				page.fields = table.clone(page.fields)
+				table.insert(page.fields, field)
+				pages[index] = page
+				entry.binnacle.pages = pages
+			end
+		end
+		local breaks: { (any) -> () } = {
+			withField(1, { label = "BOOST", reading = "none" }),
+			withField(2, { label = "ABS FAIL", reading = "none", pill = { OFF = { r = 0, g = 0, b = 0 } } }),
+			function(entry)
+				entry.binnacle.lenses = { "ShiftLight_1" }
+			end,
+		}
+		for _, change in breaks do
+			expect(function()
+				Contract.define(withBinnacle(change))
+			end).toThrow()
+		end
+	end)
 end)
