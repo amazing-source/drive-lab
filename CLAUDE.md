@@ -34,6 +34,7 @@ owner; **read `docs/engineering/AGENTIC_WORKFLOW.md` before your first change.**
     selene games/drive-lab/src kit/src tools
     cd games/drive-lab && rojo sourcemap default.project.json -o sourcemap.json && luau-lsp analyze --sourcemap=sourcemap.json --definitions=../../roblox.d.luau --base-luaurc=../../.luaurc --ignore="**/packages/**" src
     lune run tools/test/run
+    lune run tools/test/tools        # runs every games/<game>/tools/*.luau once (about 20 s)
     rojo build games/drive-lab/default.project.json -o drive-lab.rbxl
 
 `roblox.d.luau` is downloaded, not committed (see the CI workflow). The toolchain is pinned in
