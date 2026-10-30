@@ -262,3 +262,76 @@ describe("Car contract: switches", function()
 		)
 	end)
 end)
+
+describe("Car contract: a binnacle display", function()
+	local DR458Screen = require("../src/shared/Config/Cars/DR458/Binnacle")
+
+	-- The SVJ with the DR458's binnacle in place of its dial, drawn to the SVJ's screen shape.
+	local function withBinnacle(change: ((any) -> ())?): Contract.Entry
+		return svjWith(function(entry)
+			local glass = entry.model.cluster
+			local screen = table.clone(DR458Screen) :: any
+			screen.canvasHeight = 300
+			screen.canvasWidth = 300 * glass.width / glass.height
+			entry.cluster = nil
+			entry.binnacle = screen
+			entry.switches.displayPages = #screen.pages
+			if change then
+				change(entry)
+			end
+		end)
+	end
+
+	it("accepts a binnacle in place of the dial, and reads its redline", function()
+		local entry = Contract.define(withBinnacle())
+		expect(Contract.redline(entry)).toBe(DR458Screen.redlineRpm)
+		expect(Contract.redline(Catalog.cars.SVJ)).toBe((Catalog.cars.SVJ.cluster :: any).redlineRpm)
+	end)
+
+	it("refuses a car with no display, or with both", function()
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				entry.cluster = nil
+			end))
+		end).toThrow()
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				entry.binnacle = table.clone(DR458Screen)
+				entry.switches.displayPages = #DR458Screen.pages
+			end))
+		end).toThrow()
+	end)
+
+	it("refuses pages its page switch does not step through", function()
+		expect(function()
+			Contract.define(withBinnacle(function(entry)
+				entry.switches.displayPages = nil
+			end))
+		end).toThrow()
+		expect(function()
+			Contract.define(withBinnacle(function(entry)
+				entry.switches.displayPages = 2
+			end))
+		end).toThrow()
+	end)
+
+	it("refuses rev lights that do not rise, a redline off the bar, or a canvas of another shape", function()
+		local breaks: { (any) -> () } = {
+			function(entry)
+				entry.binnacle.revLights = table.clone(entry.binnacle.revLights)
+				entry.binnacle.revLights.toRpm = entry.binnacle.revLights.fromRpm
+			end,
+			function(entry)
+				entry.binnacle.redlineRpm = entry.binnacle.barToRpm + 1
+			end,
+			function(entry)
+				entry.binnacle.canvasWidth *= 1.2
+			end,
+		}
+		for _, change in breaks do
+			expect(function()
+				Contract.define(withBinnacle(change))
+			end).toThrow()
+		end
+	end)
+end)

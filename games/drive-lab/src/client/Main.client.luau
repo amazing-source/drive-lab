@@ -19,6 +19,7 @@ local START_ORDER = {
 	Controllers.CockpitGlazing,
 	Controllers.CarDoor,
 	Controllers.Cluster,
+	Controllers.Binnacle,
 	Controllers.DriverArms,
 	Controllers.DriverLegs,
 	Controllers.StreetLights,

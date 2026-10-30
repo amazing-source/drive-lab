@@ -6,6 +6,7 @@
 	at load time, and freezes it, so nothing can tune a car at run time.
 ]]
 local Binding = require("./Binding")
+local Binnacle = require("../Binnacle")
 local CarAudio = require("../CarAudio")
 local CarCamera = require("../CarCamera")
 local CarEntry = require("../CarEntry")
@@ -38,7 +39,9 @@ export type Entry = {
 	rimBlur: RimBlur.Rims,
 	audio: CarAudio.Pack,
 	lights: CarLights.Lights,
-	cluster: Cluster.Face,
+	-- The car's display: a dial face, or a binnacle screen with pages and shift lights. One of them.
+	cluster: Cluster.Face?,
+	binnacle: Binnacle.Screen?,
 	assists: DriverAssists.Tuning,
 	switches: CarSwitches.Switches,
 }
@@ -118,15 +121,44 @@ local function checkModes(entry: Entry)
 	end
 end
 
--- The display draws every drive mode the car has in that mode's colours, and its red zone on its
+-- A dial face draws every drive mode the car has in that mode's colours, and its red zone on its
 -- dial.
-local function checkCluster(entry: Entry)
-	local face = entry.cluster
+local function checkCluster(entry: Entry, face: Cluster.Face)
 	checkCovers(entry, face.modes, "the cluster's colours")
 	assert(
 		face.redlineRpm > 0 and face.redlineRpm < face.dialMaxRpm,
 		"the cluster's redline lies off its dial"
 	)
+end
+
+-- A binnacle screen has a page for each the SCROLL button steps through, a strip of a lamp, its
+-- rev lights in rising order and a lamp, its redline on its rpm bar, and the shape of the screen
+-- it is drawn on.
+local function checkBinnacle(entry: Entry, screen: Binnacle.Screen)
+	assert(
+		#screen.pages == (entry.switches.displayPages or 1),
+		"the binnacle's pages are not the ones its page switch steps through"
+	)
+	local lights = screen.revLights
+	assert(#lights.colours >= 1, "the binnacle's strip has no rev lights")
+	assert(lights.fromRpm < lights.toRpm, "the binnacle's rev lights do not rise")
+	assert(
+		screen.redlineRpm > screen.barFromRpm and screen.redlineRpm <= screen.barToRpm,
+		"the binnacle's redline lies off its rpm bar"
+	)
+	local glass = entry.model.cluster
+	local shape = (screen.canvasWidth / screen.canvasHeight) / (glass.width / glass.height)
+	assert(math.abs(shape - 1) <= 0.05, "the binnacle's canvas is not the shape of its screen")
+end
+
+local function checkDisplay(entry: Entry)
+	local face, screen = entry.cluster, entry.binnacle
+	assert((face == nil) ~= (screen == nil), "a car has one display: a dial face or a binnacle screen")
+	if face then
+		checkCluster(entry, face)
+	elseif screen then
+		checkBinnacle(entry, screen)
+	end
 end
 
 -- The switches' numbers are usable: a limiter with a band, a wiper with a wipe time, more than
@@ -154,9 +186,19 @@ function Contract.define(entry: Entry): Entry
 	checkStartup(entry)
 	checkFootwell(entry)
 	checkModes(entry)
-	checkCluster(entry)
+	checkDisplay(entry)
 	checkSwitches(entry)
 	return deepFreeze(entry)
+end
+
+-- Where the car's red zone starts, on its display and the HUD's rev segments.
+function Contract.redline(entry: Entry): number
+	local face, screen = entry.cluster, entry.binnacle
+	if face then
+		return face.redlineRpm
+	end
+	assert(screen, "a car has a display")
+	return screen.redlineRpm
 end
 
 function Contract.features(entry: Entry): Features
