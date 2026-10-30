@@ -1,7 +1,7 @@
 """Look-dev renders of the cockpit from fixed cameras, with fixed light, materials untouched.
 
 blender -b <car.blend> --factory-startup --python-exit-code 1 -P tools/blender/car_eye_render.py -- <out dir> [<view> ...]
-        [--res 1280x720] [--light sun|overcast] [--views <views.json>]
+        [--res 1280x720] [--light sun|overcast|hdri:<name>] [--views <views.json>] [--show-glass]
 
 Views (the DR458's, in its metres; --views replaces them with {name: [[eye], [target], fov_deg]}):
 - driver: eye 0.36, -1.42, 0.98 looking at 0.36, -3.0, 0.80, 70 deg (the team's reference driver view);
@@ -11,8 +11,9 @@ Views (the DR458's, in its metres; --views replaces them with {name: [[eye], [ta
 - duct:   from the eye at the cooling duct up the passenger A-pillar (photo 002, right).
 Light `sun` (default, the team's reference light): Nishita sky at 35 deg (strength 0.35), sun 3.0 at
 55/150 deg; light `overcast`: a neutral sky, 1.0 overhead to 0.35 below, no sun, as the photos were
-taken. Both: EEVEE with screen-space ray tracing and fast GI (occlusion inside the cabin), AgX, exposure 0.6.
-Glass is hidden (Roblox draws through it). Placeholder materials are
+taken; light `hdri:<name>`: one of Blender's bundled world HDRIs (city, courtyard, ...), so gloss
+shows. All: EEVEE with screen-space ray tracing and fast GI (occlusion inside the cabin), AgX, exposure 0.6.
+Glass is hidden (Roblox draws through it) unless --show-glass. Placeholder materials are
 NOT recoloured, so what renders is what the file carries.
 """
 import json
@@ -27,7 +28,7 @@ args = sys.argv[sys.argv.index("--") + 1:]
 out = Path(args[0])
 out.mkdir(parents=True, exist_ok=True)
 res = args[args.index("--res") + 1] if "--res" in args else "1280x720"
-skip = {res, "sun", "overcast"}
+skip = {res, "sun", "overcast", args[args.index("--light") + 1] if "--light" in args else ""}
 views = [a for a in args[1:] if not a.startswith("--") and a not in skip and not a.endswith(".json")]
 views = views or ["driver", "wheel", "across", "down", "duct"]
 W, H = (int(x) for x in res.split("x"))
@@ -35,7 +36,7 @@ sc = bpy.context.scene
 
 GLASS = ("_glass", "_window_", "glassLHL", "glassRHL", "glassLTL", "glassRTL", "glassLF")
 for o in sc.objects:
-    if o.type == "MESH" and any(s in o.name for s in GLASS):
+    if o.type == "MESH" and any(s in o.name for s in GLASS) and "--show-glass" not in args:
         o.hide_render = True
 for c in bpy.data.collections:
     if c.name.startswith("Replaced"):
@@ -60,6 +61,13 @@ if LIGHT == "sun":
     sun.data.angle = math.radians(1.0)
     sc.collection.objects.link(sun)
     sun.rotation_euler = (math.radians(55), 0, math.radians(150))
+elif LIGHT.startswith("hdri:"):
+    # A recorded environment, so gloss has something to reflect (Blender's bundled studio lights).
+    hdri = Path(bpy.utils.resource_path("LOCAL")) / "datafiles" / "studiolights" / "world" / (LIGHT[5:] + ".exr")
+    env = nt.nodes.new("ShaderNodeTexEnvironment")
+    env.image = bpy.data.images.load(str(hdri))
+    nt.links.new(env.outputs["Color"], bg.inputs["Color"])
+    bg.inputs["Strength"].default_value = 1.0
 else:
     # Overcast: a neutral sky brighter overhead than at the horizon, no sun, as in the photos.
     grad = nt.nodes.new("ShaderNodeTexGradient")
