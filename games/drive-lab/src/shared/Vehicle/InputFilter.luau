@@ -71,8 +71,10 @@ function InputFilter.steerBounds(
 end
 
 -- Seconds a move from `current` toward `target` would take across full lock: a return toward
--- centre, a turn toward the other side (no slower than a return while it heads back to centre),
--- or a turn in.
+-- centre, a turn toward the other side, or a turn in. The other side is a turn in sped up by
+-- oppositeFactor, never the return: on the move the return is quick (the road's trail), and a
+-- swing from one side to the other borrowed it, 4 to 5 times faster than turning in from 14 m/s
+-- (the owner felt it as an uncontrolled flick, 2026-10-30).
 function InputFilter.moveTime(
 	help: InputHelp.InputHelp,
 	current: number,
@@ -88,7 +90,7 @@ function InputFilter.moveTime(
 	end
 	local turnIn = help.lockTime * (1 + speedAbs / help.rateHalvingSpeed)
 	if target * current < 0 then
-		return math.min(back, turnIn / help.oppositeFactor)
+		return turnIn / help.oppositeFactor
 	end
 	return turnIn
 end

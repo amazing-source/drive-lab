@@ -73,8 +73,15 @@ describe("Input filter steering", function()
 		local opposite = InputFilter.moveTime(keyboard, -1, 1, 0)
 		expect(opposite).toBeNear(keyboard.lockTime / keyboard.oppositeFactor, 1e-12)
 		expect(opposite < InputFilter.moveTime(keyboard, 0, 1, 0)).toBe(true)
-		-- On the move it is never slower than letting the wheel return.
-		expect(InputFilter.moveTime(keyboard, -1, 1, 30)).toBe(keyboard.returnTimeMoving)
+		-- The same share at any speed: on the move it never takes the quick return's pace, which
+		-- made a swing from one side to the other 4 to 5 times faster than turning in.
+		for _, speed in { 8, 14, 30 } do
+			local turnIn = InputFilter.moveTime(keyboard, 0, 1, speed)
+			expect(InputFilter.moveTime(keyboard, -1, 1, speed)).toBeNear(
+				turnIn / keyboard.oppositeFactor,
+				1e-12
+			)
+		end
 	end)
 
 	it("keeps its timing within a frame at 30, 60 and 240 FPS", function()
