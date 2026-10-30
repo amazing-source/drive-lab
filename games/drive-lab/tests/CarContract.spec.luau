@@ -335,3 +335,93 @@ describe("Car contract: a binnacle display", function()
 		end
 	end)
 end)
+
+-- The SVJ with its own start-up sound, timed to its start-up (catch 0.75 s after the press, the
+-- starter's revs held to 0.7 s), and then `change` made to that sound or that start-up.
+local function withSound(change: (any) -> ()): Contract.Entry
+	return svjWith(function(entry)
+		entry.audio.startup.sound = {
+			id = "rbxassetid://1",
+			volume = 1,
+			from = 0.2,
+			starterEnds = 0.9,
+			catchAt = 0.95,
+			handOver = 9,
+			to = 10,
+		}
+		change(entry)
+	end)
+end
+
+describe("Car contract: the start-up sound", function()
+	it("accepts a start-up sound that keeps to the start-up's timing, and none at all", function()
+		expect(Contract.define(withSound(function() end)).audio.startup.sound ~= nil).toBeTruthy()
+		expect(Catalog.cars.SVJ.audio.startup.sound).toBe(nil)
+	end)
+
+	it("refuses a start-up sound that is not an uploaded asset, or has no level", function()
+		local breaks: { (any) -> () } = {
+			function(entry)
+				entry.audio.startup.sound.id = "126032464409866"
+			end,
+			function(entry)
+				entry.audio.startup.sound.volume = 0
+			end,
+		}
+		for _, change in breaks do
+			expect(function()
+				Contract.define(withSound(change))
+			end).toThrow()
+		end
+	end)
+
+	it("refuses a start-up sound whose times run out of order", function()
+		-- Each break keeps the catch and the starter's revs in step, so only the order is wrong.
+		local breaks: { (any) -> () } = {
+			function(entry)
+				local sound = entry.audio.startup.sound
+				sound.from, sound.starterEnds, sound.catchAt = -0.1, 0.6, 0.65
+			end,
+			function(entry)
+				entry.audio.startup.sound.handOver = entry.audio.startup.sound.to
+			end,
+			function(entry)
+				entry.audio.startup.sound.handOver = entry.audio.startup.sound.catchAt
+			end,
+		}
+		for _, change in breaks do
+			expect(function()
+				Contract.define(withSound(change))
+			end).toThrow()
+		end
+	end)
+
+	it("refuses a start-up sound that catches at another time than the start-up", function()
+		expect(function()
+			Contract.define(withSound(function(entry)
+				entry.audio.startup.sound.catchAt += 0.1
+			end))
+		end).toThrow()
+		expect(function()
+			Contract.define(withSound(function(entry)
+				entry.startup.catchAfter += 0.1
+			end))
+		end).toThrow()
+	end)
+
+	it(
+		"refuses instruments that leave the starter's revs before its starter stops or after the catch",
+		function()
+			expect(function()
+				Contract.define(withSound(function(entry)
+					entry.audio.startup.sound.starterEnds = entry.audio.startup.sound.catchAt
+				end))
+			end).toThrow()
+			expect(function()
+				Contract.define(withSound(function(entry)
+					entry.startup.rpm.values[3] = entry.startup.rpm.values[1]
+				end))
+			end).toThrow()
+		end
+	)
+end)
