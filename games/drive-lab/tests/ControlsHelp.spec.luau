@@ -4,8 +4,14 @@ local luau = require("@lune/luau")
 local roblox = require("@lune/roblox")
 
 local CarEntry = require("../src/shared/Config/CarEntry")
+local CarSwitches = require("../src/shared/Config/CarSwitches")
+local Catalog = require("../src/shared/Config/Cars/Catalog")
 local Config = require("../src/shared/Config/ControlsHelp")
+local Contract = require("../src/shared/Config/Cars/Contract")
 local ControlsHelp = require("../src/shared/Rules/ControlsHelp")
+local DR458 = require("../src/shared/Config/Cars/DR458/Physics")
+local DR458Assists = require("../src/shared/Config/Cars/DR458/Assists")
+local DR458Switches = require("../src/shared/Config/Cars/DR458/Switches")
 local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect
@@ -34,6 +40,37 @@ local function realBindings(): ControlsHelp.Bindings
 			bindings[name] = names(value)
 		end
 	end
+	return bindings
+end
+
+-- One car's screen, from its entry.
+local function screen(name: string, entry: Contract.Entry): (ControlsHelp.Help, ControlsHelp.Bindings)
+	return ControlsHelp.forCar(
+		Config.HELP,
+		realBindings(),
+		name,
+		Contract.features(entry),
+		CarSwitches.NEEDS,
+		Config.carValues(entry)
+	)
+end
+
+local function svj(): (ControlsHelp.Help, ControlsHelp.Bindings)
+	return screen("SVJ", Catalog.cars.SVJ)
+end
+
+-- The DR458 has no catalog entry until its model is bound: its screen from the modules it has.
+local function dr458(): (ControlsHelp.Help, ControlsHelp.Bindings)
+	local parts = { physics = DR458, assists = DR458Assists, switches = DR458Switches }
+	return screen("DR458", (parts :: any) :: Contract.Entry)
+end
+
+local function svjHelp(): ControlsHelp.Help
+	return (svj())
+end
+
+local function svjBindings(): ControlsHelp.Bindings
+	local _, bindings = svj()
 	return bindings
 end
 
@@ -73,10 +110,12 @@ local function firstRow(help: ControlsHelp.Help, control: string): ControlsHelp.
 end
 
 describe("ControlsHelp", function()
-	it("explains every control in Config/Controls with a label and one sentence", function()
-		local problems = ControlsHelp.problems(Config.HELP, realBindings())
-		if #problems > 0 then
-			error(`the controls screen is incomplete: {report(problems)}`)
+	it("explains every control in Config/Controls with a label and one sentence, for each car", function()
+		for name, build in { SVJ = svj, DR458 = dr458 } do
+			local problems = ControlsHelp.problems(build())
+			if #problems > 0 then
+				error(`the {name}'s controls screen is incomplete: {report(problems)}`)
+			end
 		end
 	end)
 
@@ -95,17 +134,17 @@ describe("ControlsHelp", function()
 	end)
 
 	it("fails a control with no row, no label or no sentence", function()
-		local bindings = realBindings()
+		local help, bindings = svj()
 		bindings.NEW_CONTROL = { "N" }
-		expect(has(ControlsHelp.problems(Config.HELP, bindings), "NEW_CONTROL has no row")).toBe(true)
+		expect(has(ControlsHelp.problems(help, bindings), "NEW_CONTROL has no row")).toBe(true)
 
-		local noLabel = copy(Config.HELP)
+		local noLabel = copy(svjHelp())
 		firstRow(noLabel, "HEADLIGHTS").label = " "
-		expect(has(ControlsHelp.problems(noLabel, realBindings()), "has no label")).toBe(true)
+		expect(has(ControlsHelp.problems(noLabel, svjBindings()), "has no label")).toBe(true)
 
-		local noText = copy(Config.HELP)
+		local noText = copy(svjHelp())
 		firstRow(noText, "HEADLIGHTS").text = ""
-		expect(has(ControlsHelp.problems(noText, realBindings()), "Headlights: the explanation is missing")).toBe(
+		expect(has(ControlsHelp.problems(noText, svjBindings()), "Headlights: the explanation is missing")).toBe(
 			true
 		)
 	end)
@@ -119,22 +158,22 @@ describe("ControlsHelp", function()
 			{ text = "Hold {NOWHERE} s.", problem = "quotes NOWHERE, which no config fills" },
 		}
 		for _, case in cases do
-			local help = copy(Config.HELP)
+			local help = copy(svjHelp())
 			firstRow(help, "HEADLIGHTS").text = case.text
-			expect(has(ControlsHelp.problems(help, realBindings()), case.problem)).toBe(true)
+			expect(has(ControlsHelp.problems(help, svjBindings()), case.problem)).toBe(true)
 		end
 	end)
 
 	it("fails a row for a control that does not exist or is explained twice", function()
-		local stale = copy(Config.HELP)
+		local stale = copy(svjHelp())
 		table.insert(firstRow(stale, "HEADLIGHTS").controls, "FOG_LIGHTS")
-		expect(has(ControlsHelp.problems(stale, realBindings()), "FOG_LIGHTS, which is not a control")).toBe(
+		expect(has(ControlsHelp.problems(stale, svjBindings()), "FOG_LIGHTS, which is not a control")).toBe(
 			true
 		)
 
-		local twice = copy(Config.HELP)
+		local twice = copy(svjHelp())
 		table.insert(firstRow(twice, "HEADLIGHTS").controls, "HUD_MODE")
-		expect(has(ControlsHelp.problems(twice, realBindings()), "HUD_MODE is explained twice")).toBe(true)
+		expect(has(ControlsHelp.problems(twice, svjBindings()), "HUD_MODE is explained twice")).toBe(true)
 	end)
 
 	it("shows the brake's keys on the reverse row without explaining the brake twice", function()
@@ -153,20 +192,17 @@ describe("ControlsHelp", function()
 		expect(table.concat(gamepad.keys, ",")).toBe("LT")
 		expect(firstRow(Config.HELP, "BRAKE").label).toBe("Brake")
 
-		local stale = copy(Config.HELP)
+		local stale = copy(svjHelp())
 		firstRow(stale, "HEADLIGHTS").keysOf = { "FOG_LIGHTS" }
 		expect(
-			has(
-				ControlsHelp.problems(stale, realBindings()),
-				"the keys of FOG_LIGHTS, which is not a control"
-			)
+			has(ControlsHelp.problems(stale, svjBindings()), "the keys of FOG_LIGHTS, which is not a control")
 		).toBe(true)
 	end)
 
 	it("names every gamepad and multi-letter key a player reads", function()
-		local bindings = realBindings()
+		local bindings = svjBindings()
 		bindings.HEADLIGHTS = { "ButtonL2" }
-		local help = copy(Config.HELP)
+		local help = copy(svjHelp())
 		help.keyNames.ButtonL2 = nil
 		expect(has(ControlsHelp.problems(help, bindings), "ButtonL2 (HEADLIGHTS) has no display name")).toBe(
 			true
@@ -213,6 +249,66 @@ describe("ControlsHelp", function()
 		expect(shape(ControlsHelp.columns({ 1, 1 }, 3))).toBe("1 | 2")
 		expect(ControlsHelp.columnCount(1300, 420, 3)).toBe(3)
 		expect(ControlsHelp.columnCount(300, 420, 3)).toBe(1)
+	end)
+
+	it("shows each car only its own rows and the controls it has", function()
+		local function labels(help: ControlsHelp.Help): { [string]: boolean }
+			local found: { [string]: boolean } = {}
+			for _, group in help.groups do
+				for _, row in group.rows do
+					found[row.label] = true
+				end
+			end
+			return found
+		end
+		local svjScreen, svjKeys = svj()
+		local drScreen, drKeys = dr458()
+		local mine, theirs = labels(svjScreen), labels(drScreen)
+		expect(mine["Strada / Sport / Corsa"]).toBe(true)
+		expect(mine["Manettino 1 / 2 / OFF"]).toBe(nil)
+		expect(theirs["Manettino 1 / 2 / OFF"]).toBe(true)
+		expect(theirs["Strada / Sport / Corsa"]).toBe(nil)
+		expect(mine["High beam"] and theirs.Flash).toBe(true)
+		expect(mine["Launch control"] and mine["ESC and TC off / on"]).toBe(true)
+		expect(theirs["Launch control"] or theirs["ESC and TC off / on"]).toBe(nil)
+		for _, control in { "PIT_LIMITER", "DISPLAY_PAGE", "WIPER", "WASHER", "RAIN_LIGHT" } do
+			expect(svjKeys[control]).toBe(nil)
+			expect(drKeys[control] ~= nil).toBe(true)
+		end
+		expect(svjKeys.ESC_OFF ~= nil).toBe(true)
+		expect(drKeys.ESC_OFF).toBe(nil)
+	end)
+
+	it("quotes each car's own numbers", function()
+		local help = dr458()
+		local text =
+			ControlsHelp.fill(firstRow(help, "PIT_LIMITER").text, ControlsHelp.formatted(help.values))
+		expect(string.find(text, "In gear 2 below 60 km/h", 1, true) ~= nil).toBe(true)
+		local wash = ControlsHelp.fill(firstRow(help, "WASHER").text, ControlsHelp.formatted(help.values))
+		expect(
+			string.find(wash, `makes {DR458Switches.wiper and DR458Switches.wiper.afterWash} more`, 1, true)
+				~= nil
+		).toBe(true)
+	end)
+
+	it("shows a key as the player's keyboard prints it, and its name where it prints nothing", function()
+		-- An AZERTY keyboard, as UserInputService:GetStringForKeyCode would describe it.
+		local azerty: ControlsHelp.Layout =
+			{ W = "z", A = "q", Q = "a", M = ",", Semicolon = "m", One = "&", Space = " " }
+		local names = Config.HELP.keyNames
+		expect(ControlsHelp.keyLabel("W", names, azerty)).toBe("Z")
+		expect(ControlsHelp.keyLabel("Semicolon", names, azerty)).toBe("M")
+		expect(ControlsHelp.keyLabel("One", names, azerty)).toBe("&")
+		expect(ControlsHelp.keyLabel("Space", names, azerty)).toBe("Space")
+		expect(ControlsHelp.keyLabel("Up", names, azerty)).toBe("Up arrow")
+		expect(ControlsHelp.keyLabel("Semicolon", names, nil)).toBe(";")
+		local bindings = realBindings()
+		local keyboard, gamepad =
+			ControlsHelp.inputs(firstRow(Config.HELP, "DRIVING_MODE"), bindings, names, azerty)
+		expect(table.concat(keyboard.keys, ",")).toBe(",,M")
+		expect(table.concat(gamepad.keys, ",")).toBe("D-pad up")
+		local walk = ControlsHelp.inputs(Config.HELP.groups[1].rows[1], bindings, names, azerty)
+		expect(table.concat(walk.keys, " ")).toBe("Z Q S D")
 	end)
 
 	it("tells gamepad keys from keyboard keys", function()

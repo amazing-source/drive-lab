@@ -5,7 +5,8 @@
 	client knows it for every car.
 
 	The driver of a car: H cycles the headlights (automatic, on, off; automatic means at night or
-	in heavy rain), J switches the high beam, X and C toggle the left and right indicators, L the
+	in heavy rain), J switches the high beam, or flashes it while held on a car whose switch flashes
+	(Config/CarSwitches), X and C toggle the left and right indicators, L the
 	cabin light; on a pad, D-pad left and right are the indicators and D-pad down steps the
 	headlights Auto, On, high beam, Off on a tap and switches the cabin light on a hold. The car this player drives also shows its brakes and
 	reverse from its readouts; other cars show what this client can know: running lights and
@@ -69,6 +70,15 @@ local function number(model: Model, name: string, default: number): number
 	return if typeof(value) == "number" then value else default
 end
 
+local function held(keys: { Enum.KeyCode }): boolean
+	for _, key in keys do
+		if UserInputService:IsKeyDown(key) then
+			return true
+		end
+	end
+	return false
+end
+
 local function toggleIndicator(side: Rules.Side)
 	indicator = if indicator == side then nil else side
 	indicatorSince = os.clock()
@@ -109,11 +119,15 @@ local function update(dt: number)
 		end
 		local mine = model == driven
 		local entry = Catalog.of(model)
+		local flashing = mine
+			and entry ~= nil
+			and entry.switches.highBeam == "Flash"
+			and held(Controls.HIGH_BEAM)
 		local lit = Rules.decide({
 			running = entry ~= nil
 				and CarEntry.startup(entry, CarState.read(model), serverNow).sincePress ~= nil,
 			mode = if mine then mode else "Auto",
-			highBeam = mine and highBeam,
+			highBeam = mine and (highBeam or flashing),
 			night = night,
 			rain = if typeof(rain) == "number" then rain else 0,
 			brake = if mine then number(model, "Brake", 0) else 0,
@@ -154,7 +168,11 @@ function Controller.start()
 		if table.find(Controls.HEADLIGHTS, key) then
 			mode = Rules.nextMode(mode)
 		elseif table.find(Controls.HIGH_BEAM, key) then
-			highBeam = not highBeam
+			local driving = drivenModel()
+			local entry = driving and Catalog.of(driving)
+			if entry and entry.switches.highBeam == "Toggle" then
+				highBeam = not highBeam
+			end
 		elseif table.find(Controls.CABIN_LIGHT, key) then
 			cabin = not cabin
 		elseif table.find(Controls.INDICATOR_LEFT, key) then

@@ -10,6 +10,7 @@ local CarAudio = require("../CarAudio")
 local CarCamera = require("../CarCamera")
 local CarEntry = require("../CarEntry")
 local CarLights = require("../CarLights")
+local CarSwitches = require("../CarSwitches")
 local Cluster = require("../Cluster")
 local DriverArms = require("../DriverArms")
 local DriverLegs = require("../DriverLegs")
@@ -39,7 +40,11 @@ export type Entry = {
 	lights: CarLights.Lights,
 	cluster: Cluster.Face,
 	assists: DriverAssists.Tuning,
+	switches: CarSwitches.Switches,
 }
+
+-- What a car has of the controls not every car has (Config/CarSwitches.NEEDS), by name.
+export type Features = { [string]: boolean }
 
 local Contract = {}
 
@@ -124,12 +129,46 @@ local function checkCluster(entry: Entry)
 	)
 end
 
+-- The switches' numbers are usable: a limiter with a band, a wiper with a wipe time, more than
+-- one display page.
+local function checkSwitches(entry: Entry)
+	local switches = entry.switches
+	local pit = switches.pitLimiter
+	if pit then
+		assert(pit.limitKmh > 0 and pit.band > 0, "the pit limiter needs a limit and a band")
+		assert(pit.armBelowKmh <= pit.limitKmh, "the pit limiter arms above its own limit")
+	end
+	local wiper = switches.wiper
+	if wiper then
+		assert(wiper.wipeSeconds > 0, "the wiper needs a wipe time")
+		assert(
+			wiper.afterWash >= 0 and wiper.afterWash % 1 == 0,
+			"the wiper's wipes after a wash are a count"
+		)
+	end
+	local pages = switches.displayPages
+	assert(pages == nil or (pages >= 2 and pages % 1 == 0), "a display with pages has two or more")
+end
+
 function Contract.define(entry: Entry): Entry
 	checkStartup(entry)
 	checkFootwell(entry)
 	checkModes(entry)
 	checkCluster(entry)
+	checkSwitches(entry)
 	return deepFreeze(entry)
+end
+
+function Contract.features(entry: Entry): Features
+	local switches = entry.switches
+	return {
+		pitLimiter = switches.pitLimiter ~= nil,
+		wiper = switches.wiper ~= nil,
+		rainLight = switches.rainLight,
+		displayPages = switches.displayPages ~= nil,
+		escButton = entry.assists.escButton ~= nil,
+		launch = entry.physics.launch ~= nil,
+	}
 end
 
 return table.freeze(Contract)

@@ -2,7 +2,8 @@
 --[[
 	The controls screen (Controllers/ControlsHelp, Rules/ControlsHelp): every control in
 	Config/Controls, grouped, with a label and one plain sentence for a player who has never
-	driven a supercar. A row names the Config/Controls entries it explains and shows their keys
+	driven a supercar. A row marked with `cars` is that car's own, and a control a car lacks
+	(Config/CarSwitches) has no row on its screen; `carValues` fills the numbers a car's rows quote. A row names the Config/Controls entries it explains and shows their keys
 	from there, so a rebound key shows up here by itself; tests/ControlsHelp.spec.luau fails if a
 	control has no row, label or sentence. Inputs bound elsewhere are declared on their row, with
 	where they are bound: Roblox's defaults (walk, jump, the camera on foot, the prompts' E and X),
@@ -12,14 +13,9 @@
 ]]
 local CarEntry = require("./CarEntry")
 local CarLights = require("./CarLights")
-local SVJ = require("./Cars/SVJ/Physics")
-local DriverAssists = require("./Cars/SVJ/Assists")
+local Contract = require("./Cars/Contract")
 local InputHelp = require("./InputHelp")
 local Rules = require("../Rules/ControlsHelp")
-
--- The screen explains the SVJ's ESC button.
-local escButton = DriverAssists.escButton
-assert(escButton, "the SVJ has no ESC button to explain")
 
 export type ControlsHelpConfig = {
 	HELP: Rules.Help,
@@ -58,6 +54,7 @@ export type ControlsHelpConfig = {
 	PANEL_RGB: { number },
 	PANEL_TRANSPARENCY: number,
 	FADE_SECONDS: number,
+	carValues: (entry: Contract.Entry) -> { [string]: number },
 }
 
 local HELP: Rules.Help = {
@@ -69,7 +66,7 @@ local HELP: Rules.Help = {
 					label = "Walk",
 					text = "Walks your character; forward is wherever the camera faces.",
 					controls = {},
-					keyboard = { "W A S D" },
+					keyboard = { "W", "A", "S", "D" },
 					gamepad = { "Thumbstick1" },
 				},
 				{
@@ -104,6 +101,15 @@ local HELP: Rules.Help = {
 					controls = {},
 					keyboard = { "E" },
 					gamepad = { "ButtonX" },
+					cars = { "SVJ" },
+				},
+				{
+					label = "Get in (at the door)",
+					text = "At the driver's door on the left, walks you to it and plays the whole way in: the door open, over the roll cage into the race seat and the door pulled shut.",
+					controls = {},
+					keyboard = { "E" },
+					gamepad = { "ButtonX" },
+					cars = { "DR458" },
 				},
 				{
 					label = "Door, from outside",
@@ -111,6 +117,15 @@ local HELP: Rules.Help = {
 					controls = {},
 					keyboard = { "F" },
 					gamepad = { "ButtonY" },
+					cars = { "SVJ" },
+				},
+				{
+					label = "Door, from outside",
+					text = "Opens or closes the driver's door from outside; it swings out on its front hinges.",
+					controls = {},
+					keyboard = { "F" },
+					gamepad = { "ButtonY" },
+					cars = { "DR458" },
 				},
 				{
 					label = "Door, seated",
@@ -121,6 +136,13 @@ local HELP: Rules.Help = {
 					label = "Start the engine",
 					text = "The SVJ has no key: seated with the door shut, the driver puts a foot on the brake, flips up the red cover and presses the START button under it, and the V12 fires.",
 					controls = { "START_ENGINE" },
+					cars = { "SVJ" },
+				},
+				{
+					label = "Start the engine",
+					text = "Seated with the door shut, the driver turns the red master key on the tunnel, lifts the guard and switches IGNITION on, then presses ENGINE START with a foot on the brake, and the V8 fires (the order is inferred from the car's controls).",
+					controls = { "START_ENGINE" },
+					cars = { "DR458" },
 				},
 				{
 					label = "Get out",
@@ -151,6 +173,14 @@ local HELP: Rules.Help = {
 					text = "Turns the front wheels; the SVJ steers its rear wheels a little too, against the fronts when slow for tight turns and with them at speed for stability.",
 					controls = { "LEFT", "RIGHT" },
 					gamepad = { "Thumbstick1" },
+					cars = { "SVJ" },
+				},
+				{
+					label = "Steer",
+					text = "Turns the front wheels, quickly: two turns of the wheel from lock to lock.",
+					controls = { "LEFT", "RIGHT" },
+					gamepad = { "Thumbstick1" },
+					cars = { "DR458" },
 				},
 				{
 					label = "Handbrake",
@@ -190,6 +220,13 @@ local HELP: Rules.Help = {
 					label = "Strada / Sport / Corsa",
 					text = "Steps through the drive modes: Strada for the road (smooth shifts, soft suspension, assists that step in early), Sport (quicker shifts, power mostly to the rear, assists that let the tail slide) and Corsa for the track (the fastest shifts, the firmest suspension, kept on its line).",
 					controls = { "DRIVING_MODE" },
+					cars = { "SVJ" },
+				},
+				{
+					label = "Manettino 1 / 2 / OFF",
+					text = "Turns the manettino on the wheel: 1 to start, 2 for wet or worn tyres (traction control steps in sooner, the ABS is set for low grip) and OFF with traction control off; ABS stays on, and the engine's power is the same in all three.",
+					controls = { "DRIVING_MODE" },
+					cars = { "DR458" },
 				},
 			},
 		},
@@ -205,6 +242,7 @@ local HELP: Rules.Help = {
 				},
 				{
 					label = "Launch control",
+					requires = "launch",
 					text = "In Corsa with ESC off, stopped in first: hold the brake and floor the accelerator until LAUNCH shows and the engine holds {LAUNCH_RPM} rpm, then let go of the brake (in manual, shift up with E); lifting first cancels it, and the brake does not select reverse there.",
 					controls = {},
 					keysOf = { "BRAKE", "THROTTLE" },
@@ -226,6 +264,19 @@ local HELP: Rules.Help = {
 					label = "High beam",
 					text = "Turns the full-beam headlights on or off for seeing further down the road; they only shine while the headlights are on.",
 					controls = { "HIGH_BEAM" },
+					cars = { "SVJ" },
+				},
+				{
+					label = "Flash",
+					text = "Flashes the full-beam headlights for as long as it is held, as the FLASH button on the wheel does.",
+					controls = { "HIGH_BEAM" },
+					keyboardGesture = "Hold",
+					cars = { "DR458" },
+				},
+				{
+					label = "Rain light",
+					text = "Switches the red rain light at the back on or off, so the cars behind see you in spray.",
+					controls = { "RAIN_LIGHT" },
 				},
 				{
 					label = "Cabin light",
@@ -242,6 +293,32 @@ local HELP: Rules.Help = {
 					label = "Indicators, left / right",
 					text = "Flashes the indicator on that side to show you are turning; press again to stop it.",
 					controls = { "INDICATOR_LEFT", "INDICATOR_RIGHT" },
+				},
+			},
+		},
+		{
+			title = "Race controls",
+			rows = {
+				{
+					label = "Pit limiter",
+					text = "In gear {PIT_GEAR} below {PIT_KMH} km/h, arms the limiter so the accelerator cannot take the car past {PIT_KMH} km/h; press again, or shift down out of gear {PIT_GEAR}, to release it.",
+					controls = { "PIT_LIMITER" },
+				},
+				{
+					label = "Display page",
+					text = "Steps the display behind the wheel through its {PAGES} pages, as the SCROLL button on the wheel does.",
+					controls = { "DISPLAY_PAGE" },
+				},
+				{
+					label = "Wiper",
+					text = "Switches the windscreen wiper on or off; switched off, it finishes its sweep and parks.",
+					controls = { "WIPER" },
+				},
+				{
+					label = "Washer",
+					text = "Sprays the windscreen while held and runs the wiper, which makes {WIPES} more wipes after the spray stops.",
+					controls = { "WASHER" },
+					keyboardGesture = "Hold",
 				},
 			},
 		},
@@ -299,6 +376,9 @@ local HELP: Rules.Help = {
 	keyNames = {
 		LeftShift = "Shift",
 		Space = "Space",
+		-- What a US keyboard prints; the screen shows the player's own label when it has one.
+		Semicolon = ";",
+		One = "1",
 		Up = "Up arrow",
 		Down = "Down arrow",
 		Left = "Left arrow",
@@ -326,14 +406,36 @@ local HELP: Rules.Help = {
 		EXIT_HOLD = CarEntry.EXIT_HOLD_SECONDS,
 		EXIT_KMH = CarEntry.EXIT_MAX_KMH,
 		DOOR_KMH = CarEntry.DOOR_MAX_KMH,
-		ESC_HOLD = escButton.holdSeconds,
 		PAD_HOLD = CarLights.PAD_HOLD_SECONDS,
 		REVERSE_HOLD = InputHelp.REVERSE_HOLD_SECONDS,
-		LAUNCH_RPM = SVJ.engine.launchRpm,
 	},
 	maxLabelLength = 26,
 	maxTextLength = 300,
 }
+
+-- The numbers a car's own rows quote, from its entry.
+local function carValues(entry: Contract.Entry): { [string]: number }
+	local values: { [string]: number } = { LAUNCH_RPM = entry.physics.engine.launchRpm }
+	local button = entry.assists.escButton
+	if button then
+		values.ESC_HOLD = button.holdSeconds
+	end
+	local switches = entry.switches
+	local pit = switches.pitLimiter
+	if pit then
+		values.PIT_KMH = pit.limitKmh
+		values.PIT_GEAR = pit.armGear
+	end
+	local wiper = switches.wiper
+	if wiper then
+		values.WIPES = wiper.afterWash
+	end
+	local pages = switches.displayPages
+	if pages then
+		values.PAGES = pages
+	end
+	return values
+end
 
 local Config: ControlsHelpConfig = table.freeze({
 	HELP = HELP,
@@ -368,6 +470,7 @@ local Config: ControlsHelpConfig = table.freeze({
 	PANEL_RGB = { 14, 15, 18 },
 	PANEL_TRANSPARENCY = 0.08,
 	FADE_SECONDS = 0.3,
+	carValues = carValues,
 })
 
 return Config
