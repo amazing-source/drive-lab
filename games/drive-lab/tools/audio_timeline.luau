@@ -13,6 +13,7 @@
 	loop. Pops use a seeded random, so a run repeats.
 ]]
 local CarAudio = require("../src/shared/Config/CarAudio")
+local Pack = require("../src/shared/Config/Cars/SVJ/Audio")
 local CarAudioEvents = require("../src/shared/Rules/CarAudioEvents")
 local DriveSim = require("./DriveSim")
 local EngineSound = require("../src/shared/Rules/EngineSound")
@@ -38,18 +39,18 @@ local PHASES = {
 }
 
 local sim = DriveSim.new(SVJ)
-local engine = EngineSound.new(CarAudio.ENGINE_LAYERS, CarAudio.ENGINE_TUNING)
-local events = CarAudioEvents.new(CarAudio.EVENTS)
+local engine = EngineSound.new(Pack.engineLayers, Pack.engineTuning)
+local events = CarAudioEvents.new(Pack.events)
 local frames, shots = {}, {}
 local dip, limiterShare = 1, 0
 local popsUntil, nextPop = 0, 0
 local time = 0
-local startup = CarAudio.STARTUP
+local startup = Pack.startup
 local startupLength = startup.region.to - startup.region.from
-local pops = CarAudio.POPS
+local pops = Pack.pops
 -- Level with the idle loop it hands over to, as Controllers/CarAudio sets it.
-local idle = CarAudio.ENGINE_LAYERS[1]
-for _, layer in CarAudio.ENGINE_LAYERS do
+local idle = Pack.engineLayers[1]
+for _, layer in Pack.engineLayers do
 	if layer.rpm < idle.rpm then
 		idle = layer
 	end
@@ -59,9 +60,9 @@ table.insert(shots, {
 	kind = "startup",
 	from = startup.region.from,
 	to = startup.region.to,
-	volume = CarAudio.ENGINE_VOLUME
+	volume = Pack.engineVolume
 		* idle.volume
-		* EngineSound.loudness(CarAudio.ENGINE_TUNING, idle.rpm)
+		* EngineSound.loudness(Pack.engineTuning, idle.rpm)
 		* 10 ^ (startup.boostDb / 20),
 	speed = 1,
 })
@@ -84,25 +85,25 @@ for _, phase in PHASES do
 		}
 		local happened = CarAudioEvents.step(events, car, DT)
 		local mix = EngineSound.step(engine, car.rpm, if happened.limiter then 1 else car.throttle, DT)
-		local dipGoal = if car.shifting then CarAudio.SHIFT_DIP.gain else 1
+		local dipGoal = if car.shifting then Pack.shiftDip.gain else 1
 		dip += (dipGoal - dip) * EngineSound.blend(
 			DT,
-			if dipGoal < dip then CarAudio.SHIFT_DIP.downHalfLife else CarAudio.SHIFT_DIP.upHalfLife
+			if dipGoal < dip then Pack.shiftDip.downHalfLife else Pack.shiftDip.upHalfLife
 		)
 		limiterShare += ((if happened.limiter then 1 else 0) - limiterShare) * EngineSound.blend(
 			DT,
-			CarAudio.LIMITER.halfLife
+			Pack.limiter.halfLife
 		)
 		-- The start-up's own hand-over: none until its fade-out begins, then equal power.
 		local progress = math.clamp((time - startup.handOver) / (startupLength - startup.handOver), 0, 1)
-		local master = CarAudio.ENGINE_VOLUME * dip * math.sin(progress * math.pi / 2)
-		local onDuck = 1 - (1 - CarAudio.LIMITER.onDuck) * limiterShare
+		local master = Pack.engineVolume * dip * math.sin(progress * math.pi / 2)
+		local onDuck = 1 - (1 - Pack.limiter.onDuck) * limiterShare
 		local volumes, speeds = {}, {}
-		for index, layer in CarAudio.ENGINE_LAYERS do
+		for index, layer in Pack.engineLayers do
 			volumes[index] = mix.volumes[index] * master * (if layer.load == "On" then onDuck else 1)
 			speeds[index] = mix.speeds[index]
 		end
-		local loud = EngineSound.loudness(CarAudio.ENGINE_TUNING, math.max(car.rpm, 1))
+		local loud = EngineSound.loudness(Pack.engineTuning, math.max(car.rpm, 1))
 		table.insert(frames, {
 			t = time,
 			rpm = car.rpm,
@@ -110,11 +111,11 @@ for _, phase in PHASES do
 			kmh = t.speedKmh,
 			volumes = volumes,
 			speeds = speeds,
-			limiter = CarAudio.LIMITER.volume * limiterShare * master * loud,
-			limiterSpeed = math.max(car.rpm, 1) / CarAudio.LIMITER.rpm,
+			limiter = Pack.limiter.volume * limiterShare * master * loud,
+			limiterSpeed = math.max(car.rpm, 1) / Pack.limiter.rpm,
 		})
 		if happened.gear then
-			local gear = CarAudio.GEAR
+			local gear = Pack.gear
 			table.insert(shots, {
 				t = time,
 				kind = "gear" .. happened.gear,
@@ -137,7 +138,7 @@ for _, phase in PHASES do
 		end
 		if
 			happened.cut
-			and car.rpm >= CarAudio.EVENTS.liftMinRpm
+			and car.rpm >= Pack.events.liftMinRpm
 			and math.random() < (pops.upshiftChance :: any)[mode]
 		then
 			pop()
@@ -145,7 +146,7 @@ for _, phase in PHASES do
 		if happened.lift and math.random() < (pops.chance :: any)[mode] then
 			popsUntil, nextPop = time + between(pops.trainSeconds), time
 		end
-		if car.throttle > CarAudio.EVENTS.liftTo or car.rpm < pops.minRpm then
+		if car.throttle > Pack.events.liftTo or car.rpm < pops.minRpm then
 			popsUntil = 0
 		elseif time < popsUntil and time >= nextPop then
 			pop()

@@ -1,82 +1,69 @@
 --!strict
 --[[
-	The instrument cluster: the Aventador SVJ's own face (the Assetto Corsa mod's display texture,
-	512 x 256) with its rev counter, gear, speed and drive mode brought to life. Positions are
-	pixels of that image; the dial's geometry was measured from it by
-	tools/assets/cluster_layers.py, which also cut the three images. Colours per driving mode live
-	in Config/ClusterTheme, which only the client needs.
+	The instrument cluster: the shape of a car's display (its entry's cluster), an image face whose
+	rev counter, gear, speed and drive mode are brought to life, and what every car's display
+	shares. Positions are pixels of the face image; tools/assets/cluster_layers.py measures them
+	and cuts the images.
 ]]
 export type Spot = { x: number, y: number, size: number }
 
+-- Colours as 0-255 channels, so Lune can load every car's entry.
+export type Rgb = { r: number, g: number, b: number }
+
+-- A drive mode's colours: the accent tints the lit rev cells and the mode's name; dim is an unlit
+-- tell-tale.
+export type Theme = { accent: Rgb, dim: Rgb, text: Rgb }
+
+export type Face = {
+	-- The face, its rev cells lit in white (tinted per mode), and its red-zone cells lit in red;
+	-- both lit images are squares centred on the dial.
+	baseImage: string,
+	litImage: string,
+	redImage: string,
+	imageWidth: number,
+	imageHeight: number,
+	-- The dial's centre and the lit squares' side, image pixels.
+	dialX: number,
+	dialY: number,
+	litSize: number,
+	-- Where 0 rpm sits and how far the dial runs to dialMaxRpm: degrees clockwise from the right.
+	dialStart: number,
+	dialSweep: number,
+	dialMaxRpm: number,
+	cells: number,
+	-- The red zone starts here; the HUD's rev segments turn red here too.
+	redlineRpm: number,
+	-- Live readouts, image pixels.
+	gear: Spot,
+	speed: Spot,
+	mode: Spot,
+	esc: Spot,
+	tc: Spot,
+	abs: Spot,
+	-- Seconds the rev counter takes to sweep to the top and back when START is pressed.
+	startupSeconds: number,
+	limiterFlashHz: number,
+	-- Pixels of the screen's canvas; the face fills its height.
+	canvasWidth: number,
+	canvasHeight: number,
+	brightness: number,
+	-- Per drive mode, a tell-tale while its system acts (TC, ABS), and around the face where the
+	-- screen is wider than the image.
+	modes: { [string]: Theme },
+	warning: Rgb,
+	background: Rgb,
+}
+
 export type Cluster = {
-	BASE_IMAGE: string,
-	LIT_IMAGE: string,
-	RED_IMAGE: string,
-	IMAGE_WIDTH: number,
-	IMAGE_HEIGHT: number,
-	DIAL_X: number,
-	DIAL_Y: number,
-	LIT_SIZE: number,
-	DIAL_START: number,
-	DIAL_SWEEP: number,
-	DIAL_MAX_RPM: number,
-	CELLS: number,
-	REDLINE_RPM: number,
-	GEAR: Spot,
-	SPEED: Spot,
-	MODE: Spot,
-	ESC: Spot,
-	TC: Spot,
-	ABS: Spot,
-	STARTUP_SECONDS: number,
-	LIMITER_FLASH_HZ: number,
 	-- Shown under the gear, where the ESC light is, while launch control is armed or launching: our
 	-- own UI, no source shows the car's (#74).
 	LAUNCH_TEXT: string,
-	CANVAS_WIDTH: number,
-	CANVAS_HEIGHT: number,
 	UPDATE_INTERVAL: number,
-	BRIGHTNESS: number,
 }
 
 local Cluster: Cluster = table.freeze({
-	-- The face with its "CORSA" label erased, the rev cells lit in white (tinted per mode), and
-	-- the red-zone cells lit in red. Both lit images are squares centred on the dial.
-	BASE_IMAGE = "rbxassetid://136505327286786",
-	LIT_IMAGE = "rbxassetid://119842934651154",
-	RED_IMAGE = "rbxassetid://93745139015553",
-	IMAGE_WIDTH = 512,
-	IMAGE_HEIGHT = 256,
-	-- The dial's centre and the lit squares' side, image pixels.
-	DIAL_X = 256.26,
-	DIAL_Y = 200.76,
-	LIT_SIZE = 352,
-	-- Where 0 rpm sits and how far the dial runs to 10,000: degrees clockwise from the right.
-	DIAL_START = 209.75,
-	DIAL_SWEEP = 120.5,
-	DIAL_MAX_RPM = 10000,
-	-- One cell per 500 rpm; the last three, from 8500, are the red zone.
-	CELLS = 20,
-	REDLINE_RPM = 8500,
-	-- Live readouts, image pixels: the gear inside the dial, the speed above the face's own km/h,
-	-- the mode where the face printed CORSA, the tell-tales beside the gear.
-	GEAR = { x = 256, y = 82, size = 30 },
-	SPEED = { x = 379, y = 157, size = 20 },
-	MODE = { x = 190.5, y = 109.5, size = 8.5 },
-	-- The ESC light, under the gear in the free band between the mode and the odometer.
-	ESC = { x = 256, y = 110, size = 6 },
-	TC = { x = 205, y = 93, size = 6 },
-	ABS = { x = 307, y = 93, size = 6 },
-	-- The rev counter sweeps to the top and back when START is pressed (unsourced for the SVJ: no
-	-- reference of its start-up screen was found, 2026-10-28).
-	STARTUP_SECONDS = 1.4,
-	LIMITER_FLASH_HZ = 10,
 	LAUNCH_TEXT = "LAUNCH",
-	-- Pixels of the screen's canvas, about 2.5 : 1 like the screen; the face fills its height.
-	CANVAS_WIDTH = 1240,
-	CANVAS_HEIGHT = 500,
 	UPDATE_INTERVAL = 1 / 30,
-	BRIGHTNESS = 1.6,
 })
 
 return Cluster

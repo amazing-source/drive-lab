@@ -16,7 +16,6 @@ local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local DriverAssists = require(ReplicatedStorage.Shared.Rules.DriverAssists)
-local DriverAssistsConfig = require(ReplicatedStorage.Shared.Config.DriverAssists)
 local InputHelp = require(ReplicatedStorage.Shared.Config.InputHelp)
 local Interface = require(ReplicatedStorage.Shared.Vehicle.Interface)
 local TyreSmoke = require(ReplicatedStorage.Shared.Rules.TyreSmoke)
@@ -69,10 +68,10 @@ local function gamepadAxes(): (number, number, number)
 	return throttle, brake, steer
 end
 
-local function readInput(): Interface.DriverInput
+local function readInput(tuning: DriverAssists.Tuning): Interface.DriverInput
 	local padThrottle, padBrake, padSteer = gamepadAxes()
 	local keySteer = (if held(Controls.RIGHT) then 1 else 0) - (if held(Controls.LEFT) then 1 else 0)
-	DriverAssists.updateSwitch(escSwitch, held(Controls.ESC_OFF), os.clock(), DriverAssistsConfig)
+	DriverAssists.updateSwitch(escSwitch, held(Controls.ESC_OFF), os.clock(), tuning)
 	local input: Interface.DriverInput = {
 		throttle = math.max(if held(Controls.THROTTLE) then 1 else 0, padThrottle),
 		brake = math.max(if held(Controls.BRAKE) then 1 else 0, padBrake),
@@ -82,7 +81,7 @@ local function readInput(): Interface.DriverInput
 		shiftDown = pressed.shiftDown,
 		gearboxMode = gearboxMode,
 		drivingMode = MODES[modeIndex],
-		assists = DriverAssists.assists(escSwitch.off, DriverAssistsConfig),
+		assists = DriverAssists.assists(escSwitch.off, tuning),
 	}
 	pressed.shiftUp, pressed.shiftDown = false, false
 	return input
@@ -127,7 +126,7 @@ local function publish(model: Model, result: Interface.StepResult, current: Vehi
 end
 
 local function stop()
-	-- ESC is back on for the next drive, as at a new ignition cycle (Config/DriverAssists).
+	-- ESC is back on for the next drive, as at a new ignition cycle (the car's assists).
 	escSwitch = DriverAssists.newSwitch()
 	if connection then
 		connection:Disconnect()
@@ -152,7 +151,7 @@ local function start(seat: Seat)
 	local current = VehicleRunner.new(rig, entry.physics, help)
 	runner = current
 	connection = RunService.PreSimulation:Connect(function(dt: number)
-		local result = VehicleRunner.step(current, gated(entry, model, readInput()), dt)
+		local result = VehicleRunner.step(current, gated(entry, model, readInput(entry.assists)), dt)
 		VehicleRunner.animate(current, dt)
 		publish(model, result, current)
 	end)

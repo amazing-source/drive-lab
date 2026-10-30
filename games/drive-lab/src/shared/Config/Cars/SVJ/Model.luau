@@ -139,6 +139,13 @@ local Model: Binding.CarModel = table.freeze({
 	-- between the sun visors faces down, 0.48 to 0.51 m up, its centre 0.69 m ahead on the centre
 	-- line; the lamp sits a centimetre under it.
 	cabinLight = table.freeze({ forward = 0.689, right = 0, up = 0.471 }),
+	-- After the Assetto Corsa mod's own set-up (data/flames.ini): two outlets 0.56 m apart,
+	-- placed from the rear light clusters (checked against the model's outlets in Studio).
+	exhaust = table.freeze({
+		left = "Light_RearLeft",
+		right = "Light_RearRight",
+		outlet = table.freeze({ right = 0.28, back = 0.347, up = -0.05 }),
+	}),
 })
 
 return Model

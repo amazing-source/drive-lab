@@ -38,7 +38,6 @@ export type HudConfig = {
 	MARGIN: number,
 	MINIMAL_SCALE: number,
 	RPM_PER_SEGMENT: number,
-	REDLINE_RPM: number,
 	FLASH_HZ: number,
 	CAP_HEIGHT: number,
 	YELLOW: Color3,
@@ -105,7 +104,6 @@ local Hud: HudConfig = table.freeze({
 	-- The minimal mode is the same HUD this much smaller.
 	MINIMAL_SCALE = 0.72,
 	RPM_PER_SEGMENT = 1000,
-	REDLINE_RPM = 8500,
 	FLASH_HZ = 2.5,
 	-- Montserrat's capitals are this share of the TextSize, measured in Studio 2026-10-28
 	-- (59 px at TextSize 100, centred on the label).

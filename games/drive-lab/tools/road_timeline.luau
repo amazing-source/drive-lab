@@ -15,6 +15,7 @@
 	is asphalt throughout.
 ]]
 local CarAudio = require("../src/shared/Config/CarAudio")
+local Pack = require("../src/shared/Config/Cars/SVJ/Audio")
 local CarAudioEvents = require("../src/shared/Rules/CarAudioEvents")
 local Config = require("../src/shared/Config/RoadAudio")
 local DriveSim = require("./DriveSim")
@@ -44,8 +45,8 @@ end
 
 local sim = DriveSim.new(SVJ)
 local road = RoadAudio.new(Config.TUNING)
-local engine = EngineSound.new(CarAudio.ENGINE_LAYERS, CarAudio.ENGINE_TUNING)
-local events = CarAudioEvents.new(CarAudio.EVENTS)
+local engine = EngineSound.new(Pack.engineLayers, Pack.engineTuning)
+local events = CarAudioEvents.new(Pack.events)
 local dip, limiterShare, outside = 1, 0, 1
 local frames = {}
 local time = 0
@@ -73,27 +74,27 @@ for _, phase in PHASES do
 		}
 		local happened = CarAudioEvents.step(events, car, DT)
 		local engineMix = EngineSound.step(engine, car.rpm, if happened.limiter then 1 else car.throttle, DT)
-		local dipGoal = if car.shifting then CarAudio.SHIFT_DIP.gain else 1
+		local dipGoal = if car.shifting then Pack.shiftDip.gain else 1
 		dip += (dipGoal - dip) * EngineSound.blend(
 			DT,
-			if dipGoal < dip then CarAudio.SHIFT_DIP.downHalfLife else CarAudio.SHIFT_DIP.upHalfLife
+			if dipGoal < dip then Pack.shiftDip.downHalfLife else Pack.shiftDip.upHalfLife
 		)
 		limiterShare += ((if happened.limiter then 1 else 0) - limiterShare) * EngineSound.blend(
 			DT,
-			CarAudio.LIMITER.halfLife
+			Pack.limiter.halfLife
 		)
 		outside += ((if phase.cockpit then 0 else 1) - outside) * EngineSound.blend(
 			DT,
 			CarAudio.VIEW_HALF_LIFE
 		)
-		local master = CarAudio.ENGINE_VOLUME * dip
-		local onDuck = 1 - (1 - CarAudio.LIMITER.onDuck) * limiterShare
+		local master = Pack.engineVolume * dip
+		local onDuck = 1 - (1 - Pack.limiter.onDuck) * limiterShare
 		local volumes, speeds = {}, {}
-		for index, layer in CarAudio.ENGINE_LAYERS do
+		for index, layer in Pack.engineLayers do
 			volumes[index] = engineMix.volumes[index] * master * (if layer.load == "On" then onDuck else 1)
 			speeds[index] = engineMix.speeds[index]
 		end
-		local loud = EngineSound.loudness(CarAudio.ENGINE_TUNING, math.max(car.rpm, 1))
+		local loud = EngineSound.loudness(Pack.engineTuning, math.max(car.rpm, 1))
 
 		table.insert(frames, {
 			t = time,
@@ -110,8 +111,8 @@ for _, phase in PHASES do
 			roadEq = copy(mix.roadEq),
 			engineVolumes = volumes,
 			engineSpeeds = speeds,
-			limiter = CarAudio.LIMITER.volume * limiterShare * master * loud,
-			limiterSpeed = math.max(car.rpm, 1) / CarAudio.LIMITER.rpm,
+			limiter = Pack.limiter.volume * limiterShare * master * loud,
+			limiterSpeed = math.max(car.rpm, 1) / Pack.limiter.rpm,
 			engineOutside = outside,
 		})
 		time += DT
@@ -124,6 +125,6 @@ print(serde.encode("json", {
 	loops = Config.LOOPS,
 	cutoffQ = Config.CUTOFF_Q,
 	midBand = Config.MID_BAND,
-	engineEqualiser = { cockpit = CarAudio.COCKPIT.engine, outside = CarAudio.OUTSIDE.engine },
+	engineEqualiser = { cockpit = Pack.cockpit.engine, outside = Pack.outside.engine },
 	frames = frames,
 }))

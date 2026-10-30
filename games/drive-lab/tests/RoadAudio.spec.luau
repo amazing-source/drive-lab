@@ -1,5 +1,5 @@
 --!strict
-local CarAudio = require("../src/shared/Config/CarAudio")
+local Pack = require("../src/shared/Config/Cars/SVJ/Audio")
 local Config = require("../src/shared/Config/RoadAudio")
 local EngineSound = require("../src/shared/Rules/EngineSound")
 local RoadAudio = require("../src/shared/Rules/RoadAudio")
@@ -230,7 +230,7 @@ local function margin(
 ): number
 	local tuning = Config.TUNING
 	local engine = ENGINE_LUFS
-		+ db(CarAudio.ENGINE_VOLUME * EngineSound.loudness(CarAudio.ENGINE_TUNING, topGearRpm(kmh)))
+		+ db(Pack.engineVolume * EngineSound.loudness(Pack.engineTuning, topGearRpm(kmh)))
 	local wind = RoadAudio.wind(tuning, kmh) * 10 ^ (view.wind.gain / 20)
 	local road = RoadAudio.road(tuning, kmh) * 10 ^ ((view.road.gain + surface.gain) / 20)
 	local noise = PACK_LUFS + 10 * math.log10(wind ^ 2 + road ^ 2 + 1e-30)

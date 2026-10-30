@@ -13,7 +13,7 @@
 local CarEntry = require("./CarEntry")
 local CarLights = require("./CarLights")
 local SVJ = require("./Cars/SVJ/Physics")
-local DriverAssists = require("./DriverAssists")
+local DriverAssists = require("./Cars/SVJ/Assists")
 local InputHelp = require("./InputHelp")
 local Rules = require("../Rules/ControlsHelp")
 

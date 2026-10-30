@@ -17,6 +17,7 @@ local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
+local Binding = require(ReplicatedStorage.Shared.Config.Cars.Binding)
 local CarAudio = require(ReplicatedStorage.Shared.Config.CarAudio)
 local CarAudioEvents = require(ReplicatedStorage.Shared.Rules.CarAudioEvents)
 local CarEntry = require(ReplicatedStorage.Shared.Rules.CarEntry)
@@ -38,6 +39,9 @@ local ONE_SHOT_GRACE = 5
 
 type Session = {
 	model: Model,
+	pack: CarAudio.Pack,
+	-- Where its pops throw flames; nil on a model with no outlets bound.
+	exhaust: Binding.Exhaust?,
 	chassis: BasePart,
 	-- Everything the session made: destroying them stops every sound.
 	owned: { Instance },
@@ -144,6 +148,7 @@ end
 
 -- A one-shot cut from the packed events file; it removes itself once played.
 local function oneShot(
+	pack: CarAudio.Pack,
 	region: CarAudio.Region,
 	soundGroup: SoundGroup,
 	parent: Instance,
@@ -151,15 +156,15 @@ local function oneShot(
 	speed: number
 ): Sound
 	local sound = Instance.new("Sound")
-	sound.SoundId = CarAudio.EVENTS_SOUND_ID
+	sound.SoundId = pack.eventsSoundId
 	sound.PlaybackRegionsEnabled = true
 	sound.PlaybackRegion = NumberRange.new(region.from, region.to)
 	sound.Volume = volume
 	sound.PlaybackSpeed = speed
 	sound.SoundGroup = soundGroup
 	sound.RollOffMode = Enum.RollOffMode.InverseTapered
-	sound.RollOffMinDistance = CarAudio.ROLL_OFF.from
-	sound.RollOffMaxDistance = CarAudio.ROLL_OFF.to
+	sound.RollOffMinDistance = pack.rollOff.from
+	sound.RollOffMaxDistance = pack.rollOff.to
 	sound.Parent = parent
 	sound:Play()
 	local function remove()
@@ -171,9 +176,10 @@ local function oneShot(
 end
 
 local function pop(current: Session)
-	local pops = CarAudio.POPS
+	local pops = current.pack.pops
 	local volume = between(pops.volume)
 	oneShot(
+		current.pack,
 		pops.regions[random:NextInteger(1, #pops.regions)],
 		current.eventsGroup,
 		current.exhaustPoint,
@@ -181,7 +187,14 @@ local function pop(current: Session)
 		between(pops.speed)
 	)
 	-- The flame goes with the bang: a louder pop throws more of it.
-	ExhaustFlames.burst(current.model, (volume - pops.volume.from) / (pops.volume.to - pops.volume.from))
+	local exhaust = current.exhaust
+	if exhaust then
+		ExhaustFlames.burst(
+			current.model,
+			exhaust,
+			(volume - pops.volume.from) / (pops.volume.to - pops.volume.from)
+		)
+	end
 end
 
 local function equalise(
@@ -202,7 +215,7 @@ local function startupShare(current: Session, rpm: number, dt: number): number
 	if startup == nil then
 		return 1
 	end
-	local settings = CarAudio.STARTUP
+	local settings = current.pack.startup
 	local waited = os.clock() - current.startedAt
 	if
 		current.handedOver == nil
@@ -237,6 +250,7 @@ local function startupShare(current: Session, rpm: number, dt: number): number
 end
 
 local function update(current: Session, dt: number)
+	local pack = current.pack
 	local car = readout(current.model)
 	if car == nil then
 		return
@@ -246,7 +260,7 @@ local function update(current: Session, dt: number)
 	-- The engine's throttle drops at every fuel cut; while the limiter bounces it counts as open.
 	local mix = EngineSound.step(current.engine, car.rpm, if events.limiter then 1 else car.throttle, dt)
 
-	local dip = CarAudio.SHIFT_DIP
+	local dip = pack.shiftDip
 	local dipGoal = if car.shifting then dip.gain else 1
 	current.dip += (dipGoal - current.dip) * EngineSound.blend(
 		dt,
@@ -255,19 +269,19 @@ local function update(current: Session, dt: number)
 	local limiterGoal = if events.limiter then 1 else 0
 	current.limiterShare += (limiterGoal - current.limiterShare) * EngineSound.blend(
 		dt,
-		CarAudio.LIMITER.halfLife
+		pack.limiter.halfLife
 	)
 
-	local master = CarAudio.ENGINE_VOLUME * current.dip * startupShare(current, car.rpm, dt)
-	local onDuck = 1 - (1 - CarAudio.LIMITER.onDuck) * current.limiterShare
+	local master = pack.engineVolume * current.dip * startupShare(current, car.rpm, dt)
+	local onDuck = 1 - (1 - pack.limiter.onDuck) * current.limiterShare
 	for index, sound in current.layers do
-		local layer = CarAudio.ENGINE_LAYERS[index]
+		local layer = pack.engineLayers[index]
 		sound.Volume = mix.volumes[index] * master * (if layer.load == "On" then onDuck else 1)
 		sound.PlaybackSpeed = mix.speeds[index]
 	end
-	local loud = EngineSound.loudness(CarAudio.ENGINE_TUNING, math.max(car.rpm, 1))
-	current.limiter.Volume = CarAudio.LIMITER.volume * current.limiterShare * master * loud
-	current.limiter.PlaybackSpeed = math.max(car.rpm, 1) / CarAudio.LIMITER.rpm
+	local loud = EngineSound.loudness(pack.engineTuning, math.max(car.rpm, 1))
+	current.limiter.Volume = pack.limiter.volume * current.limiterShare * master * loud
+	current.limiter.PlaybackSpeed = math.max(car.rpm, 1) / pack.limiter.rpm
 
 	local camera = Workspace.CurrentCamera
 	local outsideGoal = if camera
@@ -275,18 +289,18 @@ local function update(current: Session, dt: number)
 		then 0
 		else 1
 	current.outside += (outsideGoal - current.outside) * EngineSound.blend(dt, CarAudio.VIEW_HALF_LIFE)
-	equalise(current.engineEqualiser, CarAudio.COCKPIT.engine, CarAudio.OUTSIDE.engine, current.outside)
-	equalise(current.eventsEqualiser, CarAudio.COCKPIT.events, CarAudio.OUTSIDE.events, current.outside)
-	local far = CarAudio.FAR
+	equalise(current.engineEqualiser, pack.cockpit.engine, pack.outside.engine, current.outside)
+	equalise(current.eventsEqualiser, pack.cockpit.events, pack.outside.events, current.outside)
+	local far = pack.far
 	local distance = if camera then (camera.CFrame.Position - current.chassis.Position).Magnitude else 0
 	local farShare = math.clamp((distance - far.fromDistance) / (far.toDistance - far.fromDistance), 0, 1)
-	local viewShare = CarAudio.COCKPIT.far + (CarAudio.OUTSIDE.far - CarAudio.COCKPIT.far) * current.outside
+	local viewShare = pack.cockpit.far + (pack.outside.far - pack.cockpit.far) * current.outside
 	current.far.Volume = far.volume * farShare * viewShare * master * loud
 
 	if events.gear then
-		local gear = CarAudio.GEAR
+		local gear = pack.gear
 		local speed = if events.gear == "Up" then gear.upSpeed else gear.downSpeed
-		oneShot(gear.region, current.eventsGroup, current.enginePoint, gear.volume, speed)
+		oneShot(pack, gear.region, current.eventsGroup, current.enginePoint, gear.volume, speed)
 	end
 	if ExhaustPops.step(current.pops, events, car, mode, os.clock(), draw) then
 		pop(current)
@@ -315,20 +329,21 @@ local function stop()
 	end)
 end
 
-local function start(model: Model, sincePress: number)
+local function start(model: Model, entry: Catalog.Entry, sincePress: number)
 	local chassis = model:FindFirstChild("Chassis")
 	if chassis == nil or not chassis:IsA("BasePart") then
 		return
 	end
+	local pack = entry.audio
 	local engineGroup, engineEqualiser = group("DriveLabCarEngine")
 	local eventsGroup, eventsEqualiser = group("DriveLabCarEvents")
-	local enginePoint = point(chassis, "DriveLabEngineAudio", CarAudio.ENGINE_POSITION)
-	local exhaustPoint = point(chassis, "DriveLabExhaustAudio", CarAudio.EXHAUST_POSITION)
-	local layers: { Sound } = table.create(#CarAudio.ENGINE_LAYERS)
-	local mixerLayers: { EngineSound.Layer } = table.create(#CarAudio.ENGINE_LAYERS)
-	local idle = CarAudio.ENGINE_LAYERS[1]
-	for _, layer in CarAudio.ENGINE_LAYERS do
-		table.insert(layers, loop(layer.soundId, engineGroup, CarAudio.ROLL_OFF, enginePoint))
+	local enginePoint = point(chassis, "DriveLabEngineAudio", pack.enginePosition)
+	local exhaustPoint = point(chassis, "DriveLabExhaustAudio", pack.exhaustPosition)
+	local layers: { Sound } = table.create(#pack.engineLayers)
+	local mixerLayers: { EngineSound.Layer } = table.create(#pack.engineLayers)
+	local idle = pack.engineLayers[1]
+	for _, layer in pack.engineLayers do
+		table.insert(layers, loop(layer.soundId, engineGroup, pack.rollOff, enginePoint))
 		table.insert(
 			mixerLayers,
 			{ rpm = layer.rpm, load = layer.load, volume = layer.volume, crossoverRpm = layer.crossoverRpm }
@@ -338,39 +353,41 @@ local function start(model: Model, sincePress: number)
 		end
 	end
 	-- Level with the idle loop it hands over to.
-	local startupVolume = CarAudio.ENGINE_VOLUME
+	local startupVolume = pack.engineVolume
 		* idle.volume
-		* EngineSound.loudness(CarAudio.ENGINE_TUNING, idle.rpm)
-		* 10 ^ (CarAudio.STARTUP.boostDb / 20)
+		* EngineSound.loudness(pack.engineTuning, idle.rpm)
+		* 10 ^ (pack.startup.boostDb / 20)
 	local current: Session = {
 		model = model,
+		pack = pack,
+		exhaust = entry.model.exhaust,
 		chassis = chassis,
 		owned = { engineGroup, eventsGroup, enginePoint, exhaustPoint },
-		engine = EngineSound.new(mixerLayers, CarAudio.ENGINE_TUNING),
-		events = CarAudioEvents.new(CarAudio.EVENTS),
+		engine = EngineSound.new(mixerLayers, pack.engineTuning),
+		events = CarAudioEvents.new(pack.events),
 		layers = layers,
-		limiter = loop(CarAudio.LIMITER.soundId, engineGroup, CarAudio.ROLL_OFF, exhaustPoint),
-		far = loop(CarAudio.FAR.soundId, engineGroup, CarAudio.FAR_ROLL_OFF, exhaustPoint),
+		limiter = loop(pack.limiter.soundId, engineGroup, pack.rollOff, exhaustPoint),
+		far = loop(pack.far.soundId, engineGroup, pack.farRollOff, exhaustPoint),
 		engineGroup = engineGroup,
 		eventsGroup = eventsGroup,
 		engineEqualiser = engineEqualiser,
 		eventsEqualiser = eventsEqualiser,
 		enginePoint = enginePoint,
 		exhaustPoint = exhaustPoint,
-		startup = oneShot(CarAudio.STARTUP.region, engineGroup, enginePoint, startupVolume, 1),
+		startup = oneShot(pack, pack.startup.region, engineGroup, enginePoint, startupVolume, 1),
 		startedAt = os.clock(),
 		handedOver = nil,
 		dip = 1,
 		limiterShare = 0,
 		outside = 1,
-		pops = ExhaustPops.new(CarAudio.POP_TRIGGERS),
+		pops = ExhaustPops.new(pack.popTriggers),
 	}
-	current.far.PlaybackSpeed = CarAudio.FAR.speed
+	current.far.PlaybackSpeed = pack.far.speed
 	session = current
 	-- Joined late in the start-up, the recording picks up where the engine is.
 	local startup = current.startup
 	if startup and sincePress > 0 then
-		startup.TimePosition = CarAudio.STARTUP.region.from + sincePress
+		startup.TimePosition = pack.startup.region.from + sincePress
 	end
 end
 
@@ -383,7 +400,7 @@ local function follow()
 	end
 	local startup = CarEntry.startup(entry, CarState.read(model), Workspace:GetServerTimeNow())
 	if session == nil and startup.sincePress then
-		start(model, startup.sincePress)
+		start(model, entry, startup.sincePress)
 	elseif session and startup.stage == "Off" then
 		stop()
 	end

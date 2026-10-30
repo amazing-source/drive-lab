@@ -1,16 +1,16 @@
 --!strict
 --[[
 	Exhaust flames, fired with each pop the engine sound plays. After the Assetto Corsa mod's own
-	set-up (data/flames.ini, extension/ext_config.ini): two outlets 0.56 m apart, flames thrown
-	back and a little up (direction 0, 0.175, -1), a light flash with each; textures from its
-	texture/flames folder (a blue jet bursting orange, and fireball puffs as a 2 x 2 flipbook).
+	set-up (data/flames.ini, extension/ext_config.ini): flames thrown back and a little up
+	(direction 0, 0.175, -1), a light flash with each; textures from its texture/flames folder (a
+	blue jet bursting orange, and fireball puffs as a 2 x 2 flipbook). Where the outlets are is the
+	car's (its model binding's exhaust).
 ]]
 export type Range = { from: number, to: number }
 
 export type ExhaustFlames = {
 	JET_TEXTURE: string,
 	FIREBALL_TEXTURE: string,
-	OUTLETS: { right: number, back: number, up: number },
 	RISE: number,
 	JET: { lifetime: Range, speed: Range, size: Range, count: Range },
 	FIREBALL: { lifetime: Range, speed: Range, size: Range, hot: Color3, cool: Color3 },
@@ -20,9 +20,6 @@ export type ExhaustFlames = {
 local ExhaustFlames: ExhaustFlames = table.freeze({
 	JET_TEXTURE = "rbxassetid://104234237829384",
 	FIREBALL_TEXTURE = "rbxassetid://82429406576820",
-	-- Metres from the midpoint of the rear light clusters: each outlet this far either side,
-	-- behind and up (checked against the model's outlets in Studio).
-	OUTLETS = table.freeze({ right = 0.28, back = 0.347, up = -0.05 }),
 	-- Upward share of the flames' direction, as the mod's 0.175.
 	RISE = 0.175,
 	-- Studs and seconds at the world scale; a stronger pop throws more and bigger flames.

@@ -29,6 +29,15 @@ export type Hinge = {
 	axis: { forward: number, right: number, up: number },
 }
 
+-- Where the exhaust's flames come out: two outlets either side of the midpoint of the rear
+-- light clusters, each a housing part and the pieces named after it (tools/blender/split_lights.py),
+-- `outlet` metres either side, behind and up, in the left housing's axes.
+export type Exhaust = {
+	left: string,
+	right: string,
+	outlet: { right: number, back: number, up: number },
+}
+
 export type CarModel = {
 	-- Part names, in Vehicle/Geometry's wheel order: front left, front right, rear left, rear right.
 	wheels: { string },
@@ -76,6 +85,8 @@ export type CarModel = {
 	-- The cabin light (Controllers/CarLights): where the lamp in the roof console sits, from the
 	-- centre of mass in the car frame (metres, before bodyRaise). Optional.
 	cabinLight: { forward: number, right: number, up: number }?,
+	-- Optional: a model without it throws no flames.
+	exhaust: Exhaust?,
 }
 
 return table.freeze({})

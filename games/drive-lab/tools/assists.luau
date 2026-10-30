@@ -5,7 +5,7 @@
 	against the tyre-smoke thresholds, a stop from 100 km/h, and a power-on slide out of a bend.
 	`lune run games/drive-lab/tools/assists` from the repo root.
 ]]
-local Config = require("../src/shared/Config/DriverAssists")
+local Config = require("../src/shared/Config/Cars/SVJ/Assists")
 local DriveSim = require("./DriveSim")
 local DriverAssists = require("../src/shared/Rules/DriverAssists")
 local SVJ = require("../src/shared/Config/Cars/SVJ/Physics")

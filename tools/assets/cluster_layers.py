@@ -2,7 +2,7 @@
 Cuts a car's instrument-cluster texture into the layers the live cluster animates: the static
 face with the drive-mode label erased (the game draws the live mode there), and the rev counter's
 cells lit, in white (tinted per drive mode in game) and in red (the red zone). Prints the dial's
-geometry, measured from the image, for Config/Cluster.
+geometry, measured from the image, for the car's face (Config/Cars/<Car>/Cluster).
 
     python -I tools/assets/cluster_layers.py <display.png> <out dir> [--erase x0,y0,x1,y1 ...]
 

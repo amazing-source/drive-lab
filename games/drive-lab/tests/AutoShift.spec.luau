@@ -1,12 +1,12 @@
 --!strict
 local DriveSim = require("../tools/DriveSim")
-local Cluster = require("../src/shared/Config/Cluster")
 local ClusterRules = require("../src/shared/Rules/Cluster")
 local SVJ = require("../src/shared/Config/Cars/SVJ/Physics")
 local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect
 
+local FACE = require("../src/shared/Config/Cars/SVJ/Cluster")
 local DT = 1 / 60
 
 describe("Automatic gearbox", function()
@@ -52,8 +52,8 @@ describe("Automatic gearbox", function()
 			end
 			expect(#shiftRpms >= 3).toBe(true)
 			for _, rpm in shiftRpms do
-				expect(rpm > Cluster.REDLINE_RPM).toBe(true)
-				expect(ClusterRules.isRed(ClusterRules.litCells(rpm))).toBe(true)
+				expect(rpm > FACE.redlineRpm).toBe(true)
+				expect(ClusterRules.isRed(FACE, ClusterRules.litCells(FACE, rpm))).toBe(true)
 				expect(rpm < SVJ.engine.limiterRpm).toBe(true)
 			end
 		end)

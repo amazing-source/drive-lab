@@ -1,9 +1,12 @@
 --!strict
 local Cluster = require("../src/shared/Config/Cluster")
 local Rules = require("../src/shared/Rules/Cluster")
+local SVJ = require("../src/shared/Config/Cars/SVJ")
 local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect
+
+local FACE = SVJ.cluster
 
 -- A UIGradient whose transparency steps from 0 to 1 at its middle, rotated `rotation` degrees
 -- clockwise: a point of the square image shows if it lies on the gradient's opaque first half.
@@ -14,37 +17,37 @@ end
 
 describe("Cluster", function()
 	it("lights cells in proportion to rpm, within the dial", function()
-		expect(Rules.litCells(0)).toBe(0)
-		expect(Rules.litCells(Cluster.DIAL_MAX_RPM / 2)).toBe(Cluster.CELLS / 2)
-		expect(Rules.litCells(Cluster.DIAL_MAX_RPM)).toBe(Cluster.CELLS)
-		expect(Rules.litCells(20000)).toBe(Cluster.CELLS)
-		expect(Rules.litCells(-50)).toBe(0)
+		expect(Rules.litCells(FACE, 0)).toBe(0)
+		expect(Rules.litCells(FACE, FACE.dialMaxRpm / 2)).toBe(FACE.cells / 2)
+		expect(Rules.litCells(FACE, FACE.dialMaxRpm)).toBe(FACE.cells)
+		expect(Rules.litCells(FACE, 20000)).toBe(FACE.cells)
+		expect(Rules.litCells(FACE, -50)).toBe(0)
 	end)
 
 	it("lights the first red cell just past the redline", function()
-		expect(Rules.isRed(Rules.litCells(Cluster.REDLINE_RPM))).toBe(false)
-		expect(Rules.isRed(Rules.litCells(Cluster.REDLINE_RPM + 1))).toBe(true)
+		expect(Rules.isRed(FACE, Rules.litCells(FACE, FACE.redlineRpm))).toBe(false)
+		expect(Rules.isRed(FACE, Rules.litCells(FACE, FACE.redlineRpm + 1))).toBe(true)
 	end)
 
 	it("paints red exactly the cells from the redline up", function()
 		local firstRed = math.huge
-		for index = 1, Cluster.CELLS do
-			if Rules.isRed(index) then
+		for index = 1, FACE.cells do
+			if Rules.isRed(FACE, index) then
 				firstRed = math.min(firstRed, index)
 			end
 		end
-		expect((firstRed - 1) / Cluster.CELLS * Cluster.DIAL_MAX_RPM).toBe(Cluster.REDLINE_RPM)
-		expect(Rules.isRed(Cluster.CELLS)).toBe(true)
+		expect((firstRed - 1) / FACE.cells * FACE.dialMaxRpm).toBe(FACE.redlineRpm)
+		expect(Rules.isRed(FACE, FACE.cells)).toBe(true)
 	end)
 
 	it("wipes in exactly the lit cells, whatever the count", function()
-		local cellSweep = Cluster.DIAL_SWEEP / Cluster.CELLS
-		for lit = 0, Cluster.CELLS do
-			local rotation = Rules.wipeRotation(lit)
-			for cell = 1, Cluster.CELLS do
+		local cellSweep = FACE.dialSweep / FACE.cells
+		for lit = 0, FACE.cells do
+			local rotation = Rules.wipeRotation(FACE, lit)
+			for cell = 1, FACE.cells do
 				-- Sample each cell near both of its edges and at its middle.
 				for _, share in { 0.1, 0.5, 0.9 } do
-					local angle = Cluster.DIAL_START + (cell - 1 + share) * cellSweep
+					local angle = FACE.dialStart + (cell - 1 + share) * cellSweep
 					expect(shows(rotation, angle)).toBe(cell <= lit)
 				end
 			end
@@ -52,10 +55,10 @@ describe("Cluster", function()
 	end)
 
 	it("sweeps the dial to the top and back once on start-up", function()
-		expect(Rules.startupRpm(0)).toBe(0)
-		expect(Rules.startupRpm(Cluster.STARTUP_SECONDS / 2)).toBeNear(Cluster.DIAL_MAX_RPM, 1e-6)
-		expect(Rules.startupRpm(Cluster.STARTUP_SECONDS)).toBe(nil)
-		expect(Rules.startupRpm(-1)).toBe(nil)
+		expect(Rules.startupRpm(FACE, 0)).toBe(0)
+		expect(Rules.startupRpm(FACE, FACE.startupSeconds / 2)).toBeNear(FACE.dialMaxRpm, 1e-6)
+		expect(Rules.startupRpm(FACE, FACE.startupSeconds)).toBe(nil)
+		expect(Rules.startupRpm(FACE, -1)).toBe(nil)
 	end)
 
 	it("labels reverse, neutral and the gears", function()
@@ -65,9 +68,9 @@ describe("Cluster", function()
 	end)
 
 	it("flashes the cells on the limiter only", function()
-		expect(Rules.cellsShown(false, 0.03)).toBe(true)
-		expect(Rules.cellsShown(true, 0.01)).toBe(true)
-		expect(Rules.cellsShown(true, 0.07)).toBe(false)
+		expect(Rules.cellsShown(FACE, false, 0.03)).toBe(true)
+		expect(Rules.cellsShown(FACE, true, 0.01)).toBe(true)
+		expect(Rules.cellsShown(FACE, true, 0.07)).toBe(false)
 	end)
 
 	it("shows LAUNCH under the gear over the ESC light while launch control is on", function()
@@ -75,5 +78,38 @@ describe("Cluster", function()
 		expect(Rules.lampText("EscOff", false)).toBe("ESC OFF")
 		expect(Rules.lampText("Esc", false)).toBe("ESC")
 		expect(Rules.lampText("Hidden", false)).toBe("")
+	end)
+end)
+
+describe("Cluster, per car", function()
+	-- Another car's face: ten cells over a 9,000 rpm dial that sweeps a half turn from 170 degrees,
+	-- red from 8,000, a two-second start-up sweep and a slower limiter flash.
+	local other = table.clone(FACE)
+	other.cells = 10
+	other.dialMaxRpm = 9000
+	other.redlineRpm = 8000
+	other.dialStart = 170
+	other.dialSweep = 180
+	other.startupSeconds = 2
+	other.limiterFlashHz = 4
+
+	it("lights and reddens the car's own cells", function()
+		expect(Rules.litCells(other, 4500)).toBe(5)
+		expect(Rules.litCells(FACE, 4500)).toBe(9)
+		expect(Rules.isRed(other, 9)).toBe(false)
+		expect(Rules.isRed(other, 10)).toBe(true)
+		expect(Rules.isRed(FACE, 10)).toBe(false)
+	end)
+
+	it("turns the wipe over the car's own dial", function()
+		expect(Rules.wipeRotation(other, 5)).toBeNear(170 + 90 + 90, 1e-9)
+	end)
+
+	it("sweeps and flashes at the car's own pace", function()
+		expect(Rules.startupRpm(other, 1)).toBeNear(9000, 1e-6)
+		expect(Rules.startupRpm(other, 1.5)).toBeNear(9000 * math.sin(math.pi * 0.75), 1e-6)
+		expect(Rules.startupRpm(FACE, 1.5)).toBe(nil)
+		expect(Rules.cellsShown(other, true, 0.2)).toBe(false)
+		expect(Rules.cellsShown(FACE, true, 0.2)).toBe(true)
 	end)
 end)

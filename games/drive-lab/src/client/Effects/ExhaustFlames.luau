@@ -3,10 +3,11 @@
 	Exhaust flames for a car: a jet and a fireball out of each outlet and a flash of light,
 	fired by Controllers/CarAudio with every pop it plays, so sight and sound land together. The
 	emitters are built on a car's first pop, on its rear light clusters (the outlets are placed
-	from the clusters' whole boxes, Config/ExhaustFlames), and go with the car.
+	from the clusters' whole boxes, the model binding's exhaust), and go with the car.
 ]]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Binding = require(ReplicatedStorage.Shared.Config.Cars.Binding)
 local Config = require(ReplicatedStorage.Shared.Config.ExhaustFlames)
 local Units = require(ReplicatedStorage.Shared.Units)
 
@@ -52,15 +53,15 @@ local function clusterCentre(model: Model, housing: BasePart): Vector3
 	return housing.CFrame:PointToWorldSpace((low + high) / 2)
 end
 
-local function build(model: Model): { Outlet }?
-	local left = model:FindFirstChild("Light_RearLeft", true)
-	local right = model:FindFirstChild("Light_RearRight", true)
+local function build(model: Model, exhaust: Binding.Exhaust): { Outlet }?
+	local left = model:FindFirstChild(exhaust.left, true)
+	local right = model:FindFirstChild(exhaust.right, true)
 	if left == nil or right == nil or not left:IsA("BasePart") or not right:IsA("BasePart") then
 		return nil
 	end
 	local axes = left.CFrame
 	local middle = (clusterCentre(model, left) + clusterCentre(model, right)) / 2
-	local spot = Config.OUTLETS
+	local spot = exhaust.outlet
 	local direction = (-axes.LookVector + axes.UpVector * Config.RISE).Unit
 	local outlets = {}
 	for _, side in { -1, 1 } do
@@ -108,8 +109,8 @@ end
 local ExhaustFlames = {}
 
 -- One pop out of the car's outlets; strength 0 to 1 scales how much flame.
-function ExhaustFlames.burst(model: Model, strength: number)
-	local found: { Outlet }? = outletsOf[model] or build(model)
+function ExhaustFlames.burst(model: Model, exhaust: Binding.Exhaust, strength: number)
+	local found: { Outlet }? = outletsOf[model] or build(model, exhaust)
 	if found == nil then
 		return
 	end

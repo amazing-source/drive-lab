@@ -1,5 +1,5 @@
 --!strict
-local CarAudio = require("../src/shared/Config/CarAudio")
+local Pack = require("../src/shared/Config/Cars/SVJ/Audio")
 local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect
@@ -13,17 +13,17 @@ end
 
 describe("CarAudio config", function()
 	it("points every loop and the events file at an uploaded asset", function()
-		for _, layer in CarAudio.ENGINE_LAYERS do
+		for _, layer in Pack.engineLayers do
 			expect(uploaded(layer.soundId)).toBeTruthy()
 		end
-		expect(uploaded(CarAudio.LIMITER.soundId)).toBeTruthy()
-		expect(uploaded(CarAudio.FAR.soundId)).toBeTruthy()
-		expect(uploaded(CarAudio.EVENTS_SOUND_ID)).toBeTruthy()
+		expect(uploaded(Pack.limiter.soundId)).toBeTruthy()
+		expect(uploaded(Pack.far.soundId)).toBeTruthy()
+		expect(uploaded(Pack.eventsSoundId)).toBeTruthy()
 	end)
 
 	it("keeps every one-shot region inside the events file, in order and apart", function()
-		local regions = { CarAudio.STARTUP.region, CarAudio.GEAR.region }
-		for _, region in CarAudio.POPS.regions do
+		local regions = { Pack.startup.region, Pack.gear.region }
+		for _, region in Pack.pops.regions do
 			table.insert(regions, region)
 		end
 		local previousEnd = 0
@@ -33,16 +33,16 @@ describe("CarAudio config", function()
 			previousEnd = region.to
 		end
 		expect(previousEnd <= EVENTS_LENGTH).toBeTruthy()
-		expect(CarAudio.STARTUP.handOver < CarAudio.STARTUP.region.to - CarAudio.STARTUP.region.from).toBeTruthy()
+		expect(Pack.startup.handOver < Pack.startup.region.to - Pack.startup.region.from).toBeTruthy()
 	end)
 
 	it("hands the idle over before the next loop up, inside both loops", function()
-		local idle = CarAudio.ENGINE_LAYERS[1]
+		local idle = Pack.engineLayers[1]
 		local crossover = idle.crossoverRpm
 		expect(idle.load).toBe("Both")
 		expect(crossover ~= nil).toBeTruthy()
-		for index = 2, #CarAudio.ENGINE_LAYERS do
-			local layer = CarAudio.ENGINE_LAYERS[index]
+		for index = 2, #Pack.engineLayers do
+			local layer = Pack.engineLayers[index]
 			expect(layer.rpm > idle.rpm).toBeTruthy()
 			expect((crossover :: number) < layer.rpm).toBeTruthy()
 		end
@@ -50,7 +50,7 @@ describe("CarAudio config", function()
 	end)
 
 	it("keeps Strada the most restrained mode for every pop", function()
-		local triggers = CarAudio.POP_TRIGGERS
+		local triggers = Pack.popTriggers
 		for _, chance in { triggers.liftChance, triggers.upshiftChance, triggers.downshiftChance } do
 			expect(chance.Strada >= 0 and chance.Strada <= chance.Sport).toBeTruthy()
 			expect(chance.Sport <= chance.Corsa and chance.Corsa <= 1).toBeTruthy()
@@ -58,7 +58,7 @@ describe("CarAudio config", function()
 	end)
 
 	it("puts every lift the events report on the overrun, so its train can start", function()
-		local triggers, events = CarAudio.POP_TRIGGERS, CarAudio.EVENTS
+		local triggers, events = Pack.popTriggers, Pack.events
 		expect(events.liftMinRpm >= triggers.minRpm).toBeTruthy()
 		expect(events.liftTo <= triggers.closedThrottle).toBeTruthy()
 	end)
