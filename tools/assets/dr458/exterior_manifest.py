@@ -16,7 +16,7 @@ WORK = Path(os.environ["DR458_WORK"])  # drive-lab-assets/dr458/work: the files 
 inv = {o["name"]: o for o in json.load(open(sys.argv[1]))["objects"]}
 wheels = json.load(open(WORK / "assembly" / "wheels_report.json"))
 hinge = json.load(open(WORK / "assembly" / "hinge_report.json"))["door_L_hinge"]
-FILE = "work/assembly/dr458_master.blend"
+FILE = "work/assembly/dr458_master_v11_final.blend"
 
 
 def m(v):
@@ -68,6 +68,29 @@ for side, sub in (("L", "L"), ("R", "R")):
     parts.append({"name": f"Door_{side}_Mirror", "group": f"Door_{side}", "motion": "static", "materials": ["plastic_black", "chrome"],
                   "triangles": tris(*mi), "measured_from": "Forza 458 Italia mirror; black caps per exterior/001, 002", "source": "Forza 458 Italia",
                   "file": FILE, "objects": mi})
+GLASS = (("Glass_Windscreen", ("glassF_window_", "glassF_black_glass_"), "windscreen with its black frit band"),
+         ("Glass_RearScreen", ("glassR_window_",), "screen over the engine"),
+         ("Glass_CabinRear", ("body_window_",), "small window behind the cabin"),
+         ("Glass_Quarter_L", ("glassLR_window_", "glassLR_black_glass_"), "rear quarter window, left"),
+         ("Glass_Quarter_R", ("glassRR_window_", "glassRR_black_glass_"), "rear quarter window, right"))
+for name, subs, what in GLASS:
+    objs = like(*subs)
+    if objs:
+        parts.append({"name": name, "group": "Chassis", "motion": "static", "materials": ["glass_clear", "plastic_black"],
+                      "triangles": tris(*objs), "note": what, "measured_from": "Forza 458 Italia glass at the body's openings",
+                      "source": "Forza 458 Italia", "file": FILE, "objects": objs})
+for side, obj in (("L", "Rolled titanium exhaust barrel.001"), ("R", "Rolled titanium exhaust barrel")):
+    o = inv.get(obj)
+    if not o:
+        continue
+    lo, hi = o["min"], o["max"]
+    centre = [(lo[0] + hi[0]) / 2, hi[1], (lo[2] + hi[2]) / 2]
+    parts.append({"name": f"Exhaust_Outlet_{side}", "group": "Chassis", "motion": "static", "materials": ["stainless_brushed"],
+                  "triangles": o["tris"], "outlet": {"centre": m(centre), "axis": {"forward": -1.0, "right": 0.0, "up": 0.0},
+                                                   "diameter_m": round(min(hi[0] - lo[0], hi[2] - lo[2]), 4)},
+                  "note": "outlet centre on the barrel's rear face; axis points out of the pipe (rearward)",
+                  "measured_from": "the fitted Evo exhaust barrel's bounds", "source": "codex_evo_src (Evo exhaust, fitted)",
+                  "file": FILE, "objects": [obj]})
 for e in parts:
     if e["triangles"] > 10000:
         e["note_export"] = "split into several MeshParts at export (over 10,000 triangles)"

@@ -1,10 +1,13 @@
 """Find surfaces that will depth-fight in Roblox: two different meshes within 1.5 mm and parallel.
 
-blender -b <master.blend> --factory-startup -P zfight_scan.py -- <out.json> [max cm2 per pair]
+blender -b <master.blend> --factory-startup -P zfight_scan.py -- <out.json> [max cm2 per pair] [--any-direction]
 
 Every visible mesh outside the Replaced_* collections is sampled (area-weighted, one sample per
 SAMPLE_CM2, at most MAX_SAMPLES per object). A sample depth-fights when another object's face lies
-within 1.5 mm of it facing the same way (normals within 25 degrees). Back-to-back faces (opposite
+within 1.5 mm of it facing the same way (normals within 25 degrees) and lies along the sample's
+normal: the nearest point on it is at most 0.3 mm to the side, so two panels that only butt at a
+seam (nothing to flicker) do not count; `--any-direction` drops that test, for comparison (tools/blender/dr458/zfight_controls.py shows both on
+abutting, overlapping and back-to-back quads). Back-to-back faces (opposite
 normals) do not fight on single-sided MeshParts, since one of the two is always culled; they are
 counted apart, as information. Reported per pair of
 objects as an area in cm2 (each pair counted from the sampled side, both sides listed). Exit code 1
@@ -19,8 +22,11 @@ from mathutils import Vector
 from mathutils.bvhtree import BVHTree
 
 args = sys.argv[sys.argv.index("--") + 1:]
+ANY = "--any-direction" in args
+args = [a for a in args if a != "--any-direction"]
 out = args[0]
 limit = float(args[1]) if len(args) > 1 else 1.0
+LATERAL = 0.0003
 SAMPLE_CM2, MAX_SAMPLES, DIST, COS = 0.5, 40000, 0.0015, np.cos(np.radians(25))
 rng = np.random.default_rng(11)
 dg = bpy.context.evaluated_depsgraph_get()
@@ -57,10 +63,14 @@ for k, o in enumerate(objs):
     for p, ti in zip(pts, pick):
         hits = bvh.find_nearest_range(Vector(p), DIST)
         seen = set()
-        for _loc, _nr, fi, _d in hits:
+        for loc, _nr, fi, _d in hits:
             j = own[fi]
             if j == k or j in seen:
                 continue
+            if not ANY:
+                dv = p - np.asarray(loc)
+                if np.linalg.norm(dv - (dv @ nrm[ti]) * nrm[ti]) > LATERAL:
+                    continue  # beside the other face (a seam), not over it
             c = float(nrm[fi] @ nrm[ti])
             if c >= COS:
                 seen.add(j)
@@ -70,7 +80,7 @@ for k, o in enumerate(objs):
 rows = sorted(({"a": a_, "b": b_, "cm2": round(v, 1), "a_collection": bpy.data.objects[a_].users_collection[0].name,
                 "b_collection": bpy.data.objects[b_].users_collection[0].name} for (a_, b_), v in pairs.items()), key=lambda r: -r["cm2"])
 over = [r for r in rows if r["cm2"] > limit]
-json.dump({"limit_cm2": limit, "pairs_over": len(over), "pairs": rows,
+json.dump({"test": "any-direction" if ANY else "overlap", "limit_cm2": limit, "pairs_over": len(over), "pairs": rows,
            "back_to_back_cm2_total": round(sum(back.values()), 1)}, open(out, "w"), indent=1)
 print(f"ZFIGHT {len(over)} pairs over {limit} cm2 (of {len(rows)} touching); back-to-back (not fighting) {sum(back.values()):.0f} cm2")
 for r in rows[:40]:

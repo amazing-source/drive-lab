@@ -1,0 +1,10 @@
+[
+ {"name": "console", "why": "Road console replaced by the cockpit modeller's Tunnel_Cover (agreed box, face centres)",
+  "box": [[-0.115, -1.995, 0.13], [0.115, -1.06, 0.372]], "collections": ["Cabin"]},
+ {"name": "tach_housing", "why": "The Challenge has no road tach housing; the binnacle face cut it (cockpit pieces check, 8 pairs)",
+  "box": [[0.26, -2.10, 0.70], [0.43, -2.02, 0.86]], "collections": ["Cabin"]},
+ {"name": "road_pedals", "why": "Road pedals and footrest; the race pedals are a cockpit piece (research 5 item 25)",
+  "box": [[0.12, -2.80, 0.122], [0.62, -2.05, 0.42]], "collections": ["Cabin"], "objects": ["interior_bump_metal_"]},
+ {"name": "rear_wall_top", "why": "Road rear-wall trim where the main hoop meets it (race car: black bulkhead, research 5 item 29); only the band with the shell behind it",
+  "box": [[-0.75, -1.12, 0.85], [0.75, -0.80, 1.00]], "collections": ["Cabin"], "objects": ["interior_bump_leather_", "interior_bump_stitchingA_"]}
+]

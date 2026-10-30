@@ -11,7 +11,13 @@ Each area file is {"file", "frame", "parts": [...]} as manifest_schema.json desc
 - names unique across all areas; every moving or emissive part carries an agreed contract name
   (plan/dr458_parts_draft.json, since the binding looks it up by name); a static part, which the
   binding never looks up, is <Area>_<Piece>[_...] with a known area (e.g. Cabin_Battery_Case);
-- materials known to materials/library/library.json; triangles a positive integer, at most 10,000.
+- materials known to materials/library/library.json; triangles a positive integer, at most 10,000;
+- a pivot with no mesh of its own (an assembly's hub, such as the steering wheel's) says
+  "mesh": false and may have 0 triangles and no materials; a hinge whose angle another system
+  drives says "driven_by" instead of a range;
+- every group resolves: a part's group is another part (the thing it rides on), an assembly in the
+  parts draft, or Chassis; following groups from part to part never loops. A static part riding a
+  moving one may be named <its group>_<Piece>.
 Rotation sense: axes are the Blender axis converted component-wise and a positive turn is the
 right-hand rule in Blender's frame. The {forward, right, up} frame itself is left-handed, but mapped
 to Roblox as (x = right, y = up, z = -forward) the whole chain is Blender (x, y, z) -> Roblox
@@ -51,7 +57,7 @@ def walk(x):
 
 
 walk(draft["assemblies"])
-STATIC = r"(Body|Cabin|Cage|Door_[LR]|Tunnel|Engine|Glass|Evo|Aero|Floor|Seat|Harness|Dash|Binnacle|SwitchPanel|SteeringWheel|SteeringColumn|WindowNet|Pedal|Cooler|Duct)_[A-Za-z0-9]+(_[A-Za-z0-9]+)*"
+STATIC = r"(Body|Cabin|Cage|Door_[LR]|Tunnel|Engine|Glass|Evo|Aero|Floor|Seat|Harness|Dash|Binnacle|SwitchPanel|SteeringWheel|SteeringColumn|WindowNet|Pedal|Cooler|Duct|Exhaust)_[A-Za-z0-9]+(_[A-Za-z0-9]+)*"
 MOTIONS = {"static", "spin", "hinge", "press", "toggle", "rotary", "removable", "emissive"}
 problems, parts, seen = [], [], {}
 
@@ -81,7 +87,7 @@ for path in areas:
             elif abs(math.sqrt(sum(c * c for c in a)) - 1) > 1e-3:
                 problems.append(f"{where}: axis not unit length ({math.sqrt(sum(c * c for c in a)):.4f})")
             r = e.get("range")
-            if m == "hinge" and not (isinstance(r, (int, float)) and 0 < r <= math.pi):
+            if m == "hinge" and not e.get("driven_by") and not (isinstance(r, (int, float)) and 0 < r <= math.pi):
                 problems.append(f"{where}: hinge range must be an angle in (0, pi] rad, got {r!r}")
             if m == "press" and not (isinstance(r, (int, float)) and 0 < r <= 0.05):
                 problems.append(f"{where}: press range must be a travel in (0, 0.05] m, got {r!r}")
@@ -94,15 +100,32 @@ for path in areas:
                  or re.fullmatch(r"ShiftLight_[1-8]", n) or re.fullmatch(r"Light_[A-Za-z]+_[A-Za-z]+", n))
         if m not in ("static", None) and not bound:
             problems.append(f"{where}: a {m} part must carry an agreed contract name (the binding looks it up)")
-        if m == "static" and not (bound or re.fullmatch(STATIC, n)):
+        rider = isinstance(e.get("group"), str) and n.startswith(e["group"] + "_") and e["group"] != "Chassis"
+        if m == "static" and not (bound or rider or re.fullmatch(STATIC, n)):
             problems.append(f"{where}: static name must be <Area>_<Piece>[_...] with a known area")
         for mat in e.get("materials", []):
             if mat not in lib:
                 problems.append(f"{where}: material {mat!r} not in library.json")
         t = e.get("triangles")
-        if not (isinstance(t, int) and 0 < t <= 10000):
+        if e.get("mesh") is False:
+            if t not in (0, None):
+                problems.append(f"{where}: a part with no mesh carries no triangles, got {t!r}")
+        elif not (isinstance(t, int) and 0 < t <= 10000):
             problems.append(f"{where}: triangles must be an integer in 1..10000, got {t!r}")
+        e["_where"] = where
         parts.append(e)
+by_name = {e["name"]: e for e in parts if "name" in e}
+for e in parts:
+    n, g, where = e.get("name"), e.get("group"), e.pop("_where")
+    if g not in by_name and g not in groups and g != "Chassis":
+        problems.append(f"{where}: group {g!r} is neither a part, an assembly of the parts draft, nor Chassis")
+    chain = [n]
+    while g in by_name and g != chain[-1]:
+        if g in chain:
+            problems.append(f"{where}: group chain loops: {' -> '.join(chain + [g])}")
+            break
+        chain.append(g)
+        g = by_name[g].get("group")
 if problems:
     print(f"MANIFEST FAIL: {len(problems)} problems")
     for p in problems:

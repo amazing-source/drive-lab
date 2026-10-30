@@ -6,9 +6,10 @@ Per object, a binary search finds the lowest collapse-decimation ratio whose sur
 inside the object's tolerance: sample points on the original surface, distance to the decimated
 one (and back, so a collapse cannot spike out unseen), p95 and max. Tolerances by area (mm, p95 /
 max): body, doors and aero 1.0 / 5; lamps 0.7 / 3; wheels 0.8 / 3; engine 4 / 15; cabin 2 / 8.
-Objects under 300 triangles and the glass are left alone. When an area is still over its line of
-plan/dr458_budget.json, its tolerances grow by 1.5x and the search runs again (at most 3 times);
-the report says which areas needed that and what tolerance they ended at. Normals are rebuilt by
+Objects under 300 triangles and the glass are left alone. The plan's lines (plan/dr458_budget.json)
+are ceilings, not targets: each area takes the tightest tolerance whose result fits its line, trying
+0.25x, 0.5x, 1x, 1.5x, 2.25x and 3.4x the base values in turn; the report gives the scale each area
+ended at (over its line at 3.4x, it says so). Normals are rebuilt by
 angle (35 degrees) after decimation, since collapse invalidates the source's custom normals.
 """
 import json
@@ -60,7 +61,8 @@ def deviation(src_pts, src_bvh, v, t):
 
 
 def decimated(o, ratio):
-    tmp = bpy.data.objects.new("_tmp", o.data)
+    src = o.data.copy()  # weights live on the mesh: never write them into the original's
+    tmp = bpy.data.objects.new("_tmp", src)
     bpy.context.scene.collection.objects.link(tmp)
     tmp.matrix_world = o.matrix_world
     m = tmp.modifiers.new("d", "DECIMATE")
@@ -69,6 +71,7 @@ def decimated(o, ratio):
     ev = tmp.evaluated_get(dg)
     me = bpy.data.meshes.new_from_object(ev)
     bpy.data.objects.remove(tmp, do_unlink=True)
+    bpy.data.meshes.remove(src)
     return me
 
 
@@ -94,8 +97,8 @@ objs = {c.name: [o for o in c.objects if o.type == "MESH" and not o.hide_render]
         for c in bpy.data.collections if not c.name.startswith("Replaced")}
 plan, report = {}, {"lines": {}, "objects": {}}
 for line, (cols, budget) in LINES.items():
-    scale = 1.0
-    for attempt in range(4):
+    scales = (0.25, 0.5, 1.0, 1.5, 2.25, 3.375)
+    for attempt, scale in enumerate(scales):
         total = 0
         for c in cols:
             p95_tol, max_tol = (TOL[c][0] * scale, TOL[c][1] * scale)
@@ -110,9 +113,8 @@ for line, (cols, budget) in LINES.items():
                 plan[o.name] = (r, p95, mx, n, est)
                 total += est
         report["lines"][line] = {"budget": budget, "estimate": total, "tolerance_scale": scale}
-        if total <= budget or attempt == 3:
+        if total <= budget or attempt == len(scales) - 1:
             break
-        scale *= 1.5
 for c, os_ in objs.items():
     for o in os_:
         if o.name not in plan:

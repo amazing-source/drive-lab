@@ -2,9 +2,11 @@
 
     python -I render_diff.py <before dir> <after dir> <out dir> [max changed share] [allowed.json]
 
-A pixel changed when its object colour differs. allowed.json ({"deleted": [names], "pairs": [[a, b]]})
-excuses pixels of objects deleted on purpose and swaps between the two members of a depth-fight pair
-that was resolved (either may win there); every other changed pixel counts as visible geometry lost
+A pixel changed when its object colour differs. allowed.json ({"deleted": [names], "pairs": [[a, b]],
+"revealed": [names]}) excuses pixels of objects deleted on purpose, swaps between the two members of
+a depth-fight pair that was resolved (either may win there), and pixels of a "revealed" object
+(one trimmed on purpose where it covered real parts) that now show another object, never the
+background; every other changed pixel counts as visible geometry lost
 or moved, and is attributed to the object that was there before. Per view: the share of car pixels (non-black in
 either image) that changed. FAIL (exit 1) when any view exceeds the limit (default 0.002, 0.2 %).
 Writes a diff image per view (changed pixels in magenta over the after image) and diff.json.
@@ -22,6 +24,7 @@ limit = float(sys.argv[4]) if len(sys.argv) > 4 else 0.002
 allowed = json.load(open(sys.argv[5])) if len(sys.argv) > 5 else {"deleted": [], "pairs": []}
 deleted = set(allowed.get("deleted", []))
 pairs = {frozenset(p) for p in allowed.get("pairs", [])}
+revealed = set(allowed.get("revealed", []))
 
 
 def palette(d):
@@ -46,7 +49,7 @@ nb, pb = palette(b)
 losses = {}
 out.mkdir(parents=True, exist_ok=True)
 rows, worst = {}, 0.0
-for fa in sorted(a.glob("*.png")):
+for fa in sorted(f for f in a.glob("*.png") if not f.stem.endswith("_holes")):
     A = np.asarray(Image.open(fa).convert("RGB")).astype(int)
     B = np.asarray(Image.open(b / fa.name).convert("RGB")).astype(int)
     car = (A.sum(2) > 0) | (B.sum(2) > 0)
@@ -56,7 +59,7 @@ for fa in sorted(a.glob("*.png")):
     for k in np.flatnonzero(ch.ravel()):
         was = na[ia[k]] if ia[k] >= 0 else None
         now = nb[ib[k]] if ib[k] >= 0 else None
-        if was in deleted or (was and now and frozenset((was, now)) in pairs):
+        if was in deleted or (was and now and frozenset((was, now)) in pairs) or (was in revealed and now):
             continue
         lost[k] = True
         losses[was] = losses.get(was, 0) + 1
