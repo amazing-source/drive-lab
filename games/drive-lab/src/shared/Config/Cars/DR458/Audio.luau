@@ -74,12 +74,12 @@ local Audio: CarAudio.Pack = {
 		volume = { from = 1, to = 1.8 },
 		speed = { from = 0.92, to = 1.08 },
 	},
-	-- A race exhaust has no valve, so the drive mode does not change it. When and how often it
-	-- pops is our choice: no source on the 458 Challenge gives it.
+	-- Keyed by the manettino's positions. A race exhaust has no valve, so they all pop alike; when
+	-- and how often is our choice: no source on the 458 Challenge gives it.
 	popTriggers = {
-		liftChance = { Strada = 0.7, Sport = 0.7, Corsa = 0.7 },
-		upshiftChance = { Strada = 0.3, Sport = 0.3, Corsa = 0.3 },
-		downshiftChance = { Strada = 0.8, Sport = 0.8, Corsa = 0.8 },
+		liftChance = { ["1"] = 0.7, ["2"] = 0.7, OFF = 0.7 },
+		upshiftChance = { ["1"] = 0.3, ["2"] = 0.3, OFF = 0.3 },
+		downshiftChance = { ["1"] = 0.8, ["2"] = 0.8, OFF = 0.8 },
 		liftTrain = { from = 0.35, to = 1.1 },
 		downshiftTrain = { from = 0.3, to = 0.8 },
 		gap = { from = 0.06, to = 0.22 },

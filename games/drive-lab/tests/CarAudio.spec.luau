@@ -62,11 +62,12 @@ describe("CarAudio config", function()
 			expect((crossover :: number) > idle.rpm).toBeTruthy()
 		end)
 
-		it(`{car.name}: keeps Strada the most restrained mode for every pop`, function()
+		it(`{car.name}: gives every pop a chance between 0 and 1 in every mode`, function()
 			local triggers = Pack.popTriggers
-			for _, chance in { triggers.liftChance, triggers.upshiftChance, triggers.downshiftChance } do
-				expect(chance.Strada >= 0 and chance.Strada <= chance.Sport).toBeTruthy()
-				expect(chance.Sport <= chance.Corsa and chance.Corsa <= 1).toBeTruthy()
+			for _, chances in { triggers.liftChance, triggers.upshiftChance, triggers.downshiftChance } do
+				for _, chance in chances do
+					expect(chance >= 0 and chance <= 1).toBeTruthy()
+				end
 			end
 		end)
 
@@ -76,6 +77,13 @@ describe("CarAudio config", function()
 			expect(events.liftTo <= triggers.closedThrottle).toBeTruthy()
 		end)
 	end
+
+	it("SVJ: keeps Strada the most restrained mode for every pop", function()
+		local triggers = SVJ.popTriggers
+		for _, chance in { triggers.liftChance, triggers.upshiftChance, triggers.downshiftChance } do
+			expect(chance.Strada <= chance.Sport and chance.Sport <= chance.Corsa).toBeTruthy()
+		end
+	end)
 
 	-- The loudest loop's playback speed over an rpm range, in both loads.
 	local function stretch(from: number, to: number): (number, number)

@@ -6,7 +6,10 @@
 	speed. tools/audio/render_preview.py turns it into a listening file, so the sound can be
 	judged without Studio.
 
-	    lune run games/drive-lab/tools/audio_timeline.luau [SVJ|DR458] [Strada|Sport|Corsa] > timeline.json
+	    lune run games/drive-lab/tools/audio_timeline.luau [SVJ|DR458] [mode] > timeline.json
+
+	The mode is one of the car's (SVJ: Strada, Sport, Corsa, default Corsa; DR458: 1, 2, OFF,
+	default 1).
 
 	The SVJ drives DriveSim on its own physics: start-up, a moment at idle, full throttle from
 	rest, a lift at speed, hard braking. The DR458 has no physics yet, so its run is scripted on
@@ -30,9 +33,10 @@ local serde = require("@lune/serde")
 local DT = 1 / 60
 local STARTUP_SECONDS = 10.5
 local car = process.args[1] or "SVJ"
-local mode = (process.args[2] or "Corsa") :: Types.DrivingMode
 assert(car == "SVJ" or car == "DR458", `unknown car {car}: SVJ or DR458`)
-assert(mode == "Strada" or mode == "Sport" or mode == "Corsa", `unknown mode {mode}`)
+local pack: CarAudio.Pack = if car == "DR458" then DR458Pack else SVJPack
+local mode: Types.DrivingMode = process.args[2] or if car == "DR458" then "1" else "Corsa"
+assert(pack.popTriggers.liftChance[mode] ~= nil, `the {car} has no {mode} mode`)
 math.randomseed(7)
 
 type Readout = CarAudioEvents.Readout & { speedKmh: number }
@@ -254,7 +258,6 @@ local function simulatedRun(): { Readout }
 	return readouts
 end
 
-local pack: CarAudio.Pack = if car == "DR458" then DR458Pack else SVJPack
 local readouts: { Readout } = if car == "DR458" then scriptedRun() else simulatedRun()
 
 local function between(range: CarAudio.Region): number
