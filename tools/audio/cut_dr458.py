@@ -85,9 +85,11 @@ LIMITER_RHYTHM_HZ = 15.0
 LIMITER_FIRE_SHARE = 0.55
 LIMITER_CUT_DB = -20.0
 
-STARTUP_FADE_SECONDS = 2.0
+# The chosen recording settles only about a second before its next throttle blip, so the
+# hand-over fade and the stretch matched to the idle loop both fit inside that second.
+STARTUP_FADE_SECONDS = 0.8
 # The stretch before the fade-out whose loudness is matched to the idle loop's.
-STARTUP_SETTLED_SECONDS = 1.5
+STARTUP_SETTLED_SECONDS = 0.6
 SEAM_SECONDS = 0.05
 SEAM_SEARCH_SECONDS = 0.25
 

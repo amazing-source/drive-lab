@@ -11,7 +11,7 @@ local describe, it, expect = T.describe, T.it, T.expect
 -- Each car's pack with the length of its events.ogg, seconds (manifest.json beside the files).
 local PACKS: { { name: string, pack: CarAudio.Pack, eventsLength: number } } = {
 	{ name = "SVJ", pack = SVJ, eventsLength = 18.6001 },
-	{ name = "DR458", pack = DR458, eventsLength = 20.8417 },
+	{ name = "DR458", pack = DR458, eventsLength = 14.6917 },
 }
 
 local function uploaded(soundId: string): boolean
