@@ -80,6 +80,7 @@ local function toPose(frame: CFrame): StartupArms.Pose
 end
 
 function StartupHands.build(
+	paths: DriverStartup.Paths,
 	sign: number,
 	grip: BasePart,
 	gripCuff: BasePart,
@@ -97,7 +98,7 @@ function StartupHands.build(
 	end
 	local hands: Hands = {
 		sign = sign,
-		track = if sign > 0 then DriverStartup.RIGHT else DriverStartup.LEFT,
+		track = if sign > 0 then paths.RIGHT else paths.LEFT,
 		grip = grip,
 		gripCuff = gripCuff,
 		shapes = nil,
@@ -106,9 +107,9 @@ function StartupHands.build(
 		gripWrist = gripWrist,
 		gripOffset = fromWrist * CFrame.new(sign * centre.x, centre.y, centre.z),
 		gripCuffOffset = fromWrist * CFrame.new(sign * cuffCentre.x, cuffCentre.y, cuffCentre.z),
-		restOffset = offset(DriverStartup.MESHES.Rest),
-		pointOffset = offset(DriverStartup.MESHES.Point),
-		cuffOffset = offset(DriverStartup.CUFF),
+		restOffset = offset(paths.MESHES.Rest),
+		pointOffset = offset(paths.MESHES.Point),
+		cuffOffset = offset(paths.CUFF),
 	}
 	if rest and point and cuff then
 		hands.shapes = {

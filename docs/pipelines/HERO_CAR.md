@@ -280,10 +280,12 @@ its top about 12 degrees outboard (front view), measured on Commons photos (see 
   from (same textures, same UVs). Door glass goes in the model binding's `glazing`.
 - Back up every part you change into ServerStorage first (`CarImport_door_backup`).
 - Binding (`Config/Cars/<Car>/Model.luau`): `door = { parts, pivot, axis, openAngle }` and
-  `flap = { part, pivot, axis }`, points in the car frame from the centre of mass (before the body
-  raise, like `seat`). `CarRig` hangs the door on one Weld to an invisible `DoorHinge` part whose
-  C0's X is the axis (door parts weld rigidly to it) and the flap on a `FlapHinge` Weld;
-  `Controllers/CarDoor` sets `C0 = RestC0 * CFrame.Angles(angle, 0, 0)` from the car's entry state.
+  `controls = { <Name> = { part, pivot, axis } }` (the SVJ's `StartFlap`), points in the car frame
+  from the centre of mass (before the body raise, like `seat`). `CarRig` hangs the door on one
+  Weld to an invisible `DoorHinge` part whose C0's X is the axis (door parts weld rigidly to it)
+  and each control on a Weld named after its part; `Controllers/CarDoor` sets
+  `C0 = RestC0 * CFrame.Angles(angle, 0, 0)` from the car's entry state and, for a control, from
+  the start-up move naming it (`Config/Cars/<Car>/Startup`).
   `pedals = { { part, pivot, axis } }` the same way: each pedal on a Weld named after it, turned
   by `Controllers/DriverLegs`. A binding without pedals rigs as before.
 - Door sounds: one uploaded pack (`tools/audio/pack_door.py`), each sound a region; start them a

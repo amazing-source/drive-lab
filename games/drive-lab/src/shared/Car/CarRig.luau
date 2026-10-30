@@ -17,6 +17,9 @@ local Hinge = require("../Rules/Hinge")
 local Types = require("../Config/Cars/Types")
 local Units = require("../Units")
 
+-- A hinged part's weld, turned about its C0's X axis, and that C0 shut.
+export type Hinged = { weld: Weld, rest: CFrame }
+
 export type Rig = {
 	model: Model,
 	chassis: BasePart,
@@ -32,12 +35,12 @@ export type Rig = {
 	-- Turns about its C0's Z axis (the column, toward the driver); nil on a model without one.
 	steeringWheel: Weld?,
 	steeringWheelRest: CFrame,
-	-- The driver's door and the START flap open by turning their weld's C0 about its X axis (the
-	-- hinge); nil on a model without one. Each rest is that C0 shut.
+	-- The driver's door opens by turning its weld's C0 about its X axis (the hinge); nil on a
+	-- model without one. The rest is that C0 shut.
 	door: Weld?,
 	doorRest: CFrame,
-	flap: Weld?,
-	flapRest: CFrame,
+	-- The cabin controls, by the binding's names; one whose part has not streamed in is missing.
+	controls: { [string]: Hinged },
 	-- The door's pull strap (Rules/DoorStrap) on its own weld from the chassis, posed by its C0
 	-- (the strap's centre, its -Y down the strap) and its part's Size.Y; nil on a model without
 	-- one or before it has streamed in.
@@ -48,7 +51,6 @@ export type Rig = {
 
 local TAG = "DriveLabCar"
 local DOOR_HINGE = "DoorHinge"
-local FLAP_HINGE = "FlapHinge"
 local DOOR_STRAP = "DoorStrap"
 
 local CarRig = {
@@ -196,8 +198,8 @@ local function hingeWeld(name: string, chassis: BasePart, part: BasePart, frame:
 	joint.Parent = chassis
 end
 
--- The door's parts, the flap and the door's strap that the binding names and the model has.
-local function hingedParts(model: Model, binding: Binding.CarModel): ({ BasePart }, BasePart?, BasePart?)
+-- The door's parts and the door's strap that the binding names and the model has.
+local function doorParts(model: Model, binding: Binding.CarModel): ({ BasePart }, BasePart?)
 	local door = {}
 	local strap: Instance? = nil
 	if binding.door then
@@ -209,39 +211,38 @@ local function hingedParts(model: Model, binding: Binding.CarModel): ({ BasePart
 		end
 		strap = if binding.door.strap then model:FindFirstChild(binding.door.strap.part, true) else nil
 	end
-	local flap = if binding.flap then model:FindFirstChild(binding.flap.part, true) else nil
-	return door,
-		if flap and flap:IsA("BasePart") then flap else nil,
-		if strap and strap:IsA("BasePart") then strap else nil
+	return door, if strap and strap:IsA("BasePart") then strap else nil
 end
 
--- The pedals the binding names and the model has, each with its hinge frame. Each hangs on its
--- own Weld named after it, which Controllers/DriverLegs turns about X.
-local function pedalParts(model: Model, binding: Binding.CarModel): { [BasePart]: CFrame }
+-- The hinged parts the binding names and the model has (its pedals or its cabin controls), each
+-- with its hinge frame. Each hangs on its own Weld named after it, which Controllers/DriverLegs
+-- (pedals) and Controllers/CarDoor (controls) turn about X.
+local function hingeParts<K>(
+	model: Model,
+	hinges: { [K]: Binding.Hinge }?,
+	bodyRaise: number
+): { [BasePart]: CFrame }
 	local found: { [BasePart]: CFrame } = {}
-	local pedals = binding.pedals
-	if pedals == nil then
+	if hinges == nil then
 		return found
 	end
-	for _, pedal in pedals do
-		local part = model:FindFirstChild(pedal.part, true)
+	for _, hinge in hinges do
+		local part = model:FindFirstChild(hinge.part, true)
 		if part and part:IsA("BasePart") then
-			found[part] = hingeFrame(pedal.pivot, pedal.axis, binding.bodyRaise)
+			found[part] = hingeFrame(hinge.pivot, hinge.axis, bodyRaise)
 		end
 	end
 	return found
 end
 
 -- The door hangs on one Weld to an invisible part at its hinge, its parts welded rigidly to that
--- part; the flap hangs on its own Weld. Turning either Weld's C0 about X opens it. The door's
--- strap hangs on its own Weld from the chassis, where it sits in the place; Controllers/CarDoor
--- poses it from then on.
+-- part; turning the Weld's C0 about X opens it. The door's strap hangs on its own Weld from the
+-- chassis, where it sits in the place; Controllers/CarDoor poses it from then on.
 local function hang(
 	model: Model,
 	chassis: BasePart,
 	binding: Binding.CarModel,
 	door: { BasePart },
-	flap: BasePart?,
 	strap: BasePart?
 )
 	if binding.door and #door > 0 then
@@ -256,14 +257,6 @@ local function hang(
 			joint.Part1 = part
 			joint.Parent = part
 		end
-	end
-	if binding.flap and flap then
-		hingeWeld(
-			FLAP_HINGE,
-			chassis,
-			flap,
-			hingeFrame(binding.flap.pivot, binding.flap.axis, binding.bodyRaise)
-		)
 	end
 	if strap then
 		local joint = Instance.new("Weld")
@@ -415,20 +408,20 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: Binding.CarMo
 			moving[findPart(model, caliper)] = true
 		end
 	end
-	local doorParts, flapPart, strapPart = hingedParts(model, binding)
+	local door, strapPart = doorParts(model, binding)
 	local hinged: { [BasePart]: true } = {}
-	for _, part in doorParts do
+	for _, part in door do
 		hinged[part] = true
-	end
-	if flapPart then
-		hinged[flapPart] = true
 	end
 	if strapPart then
 		hinged[strapPart] = true
 	end
-	local pedals = pedalParts(model, binding)
-	for part in pedals do
-		hinged[part] = true
+	local pedals = hingeParts(model, binding.pedals, binding.bodyRaise)
+	local controls = hingeParts(model, binding.controls, binding.bodyRaise)
+	for _, set in { pedals, controls } do
+		for part in set do
+			hinged[part] = true
+		end
 	end
 	for _, part in model:GetDescendants() do
 		if part:IsA("BasePart") and part ~= chassis then
@@ -446,9 +439,11 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: Binding.CarMo
 			end
 		end
 	end
-	hang(model, chassis, binding, doorParts, flapPart, strapPart)
-	for part, hinge in pedals do
-		hingeWeld(part.Name, chassis, part, hinge)
+	hang(model, chassis, binding, door, strapPart)
+	for _, set in { pedals, controls } do
+		for part, hinge in set do
+			hingeWeld(part.Name, chassis, part, hinge)
+		end
 	end
 	addHull(model, chassis, ground, binding.hullClearance)
 	addSeat(model, chassis, binding)
@@ -515,7 +510,16 @@ function CarRig.find(model: Model, binding: Binding.CarModel): Rig?
 		calipers[index], caliperRest[index] = list, rests
 	end
 	local doorHinge, doorRest = hingeOf(chassis, DOOR_HINGE)
-	local flapHinge, flapRest = hingeOf(chassis, FLAP_HINGE)
+	local controls: { [string]: Hinged } = {}
+	local bound = binding.controls
+	if bound then
+		for name, control in bound do
+			local joint, rest = hingeOf(chassis, control.part)
+			if joint then
+				controls[name] = { weld = joint, rest = rest }
+			end
+		end
+	end
 	local strap = hingeOf(chassis, DOOR_STRAP)
 	local steeringWeld = chassis:FindFirstChild(binding.steeringWheel)
 	local steeringRest = steeringWeld and steeringWeld:GetAttribute("RestC0")
@@ -537,8 +541,7 @@ function CarRig.find(model: Model, binding: Binding.CarModel): Rig?
 		steeringWheelRest = if typeof(steeringRest) == "CFrame" then steeringRest else CFrame.identity,
 		door = doorHinge,
 		doorRest = doorRest,
-		flap = flapHinge,
-		flapRest = flapRest,
+		controls = controls,
 		strap = strap,
 		seat = seat,
 		prompt = prompt,

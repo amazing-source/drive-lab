@@ -129,13 +129,16 @@ heel and ball points) are copies of `Config/DriverLegs`; change them together.
 ### 8c. Keyed paths
 
     blender -b <svj_interior_v2_wheel.blend> --factory-startup -P tools/blender/startup_paths.py --
-        <inputs.json> games/drive-lab/src/shared/Config/DriverStartup.luau <out dir>
-    stylua games/drive-lab/src/shared/Config/DriverStartup.luau
+        <inputs.json> games/drive-lab/src/shared/Config/Cars/SVJ/StartupPaths.luau <out dir>
+    stylua games/drive-lab/src/shared/Config/Cars/SVJ/StartupPaths.luau
 
 `inputs.json` (example: `drive-lab-assets/driver/startup_inputs.json`) names the seat's origin in
-the blend, the measured files above, the hands of section 3, the start-up times (`Config/Cars/SVJ/Startup`) and the flap: its
+the blend, the measured files above, the hands of section 3, the start-up times and the flap: its
 hinge line, the point under its free edge, START's top face and the console's normal (agent B's
-door work measured them). The script moves the cabin into the seat frame, then keys an Empty:
+door work measured them). The times come from `Config/Cars/SVJ/Startup`: `pressAt` and
+`wheelAt` as they are, and from its `StartFlap` move `flapUpAt` = `at`, `flapDownAt` = `back`,
+`flapMove` = `move`, `flapAngleDeg` = `angle` in degrees. The script moves the cabin into the
+seat frame, then keys an Empty:
 - each Point pose is aimed so the index tip lands on its target with the hand in line with the
   forearm the arm controller would draw (three passes through its elbow rule);
 - the lift is keyed every 0.05 s on the edge's arc, turning about the hinge as `Rules/CarEntry`
@@ -146,8 +149,8 @@ door work measured them). The script moves the cabin into the seat frame, then k
 Blender's Bezier easing between keys, baked every 1/30 s. The script stops if a wrist leaves 96 %
 of the arm's reach, prints how far the index strays from the edge (0.4 mm for the SVJ) and where
 it is at the press, renders eight moments from the cockpit eye, the passenger seat and the flap,
-and writes `Config/DriverStartup.luau`: the keys in metres in the seat frame, the shape changes,
-and the geometry they were made against. **Re-bake whenever the start-up's times or the flap change**:
+and writes the car's `StartupPaths.luau` (typed by `Config/DriverStartup`): the keys in metres in
+the seat frame, the shape changes, and the geometry they were made against. **Re-bake whenever the start-up's times or the flap change**:
 `tests/StartupArms.spec.luau` checks the index against `Rules/CarEntry`'s flap and press times
 and fails otherwise.
 

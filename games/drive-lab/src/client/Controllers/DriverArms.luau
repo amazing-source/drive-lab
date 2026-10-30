@@ -210,7 +210,14 @@ local function build(model: Model, character: Model): Driver?
 			elbow = elbowBall(scale),
 			hand = hand,
 			cuff = cuff,
-			hands = StartupHands.build(limb.sign, hand, cuff, arm.Color, folder :: Folder),
+			hands = StartupHands.build(
+				entry.driver.startupPaths,
+				limb.sign,
+				hand,
+				cuff,
+				arm.Color,
+				folder :: Folder
+			),
 		})
 		arm.Transparency = 1
 	end

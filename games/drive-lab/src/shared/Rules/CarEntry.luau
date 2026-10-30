@@ -217,19 +217,18 @@ function CarEntry.shownRpm(car: Car, state: State, now: number, engineRpm: numbe
 	return if startup.drivable then math.max(engineRpm, settling) else settling
 end
 
--- How far the START flap is lifted, 0 to 1: the right hand lifts it before the press and lets
--- it fall after.
-function CarEntry.flapOpenness(car: Car, state: State, now: number): number
+-- How far a start-up move has turned its control, 0 to 1: turning toward its angle until `at`,
+-- and back from `back`, if it has one.
+function CarEntry.controlOpenness(move: Config.ControlMove, state: State, now: number): number
 	if state.engine == "Off" then
 		return 0
 	end
 	local t = now - state.engineAt
-	local settings = car.startup
-	local move = settings.flapMove
-	if t < settings.flapDownAt then
-		return math.clamp((t - (settings.flapUpAt - move)) / move, 0, 1)
+	local back = move.back
+	if back == nil or t < back then
+		return math.clamp((t - (move.at - move.move)) / move.move, 0, 1)
 	end
-	return math.clamp(1 - (t - settings.flapDownAt) / move, 0, 1)
+	return math.clamp(1 - (t - back) / move.move, 0, 1)
 end
 
 -- The brake the right foot holds while the car starts, until driving unlocks; nil otherwise.

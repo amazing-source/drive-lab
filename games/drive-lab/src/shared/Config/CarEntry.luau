@@ -28,23 +28,25 @@ export type Clip = {
 	door: Curve?,
 }
 
+-- A cabin control the start-up turns on its hinge (the model binding's `controls`, by name):
+-- it reaches `angle` radians `at` seconds after the start key, taking `move` seconds, and turns
+-- back from `back` seconds after the key; with no `back` it holds until the engine is off.
+export type ControlMove = { control: string, angle: number, move: number, at: number, back: number? }
+
+-- A car's start, as a sequence from the start key: the cabin controls the driver works, the
+-- START press, the engine catching, the hands back on the wheel, driving unlocked.
 export type Startup = {
-	-- Seconds after the start key: the right hand reaches the flap, lifts it, presses START
-	-- (the starter turns from here), lets the flap down, and both hands are on the wheel.
-	flapUpAt: number,
+	moves: { ControlMove },
+	-- Seconds after the start key: START is pressed (the starter turns from here), both hands
+	-- are on the wheel, driving unlocks.
 	pressAt: number,
-	flapDownAt: number,
 	wheelAt: number,
-	-- Driving unlocks this long after the key.
 	drivableAt: number,
 	-- From the press: the starter cranks, the engine catches and flares, then a fast idle
 	-- settles. The revs the instruments show over that time.
 	catchAfter: number,
 	rpm: Curve,
-	-- How far the flap opens (radians) and how long it takes to lift or fall; how hard the right
-	-- foot holds the brake from the key until driving unlocks (0 to 1).
-	flapAngle: number,
-	flapMove: number,
+	-- How hard the right foot holds the brake from the key until driving unlocks (0 to 1).
 	brake: number,
 }
 

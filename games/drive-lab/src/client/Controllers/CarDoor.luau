@@ -1,12 +1,12 @@
 --!strict
 --[[
-	The driver's door and the START flap of every car on this client, turned from the car's
-	replicated entry state and the server's clock (Rules/CarEntry), so every client shows the
-	same door at the same moment, late joiners too. The door's latch and shut sound from its outer
-	panel. The door's pull strap turns with it, hanging, or runs to the driver's animated palm
-	while a clip closes the door by it (Rules/DoorStrap). Writes nothing but the two hinge welds'
-	C0, the strap weld's C0 and its part's Size, and the sounds it plays. Each car's door, flap
-	and sounds are its catalog entry's.
+	The driver's door and the cabin controls (the SVJ's START flap) of every car on this client,
+	turned from the car's replicated entry state and the server's clock (Rules/CarEntry), so every
+	client shows the same door at the same moment, late joiners too. The door's latch and shut
+	sound from its outer panel. The door's pull strap turns with it, hanging, or runs to the
+	driver's animated palm while a clip closes the door by it (Rules/DoorStrap). Writes nothing but
+	the hinge welds' C0, the strap weld's C0 and its part's Size, and the sounds it plays. Each
+	car's door, sounds and start-up moves are its catalog entry's.
 ]]
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -48,7 +48,8 @@ type Car = {
 	openAngle: number,
 	panel: BasePart?,
 	doorAngle: number,
-	flapAngle: number,
+	-- The angle last written to each control, by name.
+	controlAngles: { [string]: number },
 	-- The door's openness its sounds' lead ahead at the last frame; nil before the first.
 	ahead: number?,
 	strap: Strap?,
@@ -104,13 +105,23 @@ local function track(model: Instance)
 		return
 	end
 	local binding = entry.model
-	if binding.door == nil and binding.flap == nil then
+	if binding.door == nil and binding.controls == nil then
 		return
 	end
 	local rig = CarRig.find(model, binding)
-	-- A car whose door or flap has not streamed in yet is picked up on a later scan.
-	if rig == nil or (binding.door and rig.door == nil) or (binding.flap and rig.flap == nil) then
+	-- A car whose door or controls have not streamed in yet is picked up on a later scan.
+	if rig == nil or (binding.door and rig.door == nil) then
 		return
+	end
+	local controlAngles: { [string]: number } = {}
+	local bound = binding.controls
+	if bound then
+		for name in bound do
+			if rig.controls[name] == nil then
+				return
+			end
+			controlAngles[name] = 0
+		end
 	end
 	-- The server rigged a strap whose part has not streamed in yet: picked up on a later scan.
 	if
@@ -128,7 +139,7 @@ local function track(model: Instance)
 		openAngle = if binding.door then binding.door.openAngle else 0,
 		panel = if panel and panel:IsA("BasePart") then panel else nil,
 		doorAngle = 0,
-		flapAngle = 0,
+		controlAngles = controlAngles,
 		ahead = nil,
 		strap = strapOf(rig, binding),
 	}
@@ -221,11 +232,14 @@ local function poseStrap(car: Car, strap: Strap, state: Entry.State, now: number
 	strap.tip = tip
 end
 
-local function poseFlap(car: Car, flap: Weld, state: Entry.State, now: number)
-	local angle = Hinge.angle(Entry.flapOpenness(car.entry, state, now), car.entry.startup.flapAngle)
-	if angle ~= car.flapAngle then
-		flap.C0 = car.rig.flapRest * CFrame.Angles(angle, 0, 0)
-		car.flapAngle = angle
+local function poseControls(car: Car, state: Entry.State, now: number)
+	for _, move in car.entry.startup.moves do
+		local control = car.rig.controls[move.control]
+		local angle = Hinge.angle(Entry.controlOpenness(move, state, now), move.angle)
+		if control and angle ~= car.controlAngles[move.control] then
+			control.weld.C0 = control.rest * CFrame.Angles(angle, 0, 0)
+			car.controlAngles[move.control] = angle
+		end
 	end
 end
 
@@ -244,16 +258,14 @@ local function update(dt: number)
 			continue
 		end
 		local state = CarState.read(model)
-		local door, flap = car.rig.door, car.rig.flap
+		local door = car.rig.door
 		if door then
 			poseDoor(car, door, state, now)
 		end
 		if car.strap then
 			poseStrap(car, car.strap, state, now)
 		end
-		if flap then
-			poseFlap(car, flap, state, now)
-		end
+		poseControls(car, state, now)
 	end
 end
 

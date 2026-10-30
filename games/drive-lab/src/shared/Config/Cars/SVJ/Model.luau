@@ -111,12 +111,14 @@ local Model: Binding.CarModel = table.freeze({
 			}),
 		}),
 	}),
-	-- Hinged on its front edge, across the car; the rear edge, with the finger notch, lifts
-	-- (Lamborghini's console photograph shows the notch at the rear).
-	flap = table.freeze({
-		part = "StartFlap",
-		pivot = table.freeze({ forward = 0.6318, right = 0, up = 0.017 }),
-		axis = table.freeze({ forward = 0, right = -1, up = 0 }),
+	controls = table.freeze({
+		-- The START flap, hinged on its front edge, across the car; the rear edge, with the finger
+		-- notch, lifts (Lamborghini's console photograph shows the notch at the rear).
+		StartFlap = table.freeze({
+			part = "StartFlap",
+			pivot = table.freeze({ forward = 0.6318, right = 0, up = 0.017 }),
+			axis = table.freeze({ forward = 0, right = -1, up = 0 }),
+		}),
 	}),
 	-- Measured by tools/blender/footwell.py (2026-10-28): the organ throttle hinged on the floor at
 	-- its plate's foot, the brake hanging from under the dash, both turning across the car.
