@@ -53,6 +53,7 @@ type Side = {
 }
 
 type Driver = {
+	entry: Catalog.Entry,
 	character: Model,
 	torso: BasePart,
 	model: Model,
@@ -214,6 +215,7 @@ local function build(model: Model, character: Model): Driver?
 		arm.Transparency = 1
 	end
 	return {
+		entry = entry,
 		character = character,
 		torso = torso,
 		model = model,
@@ -306,7 +308,8 @@ end
 
 -- Only once seated: getting in and out, the body animation moves the blocky arms.
 local function seated(model: Model, now: number): boolean
-	return CarEntry.phase(CarState.read(model), now) == "Seated"
+	local entry = Catalog.of(model)
+	return entry ~= nil and CarEntry.phase(entry, CarState.read(model), now) == "Seated"
 end
 
 local function update()
@@ -333,7 +336,7 @@ local function update()
 			model.Parent == nil
 			or seatedCharacter(model) ~= driver.character
 			or driver.torso.Parent == nil
-			or CarEntry.phase(state, now) ~= "Seated"
+			or CarEntry.phase(driver.entry, state, now) ~= "Seated"
 		then
 			release(driver)
 			drivers[model] = nil

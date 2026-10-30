@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local CarState = require(ReplicatedStorage.Shared.Car.CarState)
+local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local DoorMark = require(ReplicatedStorage.Shared.Car.DoorMark)
 local Rules = require(ReplicatedStorage.Shared.Rules.CarEntry)
 
@@ -54,12 +55,12 @@ local function flat(vector: Vector3): Vector3
 	return if level.Magnitude > 1e-3 then level.Unit else Vector3.zero
 end
 
-local function exitOffset(model: Model): Vector3?
+local function exitOffset(entry: Catalog.Entry, model: Model): Vector3?
 	local seat = model:FindFirstChild("DriverSeat")
 	if seat == nil or not seat:IsA("BasePart") then
 		return nil
 	end
-	local outward = flat(DoorMark.frame(seat).Position - seat.Position)
+	local outward = flat(DoorMark.frame(entry.door, seat).Position - seat.Position)
 	local rearward = flat(-seat.CFrame.LookVector)
 	local across = outward * EXIT_OUTWARD + rearward * EXIT_REARWARD
 	if across.Magnitude < 1e-3 then
@@ -70,9 +71,14 @@ end
 
 -- `normal` is where the car's view would put the camera; `current` is where it is now.
 function EntryView.place(view: string, model: Model, normal: CFrame, current: CFrame): CFrame
+	local entry = Catalog.of(model)
+	if entry == nil then
+		sequence = nil
+		return normal
+	end
 	local state = CarState.read(model)
 	local at = Workspace:GetServerTimeNow()
-	local phase = Rules.phase(state, at)
+	local phase = Rules.phase(entry, state, at)
 	local headPart = head()
 	if (phase ~= "Entering" and phase ~= "Exiting") or headPart == nil then
 		sequence = nil
@@ -86,14 +92,19 @@ function EntryView.place(view: string, model: Model, normal: CFrame, current: CF
 			startedAt = state.entryAt,
 			offset = if entering
 				then startOffset(true, current.Position, normal, headPart.Position)
-				else exitOffset(model) or startOffset(false, current.Position, normal, headPart.Position),
+				else exitOffset(entry, model) or startOffset(
+					false,
+					current.Position,
+					normal,
+					headPart.Position
+				),
 		}
 	sequence = active
 	local follow = if view == "Cockpit"
 		then headPart.CFrame * EYE
 		else CFrame.lookAt(headPart.Position + active.offset, headPart.Position)
 	local elapsed = at - state.entryAt
-	local length = Rules.length(Rules.steps(state.entry, state.entryDoorOpen))
+	local length = Rules.length(Rules.steps(entry, state.entry, state.entryDoorOpen))
 	local weight = if entering
 		then smooth((elapsed - (length - BLEND_SECONDS)) / BLEND_SECONDS)
 		else 1 - smooth(elapsed / BLEND_SECONDS)

@@ -23,6 +23,7 @@ local CarEntry = require(ReplicatedStorage.Shared.Rules.CarEntry)
 local CarLamps = require(script.Parent.Parent.Effects.CarLamps)
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local CarState = require(ReplicatedStorage.Shared.Car.CarState)
+local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local Config = require(ReplicatedStorage.Shared.Config.CarLights)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local Rules = require(ReplicatedStorage.Shared.Rules.CarLights)
@@ -106,8 +107,10 @@ local function update(dt: number)
 			continue
 		end
 		local mine = model == driven
+		local entry = Catalog.of(model)
 		local lit = Rules.decide({
-			running = CarEntry.startup(CarState.read(model), serverNow).sincePress ~= nil,
+			running = entry ~= nil
+				and CarEntry.startup(entry, CarState.read(model), serverNow).sincePress ~= nil,
 			mode = if mine then mode else "Auto",
 			highBeam = mine and highBeam,
 			night = night,

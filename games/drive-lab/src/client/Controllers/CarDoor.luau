@@ -5,7 +5,8 @@
 	same door at the same moment, late joiners too. The door's latch and shut sound from its outer
 	panel. The door's pull strap turns with it, hanging, or runs to the driver's animated palm
 	while a clip closes the door by it (Rules/DoorStrap). Writes nothing but the two hinge welds'
-	C0, the strap weld's C0 and its part's Size, and the sounds it plays.
+	C0, the strap weld's C0 and its part's Size, and the sounds it plays. Each car's door, flap
+	and sounds are its catalog entry's.
 ]]
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -42,12 +43,13 @@ type Strap = {
 }
 
 type Car = {
+	entry: Catalog.Entry,
 	rig: CarRig.Rig,
 	openAngle: number,
 	panel: BasePart?,
 	doorAngle: number,
 	flapAngle: number,
-	-- The door's openness Config.LEAD seconds ahead at the last frame; nil before the first.
+	-- The door's openness its sounds' lead ahead at the last frame; nil before the first.
 	ahead: number?,
 	strap: Strap?,
 }
@@ -98,8 +100,11 @@ local function track(model: Instance)
 		return
 	end
 	local entry = Catalog.of(model)
-	local binding = entry and entry.model
-	if binding == nil or (binding.door == nil and binding.flap == nil) then
+	if entry == nil then
+		return
+	end
+	local binding = entry.model
+	if binding.door == nil and binding.flap == nil then
 		return
 	end
 	local rig = CarRig.find(model, binding)
@@ -118,6 +123,7 @@ local function track(model: Instance)
 	end
 	local panel = if binding.door then model:FindFirstChild(binding.door.parts[1], true) else nil
 	cars[model] = {
+		entry = entry,
 		rig = rig,
 		openAngle = if binding.door then binding.door.openAngle else 0,
 		panel = if panel and panel:IsA("BasePart") then panel else nil,
@@ -128,16 +134,16 @@ local function track(model: Instance)
 	}
 end
 
-local function play(panel: BasePart, region: Config.Region)
+local function play(panel: BasePart, settings: CarEntry.DoorSound, region: CarEntry.Region)
 	local sound = Instance.new("Sound")
 	sound.Name = "DoorSound"
-	sound.SoundId = Config.SOUND_ID
+	sound.SoundId = settings.id
 	sound.PlaybackRegionsEnabled = true
 	sound.PlaybackRegion = NumberRange.new(region.from, region.to)
-	sound.Volume = Config.VOLUME
+	sound.Volume = settings.volume
 	sound.RollOffMode = Enum.RollOffMode.InverseTapered
-	sound.RollOffMinDistance = Config.ROLL_OFF.from
-	sound.RollOffMaxDistance = Config.ROLL_OFF.to
+	sound.RollOffMinDistance = settings.rollOff.from
+	sound.RollOffMaxDistance = settings.rollOff.to
 	sound.Parent = panel
 	sound:Play()
 	local function remove()
@@ -148,16 +154,17 @@ local function play(panel: BasePart, region: Config.Region)
 end
 
 local function poseDoor(car: Car, door: Weld, state: Entry.State, now: number)
-	local angle = Hinge.angle(Entry.doorOpenness(state, now), car.openAngle)
+	local angle = Hinge.angle(Entry.doorOpenness(car.entry, state, now), car.openAngle)
 	if angle ~= car.doorAngle then
 		door.C0 = car.rig.doorRest * CFrame.Angles(angle, 0, 0)
 		car.doorAngle = angle
 	end
-	local ahead = Entry.doorOpenness(state, now + Config.LEAD)
+	local settings = car.entry.door.sound
+	local ahead = Entry.doorOpenness(car.entry, state, now + settings.lead)
 	local sound = if car.ahead ~= nil then Hinge.sound(car.ahead, ahead) else nil
 	car.ahead = ahead
-	if sound and car.panel and Config.SOUND_ID ~= "" then
-		play(car.panel, if sound == "Latch" then Config.LATCH else Config.SHUT)
+	if sound and car.panel and settings.id ~= "" then
+		play(car.panel, settings, if sound == "Latch" then settings.latch else settings.shut)
 	end
 end
 
@@ -180,7 +187,7 @@ end
 
 local function poseStrap(car: Car, strap: Strap, state: Entry.State, now: number)
 	local angle = car.doorAngle
-	local palm = if DoorStrap.held(DoorStrap.clip(state, now), angle, strap.grab)
+	local palm = if DoorStrap.held(DoorStrap.clip(car.entry, state, now), angle, strap.grab)
 		then palmOf(car.rig)
 		else nil
 	local top = Hinge.rotate(strap.top, strap.pivot, strap.axis, angle)
@@ -215,7 +222,7 @@ local function poseStrap(car: Car, strap: Strap, state: Entry.State, now: number
 end
 
 local function poseFlap(car: Car, flap: Weld, state: Entry.State, now: number)
-	local angle = Hinge.angle(Entry.flapOpenness(state, now), CarEntry.STARTUP.flapAngle)
+	local angle = Hinge.angle(Entry.flapOpenness(car.entry, state, now), car.entry.startup.flapAngle)
 	if angle ~= car.flapAngle then
 		flap.C0 = car.rig.flapRest * CFrame.Angles(angle, 0, 0)
 		car.flapAngle = angle

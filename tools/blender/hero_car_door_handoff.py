@@ -60,7 +60,7 @@ handoff = {
         "axisBlender": selection["flapHinge"]["axis"],
         "pivotCar": car_point(selection["flapHinge"]["pivot"]),
         "axisCar": car_direction(selection["flapHinge"]["axis"]),
-        "openDegrees": "Config/CarEntry STARTUP.flapAngle (70 deg)",
+        "openDegrees": "Config/Cars/SVJ/Startup flapAngle (70 deg)",
         "freeEdge": "the rear edge, with the finger notch",
         "buttonTopBlender": selection["buttonTop"],
         "buttonTopCar": car_point(selection["buttonTop"]),

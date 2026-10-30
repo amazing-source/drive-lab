@@ -93,7 +93,7 @@ START, lets the flap fall and takes the wheel; the left hand is on the wheel by 
 getting in and out the body animation moves the blocky arms instead. Every client plays it from
 the car's replicated state, so other players see the same start-up.
 
-    STARTUP (Config/CarEntry)   0 ... 0.75 lift ... 1.0 up ... 1.5 press ... 2.1 fall ... 2.9 wheel
+    Config/Cars/SVJ/Startup     0 ... 0.75 lift ... 1.0 up ... 1.5 press ... 2.1 fall ... 2.9 wheel
     right hand                  Rest -> Point at 0.2 s   index under the edge, rides it up,
                                 pushes START 4 mm, out from under before 2.1, Grip at 2.5, on the rim
     left hand                   Rest -> Grip at 0.4 s, on the rim at 1.0 s
@@ -133,7 +133,7 @@ heel and ball points) are copies of `Config/DriverLegs`; change them together.
     stylua games/drive-lab/src/shared/Config/DriverStartup.luau
 
 `inputs.json` (example: `drive-lab-assets/driver/startup_inputs.json`) names the seat's origin in
-the blend, the measured files above, the hands of section 3, the STARTUP times and the flap: its
+the blend, the measured files above, the hands of section 3, the start-up times (`Config/Cars/SVJ/Startup`) and the flap: its
 hinge line, the point under its free edge, START's top face and the console's normal (agent B's
 door work measured them). The script moves the cabin into the seat frame, then keys an Empty:
 - each Point pose is aimed so the index tip lands on its target with the hand in line with the
@@ -147,7 +147,7 @@ Blender's Bezier easing between keys, baked every 1/30 s. The script stops if a 
 of the arm's reach, prints how far the index strays from the edge (0.4 mm for the SVJ) and where
 it is at the press, renders eight moments from the cockpit eye, the passenger seat and the flap,
 and writes `Config/DriverStartup.luau`: the keys in metres in the seat frame, the shape changes,
-and the geometry they were made against. **Re-bake whenever STARTUP's times or the flap change**:
+and the geometry they were made against. **Re-bake whenever the start-up's times or the flap change**:
 `tests/StartupArms.spec.luau` checks the index against `Rules/CarEntry`'s flap and press times
 and fails otherwise.
 

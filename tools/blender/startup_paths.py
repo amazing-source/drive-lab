@@ -7,7 +7,7 @@ paths and writes them into the game's config, with review renders.
 
 inputs.json names the measured pieces (absolute paths): seatWeld (SEAT_WELD.json, the seated R6
 in the DriverSeat frame), restPose (REST_POSE.json), poses (hand_poses.py's poses.json and its
-glb folder), grip (hand_grip.py's hands.json and glb folder), startup (Config/CarEntry's STARTUP
+glb folder), grip (hand_grip.py's hands.json and glb folder), startup (Config/Cars/SVJ/Startup's
 times), flap (the START flap's hinge and free edge, and the button, Blender metres) and seat (the
 DriverSeat's origin in the blend, Blender metres).
 

@@ -2,6 +2,7 @@
 local CarEntry = require("../src/shared/Config/CarEntry")
 local CarEntryRules = require("../src/shared/Rules/CarEntry")
 local Config = require("../src/shared/Config/DriverStartup")
+local SVJ = require("../src/shared/Config/Cars/SVJ")
 local StartupArms = require("../src/shared/Rules/StartupArms")
 local T = require("../../../tools/test/T")
 
@@ -10,7 +11,7 @@ local describe, it, expect = T.describe, T.it, T.expect
 type Pose = StartupArms.Pose
 type Vector = StartupArms.Vector
 
-local STARTUP = CarEntry.STARTUP
+local STARTUP = SVJ.startup
 
 local function gap(a: Vector, b: Vector): number
 	return math.sqrt((a.x - b.x) ^ 2 + (a.y - b.y) ^ 2 + (a.z - b.z) ^ 2)
@@ -139,7 +140,7 @@ local function flapEdge(t: number): Vector
 		engine = "On",
 		engineAt = 0,
 	}
-	local angle = -STARTUP.flapAngle * CarEntryRules.flapOpenness(state, t)
+	local angle = -STARTUP.flapAngle * CarEntryRules.flapOpenness(SVJ, state, t)
 	local hinge, edge = Config.FLAP.hinge, Config.FLAP.edge
 	local y, z = edge.y - hinge.y, edge.z - hinge.z
 	return {

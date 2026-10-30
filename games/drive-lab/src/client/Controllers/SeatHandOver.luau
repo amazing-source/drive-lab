@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
+local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local DoorMark = require(ReplicatedStorage.Shared.Car.DoorMark)
 local Driving = require(ReplicatedStorage.Shared.Config.Driving)
 local Movement = require(ReplicatedStorage.Shared.Config.Movement)
@@ -225,10 +226,11 @@ end
 -- Puts the body standing at the end of getting out, on the ground, still.
 local function placeOut(current: Body, car: Model)
 	local seat = car:FindFirstChild("DriverSeat")
-	if seat == nil or not seat:IsA("BasePart") then
+	local entry = Catalog.of(car)
+	if seat == nil or not seat:IsA("BasePart") or entry == nil then
 		return
 	end
-	local spot = DoorMark.exitFrame(seat)
+	local spot = DoorMark.exitFrame(entry.door, seat)
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = { car, current.character }

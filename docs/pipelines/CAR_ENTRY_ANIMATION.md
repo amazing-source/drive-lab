@@ -17,7 +17,7 @@ SEAT_WELD.json (Studio)  REST_POSE.json (hands)  HANDOFF (door)  car.glb
                                    │                       └─► car_entry_scene.py render (review)
            car_entry_export.py ──► per clip: .seated.json, .standing.json, .door.json, .seatparts.json
                                    │
-        build_keyframes (Lune) ──► .rbxm ──► upload_images.py ──► Config/CarEntry.luau
+        build_keyframes (Lune) ──► .rbxm ──► upload_images.py ──► Config/Cars/SVJ/Door.luau
 ```
 
 ## 1. References: how this car is really entered
@@ -92,9 +92,9 @@ nothing.
 back in to the mark, where the car's collision box is 0.659 studs in front of the root: a body
 standing there clears it only while facing the car, and turning away pushes the torso into it.
 So the exit sequence stops at a frame of that walk back where the body stands as at rest, far
-enough out (`Config.EXIT_END`: the time into the clip, and where the server puts the root, in
+enough out (the door's `exitEnd`: the time into the clip, and where the server puts the root, in
 metres like `MARK`); opening or shutting the door from outside still plays the whole clip.
-Re-run after any re-bake of the exit timeline and paste its line over `EXIT_END`:
+Re-run after any re-bake of the exit timeline and paste its line over `exitEnd` in `Config/Cars/SVJ/Door.luau`:
 
     python tools/anim/car_entry_exit_end.py <exit.baked.json> --mark <right,forward>
 
@@ -283,8 +283,8 @@ environment and never prints it.
 
 The standing variants leave the neck at rest: on foot `HeadLook` turns the head with the camera
 on top of whatever the clip does. Seated, `HeadLook` holds the head ahead, so the seated clips
-keep their own looks (at the release, the sill, the strap). Paste the printed `CLIPS`,
-`SEATED_POSE` and `MARK` over the old fields in `Config/CarEntry.luau`; nothing else in it is this
+keep their own looks (at the release, the sill, the strap). Paste the printed `clips`,
+`seatedPose` and `mark` over the old fields in `Config/Cars/SVJ/Door.luau`; nothing else in it is this
 pipeline's.
 
 ## 8. Studio verification

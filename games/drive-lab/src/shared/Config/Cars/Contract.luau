@@ -5,11 +5,14 @@
 	own modules. `define` freezes an entry, so nothing can tune a car at run time.
 ]]
 local Binding = require("./Binding")
+local CarEntry = require("../CarEntry")
 local Types = require("./Types")
 
 export type Entry = {
 	physics: Types.CarConfig,
 	model: Binding.CarModel,
+	door: CarEntry.Door,
+	startup: CarEntry.Startup,
 }
 
 local Contract = {}
