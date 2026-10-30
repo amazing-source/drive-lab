@@ -62,9 +62,10 @@ local function due(clock: number, rate: number): (boolean, number)
 end
 
 -- `surface` is each wheel's spin times its radius and `ground` its patch's forward speed.
--- Braking slip is negative whichever way the car moves.
+-- Braking slip is negative whichever way the car moves. The slips are the mode's, if it sets them.
 function Electronics.updateAbs(
 	config: Types.ElectronicsConfig,
+	mode: Types.ModeConfig,
 	state: ElectronicsState,
 	enabled: boolean,
 	braking: boolean,
@@ -72,6 +73,8 @@ function Electronics.updateAbs(
 	ground: { number },
 	dt: number
 )
+	local releaseSlip = mode.absReleaseSlip or config.absReleaseSlip
+	local reapplySlip = mode.absReapplySlip or config.absReapplySlip
 	local decide
 	decide, state.absClock = due(state.absClock + dt, config.absRate)
 	local active = false
@@ -84,9 +87,9 @@ function Electronics.updateAbs(
 		end
 		if decide then
 			local slip = (surface[wheel] - ground[wheel]) / ground[wheel]
-			if slip < -config.absReleaseSlip then
+			if slip < -releaseSlip then
 				state.absReleasing[wheel] = true
-			elseif slip > -config.absReapplySlip then
+			elseif slip > -reapplySlip then
 				state.absReleasing[wheel] = false
 			end
 		end

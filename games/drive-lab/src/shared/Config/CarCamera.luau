@@ -41,7 +41,12 @@ export type ViewFov = { base: number, kickShare: number }
 
 -- One car's own camera points (its entry's camera), metres: the cockpit eye ahead of and above
 -- the head's centre, and the hood camera from the centre of mass, along the car and up.
-export type CarViews = { eye: { forward: number, up: number }, hood: { forward: number, up: number } }
+export type CarViews = {
+	eye: { forward: number, up: number },
+	hood: { forward: number, up: number },
+	-- Per drive mode, the share of Config/CarShake's upshift kick the car's gearbox gives.
+	shiftKick: { [string]: number },
+}
 
 export type CarCamera = {
 	VIEWS: { View },

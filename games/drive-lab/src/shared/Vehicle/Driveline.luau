@@ -133,9 +133,15 @@ function Driveline.wheelSpeed(drive: Driveline, state: DrivelineState, wheel: nu
 end
 
 -- Rear LSD locking torque (the difference it can hold between the half-shafts) from the torque
--- entering the rear differential: preload plus a power or coast ramp.
-function Driveline.lsdCapacity(config: Types.DrivelineConfig, inputTorque: number): number
-	local ramp = if inputTorque >= 0 then config.lsdPowerRamp else config.lsdCoastRamp
+-- entering the rear differential: preload plus a power or coast ramp, the mode's if it sets one.
+function Driveline.lsdCapacity(
+	config: Types.DrivelineConfig,
+	mode: Types.ModeConfig,
+	inputTorque: number
+): number
+	local ramp = if inputTorque >= 0
+		then mode.lsdPowerRamp or config.lsdPowerRamp
+		else mode.lsdCoastRamp or config.lsdCoastRamp
 	return config.lsdPreload + ramp * math.abs(inputTorque)
 end
 

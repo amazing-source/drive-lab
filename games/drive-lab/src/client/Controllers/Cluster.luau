@@ -18,6 +18,7 @@ local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local Cluster = require(ReplicatedStorage.Shared.Config.Cluster)
+local DriveModes = require(ReplicatedStorage.Shared.Rules.DriveModes)
 local DriverAssists = require(ReplicatedStorage.Shared.Rules.DriverAssists)
 local Rules = require(ReplicatedStorage.Shared.Rules.Cluster)
 
@@ -44,8 +45,6 @@ type Display = {
 	theme: string,
 }
 
--- The drive mode a car starts in, whose colours show until the car reports another.
-local DEFAULT_THEME = "Strada"
 local FONT = Font.fromEnum(Enum.Font.Michroma)
 -- Opaque up to the gradient's middle, clear after it: the edge Rules.wipeRotation turns.
 local WIPE = NumberSequence.new({
@@ -111,14 +110,15 @@ local function litLayer(parent: Instance, spec: Cluster.Face, image: string): (I
 	return layer, wipe
 end
 
-local function build(model: Model, entry: Catalog.Entry, screen: BasePart): Display
-	local spec = entry.cluster
+local function build(model: Model, entry: Catalog.Entry, spec: Cluster.Face, screen: BasePart): Display
 	local palettes: { [string]: Palette } = {}
 	for name, theme in spec.modes do
 		palettes[name] = { accent = colour(theme.accent), dim = colour(theme.dim), text = colour(theme.text) }
 	end
 	local warning = colour(spec.warning)
-	local textColor = palettes[DEFAULT_THEME].text
+	-- The colours of the mode a car starts in show until the car reports another.
+	local first = entry.physics.modeOrder[1]
+	local textColor = palettes[first].text
 
 	local gui = Instance.new("SurfaceGui")
 	gui.Name = "LiveCluster"
@@ -164,7 +164,7 @@ local function build(model: Model, entry: Catalog.Entry, screen: BasePart): Disp
 		esc = esc,
 		gear = label(face, spec, spec.gear, "N", centred, textColor),
 		speed = label(face, spec, spec.speed, "0", Vector2.new(1, 0.5), textColor),
-		mode = label(face, spec, spec.mode, string.upper(DEFAULT_THEME), centred, textColor),
+		mode = label(face, spec, spec.mode, string.upper(entry.modeLabels[first]), centred, textColor),
 		tc = label(face, spec, spec.tc, "TC", centred, textColor),
 		abs = label(face, spec, spec.abs, "ABS", centred, textColor),
 		cells = 0,
@@ -185,16 +185,13 @@ local function refresh(current: Display)
 	local model = current.model
 	local spec = current.spec
 	local now = os.clock()
-	local modeName = read(model, "DrivingMode")
-	local themeName = if typeof(modeName) == "string" and current.palettes[modeName]
-		then modeName
-		else DEFAULT_THEME
+	local themeName = DriveModes.current(current.entry.physics.modeOrder, read(model, "DrivingMode"))
 	local theme = current.palettes[themeName]
 	if themeName ~= current.theme then
 		current.theme = themeName
 		current.lit.ImageColor3 = theme.accent
 		current.mode.TextColor3 = theme.accent
-		current.mode.Text = string.upper(themeName)
+		current.mode.Text = string.upper(current.entry.modeLabels[themeName])
 		current.gear.TextColor3 = theme.text
 		current.speed.TextColor3 = theme.text
 	end
@@ -258,10 +255,11 @@ local function update(dt: number)
 	if current == nil then
 		local screen = model:FindFirstChild("ClusterScreen")
 		local entry = Catalog.of(model)
-		if screen == nil or not screen:IsA("BasePart") or entry == nil then
+		local face = entry and entry.cluster
+		if screen == nil or not screen:IsA("BasePart") or entry == nil or face == nil then
 			return
 		end
-		current = build(model, entry, screen)
+		current = build(model, entry, face, screen)
 		display = current
 	end
 	elapsed += dt

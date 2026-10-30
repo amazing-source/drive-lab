@@ -13,6 +13,7 @@ local RunService = game:GetService("RunService")
 
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
+local DriverAssists = require(ReplicatedStorage.Shared.Rules.DriverAssists)
 local Driving = require(ReplicatedStorage.Shared.Config.Driving)
 local Interface = require(ReplicatedStorage.Shared.Vehicle.Interface)
 local Log = require(ReplicatedStorage.Kit.Log)
@@ -21,8 +22,9 @@ local VehicleRunner = require(ReplicatedStorage.Shared.Car.VehicleRunner)
 type Car = {
 	rig: CarRig.Rig,
 	entry: Catalog.Entry,
-	-- The server's own simulation, while nobody drives.
+	-- The server's own simulation, while nobody drives, and the input it runs on.
 	runner: VehicleRunner.Runner?,
+	parked: Interface.DriverInput,
 	driver: Player?,
 	-- Parts made massless while their character sits in the car.
 	carried: { BasePart },
@@ -32,17 +34,21 @@ type Car = {
 local log = Log.scope("Cars")
 local cars: { Car } = {}
 
-local PARKED: Interface.DriverInput = {
-	throttle = 0,
-	brake = 0,
-	steer = 0,
-	handbrake = 1,
-	shiftUp = false,
-	shiftDown = false,
-	gearboxMode = "auto",
-	drivingMode = "Strada",
-	assists = { abs = true, tc = true, esc = true },
-}
+-- Handbrake on, in the car's first drive mode with its assists on.
+local function parkedInput(entry: Catalog.Entry): Interface.DriverInput
+	local mode = entry.physics.modeOrder[1]
+	return {
+		throttle = 0,
+		brake = 0,
+		steer = 0,
+		handbrake = 1,
+		shiftUp = false,
+		shiftDown = false,
+		gearboxMode = "auto",
+		drivingMode = mode,
+		assists = DriverAssists.assists(false, mode, entry.assists),
+	}
+end
 
 local function setupCollisionGroups()
 	PhysicsService:RegisterCollisionGroup(CarRig.RAY_GROUP)
@@ -137,6 +143,7 @@ local function rig(model: Instance)
 		rig = CarRig.build(model, entry.physics, entry.model),
 		entry = entry,
 		runner = nil,
+		parked = parkedInput(entry),
 		driver = nil,
 		carried = {},
 		reclaimedUntil = 0,
@@ -179,7 +186,7 @@ local function update(dt: number)
 	for _, car in cars do
 		local runner = car.runner
 		if runner then
-			VehicleRunner.step(runner, PARKED, dt)
+			VehicleRunner.step(runner, car.parked, dt)
 			VehicleRunner.animate(runner, dt)
 		else
 			guard(car)

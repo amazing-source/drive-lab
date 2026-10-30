@@ -8,6 +8,8 @@ local World = require("../src/shared/Config/World")
 local describe, it, expect = T.describe, T.it, T.expect
 
 local config = SVJ.electronics
+-- A mode that sets no ABS slips of its own, so the car's apply.
+local MODE = SVJ.modes.Strada
 local STEP = 0.001
 
 local function uniform(value: number): { number }
@@ -20,14 +22,14 @@ describe("ABS", function()
 		local ground = uniform(20)
 		local locked = { 20 * (1 - 0.3), 20, 20, 20 }
 		for _ = 1, 20 do
-			Electronics.updateAbs(config, state, true, true, locked, ground, STEP)
+			Electronics.updateAbs(config, MODE, state, true, true, locked, ground, STEP)
 		end
 		expect(state.absFactor[1] < 1).toBeTruthy()
 		expect(state.absFactor[2]).toBe(1)
 		expect(state.absActive).toBe(true)
 		local released = state.absFactor[1]
 		for _ = 1, 20 do
-			Electronics.updateAbs(config, state, true, true, uniform(20), ground, STEP)
+			Electronics.updateAbs(config, MODE, state, true, true, uniform(20), ground, STEP)
 		end
 		expect(state.absFactor[1] > released).toBeTruthy()
 	end)
@@ -36,9 +38,45 @@ describe("ABS", function()
 		local state = Electronics.newState()
 		local between = -(config.absReapplySlip + config.absReleaseSlip) / 2
 		for _ = 1, 100 do
-			Electronics.updateAbs(config, state, true, true, uniform(20 * (1 + between)), uniform(20), STEP)
+			Electronics.updateAbs(
+				config,
+				MODE,
+				state,
+				true,
+				true,
+				uniform(20 * (1 + between)),
+				uniform(20),
+				STEP
+			)
 		end
 		expect(state.absFactor[1]).toBe(1)
+	end)
+
+	it("releases at the mode's own slips where the mode sets them", function()
+		local release = config.absReleaseSlip / 2
+		local tight = table.clone(MODE)
+		tight.absReleaseSlip = release
+		tight.absReapplySlip = config.absReapplySlip / 2
+		-- Past the mode's release slip, short of the car's.
+		local slip = -(release + config.absReleaseSlip) / 2
+		local function factorAfter(mode: typeof(MODE)): number
+			local state = Electronics.newState()
+			for _ = 1, 100 do
+				Electronics.updateAbs(
+					config,
+					mode,
+					state,
+					true,
+					true,
+					uniform(20 * (1 + slip)),
+					uniform(20),
+					STEP
+				)
+			end
+			return state.absFactor[1]
+		end
+		expect(factorAfter(MODE)).toBe(1)
+		expect(factorAfter(tight) < 1).toBeTruthy()
 	end)
 
 	it("does nothing when off, when not braking, or below its minimum speed", function()
@@ -53,6 +91,7 @@ describe("ABS", function()
 			for _ = 1, 50 do
 				Electronics.updateAbs(
 					config,
+					MODE,
 					state,
 					case.enabled,
 					case.braking,

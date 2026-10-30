@@ -334,6 +334,7 @@ return Types.define({
 			escSideslip = math.rad(8),
 		},
 	},
+	modeOrder = { "Strada", "Sport", "Corsa" },
 
 	-- Launch control (research note 2026-10-29, section 1, the LP700-4's procedure; nothing
 	-- SVJ-specific was found). Corsa with ESC off, as documented. The slip is the tyres' own peak

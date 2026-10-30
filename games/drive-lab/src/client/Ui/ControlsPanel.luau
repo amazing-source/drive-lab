@@ -165,7 +165,9 @@ local function row(
 	panel: Panel,
 	parent: Instance,
 	entry: Rules.Row,
+	help: Rules.Help,
 	bindings: Rules.Bindings,
+	layout: Rules.Layout?,
 	values: { [string]: string },
 	order: number
 )
@@ -176,7 +178,7 @@ local function row(
 	frame.Size = UDim2.new(1, 0, 0, Config.ROW_HEIGHT)
 	frame.LayoutOrder = order
 	frame.Parent = parent
-	local keyboard, gamepad = Rules.inputs(entry, bindings, Config.HELP.keyNames)
+	local keyboard, gamepad = Rules.inputs(entry, bindings, help.keyNames, layout)
 	local shares = Config.SHARES
 	cell(frame, escape(entry.label), 0, shares.label, Hud.WHITE)
 	cell(frame, keysText(keyboard), shares.label, shares.keyboard, Hud.WHITE)
@@ -248,9 +250,13 @@ local function tooltip(gui: ScreenGui): (Frame, TextLabel)
 	return tip, text
 end
 
+-- `help` and `bindings` are one car's screen (Rules.forCar); `keyLayout` labels the keys as the
+-- player's keyboard prints them.
 function ControlsPanel.build(
 	parent: Instance,
+	help: Rules.Help,
 	bindings: Rules.Bindings,
+	keyLayout: Rules.Layout?,
 	screen: Vector2,
 	titles: { [string]: string },
 	onClose: () -> ()
@@ -293,12 +299,12 @@ function ControlsPanel.build(
 	local tip, tipText = tooltip(gui)
 	local panel: Panel =
 		{ gui = gui, columns = columns, infos = {}, tip = tip, tipText = tipText, pinned = nil }
-	local groups = Config.HELP.groups
+	local groups = help.groups
 	local heights = table.create(#groups)
 	for _, group in groups do
 		table.insert(heights, #group.rows + 1)
 	end
-	local values = Rules.formatted(Config.HELP.values)
+	local values = Rules.formatted(help.values)
 	for index, members in Rules.columns(heights, columns) do
 		local column = Instance.new("Frame")
 		column.Name = `Column{index}`
@@ -320,7 +326,7 @@ function ControlsPanel.build(
 			title.LayoutOrder = order
 			for _, entry in group.rows do
 				order += 1
-				row(panel, column, entry, bindings, values, order)
+				row(panel, column, entry, help, bindings, keyLayout, values, order)
 			end
 		end
 	end

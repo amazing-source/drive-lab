@@ -16,21 +16,20 @@ local TUNING: CarShake.Tuning = {
 		dip = 0.06,
 		rise = 0.15,
 		settle = 0.15,
-		modes = { Strada = 0.35, Corsa = 1 },
 	},
 	-- The cockpit takes only the kick, so the kick can be read exactly; the others take all.
 	views = { Chase = VIEW, Cockpit = KICK, Hood = VIEW },
 	scale = 1,
 }
 
-local function input(gear: number, mode: string?): CarShake.Input
+local function input(gear: number, shiftScale: number?): CarShake.Input
 	return {
 		view = "Cockpit",
 		speedKmh = 0,
 		throttle = 0,
 		longitudinalG = 0,
 		gear = gear,
-		mode = mode or "Corsa",
+		shiftScale = shiftScale or 1,
 	}
 end
 
@@ -74,16 +73,16 @@ describe("CarShake", function()
 		end
 	end)
 
-	it("kicks on an upshift, not a downshift or the first gear seen, scaled by mode", function()
+	it("kicks on an upshift, not a downshift or the first gear seen, scaled by the gearbox", function()
 		local state = CarShake.new()
 		CarShake.step(state, input(3), 1 / 60, TUNING)
 		expect(state.shiftAge > 1).toBe(true)
 		CarShake.step(state, input(2), 1 / 60, TUNING)
 		expect(state.shiftAge > 1).toBe(true)
-		CarShake.step(state, input(3, "Strada"), 1 / 60, TUNING)
+		CarShake.step(state, input(3, 0.35), 1 / 60, TUNING)
 		expect(state.shiftAge).toBe(0)
 		expect(state.shiftScale).toBe(0.35)
-		local strada = CarShake.step(state, input(3, "Strada"), 0.06, TUNING).pitch
+		local strada = CarShake.step(state, input(3, 0.35), 0.06, TUNING).pitch
 		local corsa = CarShake.new()
 		CarShake.step(corsa, input(2), 1 / 60, TUNING)
 		CarShake.step(corsa, input(3), 1 / 60, TUNING)
@@ -99,7 +98,7 @@ describe("CarShake", function()
 	it("stays within the sum of its parts at every frame", function()
 		local state = CarShake.new()
 		local fast: CarShake.Input =
-			{ view = "Chase", speedKmh = 300, throttle = 1, longitudinalG = 1, gear = 6, mode = "Corsa" }
+			{ view = "Chase", speedKmh = 300, throttle = 1, longitudinalG = 1, gear = 6, shiftScale = 1 }
 		local bound = math.rad(
 			CarShake.roadDegrees(300, TUNING)
 				+ CarShake.engineDegrees(1, 300, TUNING)

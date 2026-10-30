@@ -1,5 +1,6 @@
 --!strict
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterGui = game:GetService("StarterGui")
 
 local Isolate = require(ReplicatedStorage.Kit.Isolate)
 local Log = require(ReplicatedStorage.Kit.Log)
@@ -19,10 +20,12 @@ local START_ORDER = {
 	Controllers.CockpitGlazing,
 	Controllers.CarDoor,
 	Controllers.Cluster,
+	Controllers.Binnacle,
 	Controllers.DriverArms,
 	Controllers.DriverLegs,
 	Controllers.StreetLights,
 	Controllers.CarLights,
+	Controllers.CarSwitches,
 	Controllers.RimBlur,
 	Controllers.Reflectors,
 	Controllers.Hud,
@@ -34,6 +37,10 @@ local START_ORDER = {
 	Controllers.DrivingEffects,
 	-- Controllers.RunWrap is off: the owner rejected the run's wind swirl (2026-10-27).
 }
+
+-- The game gives no tools, and Roblox's backpack would keep the number keys for its hotbar: the
+-- DR458's rain light is on the key printed 1 (Config/Controls).
+StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
 
 -- Each controller starts in isolation, so one that throws or yields cannot stop the others.
 for _, module in START_ORDER do

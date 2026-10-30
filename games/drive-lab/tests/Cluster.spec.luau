@@ -6,7 +6,7 @@ local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect
 
-local FACE = SVJ.cluster
+local FACE = assert(SVJ.cluster, "the SVJ has a dial face")
 
 -- A UIGradient whose transparency steps from 0 to 1 at its middle, rotated `rotation` degrees
 -- clockwise: a point of the square image shows if it lies on the gradient's opaque first half.

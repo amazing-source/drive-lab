@@ -144,7 +144,7 @@ function Model.new(car: CarConfig, help: InputHelp.InputHelp?): VehicleState
 			groundSpeed = 0,
 			throttle = 0,
 			brake = 0,
-			mode = car.modes.Strada,
+			mode = car.modes[car.modeOrder[1]],
 			gearboxMode = "auto",
 			holdGear = false,
 		},
@@ -167,7 +167,8 @@ local function gearboxContext(
 	context.brake = state.controls.brake
 	context.mode = state.car.modes[input.drivingMode]
 	context.gearboxMode = input.gearboxMode
-	context.holdGear = state.launch.phase == "Launching" and not state.car.launch.autoUpshift
+	local launch = state.car.launch
+	context.holdGear = state.launch.phase == "Launching" and launch ~= nil and not launch.autoUpshift
 	return context
 end
 
@@ -263,6 +264,7 @@ local function runElectronics(
 	local braking = state.controls.brake > BRAKING or escBraking
 	Electronics.updateAbs(
 		car.electronics,
+		mode,
 		electronics,
 		input.assists.abs,
 		braking,
@@ -271,10 +273,11 @@ local function runElectronics(
 		dt
 	)
 	-- A launch works the tyres at its own slip, even with TC switched off.
+	local launch = car.launch
 	local launching = state.launch.phase == "Launching"
 	Electronics.updateTc(
 		car.electronics,
-		if launching then car.launch.slipRatio else mode.tcSlipRatio,
+		if launching and launch then launch.slipRatio else mode.tcSlipRatio,
 		electronics,
 		input.assists.tc or launching,
 		state.controls.throttle,
@@ -294,7 +297,7 @@ local function setLoads(state: VehicleState, mode: Types.ModeConfig, throttle: n
 	loads.clutchCapacity = Gearbox.clutchCapacity(car.gearbox, state.gearbox)
 	loads.couplingCapacity = Driveline.couplingCapacity(mode, drive.outputTorque, drive.clutchTorque >= 0)
 	loads.lsdCapacity =
-		Driveline.lsdCapacity(car.driveline, Driveline.rearInputTorque(state.driveline, drive))
+		Driveline.lsdCapacity(car.driveline, mode, Driveline.rearInputTorque(state.driveline, drive))
 	loads.lossCapacity = (1 - car.driveline.efficiency) * math.abs(drive.outputTorque)
 	for wheel = 1, Geometry.WHEELS do
 		loads.brakeCapacity[wheel] = Brakes.torque(

@@ -5,7 +5,8 @@
 	where the source data is in rpm. `define` checks the invariants the physics relies on and
 	freezes the whole tree, so a module can never tune a car at run time.
 ]]
-export type DrivingMode = "Strada" | "Sport" | "Corsa"
+-- One of the names in the car's `modeOrder`.
+export type DrivingMode = string
 
 export type TyreConfig = {
 	-- Dynamic rolling radius under load, not the free radius.
@@ -195,9 +196,15 @@ export type ModeConfig = {
 	escOversteer: number,
 	escUndersteer: number,
 	escSideslip: number,
+	-- Calibrations a mode may set in place of the car's own (`electronics`, `driveline`), as a
+	-- manettino position selects its ABS and E-Diff maps.
+	absReleaseSlip: number?,
+	absReapplySlip: number?,
+	lsdPowerRamp: number?,
+	lsdCoastRamp: number?,
 }
 
-export type Modes = { Strada: ModeConfig, Sport: ModeConfig, Corsa: ModeConfig }
+export type Modes = { [DrivingMode]: ModeConfig }
 
 -- Launch control (Vehicle/Launch). The rpm it holds is the engine's `launchRpm`.
 export type LaunchConfig = {
@@ -241,7 +248,10 @@ export type CarConfig = {
 	aero: AeroConfig,
 	steering: SteeringConfig,
 	modes: Modes,
-	launch: LaunchConfig,
+	-- The order the drive-mode control steps through the modes; a car starts in the first.
+	modeOrder: { DrivingMode },
+	-- A car without launch control never arms one.
+	launch: LaunchConfig?,
 	simulation: SimulationConfig,
 }
 
@@ -264,6 +274,26 @@ local function checkTyre(tyre: TyreConfig, axle: string)
 	assert(tyre.slidingRatioY > 0 and tyre.slidingRatioY < 1, `{axle} slidingRatioY must be in (0, 1)`)
 	assert(tyre.curvatureX < 1 and tyre.curvatureY < 1, `{axle} tyre curvature must be below 1`)
 	assert(tyre.relaxationLengthX > 0 and tyre.relaxationLengthY > 0, `{axle} relaxation lengths`)
+end
+
+-- The drive-mode control steps through every mode the car has, each once.
+local function checkModes(car: CarConfig)
+	local listed: { [string]: boolean } = {}
+	for _, name in car.modeOrder do
+		assert(car.modes[name], `the mode order names "{name}", which the car has no mode for`)
+		assert(not listed[name], `the mode order names "{name}" twice`)
+		listed[name] = true
+	end
+	for name in car.modes do
+		assert(listed[name], `the mode order leaves out the "{name}" mode`)
+	end
+	local launch = car.launch
+	if launch then
+		assert(
+			car.modes[launch.mode],
+			`launch control arms in "{launch.mode}", which the car has no mode for`
+		)
+	end
 end
 
 -- Validates a car and freezes it. Errors name the field, so a bad config fails at load time.
@@ -295,10 +325,11 @@ function Types.define(car: CarConfig): CarConfig
 		car.gearbox.reverseCutBand > 0 and car.gearbox.reverseCutBand < car.gearbox.reverseMaxSpeed,
 		"the reverse cut must fit between a standstill and reverse's top speed"
 	)
-	assert(
-		car.launch.slipRatio > 0 and car.launch.endSpeed > 0,
-		"launch control needs a slip and an end speed"
-	)
+	local launch = car.launch
+	if launch then
+		assert(launch.slipRatio > 0 and launch.endSpeed > 0, "launch control needs a slip and an end speed")
+	end
+	checkModes(car)
 	return deepFreeze(car)
 end
 

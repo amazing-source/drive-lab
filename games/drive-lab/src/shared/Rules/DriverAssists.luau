@@ -7,12 +7,20 @@
 ]]
 local Interface = require("../Vehicle/Interface")
 
-export type Tuning = {
+export type EscButton = {
 	-- Seconds the control is held to switch ESC off.
-	offHoldSeconds: number,
-	-- The systems that run with ESC on, and with ESC switched off.
-	on: Interface.Assists,
+	holdSeconds: number,
+	-- The systems that run with ESC switched off.
 	off: Interface.Assists,
+}
+
+export type Tuning = {
+	-- The systems that run, unless the drive mode or the ESC button says otherwise.
+	on: Interface.Assists,
+	-- Drive modes that set the systems themselves, as a manettino position switches TC off.
+	modes: { [string]: Interface.Assists }?,
+	-- A car without one has no control that switches ESC off.
+	escButton: EscButton?,
 	-- Flashes a second of the cluster's ESC light while ESC acts.
 	lampFlashHz: number,
 }
@@ -37,9 +45,10 @@ function DriverAssists.newSwitch(): Switch
 	return { off = false, heldSince = nil, spent = false }
 end
 
--- Advances the control by whether it is held at `now`. Held for `offHoldSeconds` it switches ESC
--- off; pressed while ESC is off it switches it on at once. Returns true on the frame it switches.
-function DriverAssists.updateSwitch(switch: Switch, held: boolean, now: number, tuning: Tuning): boolean
+-- Advances the control by whether it is held at `now`. Held for the button's `holdSeconds` it
+-- switches ESC off; pressed while ESC is off it switches it on at once. Returns true on the frame
+-- it switches.
+function DriverAssists.updateSwitch(switch: Switch, held: boolean, now: number, button: EscButton): boolean
 	if not held then
 		switch.heldSince = nil
 		switch.spent = false
@@ -58,7 +67,7 @@ function DriverAssists.updateSwitch(switch: Switch, held: boolean, now: number, 
 		end
 		return false
 	end
-	if now - since >= tuning.offHoldSeconds then
+	if now - since >= button.holdSeconds then
 		switch.off = true
 		switch.spent = true
 		return true
@@ -66,8 +75,14 @@ function DriverAssists.updateSwitch(switch: Switch, held: boolean, now: number, 
 	return false
 end
 
-function DriverAssists.assists(escOff: boolean, tuning: Tuning): Interface.Assists
-	return if escOff then tuning.off else tuning.on
+-- With ESC switched off, the button's systems; otherwise the drive mode's, if it sets them.
+function DriverAssists.assists(escOff: boolean, mode: string, tuning: Tuning): Interface.Assists
+	local button = tuning.escButton
+	if escOff and button then
+		return button.off
+	end
+	local modes = tuning.modes
+	return if modes and modes[mode] then modes[mode] else tuning.on
 end
 
 function DriverAssists.telltale(enabled: boolean, acting: boolean): Telltale
