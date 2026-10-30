@@ -1,0 +1,20 @@
+Mutation proof for #98, branch agent/audio-dr458-pack. Each break applied alone, the check run, the file restored.
+== M1 the DR458 pack loses its 4,900 rpm on loop
+FAIL CarAudio config > DR458: plays its loudest loop within x0.7 to x1.4 of its pitch from 1,500 rpm to the limiter: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\audio-dr458-pack\games\drive-lab\tests\CarAudio.spec:121: expected a truthy value, got false
+67 spec files, 578 passed, 1 failed
+== M2 the idle hands over at 1,400 rpm
+FAIL CarAudio config > DR458: plays its loudest loop within x0.55 to x1.6 of its pitch through the idle's hand-over: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\audio-dr458-pack\games\drive-lab\tests\CarAudio.spec:113: expected a truthy value, got false
+FAIL CarAudio config > DR458: plays its loudest loop within x0.7 to x1.4 of its pitch from 1,500 rpm to the limiter: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\audio-dr458-pack\games\drive-lab\tests\CarAudio.spec:122: expected a truthy value, got false
+67 spec files, 577 passed, 2 failed
+== M3 the last pop region runs past the end of the DR458 events file
+FAIL CarAudio config > DR458: keeps every one-shot region inside the events file, in order and apart: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\audio-dr458-pack\games\drive-lab\tests\CarAudio.spec:48: expected a truthy value, got false
+67 spec files, 578 passed, 1 failed
+== M4 a car in the catalog (the SVJ) has a loop that is not uploaded
+FAIL CarAudio config > points every loop and the events file of every car the catalog rigs at an uploaded asset: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\audio-dr458-pack\games\drive-lab\tests\CarAudio.spec:26: expected a truthy value, got false
+67 spec files, 578 passed, 1 failed
+== M5 the timeline reads the pop settings by their old names again (main's version, #91)
+FAIL games/drive-lab/tools/audio_timeline.luau (exit 1)
+C:\Users\bfhdh\Downloads\drive-lab\.worktrees\audio-dr458-pack\games/drive-lab/tools/audio_timeline:149: attempt to compare number < nil
+7 tools, 7 run, 1 failed
+== restored
+67 spec files, 579 passed, 0 failed
