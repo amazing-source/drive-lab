@@ -388,6 +388,76 @@
       "name": "Cage_Paint_Node02"
     },
     {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_Trim_Alcantara_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_Trim_Alcantara_02"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_Trim_PlasticBlack_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_Trim_PlasticBlack_05"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cabin_Trim_Stitching_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Dash_Alcantara_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Dash_Alcantara_02"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Dash_CarbonSatin_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Dash_PlasticBlack_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Dash_PlasticBlack_02"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Dash_PlasticBlack_03"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Dash_PlasticBlack_04"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Dash_PlasticBlack_05"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Dash_Stitching_01"
+    },
+    {
       "group": "Door_L",
       "motion": "static",
       "name": "Door_L_Card"
@@ -748,6 +818,11 @@
         "right": -0.30219,
         "up": 0.81224
       }
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cooler_Decal_Logo"
     },
     {
       "group": "Chassis",
