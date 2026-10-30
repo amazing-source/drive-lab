@@ -4,11 +4,13 @@ loops played at the speeds and volumes the car's audio controller would set, fra
 plus the start-up, gear clunks and pops at their times. A preview of what the game mixes, made
 without Studio; Roblox's own resampling and 3D panning are not reproduced.
 
-    python -I tools/audio/render_preview.py <timeline.json> <loops dir> <out.mp3>
+    python -I tools/audio/render_preview.py <timeline.json> <loops dir> <out.mp3> [from s] [to s]
 
-<loops dir> holds the uploaded set (eng_idle.ogg, eng_on.ogg, eng_off.ogg, eng_limiter.ogg,
-events.ogg; tools/audio/cut_loops.py). Layers are taken in the SVJ's pack's order (Config/Cars/SVJ/Audio): idle, on,
-off. Decoding and the MP3 go through ffmpeg.
+<loops dir> holds the car's set (tools/audio/cut_loops.py for the SVJ, cut_dr458.py for the
+DR458); the timeline names each layer's file in the pack's order, and the limiter and events
+files. [from s] [to s] keep a stretch of the run. Every file is matched to -16 LUFS (K-weighted,
+ungated), lower only if a peak would pass -1 dBFS, so two renders compare at the same loudness.
+Decoding and the MP3 go through ffmpeg.
 """
 
 import json
@@ -17,9 +19,11 @@ import subprocess
 import sys
 
 import numpy as np
+from scipy.signal import lfilter
 
 RATE = 48000
-LAYER_FILES = ("eng_idle.ogg", "eng_on.ogg", "eng_off.ogg")
+TARGET_LUFS = -16.0
+PEAK_CEILING_DB = -1.0
 
 
 def decode(path):
@@ -47,8 +51,16 @@ def one_shot(audio, start, end, speed):
     return np.stack([np.interp(source, np.arange(len(piece)), piece[:, c]) for c in range(2)], axis=1)
 
 
-def main(timeline_path, loops, out):
+def loudness(x):
+    """BS.1770 K-weighting (its 48 kHz coefficients), ungated."""
+    shelf = lfilter([1.53512485958697, -2.69169618940638, 1.19839281085285], [1.0, -1.69065929318241, 0.73248077421585], x, axis=0)
+    weighted = lfilter([1.0, -2.0, 1.0], [1.0, -1.99004745483398, 0.99007225036621], shelf, axis=0)
+    return -0.691 + 10 * np.log10(np.sum(np.mean(weighted**2, axis=0)) + 1e-20)
+
+
+def main(timeline_path, loops, out, start=None, stop=None):
     timeline = json.load(open(timeline_path))
+    files = timeline["files"]
     frames = timeline["frames"]
     times = np.array([f["t"] for f in frames])
     total = int((times[-1] + timeline["dt"]) * RATE)
@@ -58,29 +70,34 @@ def main(timeline_path, loops, out):
         return np.interp(clock, times, np.array(values, dtype=float))
 
     mix = np.zeros((total, 2))
-    for index, name in enumerate(LAYER_FILES):
+    for index, name in enumerate(files["layers"]):
         audio = decode(os.path.join(loops, name))
         mix += loop_play(audio, track([f["speeds"][index] for f in frames]), track([f["volumes"][index] for f in frames]))
-    limiter = decode(os.path.join(loops, "eng_limiter.ogg"))
+    limiter = decode(os.path.join(loops, files["limiter"]))
     mix += loop_play(limiter, track([f["limiterSpeed"] for f in frames]), track([f["limiter"] for f in frames]))
 
-    events = decode(os.path.join(loops, "events.ogg"))
+    events = decode(os.path.join(loops, files["events"]))
     for shot in timeline["shots"]:
         piece = one_shot(events, shot["from"], shot["to"], shot["speed"]) * shot["volume"]
         at = int(shot["t"] * RATE)
         end = min(total, at + len(piece))
         mix[at:end] += piece[: end - at]
 
-    peak = np.abs(mix).max()
-    mix *= 10 ** (-1 / 20) / peak
+    if start is not None:
+        mix = mix[int(float(start) * RATE) : int(float(stop) * RATE)]
+        total = len(mix)
+    gain_db = TARGET_LUFS - loudness(mix)
+    peak_db = 20 * np.log10(np.abs(mix).max() + 1e-12)
+    gain_db = min(gain_db, PEAK_CEILING_DB - peak_db)
+    mix *= 10 ** (gain_db / 20)
     raw = mix.astype(np.float32).tobytes()
     subprocess.run(
         ["ffmpeg", "-v", "error", "-y", "-f", "f32le", "-ar", str(RATE), "-ac", "2", "-i", "-", "-b:a", "192k", out],
         input=raw,
         check=True,
     )
-    print(f"{out}: {total / RATE:.1f} s, peak normalised to -1 dBFS (gain {20 * np.log10(10 ** (-1 / 20) / peak):+.1f} dB)")
+    print(f"{out}: {total / RATE:.1f} s, {loudness(mix):.1f} LUFS, peak {20 * np.log10(np.abs(mix).max() + 1e-12):.1f} dBFS (gain {gain_db:+.1f} dB)")
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:4])
+    main(*sys.argv[1:6])

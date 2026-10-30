@@ -8,9 +8,7 @@ local fs = require("@lune/fs")
 local process = require("@lune/process")
 
 -- Tools that already failed when this check was added, each with the issue that tracks it.
-local KNOWN_BROKEN: { [string]: string } = {
-	["games/drive-lab/tools/audio_timeline.luau"] = "#91, reads pop settings by names Config/CarAudio no longer has",
-}
+local KNOWN_BROKEN: { [string]: string } = {}
 
 local tools: { string } = {}
 for _, game in fs.readDir("games") do

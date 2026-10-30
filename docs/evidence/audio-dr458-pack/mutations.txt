@@ -1,0 +1,36 @@
+Mutation proof for #98, branch agent/audio-dr458-pack. Each break applied alone, the check run, the file restored.
+== M1 the DR458 pack loses its 4,900 rpm on loop
+FAIL CarAudio config > DR458: plays its loudest loop within x0.7 to x1.4 of its pitch from 1,500 rpm to the limiter: tests\CarAudio.spec:121: expected a truthy value, got false
+67 spec files, 578 passed, 1 failed
+== M2 the idle hands over at 1,400 rpm
+FAIL CarAudio config > DR458: plays its loudest loop within x0.55 to x1.6 of its pitch through the idle's hand-over: tests\CarAudio.spec:113: expected a truthy value, got false
+FAIL CarAudio config > DR458: plays its loudest loop within x0.7 to x1.4 of its pitch from 1,500 rpm to the limiter: tests\CarAudio.spec:122: expected a truthy value, got false
+67 spec files, 577 passed, 2 failed
+== M3 the last pop region runs past the end of the DR458 events file
+FAIL CarAudio config > DR458: keeps every one-shot region inside the events file, in order and apart: tests\CarAudio.spec:48: expected a truthy value, got false
+67 spec files, 578 passed, 1 failed
+== M4 a car in the catalog (the SVJ) has a loop that is not uploaded
+FAIL CarAudio config > points every loop and the events file of every car the catalog rigs at an uploaded asset: tests\CarAudio.spec:26: expected a truthy value, got false
+67 spec files, 578 passed, 1 failed
+== M5 the timeline reads the pop settings by their old names again (main's version, #91)
+FAIL games/drive-lab/tools/audio_timeline.luau (exit 1)
+games/drive-lab/tools/audio_timeline:149: attempt to compare number < nil
+7 tools, 7 run, 1 failed
+== M6 a DR458 pop chance above 1 (after the 1/2/OFF keys)
+FAIL CarAudio config > DR458: gives every pop a chance between 0 and 1 in every mode: tests\CarAudio.spec:69: expected a truthy value, got false
+68 spec files, 598 passed, 1 failed
+== M7 the SVJ's Strada pops on more upshifts than Sport
+FAIL CarAudio config > SVJ: keeps Strada the most restrained mode for every pop: tests\CarAudio.spec:84: expected a truthy value, got false
+68 spec files, 598 passed, 1 failed
+== M8 a DR458 loop id emptied after the upload (the DR458 is not in the catalog yet)
+FAIL CarAudio config > DR458: points every loop and its events file at an uploaded asset: tests\CarAudio.spec:39: expected a truthy value, got false
+68 spec files, 600 passed, 1 failed
+== M9 a DR458 pop chance keyed by a mode the car does not have (after B2's modeOrder)
+FAIL CarAudio config > DR458: keys every pop chance by exactly the car's own modes: tests\CarAudio.spec:96: expected a truthy value, got false
+72 spec files, 638 passed, 1 failed
+== M10 the DR458's limiter raised to 11,600 rpm, past what its top loop covers
+FAIL DR458 calibration > tops gears 1 to 6 within 1.5 % of their limiter speed (the table has no tyre slip): tests\CalibrationDR458.spec:42: expected 0.9925 within 0.0075, got 0.9020711430126427
+FAIL CarAudio config > DR458: plays its loudest loop within x0.7 to x1.4 of its pitch from 1,500 rpm to the limiter: tests\CarAudio.spec:152: expected a truthy value, got false
+72 spec files, 637 passed, 2 failed
+== restored
+72 spec files, 639 passed, 0 failed
