@@ -88,8 +88,8 @@ local function image(name: string, sprite: Binnacle.Sprite, zIndex: number): Ima
 	return label
 end
 
--- A value's text, sized so its capitals fill the slot's height, centred in the slot. TextSize
--- stops at 100, so a larger size is set smaller and scaled up.
+-- A value's text, sized so its capitals and their outline fill the slot's height, centred in the
+-- slot. TextSize stops at 100, so a larger size is set smaller and scaled up.
 local function text(
 	holder: ImageLabel,
 	slot: Binnacle.Rect,
@@ -97,7 +97,8 @@ local function text(
 	font: Binnacle.Font,
 	rgb: Cluster.Rgb
 ): TextLabel
-	local size = slot.height * page.Y / font.capHeight
+	local capitals = slot.height * page.Y / (1 + 2 * font.stroke)
+	local size = capitals / font.capHeight
 	local scale = math.max(1, size / MAX_TEXT_SIZE)
 	local label = Instance.new("TextLabel")
 	label.BackgroundTransparency = 1
@@ -109,6 +110,13 @@ local function text(
 	label.AnchorPoint = Vector2.new(0.5, 0.5)
 	label.Position = UDim2.new(slot.x + slot.width / 2, 0, slot.y + slot.height / 2, -font.capOffset * size)
 	label.Size = UDim2.fromOffset(slot.width * page.X / scale, size / scale)
+	if font.stroke > 0 then
+		local outline = Instance.new("UIStroke")
+		outline.Color = label.TextColor3
+		outline.LineJoinMode = Enum.LineJoinMode.Miter
+		outline.Thickness = font.stroke * capitals / scale
+		outline.Parent = label
+	end
 	local uiScale = Instance.new("UIScale")
 	uiScale.Scale = scale
 	uiScale.Parent = label

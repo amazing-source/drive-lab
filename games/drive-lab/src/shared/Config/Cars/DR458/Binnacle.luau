@@ -36,8 +36,9 @@ local Screen: Binnacle.Screen = table.freeze({
 	font = table.freeze({
 		family = "rbxasset://fonts/families/Michroma.json",
 		weight = "Regular" :: "Regular",
-		capHeight = 0.7,
-		capOffset = 0,
+		capHeight = 0.542,
+		capOffset = 0.052,
+		stroke = 0.06,
 	}),
 	valueRgb = Layout.valueRgb,
 	pillTextRgb = Layout.pillTextRgb,

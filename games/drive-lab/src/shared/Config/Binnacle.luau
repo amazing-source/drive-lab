@@ -88,6 +88,9 @@ export type Font = {
 	-- as shares of the TextSize.
 	capHeight: number,
 	capOffset: number,
+	-- A same-colour outline that thickens the glyphs toward the design's weight, as a share of
+	-- the capitals' height on each side; 0 for none.
+	stroke: number,
 }
 
 export type Screen = {
