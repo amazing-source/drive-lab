@@ -3,8 +3,8 @@
 	The live binnacle display of the car the local player drives, on a car whose display is one
 	(its entry's binnacle; Controllers/Cluster draws a dial face): the shift lights, the page the
 	display switch has stepped to (DisplayPage, Controllers/CarSwitches) and its readouts, on the
-	screen the rig mounts in the binnacle and the strip's lenses. Dark until START is pressed. Built once per drive, then
-	updated from the car's readouts a few dozen times a second.
+	screen the rig mounts in the binnacle and on the strip's lenses. Dark until START is pressed.
+	Built once per drive, then updated from the car's readouts a few dozen times a second.
 ]]
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")

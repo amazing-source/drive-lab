@@ -203,6 +203,7 @@ function BinnacleView.build(part: BasePart, model: Model, screen: Binnacle.Scree
 	local title = Instance.new("Frame")
 	title.Name = "TitleStrip"
 	title.BorderSizePixel = 0
+	title.ZIndex = 0
 	title.Visible = false
 	title.Parent = background
 	local view: View = {

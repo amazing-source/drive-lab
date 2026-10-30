@@ -269,7 +269,8 @@ describe("The DR458's design layout", function()
 			expect(string.match(a.image, "^rbxassetid://%d+$") ~= nil and "uploaded").toBe("uploaded")
 			for j = i + 1, #sprites do
 				local b = sprites[j]
-				expect(a.image ~= b.image or not overlap(a, b)).toBe(true)
+				local apart = a.image ~= b.image or not overlap(a, b)
+				expect(apart and "apart" or `pictures {i} and {j}`).toBe("apart")
 			end
 		end
 	end)

@@ -77,6 +77,11 @@ Under the same creator as the HUD's images. Resolve each decal to its image id i
 - values are texts sized so their capitals fill their slot (`font.capHeight`, `font.capOffset`,
   measured in Studio for the chosen font); TextSize stops at 100, so the gear is scaled up with a
   UIScale;
+- the font is Michroma, chosen in a Studio capture against Jura, Sarpanch, Titillium, SciFi and
+  Montserrat: it has the design's wide, squared shapes. It has one weight, half as heavy as the
+  design's values (stems 0.127 of the cap height against 0.246), so a same-colour UIStroke of
+  0.06 of the cap height on each side thickens it. Measured on a capture: capitals 0.542 of the
+  TextSize, their middle 0.052 of it below the box's middle;
 - each lamp is drawn on its own lens (`ShiftLight_1` to `ShiftLight_8` on the model, face
   `lensFace`), unlit or lit in the colour `Rules.strip` gives.
 
