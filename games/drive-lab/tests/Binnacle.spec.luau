@@ -1,7 +1,9 @@
 --!strict
 local Binnacle = require("../src/shared/Config/Binnacle")
+local DR458Physics = require("../src/shared/Config/Cars/DR458/Physics")
 local DR458Screen = require("../src/shared/Config/Cars/DR458/Binnacle")
 local DR458Switches = require("../src/shared/Config/Cars/DR458/Switches")
+local DriveSim = require("../tools/DriveSim")
 local Rules = require("../src/shared/Rules/Binnacle")
 local T = require("../../../tools/test/T")
 
@@ -181,6 +183,21 @@ describe("The DR458's design layout", function()
 		end
 		expect(segments[1].rpm < DR458Screen.barFromRpm and "below").toBe("below")
 		expect(segments[#segments].rpm >= DR458Screen.redlineRpm and "past").toBe("past")
+	end)
+
+	it("lights the first two segments at idle and holds them there, as photo 011 shows", function()
+		local sim = DriveSim.new(DR458Physics)
+		local parked = DriveSim.input({ drivingMode = "1" })
+		local lowest, highest = math.huge, 0
+		while sim.time < 5 do
+			local rpm = DriveSim.frame(sim, parked, 1 / 60).telemetry.rpm
+			lowest, highest = math.min(lowest, rpm), math.max(highest, rpm)
+		end
+		expect(Rules.litSegments(band.segments, DR458Physics.engine.idleRpm)).toBe(2)
+		expect(Rules.litSegments(band.segments, lowest)).toBe(2)
+		expect(Rules.litSegments(band.segments, highest)).toBe(2)
+		-- Kept clear of the idle, so a sag below it cannot flicker the second segment.
+		expect(Rules.litSegments(band.segments, 0.9 * lowest)).toBe(2)
 	end)
 
 	it("reads each printed mark between the segments it is printed over", function()

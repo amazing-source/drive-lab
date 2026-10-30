@@ -17,7 +17,9 @@ How it finds things:
 - Segments are the dark shapes inside the red band, the tick numbers the dark digits above them.
   Each segment's rpm is read off the tick numbers: every number is projected onto the band (the
   nearest point on the line through the segments' top edges) and the segments between two numbers
-  are spread evenly between their values, so the band's own uneven spacing is kept.
+  are spread evenly between their values, so the band's own uneven spacing is kept. Below the
+  first number the pack says nothing, so the segments there follow the real screen instead: the
+  ones it lights at idle (IDLE_LIT) light up to IDLE_LIT_RPM.
 - Labels are the light text of the empty pages, grouped into words and matched to the page's
   label list by their rough place. Each value's slot is centred on its label, and its height and
   top are the capitals of the example value in the matching filled page.
@@ -43,6 +45,11 @@ GAP = 2
 SEGMENT_SCALE = 0.5
 LAMP_CELL = 64
 MARKS = [2, 3, 4, 5, 6, 7, 8, 9]
+# The real screen lights its first two segments at idle (photo 011), below the first tick
+# number. They light evenly up to IDLE_LIT_RPM, kept under the DR458's lowest idle so they do
+# not flicker there.
+IDLE_LIT = 2
+IDLE_LIT_RPM = 900
 
 # Each page's labels in the order of Config/Cars/DR458/Binnacle.luau, with a rough centre in
 # design pixels used only to tell which detected word is which.
@@ -231,6 +238,13 @@ def band(page):
             i = max(j for j in range(len(ats) - 1) if ats[j] <= k)
         slope = (rpms[i + 1] - rpms[i]) / (ats[i + 1] - ats[i])
         f["rpm"] = int(round(rpms[i] + (k - ats[i]) * slope))
+    if IDLE_LIT >= ats[0] + 1:
+        raise SystemExit(f"the first tick number falls on a segment lit at idle (at {ats[0]:.2f})")
+    for k in range(IDLE_LIT):
+        segments[k]["rpm"] = int(round(IDLE_LIT_RPM * (k + 1) / IDLE_LIT))
+    thresholds = [f["rpm"] for f in segments]
+    if any(b <= a for a, b in zip(thresholds, thresholds[1:])):
+        raise SystemExit(f"segment thresholds do not rise along the band: {thresholds[:6]}")
     return labels, segments, marks, worst
 
 
