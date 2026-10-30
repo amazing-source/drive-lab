@@ -18,11 +18,12 @@ local function travel(control: string): number
 end
 
 local Startup: CarEntry.Startup = {
-	-- EST times, agreed with the animator, who keys the hands to them.
+	-- EST, the animator's from the hand's reach in the cockpit: from the thigh to the key 0.28 m,
+	-- from the key to the guard's edge 0.31 m. Each move arrives at `at`.
 	moves = {
-		{ control = "TunnelKey_Master", angle = travel("TunnelKey_Master"), move = 0.35, at = 0.3 },
-		{ control = "PanelGuard_Ignition", angle = travel("PanelGuard_Ignition"), move = 0.25, at = 1.05 },
-		{ control = "PanelSwitch_Ignition", angle = travel("PanelSwitch_Ignition"), move = 0.1, at = 1.45 },
+		{ control = "TunnelKey_Master", angle = travel("TunnelKey_Master"), move = 0.35, at = 1.0 },
+		{ control = "PanelGuard_Ignition", angle = travel("PanelGuard_Ignition"), move = 0.25, at = 1.7 },
+		{ control = "PanelSwitch_Ignition", angle = travel("PanelSwitch_Ignition"), move = 0.1, at = 1.95 },
 	},
 	pressAt = 2.4,
 	wheelAt = 3.9,

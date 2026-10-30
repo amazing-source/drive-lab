@@ -323,20 +323,24 @@ describe("DR458 binding: which way each part turns, as the rig turns it", functi
 end)
 
 describe("DR458 start-up", function()
-	it("turns each of its controls through the binding's travel, in order, before START", function()
-		local controls = Model.controls
-		assert(controls, "the DR458 has controls")
-		local last = -1
-		for _, move in Startup.moves do
-			local hinge = controls[move.control]
-			expect(hinge and move.angle).toBe(hinge and hinge.travel)
-			expect(move.at > last).toBe(true)
-			last = move.at
-			expect(move.at + move.move <= Startup.pressAt).toBe(true)
+	it(
+		"turns each of its controls through the binding's travel, one after another, after the start key and before START",
+		function()
+			local controls = Model.controls
+			assert(controls, "the DR458 has controls")
+			-- A move turns over `move` seconds and arrives at `at` (Rules/CarEntry.controlOpenness).
+			local free = 0
+			for _, move in Startup.moves do
+				local hinge = controls[move.control]
+				expect(hinge and move.angle).toBe(hinge and hinge.travel)
+				expect(move.at - move.move >= free).toBe(true)
+				free = move.at
+				expect(move.at <= Startup.pressAt).toBe(true)
+			end
+			expect(Startup.moves[1].control).toBe("TunnelKey_Master")
+			expect(Startup.moves[3].control).toBe("PanelSwitch_Ignition")
 		end
-		expect(Startup.moves[1].control).toBe("TunnelKey_Master")
-		expect(Startup.moves[3].control).toBe("PanelSwitch_Ignition")
-	end)
+	)
 end)
 
 describe("ManifestBinding", function()
