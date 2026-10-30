@@ -16,6 +16,9 @@ owner; **read `docs/engineering/AGENTIC_WORKFLOW.md` before your first change.**
   a PR with the template filled, your own self-review comment, CI green. The coordinator merges.
 - Restate the owner's requests as requirements (goal, scope, constraints, acceptance); never paste
   their chat words.
+- Keep diffs readable: a code comment only says what the code cannot (a non-obvious why, a unit,
+  a trap). History, dates, the owner's remarks, "was X" and measurements go in the commit message,
+  the PR and the README decisions table, never in the code (owner, 2026-10-30).
 - Evidence: gates green; every new rule's spec shown failing on a deliberate break; edit-mode
   Studio captures for anything visual; performance numbers for anything per-frame; an honest
   not-verified list. Feel is judged by the owner in Play, not measured by agents.
