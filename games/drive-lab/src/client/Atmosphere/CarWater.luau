@@ -42,8 +42,7 @@ local FLAT_ENOUGH = math.cos(math.rad(40))
 
 local function glazing(model: Model): { [string]: boolean }
 	local names = {}
-	local name = model:GetAttribute("Car")
-	local entry = if typeof(name) == "string" then Catalog[name] else nil
+	local entry = Catalog.of(model)
 	if entry then
 		for _, part in entry.model.glazing do
 			names[part] = true
@@ -136,8 +135,7 @@ local function sprays(model: Model): ({ Spray }, { Attachment })
 	local host = if chassis and chassis:IsA("BasePart")
 		then chassis
 		else model:FindFirstChildWhichIsA("BasePart", true)
-	local name = model:GetAttribute("Car")
-	local entry = if typeof(name) == "string" then Catalog[name] else nil
+	local entry = Catalog.of(model)
 	if host == nil or entry == nil then
 		return {}, {}
 	end

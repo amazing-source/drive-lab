@@ -1,7 +1,7 @@
 --!strict
 local Config = require("../src/shared/Config/RimBlur")
 local RimBlur = require("../src/shared/Rules/RimBlur")
-local SVJ = require("../src/shared/Config/Cars/SVJ")
+local SVJ = require("../src/shared/Config/Cars/SVJ/Physics")
 local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect

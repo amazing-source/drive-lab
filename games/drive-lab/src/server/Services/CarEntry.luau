@@ -439,8 +439,7 @@ local function setup(model: Instance)
 	if not model:IsA("Model") or cars[model] ~= nil then
 		return
 	end
-	local name = model:GetAttribute("Car")
-	local entry = if typeof(name) == "string" then Catalog[name] else nil
+	local entry = Catalog.of(model)
 	local rig = if entry then CarRig.find(model, entry.model) else nil
 	if rig == nil then
 		log.warn(`{model:GetFullName()} is tagged but not rigged; no entry for it`)

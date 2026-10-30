@@ -1,7 +1,7 @@
 --!strict
 local T = require("../../../tools/test/T")
 local Aero = require("../src/shared/Vehicle/Aero")
-local SVJ = require("../src/shared/Config/Cars/SVJ")
+local SVJ = require("../src/shared/Config/Cars/SVJ/Physics")
 local World = require("../src/shared/Config/World")
 
 local describe, it, expect = T.describe, T.it, T.expect

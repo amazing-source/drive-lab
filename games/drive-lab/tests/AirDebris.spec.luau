@@ -3,7 +3,7 @@ local AirDebris = require("../src/shared/Rules/AirDebris")
 local CameraRules = require("../src/shared/Rules/CarCamera")
 local CarCamera = require("../src/shared/Config/CarCamera")
 local Config = require("../src/shared/Config/AirDebris")
-local SVJ = require("../src/shared/Config/Cars/SVJ")
+local SVJ = require("../src/shared/Config/Cars/SVJ/Physics")
 local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect

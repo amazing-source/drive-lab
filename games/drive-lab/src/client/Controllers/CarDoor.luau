@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local Binding = require(ReplicatedStorage.Shared.Config.Cars.Binding)
 local CarEntry = require(ReplicatedStorage.Shared.Config.CarEntry)
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local CarState = require(ReplicatedStorage.Shared.Car.CarState)
@@ -20,7 +21,6 @@ local Config = require(ReplicatedStorage.Shared.Config.CarDoor)
 local Entry = require(ReplicatedStorage.Shared.Rules.CarEntry)
 local DoorStrap = require(ReplicatedStorage.Shared.Rules.DoorStrap)
 local Hinge = require(ReplicatedStorage.Shared.Rules.Hinge)
-local SVJModel = require(ReplicatedStorage.Shared.Config.Cars.SVJModel)
 local Units = require(ReplicatedStorage.Shared.Units)
 
 -- The strap in the chassis's space, in studs: where it is sewn and the card's facing with the
@@ -65,7 +65,7 @@ local function chassisPoint(point: Hinge.CarPoint, raise: number): Hinge.Vector
 	return { x = Units.metresToStuds(v.x), y = Units.metresToStuds(v.y), z = Units.metresToStuds(v.z) }
 end
 
-local function strapOf(rig: CarRig.Rig, binding: SVJModel.CarModel): Strap?
+local function strapOf(rig: CarRig.Rig, binding: Binding.CarModel): Strap?
 	local door = binding.door
 	local strap = door and door.strap
 	local weld = rig.strap
@@ -97,8 +97,7 @@ local function track(model: Instance)
 	if not model:IsA("Model") or cars[model] then
 		return
 	end
-	local name = model:GetAttribute("Car")
-	local entry = if typeof(name) == "string" then Catalog[name] else nil
+	local entry = Catalog.of(model)
 	local binding = entry and entry.model
 	if binding == nil or (binding.door == nil and binding.flap == nil) then
 		return

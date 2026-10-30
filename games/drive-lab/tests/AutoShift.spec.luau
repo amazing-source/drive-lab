@@ -2,7 +2,7 @@
 local DriveSim = require("../tools/DriveSim")
 local Cluster = require("../src/shared/Config/Cluster")
 local ClusterRules = require("../src/shared/Rules/Cluster")
-local SVJ = require("../src/shared/Config/Cars/SVJ")
+local SVJ = require("../src/shared/Config/Cars/SVJ/Physics")
 local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect

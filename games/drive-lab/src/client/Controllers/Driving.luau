@@ -141,8 +141,7 @@ end
 
 local function start(seat: Seat)
 	local model = seat:FindFirstAncestorOfClass("Model")
-	local name = model and model:GetAttribute("Car")
-	local entry = if typeof(name) == "string" then Catalog[name] else nil
+	local entry = if model then Catalog.of(model) else nil
 	local rig = if model and entry then CarRig.find(model, entry.model) else nil
 	if model == nil or entry == nil or rig == nil or rig.seat ~= seat then
 		return

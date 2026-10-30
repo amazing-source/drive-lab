@@ -60,8 +60,7 @@ local function restore()
 end
 
 local function glaze(model: Model)
-	local name = model:GetAttribute("Car")
-	local entry = if typeof(name) == "string" then Catalog[name] else nil
+	local entry = Catalog.of(model)
 	if entry == nil then
 		return
 	end

@@ -1,9 +1,10 @@
 --!strict
+local Binding = require("../src/shared/Config/Cars/Binding")
 local CarEntry = require("../src/shared/Config/CarEntry")
 local DoorStrap = require("../src/shared/Rules/DoorStrap")
 local Entry = require("../src/shared/Rules/CarEntry")
 local Hinge = require("../src/shared/Rules/Hinge")
-local SVJModel = require("../src/shared/Config/Cars/SVJModel")
+local SVJModel = require("../src/shared/Config/Cars/SVJ/Model")
 local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect
@@ -157,7 +158,7 @@ describe("DoorStrap", function()
 
 	describe("the SVJ's strap", function()
 		local door = SVJModel.door :: any
-		local strap = door.strap :: SVJModel.DoorStrap
+		local strap = door.strap :: Binding.DoorStrap
 
 		it("turns with the door as in Blender (door rig, 30 degrees)", function()
 			-- hero_car_door_strap.py strap.json: the top at 30 degrees, Blender

@@ -2,7 +2,7 @@
 local T = require("../../../tools/test/T")
 local DriveSim = require("../tools/DriveSim")
 local Model = require("../src/shared/Vehicle/Model")
-local SVJ = require("../src/shared/Config/Cars/SVJ")
+local SVJ = require("../src/shared/Config/Cars/SVJ/Physics")
 
 local describe, it, expect = T.describe, T.it, T.expect
 

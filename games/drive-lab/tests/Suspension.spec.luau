@@ -1,7 +1,7 @@
 --!strict
 local T = require("../../../tools/test/T")
 local Geometry = require("../src/shared/Vehicle/Geometry")
-local SVJ = require("../src/shared/Config/Cars/SVJ")
+local SVJ = require("../src/shared/Config/Cars/SVJ/Physics")
 local Suspension = require("../src/shared/Vehicle/Suspension")
 local World = require("../src/shared/Config/World")
 

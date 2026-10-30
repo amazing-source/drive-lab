@@ -82,8 +82,7 @@ local TyreSmoke = {}
 -- Emitters behind each tyre of a catalogued car, aimed back and a little up; nil for a model
 -- that is not one.
 function TyreSmoke.new(model: Model): TyreSmoke?
-	local name = model:GetAttribute("Car")
-	local entry = if typeof(name) == "string" then Catalog[name] else nil
+	local entry = Catalog.of(model)
 	local part = host(model)
 	if entry == nil or part == nil then
 		return nil

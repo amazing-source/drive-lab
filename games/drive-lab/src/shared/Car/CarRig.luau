@@ -11,9 +11,9 @@
 local CollectionService = game:GetService("CollectionService")
 local Workspace = game:GetService("Workspace")
 
+local Binding = require("../Config/Cars/Binding")
 local Geometry = require("../Vehicle/Geometry")
 local Hinge = require("../Rules/Hinge")
-local SVJModel = require("../Config/Cars/SVJModel")
 local Types = require("../Config/Cars/Types")
 local Units = require("../Units")
 
@@ -122,7 +122,7 @@ end
 
 -- Imports are real scale; the world is Units.WORLD_SCALE times bigger. Scales the model to it and
 -- sets the tyres back on whatever is under the car.
-local function scaleToWorld(model: Model, binding: SVJModel.CarModel)
+local function scaleToWorld(model: Model, binding: Binding.CarModel)
 	if math.abs(model:GetScale() - Units.WORLD_SCALE) > 1e-3 then
 		model:ScaleTo(Units.WORLD_SCALE)
 	end
@@ -144,7 +144,7 @@ end
 
 -- Lifts every part but the wheels and calipers off the wheels, where the model sits its body
 -- too low; the wheels stay on the ground, so the physics is unchanged.
-local function raiseBody(model: Model, binding: SVJModel.CarModel)
+local function raiseBody(model: Model, binding: Binding.CarModel)
 	local lift = Vector3.new(0, Units.metresToStuds(binding.bodyRaise), 0)
 	local fixed: { [BasePart]: true } = {}
 	for index, name in binding.wheels do
@@ -197,7 +197,7 @@ local function hingeWeld(name: string, chassis: BasePart, part: BasePart, frame:
 end
 
 -- The door's parts, the flap and the door's strap that the binding names and the model has.
-local function hingedParts(model: Model, binding: SVJModel.CarModel): ({ BasePart }, BasePart?, BasePart?)
+local function hingedParts(model: Model, binding: Binding.CarModel): ({ BasePart }, BasePart?, BasePart?)
 	local door = {}
 	local strap: Instance? = nil
 	if binding.door then
@@ -217,7 +217,7 @@ end
 
 -- The pedals the binding names and the model has, each with its hinge frame. Each hangs on its
 -- own Weld named after it, which Controllers/DriverLegs turns about X.
-local function pedalParts(model: Model, binding: SVJModel.CarModel): { [BasePart]: CFrame }
+local function pedalParts(model: Model, binding: Binding.CarModel): { [BasePart]: CFrame }
 	local found: { [BasePart]: CFrame } = {}
 	local pedals = binding.pedals
 	if pedals == nil then
@@ -239,7 +239,7 @@ end
 local function hang(
 	model: Model,
 	chassis: BasePart,
-	binding: SVJModel.CarModel,
+	binding: Binding.CarModel,
 	door: { BasePart },
 	flap: BasePart?,
 	strap: BasePart?
@@ -276,7 +276,7 @@ local function hang(
 	end
 end
 
-local function rigFrame(model: Model, binding: SVJModel.CarModel, car: Types.CarConfig): (CFrame, number)
+local function rigFrame(model: Model, binding: Binding.CarModel, car: Types.CarConfig): (CFrame, number)
 	local wheels = table.create(4)
 	for index, name in binding.wheels do
 		wheels[index] = findPart(model, name)
@@ -332,7 +332,7 @@ local function addHull(model: Model, chassis: BasePart, ground: number, clearanc
 	weld(chassis, hull)
 end
 
-local function addSeat(model: Model, chassis: BasePart, binding: SVJModel.CarModel): (Seat, ProximityPrompt)
+local function addSeat(model: Model, chassis: BasePart, binding: Binding.CarModel): (Seat, ProximityPrompt)
 	-- The seat rides with the raised body.
 	local offset = carSpace(binding.seat, binding.seat.up + binding.bodyRaise)
 	local seat =
@@ -357,7 +357,7 @@ end
 
 -- A screen over the cluster's static image, for the live display (Controllers/Cluster): a hair
 -- toward the driver so it covers the image, its Back face toward the driver.
-local function addClusterScreen(model: Model, chassis: BasePart, binding: SVJModel.CarModel)
+local function addClusterScreen(model: Model, chassis: BasePart, binding: Binding.CarModel)
 	local cluster = binding.cluster
 	local offset = carSpace(cluster, cluster.up + binding.bodyRaise)
 		+ Vector3.new(0, 0, Units.metresToStuds(0.003))
@@ -373,7 +373,7 @@ local function addClusterScreen(model: Model, chassis: BasePart, binding: SVJMod
 end
 
 -- Server, once per car: builds the rig in place. Returns the rig.
-function CarRig.build(model: Model, car: Types.CarConfig, binding: SVJModel.CarModel): Rig
+function CarRig.build(model: Model, car: Types.CarConfig, binding: Binding.CarModel): Rig
 	assert(model:FindFirstChild("Chassis") == nil, `{model:GetFullName()} is already rigged`)
 	scaleToWorld(model, binding)
 	raiseBody(model, binding)
@@ -475,7 +475,7 @@ local function hingeOf(chassis: Instance, name: string): (Weld?, CFrame)
 end
 
 -- Either side: the rig's pieces, or nil while they have not all streamed in.
-function CarRig.find(model: Model, binding: SVJModel.CarModel): Rig?
+function CarRig.find(model: Model, binding: Binding.CarModel): Rig?
 	local chassis = model:FindFirstChild("Chassis")
 	local seat = model:FindFirstChild("DriverSeat")
 	if chassis == nil or not chassis:IsA("BasePart") or seat == nil or not seat:IsA("Seat") then

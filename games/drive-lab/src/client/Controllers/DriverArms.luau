@@ -140,8 +140,7 @@ local function build(model: Model, character: Model): Driver?
 	local chassis = model:FindFirstChild("Chassis")
 	local seat = model:FindFirstChild("DriverSeat")
 	local wheel = chassis and chassis:FindFirstChild("SteeringWheel")
-	local name = model:GetAttribute("Car")
-	local entry = if typeof(name) == "string" then Catalog[name] else nil
+	local entry = Catalog.of(model)
 	if
 		torso == nil
 		or not torso:IsA("BasePart")

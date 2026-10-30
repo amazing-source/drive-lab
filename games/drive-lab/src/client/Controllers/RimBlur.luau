@@ -83,7 +83,7 @@ local function attach(model: Model): Car?
 	if typeof(name) ~= "string" then
 		return nil
 	end
-	local entry = Catalog[name]
+	local entry = Catalog.cars[name]
 	local set = pieceSet(name)
 	local chassis = model:FindFirstChild("Chassis")
 	if entry == nil or set == nil or chassis == nil or not chassis:IsA("BasePart") then

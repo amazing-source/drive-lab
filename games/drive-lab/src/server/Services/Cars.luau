@@ -124,8 +124,7 @@ local function rig(model: Instance)
 	if not model:IsA("Model") then
 		return
 	end
-	local name = model:GetAttribute("Car")
-	local entry = if typeof(name) == "string" then Catalog[name] else nil
+	local entry = Catalog.of(model)
 	if entry == nil then
 		log.warn(`{model:GetFullName()} has no known "Car" attribute`)
 		return
