@@ -2,6 +2,7 @@
 local Binnacle = require("../src/shared/Config/Binnacle")
 local DR458Physics = require("../src/shared/Config/Cars/DR458/Physics")
 local DR458Screen = require("../src/shared/Config/Cars/DR458/Binnacle")
+local DR458Startup = require("../src/shared/Config/Cars/DR458/Startup")
 local DR458Switches = require("../src/shared/Config/Cars/DR458/Switches")
 local DriveSim = require("../tools/DriveSim")
 local Rules = require("../src/shared/Rules/Binnacle")
@@ -198,6 +199,18 @@ describe("The DR458's design layout", function()
 		expect(Rules.litSegments(band.segments, highest)).toBe(2)
 		-- Kept clear of the idle, so a sag below it cannot flicker the second segment.
 		expect(Rules.litSegments(band.segments, 0.9 * lowest)).toBe(2)
+		-- The start-up's revs settle from their flare to the idle; the screen shows them meanwhile.
+		local curve = DR458Startup.rpm
+		local peak = 1
+		for index, value in curve.values do
+			if value > curve.values[peak] then
+				peak = index
+			end
+		end
+		for index = peak, #curve.values do
+			local lit = Rules.litSegments(band.segments, curve.values[index])
+			expect(if lit >= 2 then "both" else `{lit} at {curve.values[index]} rpm`).toBe("both")
+		end
 	end)
 
 	it("reads each printed mark between the segments it is printed over", function()
