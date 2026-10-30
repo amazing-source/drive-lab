@@ -27,6 +27,8 @@ export type Driver = {
 
 export type Entry = {
 	physics: Types.CarConfig,
+	-- What the HUD calls each of the car's drive modes.
+	modeLabels: { [string]: string },
 	model: Binding.CarModel,
 	door: CarEntry.Door,
 	startup: CarEntry.Startup,
@@ -82,14 +84,40 @@ local function checkFootwell(entry: Entry)
 	end
 end
 
+-- Every key of a table keyed by drive mode is one of the car's modes.
+local function checkNames<V>(entry: Entry, values: { [string]: V }, what: string)
+	for name in values do
+		assert(entry.physics.modes[name], `{what} names "{name}", which the car has no mode for`)
+	end
+end
+
+-- A table keyed by drive mode has a value for each of the car's modes, and for no other.
+local function checkCovers<V>(entry: Entry, values: { [string]: V }, what: string)
+	for _, name in entry.physics.modeOrder do
+		assert(values[name] ~= nil, `{what} has nothing for the {name} mode`)
+	end
+	checkNames(entry, values, what)
+end
+
+-- Every part keyed by drive mode knows each of the car's modes.
+local function checkModes(entry: Entry)
+	checkCovers(entry, entry.modeLabels, "the mode labels")
+	checkCovers(entry, entry.camera.shiftKick, "the camera's shift kick")
+	local pops = entry.audio.popTriggers
+	checkCovers(entry, pops.liftChance, "the lift pops")
+	checkCovers(entry, pops.upshiftChance, "the upshift pops")
+	checkCovers(entry, pops.downshiftChance, "the downshift pops")
+	local modes = entry.assists.modes
+	if modes then
+		checkNames(entry, modes, "the assists")
+	end
+end
+
 -- The display draws every drive mode the car has in that mode's colours, and its red zone on its
 -- dial.
 local function checkCluster(entry: Entry)
 	local face = entry.cluster
-	for mode in entry.physics.modes do
-		local name = tostring(mode)
-		assert(face.modes[name], `the cluster has no colours for the {name} mode`)
-	end
+	checkCovers(entry, face.modes, "the cluster's colours")
 	assert(
 		face.redlineRpm > 0 and face.redlineRpm < face.dialMaxRpm,
 		"the cluster's redline lies off its dial"
@@ -99,6 +127,7 @@ end
 function Contract.define(entry: Entry): Entry
 	checkStartup(entry)
 	checkFootwell(entry)
+	checkModes(entry)
 	checkCluster(entry)
 	return deepFreeze(entry)
 end

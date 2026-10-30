@@ -22,6 +22,7 @@ local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local ClusterRules = require(ReplicatedStorage.Shared.Rules.Cluster)
 local Config = require(ReplicatedStorage.Shared.Config.Hud)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
+local DriveModes = require(ReplicatedStorage.Shared.Rules.DriveModes)
 local DriverAssists = require(ReplicatedStorage.Shared.Rules.DriverAssists)
 local Rules = require(ReplicatedStorage.Shared.Rules.Hud)
 
@@ -328,13 +329,11 @@ local function refresh(current: Ui, model: Model, entry: Catalog.Entry)
 	current.box.Text = if manual then "M" else "A"
 	current.speed.Text = tostring(math.round(number(model, "SpeedKmh")))
 	local launch = model:GetAttribute("Launch")
-	current.mode.Text = Rules.modeText(
-		model:GetAttribute("DrivingMode"),
-		launch == "Armed" or launch == "Launching",
-		Config.LAUNCH_TEXT
-	)
+	local mode = DriveModes.current(entry.physics.modeOrder, model:GetAttribute("DrivingMode"))
+	current.mode.Text =
+		Rules.modeText(entry.modeLabels[mode], launch == "Armed" or launch == "Launching", Config.LAUNCH_TEXT)
 
-	local assists = DriverAssists.assists(model:GetAttribute("EscOff") == true, entry.assists)
+	local assists = DriverAssists.assists(model:GetAttribute("EscOff") == true, mode, entry.assists)
 	paint(
 		current.tc,
 		current.tcLine,

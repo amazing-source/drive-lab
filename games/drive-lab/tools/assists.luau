@@ -15,7 +15,7 @@ local Types = require("../src/shared/Config/Cars/Types")
 
 local DT = 1 / 60
 local KMH = 1 / 3.6
-local MODES: { Types.DrivingMode } = { "Strada", "Sport", "Corsa" }
+local MODES: { Types.DrivingMode } = SVJ.modeOrder
 
 local function input(
 	escOff: boolean,
@@ -24,7 +24,7 @@ local function input(
 	brake: number,
 	steer: number
 ): DriveSim.InputOptions
-	local assists = DriverAssists.assists(escOff, Config)
+	local assists = DriverAssists.assists(escOff, mode, Config)
 	return {
 		throttle = throttle,
 		brake = brake,

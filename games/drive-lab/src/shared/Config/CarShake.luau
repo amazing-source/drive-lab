@@ -4,7 +4,8 @@
 	small and fast reads as speed, large reads as cheap (heavy shake is the most common complaint
 	about Need for Speed Heat). Road vibration after Sleitnick's CameraShaker "Vibration" preset
 	and Project CARS' high-speed shake; the upshift kick after the Aventador's 50 ms ISR shifts,
-	harsh in Corsa. Seeds for the owner's feel in a playtest; SCALE turns the whole of it down.
+	scaled per car and drive mode by the car's `shiftKick` (Config/Cars). Seeds for the owner's
+	feel in a playtest; SCALE turns the whole of it down.
 ]]
 local CarShake = require("../Rules/CarShake")
 
@@ -28,7 +29,6 @@ local Config: CarShake.Tuning = table.freeze({
 		dip = 0.06,
 		rise = 0.15,
 		settle = 0.15,
-		modes = table.freeze({ Strada = 0.35, Sport = 0.7, Corsa = 1 }),
 	}),
 	-- The chase camera hangs behind the car rather than riding in it: less engine and kick. The
 	-- hood view rides on the body but sees the road: little road vibration.

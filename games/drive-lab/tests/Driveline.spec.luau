@@ -149,7 +149,7 @@ describe("Driveline friction elements", function()
 		local state = Driveline.newState(0)
 		state.speeds[3] = 2
 		local loads = Driveline.newLoads()
-		loads.lsdCapacity = Driveline.lsdCapacity(SVJ.driveline, 0)
+		loads.lsdCapacity = Driveline.lsdCapacity(SVJ.driveline, SVJ.modes.Strada, 0)
 		Driveline.solve(drive, state, loads, tyreStates(), 4, 0.001)
 		local expected = 2 - 0.001 * SVJ.driveline.lsdPreload / drive.rearDiffInertia
 		expect(state.speeds[3]).toBeNear(expected, 1e-9)
@@ -159,15 +159,25 @@ describe("Driveline friction elements", function()
 		local state = Driveline.newState(0)
 		state.speeds[3] = 0.01
 		local loads = Driveline.newLoads()
-		loads.lsdCapacity = Driveline.lsdCapacity(SVJ.driveline, 0)
+		loads.lsdCapacity = Driveline.lsdCapacity(SVJ.driveline, SVJ.modes.Strada, 0)
 		Driveline.solve(drive, state, loads, tyreStates(), 4, 0.001)
 		expect(state.speeds[3]).toBeNear(0, 1e-12)
 	end)
 
 	it("ramps the LSD's locking with power and coast torque (02 §2.5: 25 % / 45 %)", function()
 		local config = SVJ.driveline
-		expect(Driveline.lsdCapacity(config, 1000)).toBeNear(config.lsdPreload + 250, 1e-9)
-		expect(Driveline.lsdCapacity(config, -1000)).toBeNear(config.lsdPreload + 450, 1e-9)
+		local mode = SVJ.modes.Strada
+		expect(Driveline.lsdCapacity(config, mode, 1000)).toBeNear(config.lsdPreload + 250, 1e-9)
+		expect(Driveline.lsdCapacity(config, mode, -1000)).toBeNear(config.lsdPreload + 450, 1e-9)
+	end)
+
+	it("ramps the LSD with the mode's own ramps where the mode sets them, as an E-Diff map", function()
+		local config = SVJ.driveline
+		local locked = table.clone(SVJ.modes.Strada)
+		locked.lsdPowerRamp = 0.6
+		locked.lsdCoastRamp = 0.8
+		expect(Driveline.lsdCapacity(config, locked, 1000)).toBeNear(config.lsdPreload + 600, 1e-9)
+		expect(Driveline.lsdCapacity(config, locked, -1000)).toBeNear(config.lsdPreload + 800, 1e-9)
 	end)
 
 	it("sends forward at most the mode's share of the gearbox output", function()

@@ -13,6 +13,8 @@ local Camera: CarCamera.CarViews = table.freeze({
 	eye = table.freeze({ forward = 0, up = 0.07 }),
 	-- From the centre of mass, along the car: just ahead of the windscreen, above the bonnet.
 	hood = table.freeze({ forward = 1.15, up = 0.62 }),
+	-- The ISR's 50 ms shifts are harsh in Corsa.
+	shiftKick = table.freeze({ Strada = 0.35, Sport = 0.7, Corsa = 1 }),
 })
 
 return Camera
