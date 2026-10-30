@@ -97,7 +97,7 @@ return Types.define({
 
 	rear = {
 		-- Measured on the 3D model: wheel centres 0.7984 m either side.
-		track = 1.597,
+		track = 1.5968,
 		wheelInertia = 1.6,
 		unsprungMass = 46,
 		rideFrequency = 2.8,
@@ -278,8 +278,8 @@ return Types.define({
 		highSpeedRatio = 11.5,
 		lowRatioSpeed = 50 / 3.6,
 		highRatioSpeed = 200 / 3.6,
-		-- Inferred, 12 §1.7: 360° / 11.5.
-		maxRoadWheelAngle = math.rad(31),
+		-- Inferred, 12 §1.7: a full turn either way over 11.5:1, about 31.3°.
+		maxRoadWheelAngle = math.rad(360 / 11.5),
 		ackermann = 0.5,
 		-- No rear steering.
 		rearGain = { { speed = 0, gain = 0 } },
