@@ -32,7 +32,8 @@ Images: every path is made absolute and missing ones are found by name under the
 `image_roots` (car_resolve_images.py). The file is saved with absolute paths.
 
 Self-check at the end, exit code 1 on failure: every planned slot carries its set's material,
-every tiled face group passes the UV check, and no material node still reads a replaced file.
+every tiled face group passes the UV check, and no material of this file still reads a replaced
+file (materials linked from another .blend are listed apart: they are checked in their own file).
 `--break uv` skips the first UV regeneration, `--break set` misassigns the first slot and
 `--break images` skips the replacement, so each check can be seen failing.
 """
@@ -210,7 +211,7 @@ if REPLACE and BREAK != "images":
         rep.alpha_mode = img.alpha_mode
         swap[img.name] = rep
     for mat in bpy.data.materials:
-        if not mat.node_tree:
+        if not mat.node_tree or mat.library:
             continue
         for n in mat.node_tree.nodes:
             if n.type == "TEX_IMAGE" and n.image and n.image.name in swap:
@@ -427,11 +428,16 @@ for entry in report["objects"]:
         r, a = density(o, faces)
         if not healthy(r, a, rec["tile_m"]):
             fail.append(f"{o.name} tile {rec['tile_m']}: UV density {stats(r, a, rec['tile_m'])}")
+linked = []
 for mat in bpy.data.materials:
     if mat.users and mat.node_tree:
         for n in mat.node_tree.nodes:
             if n.type == "TEX_IMAGE" and n.image and file_name(n.image) in REPLACE:
-                fail.append(f"material {mat.name} still reads {file_name(n.image)}")
+                if mat.library:
+                    linked.append(f"{mat.name} reads {file_name(n.image)} (linked from {mat.library.filepath})")
+                else:
+                    fail.append(f"material {mat.name} still reads {file_name(n.image)}")
+report["linked_not_checked"] = linked
 report["problems"] += fail
 report["materials_built"] = {n: {k: str(v) for k, v in m["dl_maps"].items()} for n, m in BUILT.items()}
 bpy.ops.file.make_paths_absolute()
@@ -446,6 +452,8 @@ for f in fail:
 for p in report["problems"]:
     if p not in fail:
         print("APPLY NOTE", p)
+for p in linked:
+    print("APPLY LINKED (checked in its own file)", p)
 if fail:
     sys.exit(1)
 print("APPLY PASS")
