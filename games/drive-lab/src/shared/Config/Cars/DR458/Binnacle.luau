@@ -17,8 +17,8 @@ local function field(label: string, reading: Binnacle.Reading, text: string?): B
 end
 
 local Screen: Binnacle.Screen = table.freeze({
-	-- EST: the screen's shape comes with the model's binding; 2.4 : 1 until then.
-	canvasWidth = 720,
+	-- The screen's shape, 164.3 x 64.5 mm (the binding's cluster, from the 3D manifest).
+	canvasWidth = 764,
 	canvasHeight = 300,
 	brightness = 1.6,
 	background = rgb(6, 7, 8),
