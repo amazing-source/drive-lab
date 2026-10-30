@@ -21,6 +21,7 @@ local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local ClusterRules = require(ReplicatedStorage.Shared.Rules.Cluster)
 local Config = require(ReplicatedStorage.Shared.Config.Hud)
+local Contract = require(ReplicatedStorage.Shared.Config.Cars.Contract)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local DriveModes = require(ReplicatedStorage.Shared.Rules.DriveModes)
 local DriverAssists = require(ReplicatedStorage.Shared.Rules.DriverAssists)
@@ -295,7 +296,7 @@ local function refresh(current: Ui, model: Model, entry: Catalog.Entry)
 	local rpm =
 		CarEntry.shownRpm(entry, CarState.read(model), Workspace:GetServerTimeNow(), number(model, "Rpm"))
 	local manual = model:GetAttribute("GearboxMode") == "manual"
-	local redline = entry.cluster.redlineRpm
+	local redline = Contract.redline(entry)
 	if redline ~= current.redline then
 		current.redline = redline
 		for index, segment in current.segments do

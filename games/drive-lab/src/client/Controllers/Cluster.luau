@@ -110,8 +110,7 @@ local function litLayer(parent: Instance, spec: Cluster.Face, image: string): (I
 	return layer, wipe
 end
 
-local function build(model: Model, entry: Catalog.Entry, screen: BasePart): Display
-	local spec = entry.cluster
+local function build(model: Model, entry: Catalog.Entry, spec: Cluster.Face, screen: BasePart): Display
 	local palettes: { [string]: Palette } = {}
 	for name, theme in spec.modes do
 		palettes[name] = { accent = colour(theme.accent), dim = colour(theme.dim), text = colour(theme.text) }
@@ -256,10 +255,11 @@ local function update(dt: number)
 	if current == nil then
 		local screen = model:FindFirstChild("ClusterScreen")
 		local entry = Catalog.of(model)
-		if screen == nil or not screen:IsA("BasePart") or entry == nil then
+		local face = entry and entry.cluster
+		if screen == nil or not screen:IsA("BasePart") or entry == nil or face == nil then
 			return
 		end
-		current = build(model, entry, screen)
+		current = build(model, entry, face, screen)
 		display = current
 	end
 	elapsed += dt
