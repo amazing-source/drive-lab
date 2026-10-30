@@ -1,11 +1,14 @@
 --!strict
 --[[
 	The controls screen (Config/ControlsHelp): every control's keyboard key and gamepad input,
-	grouped, each with an (i) whose sentence shows on hover, tap or gamepad selection. Its key or a
+	grouped, each with an (i) whose sentence shows on hover, tap or gamepad selection. It shows the
+	car the player sits in, or else the nearest one, and each key as the player's own keyboard
+	prints it (UserInputService:GetStringForKeyCode). Its key or a
 	tap of its pad button opens and closes it, a button does on touch screens, and a hint names the
 	key for a few seconds after the first spawn and the first time the player is seated. Closed,
 	its screen is disabled and nothing of it takes input; it never sinks a key.
 ]]
+local CollectionService = game:GetService("CollectionService")
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -16,8 +19,10 @@ local Workspace = game:GetService("Workspace")
 local CarEntry = require(ReplicatedStorage.Shared.Rules.CarEntry)
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local CarState = require(ReplicatedStorage.Shared.Car.CarState)
+local CarSwitches = require(ReplicatedStorage.Shared.Config.CarSwitches)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local Config = require(ReplicatedStorage.Shared.Config.ControlsHelp)
+local Contract = require(ReplicatedStorage.Shared.Config.Cars.Contract)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local Hud = require(ReplicatedStorage.Shared.Config.Hud)
 local Log = require(ReplicatedStorage.Kit.Log)
@@ -33,6 +38,9 @@ local log = Log.scope("ControlsHelp")
 local keyboardKeys: { Enum.KeyCode } = {}
 local gamepadKeys: { Enum.KeyCode } = {}
 local panel: ControlsPanel.Panel? = nil
+-- The car the open panel was built for.
+local panelCar: string? = nil
+local layout: Rules.Layout = {}
 local isOpen = false
 local padPressedAt: number? = nil
 local hintLabel: TextLabel? = nil
@@ -62,7 +70,62 @@ end
 
 local function shownKey(keys: { Enum.KeyCode }): string
 	local first = keys[1]
-	return if first then Config.HELP.keyNames[first.Name] or first.Name else Config.NO_INPUT
+	return if first then Rules.keyLabel(first.Name, Config.HELP.keyNames, layout) else Config.NO_INPUT
+end
+
+-- What this player's keyboard prints on each key, by KeyCode name; empty where it prints nothing.
+local function readLayout(): Rules.Layout
+	local found: Rules.Layout = {}
+	for _, key in Enum.KeyCode:GetEnumItems() do
+		if not Rules.isGamepadKey(key.Name) then
+			local ok, printed = pcall(UserInputService.GetStringForKeyCode, UserInputService, key)
+			if ok and typeof(printed) == "string" and printed ~= "" then
+				found[key.Name] = printed
+			end
+		end
+	end
+	return found
+end
+
+-- One car's screen.
+local function screenFor(name: string, entry: Contract.Entry): (Rules.Help, Rules.Bindings)
+	return Rules.forCar(
+		Config.HELP,
+		bindings(),
+		name,
+		Contract.features(entry),
+		CarSwitches.NEEDS,
+		Config.carValues(entry)
+	)
+end
+
+-- The car the player sits in, or else the nearest car, by its catalog name.
+local function shownCar(): (string?, Contract.Entry?)
+	local character = localPlayer.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local seat = humanoid and humanoid.SeatPart
+	local seated = seat and seat.Parent
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local best: Model? = if seated and seated:IsA("Model") and Catalog.of(seated) then seated else nil
+	if best == nil and root and root:IsA("BasePart") then
+		local nearest = math.huge
+		for _, tagged in CollectionService:GetTagged(CarRig.TAG) do
+			if tagged:IsA("Model") and Catalog.of(tagged) then
+				local distance = (tagged:GetPivot().Position - root.Position).Magnitude
+				if distance < nearest then
+					best, nearest = tagged, distance
+				end
+			end
+		end
+	end
+	local name = best and best:GetAttribute("Car")
+	if typeof(name) == "string" and best then
+		return name, Catalog.of(best)
+	end
+	for catalogName, entry in Catalog.cars do
+		return catalogName, entry
+	end
+	return nil, nil
 end
 
 local function hintText(): string
@@ -126,17 +189,32 @@ local function setOpen(value: boolean)
 		hideHint()
 		local size = viewport()
 		local current = panel
-		if current == nil or ControlsPanel.columnsFor(size) ~= current.columns then
+		local name, entry = shownCar()
+		if name == nil or entry == nil then
+			isOpen = false
+			return
+		end
+		if current == nil or ControlsPanel.columnsFor(size) ~= current.columns or panelCar ~= name then
 			if current then
 				current.gui:Destroy()
 			end
-			current = ControlsPanel.build(localPlayer:WaitForChild("PlayerGui"), bindings(), size, {
-				KEYBOARD = shownKey(keyboardKeys),
-				GAMEPAD = shownKey(gamepadKeys),
-			}, function()
-				setOpen(false)
-			end)
+			local help, carBindings = screenFor(name, entry)
+			current = ControlsPanel.build(
+				localPlayer:WaitForChild("PlayerGui"),
+				help,
+				carBindings,
+				layout,
+				size,
+				{
+					KEYBOARD = shownKey(keyboardKeys),
+					GAMEPAD = shownKey(gamepadKeys),
+				},
+				function()
+					setOpen(false)
+				end
+			)
 			panel = current
+			panelCar = name
 		end
 		local built = current :: ControlsPanel.Panel
 		ControlsPanel.show(built, UserInputService.PreferredInput == Enum.PreferredInput.Gamepad)
@@ -275,8 +353,12 @@ function Controller.start()
 	for _, key in Controls.CONTROLS_HELP do
 		table.insert(if Rules.isGamepadKey(key.Name) then gamepadKeys else keyboardKeys, key)
 	end
-	for _, problem in Rules.problems(Config.HELP, bindings()) do
-		log.warn(problem)
+	layout = readLayout()
+	for name, entry in Catalog.cars do
+		local help, carBindings = screenFor(name, entry)
+		for _, problem in Rules.problems(help, carBindings) do
+			log.warn(`{name}: {problem}`)
+		end
 	end
 	buildHint(localPlayer:WaitForChild("PlayerGui"))
 	showTouchButton()

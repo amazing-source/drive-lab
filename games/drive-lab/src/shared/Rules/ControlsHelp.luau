@@ -1,8 +1,9 @@
 --!strict
 --[[
 	The controls screen's content (Config/ControlsHelp), checked and laid out without the engine:
-	which inputs a row shows, everything that would leave a control unexplained, the columns.
-	Keys arrive by their KeyCode names, so Lune can test it against the real Config/Controls.
+	which rows a car shows, which inputs a row shows, everything that would leave a control
+	unexplained, the columns. Keys arrive by their KeyCode names, so Lune can test it against the
+	real Config/Controls; the label a player's own keyboard prints on a key arrives as a layout.
 ]]
 export type Row = {
 	label: string,
@@ -20,6 +21,10 @@ export type Row = {
 	-- A word before the keys, as "Hold" or "Tap".
 	keyboardGesture: string?,
 	gamepadGesture: string?,
+	-- The cars (Config/Cars/Catalog names) this row is for; every car's when absent.
+	cars: { string }?,
+	-- A feature the car must have for the row to show (Config/Cars/Contract.features).
+	requires: string?,
 }
 
 export type Group = { title: string, rows: { Row } }
@@ -39,6 +44,9 @@ export type Bindings = { [string]: { string } }
 
 export type Shown = { gesture: string?, keys: { string } }
 
+-- What the player's keyboard prints on a key, by KeyCode name: AZERTY prints Z on W.
+export type Layout = { [string]: string }
+
 local GAMEPAD_PREFIXES = { "Button", "DPad", "Thumbstick" }
 
 local NONE: { string } = table.freeze({})
@@ -54,8 +62,18 @@ function ControlsHelp.isGamepadKey(name: string): boolean
 	return false
 end
 
-local function add(list: { string }, keyNames: { [string]: string }, name: string)
-	local shown = keyNames[name] or name
+-- A key as the player reads it: the label their keyboard prints, when it prints one, or the key's
+-- display name.
+function ControlsHelp.keyLabel(name: string, keyNames: { [string]: string }, layout: Layout?): string
+	local printed = layout and layout[name]
+	if printed and string.match(printed, "^%S+$") then
+		return string.upper(printed)
+	end
+	return keyNames[name] or name
+end
+
+local function add(list: { string }, keyNames: { [string]: string }, layout: Layout?, name: string)
+	local shown = ControlsHelp.keyLabel(name, keyNames, layout)
 	if not table.find(list, shown) then
 		table.insert(list, shown)
 	end
@@ -63,21 +81,32 @@ end
 
 -- What a row shows on each side: its controls' keys and the keys it borrows, then the inputs it
 -- declares itself.
-function ControlsHelp.inputs(row: Row, bindings: Bindings, keyNames: { [string]: string }): (Shown, Shown)
+function ControlsHelp.inputs(
+	row: Row,
+	bindings: Bindings,
+	keyNames: { [string]: string },
+	layout: Layout?
+): (Shown, Shown)
 	local keyboard: { string } = {}
 	local gamepad: { string } = {}
 	for _, list in { row.controls, row.keysOf or NONE } do
 		for _, control in list do
 			for _, key in bindings[control] or NONE do
-				add(if ControlsHelp.isGamepadKey(key) then gamepad else keyboard, keyNames, key)
+				local gamepadKey = ControlsHelp.isGamepadKey(key)
+				add(
+					if gamepadKey then gamepad else keyboard,
+					keyNames,
+					if gamepadKey then nil else layout,
+					key
+				)
 			end
 		end
 	end
 	for _, name in row.keyboard or NONE do
-		add(keyboard, keyNames, name)
+		add(keyboard, keyNames, layout, name)
 	end
 	for _, name in row.gamepad or NONE do
-		add(gamepad, keyNames, name)
+		add(gamepad, keyNames, nil, name)
 	end
 	return { gesture = row.keyboardGesture, keys = keyboard }, { gesture = row.gamepadGesture, keys = gamepad }
 end
@@ -201,6 +230,56 @@ function ControlsHelp.problems(help: Help, bindings: Bindings): { string }
 	end
 	table.sort(found)
 	return found
+end
+
+-- The screen for one car: the rows for it whose feature it has and whose controls it has, the
+-- bindings without the controls it lacks (`needs` names the feature each such control needs), and
+-- the help's values with the car's own over them.
+function ControlsHelp.forCar(
+	help: Help,
+	bindings: Bindings,
+	car: string,
+	features: { [string]: boolean },
+	needs: { [string]: string },
+	values: { [string]: number }
+): (Help, Bindings)
+	local carBindings: Bindings = {}
+	for control, keys in bindings do
+		local need = needs[control]
+		if need == nil or features[need] then
+			carBindings[control] = keys
+		end
+	end
+	local groups: { Group } = {}
+	for _, group in help.groups do
+		local rows: { Row } = {}
+		for _, row in group.rows do
+			local forCar = row.cars == nil or table.find(row.cars, car) ~= nil
+			local hasFeature = row.requires == nil or features[row.requires] == true
+			local hasControls = true
+			for _, control in row.controls do
+				hasControls = hasControls and carBindings[control] ~= nil
+			end
+			if forCar and hasFeature and hasControls then
+				table.insert(rows, row)
+			end
+		end
+		if #rows > 0 then
+			table.insert(groups, { title = group.title, rows = rows })
+		end
+	end
+	local merged = table.clone(help.values)
+	for name, value in values do
+		merged[name] = value
+	end
+	return {
+		groups = groups,
+		keyNames = help.keyNames,
+		values = merged,
+		maxLabelLength = help.maxLabelLength,
+		maxTextLength = help.maxTextLength,
+	},
+		carBindings
 end
 
 -- The other controls that share each of `control`'s keys.
