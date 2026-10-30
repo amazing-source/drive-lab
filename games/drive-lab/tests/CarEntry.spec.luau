@@ -1,5 +1,6 @@
 --!strict
 local Config = require("../src/shared/Config/CarEntry")
+local DoorStrap = require("../src/shared/Rules/DoorStrap")
 local Hinge = require("../src/shared/Rules/Hinge")
 local Rules = require("../src/shared/Rules/CarEntry")
 local SVJ = require("../src/shared/Config/Cars/SVJ")
@@ -8,6 +9,9 @@ local T = require("../../../tools/test/T")
 local describe, it, expect = T.describe, T.it, T.expect
 
 local STARTUP = SVJ.startup
+-- The SVJ's START flap, the one cabin control its start-up moves.
+local FLAP = STARTUP.moves[1]
+local FLAP_BACK = assert(FLAP.back, "the flap falls back")
 
 local function state(overrides: { [string]: any }): Rules.State
 	local base: { [string]: any } = {
@@ -144,9 +148,10 @@ end)
 
 describe("Car start-up", function()
 	it("runs its moments in order", function()
-		expect(STARTUP.flapUpAt < STARTUP.pressAt).toBe(true)
-		expect(STARTUP.pressAt < STARTUP.flapDownAt).toBe(true)
-		expect(STARTUP.flapDownAt < STARTUP.wheelAt).toBe(true)
+		expect(FLAP.control).toBe("StartFlap")
+		expect(FLAP.at < STARTUP.pressAt).toBe(true)
+		expect(STARTUP.pressAt < FLAP_BACK).toBe(true)
+		expect(FLAP_BACK < STARTUP.wheelAt).toBe(true)
 		expect(STARTUP.wheelAt <= STARTUP.drivableAt).toBe(true)
 		for index = 2, #STARTUP.rpm.times do
 			expect(STARTUP.rpm.times[index] > STARTUP.rpm.times[index - 1]).toBe(true)
@@ -180,12 +185,12 @@ end)
 describe("Start-up flap and brake", function()
 	it("lifts the flap before the press, holds it, and lets it fall after", function()
 		local on = state({ entry = "Enter", entryAt = -100, engine = "On", engineAt = 0 })
-		expect(Rules.flapOpenness(SVJ, state({}), 1)).toBe(0)
-		expect(Rules.flapOpenness(SVJ, on, STARTUP.flapUpAt - STARTUP.flapMove - 0.01)).toBe(0)
-		expect(Rules.flapOpenness(SVJ, on, STARTUP.flapUpAt - STARTUP.flapMove / 2)).toBeNear(0.5, 1e-6)
-		expect(Rules.flapOpenness(SVJ, on, STARTUP.pressAt)).toBe(1)
-		expect(Rules.flapOpenness(SVJ, on, STARTUP.flapDownAt + STARTUP.flapMove / 2)).toBeNear(0.5, 1e-6)
-		expect(Rules.flapOpenness(SVJ, on, STARTUP.flapDownAt + STARTUP.flapMove + 0.01)).toBe(0)
+		expect(Rules.controlOpenness(FLAP, state({}), 1)).toBe(0)
+		expect(Rules.controlOpenness(FLAP, on, FLAP.at - FLAP.move - 0.01)).toBe(0)
+		expect(Rules.controlOpenness(FLAP, on, FLAP.at - FLAP.move / 2)).toBeNear(0.5, 1e-6)
+		expect(Rules.controlOpenness(FLAP, on, STARTUP.pressAt)).toBe(1)
+		expect(Rules.controlOpenness(FLAP, on, FLAP_BACK + FLAP.move / 2)).toBeNear(0.5, 1e-6)
+		expect(Rules.controlOpenness(FLAP, on, FLAP_BACK + FLAP.move + 0.01)).toBe(0)
 	end)
 
 	it("holds the brake from the key until driving unlocks", function()
@@ -565,7 +570,8 @@ describe("Walking to the mark", function()
 end)
 
 -- A second car: its clips and door curves run twice as fast, it gets out at its own stance, and
--- its start-up presses START and unlocks driving later than the SVJ's.
+-- its start-up presses START and unlocks driving later than the SVJ's, shows 100 rpm more and
+-- holds the brake lighter.
 local function otherCar(): Rules.Car
 	local function copy(value: any): any
 		if type(value) ~= "table" then
@@ -589,6 +595,10 @@ local function otherCar(): Rules.Car
 	car.door.exitEnd.at /= 2
 	car.startup.pressAt += 0.5
 	car.startup.drivableAt += 1
+	for index, rpm in car.startup.rpm.values do
+		car.startup.rpm.values[index] = rpm + 100
+	end
+	car.startup.brake = 0.4
 	return car
 end
 
@@ -626,5 +636,59 @@ describe("Car entry, per car", function()
 		expect(Rules.drivable(SVJ, on, STARTUP.drivableAt)).toBe(true)
 		expect(Rules.drivable(other, on, STARTUP.drivableAt)).toBe(false)
 		expect(Rules.drivable(other, on, STARTUP.drivableAt + 1)).toBe(true)
+	end)
+end)
+
+describe("Car entry, per car: the door's own motions and the start-up's readouts", function()
+	local other = otherCar()
+	local on = state({ entry = "Enter", entryAt = -100, engine = "On", engineAt = 0 })
+
+	it("keeps the door busy for the car's own clip", function()
+		local opening = state({ entry = "Enter", entryAt = -100, door = "InsideOpen", doorAt = 0 })
+		local halfway = SVJ.door.clips.InsideOpen.duration * 0.75
+		expect(Rules.doorIdle(SVJ, opening, halfway)).toBe(false)
+		expect(Rules.doorIdle(other, opening, halfway)).toBe(true)
+	end)
+
+	it("plays a door motion from outside for the car's own clip length", function()
+		local moved = state({ door = "OutsideOpen", doorAt = 10 })
+		local at = 10 + SVJ.door.clips.OutsideOpen.duration * 0.75
+		expect(Rules.outsideRequest(SVJ, moved, at, 10).finished).toBe(false)
+		expect(Rules.outsideRequest(other, moved, at, 10).finished).toBe(true)
+	end)
+
+	it("hands the strap back when the car's own clip ends", function()
+		local closing = state({ entry = "Enter", entryAt = -100, door = "InsideClose", doorAt = 0 })
+		local at = SVJ.door.clips.InsideClose.duration * 0.75
+		expect(DoorStrap.clip(SVJ, closing, at)).toBe("InsideClose")
+		expect(DoorStrap.clip(other, closing, at)).toBe(nil)
+	end)
+
+	it("shows the start-up's revs on the car's own curve and holds its own brake", function()
+		local flare = STARTUP.pressAt + 0.5 + 1.3
+		expect(Rules.shownRpm(other, on, flare, 950)).toBeNear(
+			Rules.shownRpm(SVJ, on, flare - 0.5, 950) + 100,
+			1e-6
+		)
+		expect(Rules.startupBrake(SVJ, on, 0.1)).toBe(STARTUP.brake)
+		expect(Rules.startupBrake(other, on, 0.1)).toBe(0.4)
+	end)
+end)
+
+describe("Start-up controls", function()
+	-- A switch flipped on during the start-up and left on, as the DR458's master switch will be.
+	local held: Config.ControlMove = { control = "MasterSwitch", angle = math.rad(40), move = 0.2, at = 0.6 }
+
+	it("turns a control with no way back toward its angle and holds it while the engine runs", function()
+		local on = state({ entry = "Enter", entryAt = -100, engine = "On", engineAt = 0 })
+		expect(Rules.controlOpenness(held, on, 0.39)).toBe(0)
+		expect(Rules.controlOpenness(held, on, 0.5)).toBeNear(0.5, 1e-9)
+		expect(Rules.controlOpenness(held, on, 0.6)).toBe(1)
+		expect(Rules.controlOpenness(held, on, 100)).toBe(1)
+	end)
+
+	it("puts every control back once the engine is off", function()
+		expect(Rules.controlOpenness(held, state({ engine = "Off", engineAt = 0 }), 100)).toBe(0)
+		expect(Rules.controlOpenness(FLAP, state({ engine = "Off", engineAt = 0 }), FLAP.at)).toBe(0)
 	end)
 end)

@@ -20,6 +20,15 @@ export type DoorStrap = {
 	hang: { { angle: number, length: number } },
 }
 
+-- A part that turns on a hinge: a pivot from the centre of mass in the car frame (metres, before
+-- bodyRaise, like `seat`) and a unit axis in the car frame. A positive turn about the axis by the
+-- right-hand rule in the chassis's space (x right, y up, z back) opens it.
+export type Hinge = {
+	part: string,
+	pivot: { forward: number, right: number, up: number },
+	axis: { forward: number, right: number, up: number },
+}
+
 export type CarModel = {
 	-- Part names, in Vehicle/Geometry's wheel order: front left, front right, rear left, rear right.
 	wheels: { string },
@@ -48,11 +57,8 @@ export type CarModel = {
 	-- bottom left), from the centre of mass in the car frame, metres: where the cockpit view
 	-- draws the water on the glass (Atmosphere/Windshield).
 	windshield: { { forward: number, right: number, up: number } },
-	-- The driver's door (its part names) and the START flap, each on a hinge: a pivot from the
-	-- centre of mass in the car frame (metres, before bodyRaise, like `seat`) and a unit axis in
-	-- the car frame. A positive turn about the axis by the right-hand rule in the chassis's space
-	-- (x right, y up, z back) opens it; the door by up to openAngle radians. Optional: a model
-	-- without them rigs as before.
+	-- The driver's door (its part names) on a hinge (as Hinge), opening by up to openAngle
+	-- radians. Optional: a model without one rigs as before.
 	door: {
 		parts: { string },
 		pivot: { forward: number, right: number, up: number },
@@ -62,20 +68,11 @@ export type CarModel = {
 		-- is not in `parts`. Optional.
 		strap: DoorStrap?,
 	}?,
-	flap: {
-		part: string,
-		pivot: { forward: number, right: number, up: number },
-		axis: { forward: number, right: number, up: number },
-	}?,
-	-- The pedals that turn, each on a hinge like the flap's; Controllers/DriverLegs turns them.
-	-- Optional.
-	pedals: {
-		{
-			part: string,
-			pivot: { forward: number, right: number, up: number },
-			axis: { forward: number, right: number, up: number },
-		}
-	}?,
+	-- The cabin controls the start-up works (Config/CarEntry ControlMove), by the name its moves
+	-- use: a cover, a switch, a key. Controllers/CarDoor turns them. Optional.
+	controls: { [string]: Hinge }?,
+	-- The pedals that turn; Controllers/DriverLegs turns them. Optional.
+	pedals: { Hinge }?,
 	-- The cabin light (Controllers/CarLights): where the lamp in the roof console sits, from the
 	-- centre of mass in the car frame (metres, before bodyRaise). Optional.
 	cabinLight: { forward: number, right: number, up: number }?,

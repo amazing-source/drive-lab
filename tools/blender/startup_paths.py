@@ -3,7 +3,7 @@ Keyframes the driver's hands through the SVJ's start-up against the real cabin, 
 paths and writes them into the game's config, with review renders.
 
     blender -b <svj_interior_v2_wheel.blend> --factory-startup -P tools/blender/startup_paths.py --
-        <inputs.json> <Config/DriverStartup.luau> <out dir>
+        <inputs.json> <Config/Cars/SVJ/StartupPaths.luau> <out dir>
 
 inputs.json names the measured pieces (absolute paths): seatWeld (SEAT_WELD.json, the seated R6
 in the DriverSeat frame), restPose (REST_POSE.json), poses (hand_poses.py's poses.json and its
@@ -247,40 +247,15 @@ def write_config(path, tracks, meshes, cuff, about, made_against):
     lines = [
         "--!strict",
         "--[[",
-        "\tThe driver's hands through the start-up, keyed in Blender against the SVJ's console, START",
+        "\tThe driver's hands through the SVJ's start-up, keyed in Blender against its console, START",
         "\tflap and wheel and baked by tools/blender/startup_paths.py, which writes this file: do not",
-        "\tedit by hand, re-run the script (docs/pipelines/DRIVER_HANDS.md, section 8).",
-        "",
-        "\tA key is { seconds after the start key, x, y, z, qw, qx, qy, qz }: the wrist frame in the",
-        "\tdriver's seat frame (the DriverSeat part: x right, y up, z back; metres), whose z axis runs up",
-        "\tthe forearm and y out of the back of the hand. The left hand's keys are its own (not mirrored).",
+        "\tedit by hand, re-run the script (docs/pipelines/DRIVER_HANDS.md, section 8). What a key holds",
+        "\tis in Config/DriverStartup.",
         f"\t{about}",
         "]]",
-        'export type Shape = "Rest" | "Point" | "Grip"',
-        "export type Point = { x: number, y: number, z: number }",
-        "export type Key = { number }",
-        "export type ShapeChange = { at: number, shape: Shape }",
-        "export type Track = {",
-        "\tkeys: { Key },",
-        "\tshapes: { ShapeChange },",
-        "\t-- From here the path bends toward the hand's live grip on the wheel, reached at the last key.",
-        "\tgripFrom: number,",
-        "}",
+        'local DriverStartup = require("../../DriverStartup")',
         "",
-        "export type DriverStartup = {",
-        "\tRIGHT: Track,",
-        "\tLEFT: Track,",
-        "\t-- The right hand's posed meshes' centres in the wrist frame, metres (hand_poses.py); the left",
-        "\t-- hand mirrors x.",
-        "\tMESHES: { Rest: Point, Point: Point },",
-        "\tCUFF: Point,",
-        "\t-- What the keys were made against, for the specs: the Point hand's index tip in its wrist",
-        "\t-- frame; START's top face, the console's normal there and the push; the flap's hinge line",
-        "\t-- (along x) and the point under its free edge the index rides (seat frame, metres).",
-        "\tFINGERTIP: Point,",
-        "\tBUTTON: { top: Point, normal: Point, depth: number },",
-        "\tFLAP: { hinge: Point, edge: Point },",
-        "}",
+        "type Track = DriverStartup.Track",
         "",
     ]
     for name, (samples, shapes, grip_from) in tracks.items():
@@ -302,7 +277,7 @@ def write_config(path, tracks, meshes, cuff, about, made_against):
         return f"table.freeze({{ x = {luau_number(p[0])}, y = {luau_number(p[1])}, z = {luau_number(p[2])} }})"
 
     lines += [
-        "local DriverStartup: DriverStartup = table.freeze({",
+        "local StartupPaths: DriverStartup.Paths = table.freeze({",
         "\tRIGHT = table.freeze(RIGHT),",
         "\tLEFT = table.freeze(LEFT),",
         "\tMESHES = table.freeze({",
@@ -322,7 +297,7 @@ def write_config(path, tracks, meshes, cuff, about, made_against):
         "\t}),",
         "})",
         "",
-        "return DriverStartup",
+        "return StartupPaths",
         "",
     ]
     with open(path, "wb") as handle:

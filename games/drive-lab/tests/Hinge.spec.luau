@@ -95,7 +95,7 @@ describe("Hinge", function()
 	end)
 
 	it("lifts the SVJ's START flap by its rear edge", function()
-		local flap = SVJModel.flap
+		local flap = SVJModel.controls and SVJModel.controls.StartFlap
 		assert(flap, "the SVJ binding has a flap")
 		local rearEdge = Hinge.chassis({ forward = flap.pivot.forward - 0.03, right = 0, up = flap.pivot.up })
 		local lifted =

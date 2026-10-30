@@ -1,7 +1,5 @@
 --!strict
-local CarEntry = require("../src/shared/Config/CarEntry")
 local CarEntryRules = require("../src/shared/Rules/CarEntry")
-local Config = require("../src/shared/Config/DriverStartup")
 local SVJ = require("../src/shared/Config/Cars/SVJ")
 local StartupArms = require("../src/shared/Rules/StartupArms")
 local T = require("../../../tools/test/T")
@@ -12,6 +10,9 @@ type Pose = StartupArms.Pose
 type Vector = StartupArms.Vector
 
 local STARTUP = SVJ.startup
+-- The SVJ's START flap, the one cabin control its start-up moves.
+local FLAP = STARTUP.moves[1]
+local Config = SVJ.driver.startupPaths
 
 local function gap(a: Vector, b: Vector): number
 	return math.sqrt((a.x - b.x) ^ 2 + (a.y - b.y) ^ 2 + (a.z - b.z) ^ 2)
@@ -140,7 +141,7 @@ local function flapEdge(t: number): Vector
 		engine = "On",
 		engineAt = 0,
 	}
-	local angle = -STARTUP.flapAngle * CarEntryRules.flapOpenness(SVJ, state, t)
+	local angle = -FLAP.angle * CarEntryRules.controlOpenness(FLAP, state, t)
 	local hinge, edge = Config.FLAP.hinge, Config.FLAP.edge
 	local y, z = edge.y - hinge.y, edge.z - hinge.z
 	return {
@@ -156,9 +157,9 @@ end
 
 describe("Start-up arms: the right hand works the START flap in time", function()
 	it("rides the flap's free edge, to the millimetre, while Rules/CarEntry lifts it", function()
-		local from = STARTUP.flapUpAt - STARTUP.flapMove
+		local from = FLAP.at - FLAP.move
 		for step = 0, 10 do
-			local t = from + STARTUP.flapMove * step / 10
+			local t = from + FLAP.move * step / 10
 			expect(gap(rightTip(t), flapEdge(t)) < 0.002).toBe(true)
 		end
 	end)
