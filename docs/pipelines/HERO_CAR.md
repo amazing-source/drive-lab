@@ -319,6 +319,54 @@ is soft, so it is modelled as what a soft strap does, not as a stiff tab: a stif
   the door by it plays (InsideClose, GetIn) and the door is between the grab angle and shut, aimed at
   the seated driver's animated palm and never longer than the strap; hanging otherwise.
 
+## 12. Materials from a library (the DR458 way)
+
+When a car is built from several sources (a game rip for the body, own models for the race
+cockpit), its surfaces get physically based sets from a shared library instead of baked atlases:
+tiling 1024 px maps (colour sRGB, OpenGL normal, roughness, metalness) with a real-world tile size
+`tile_m`, and flat sets (a Roblox Material and a Color, no SurfaceAppearance). Meshes carry
+`uv = metres / tile_m`. **Open:** that relies on UVs outside 0..1 repeating on a MeshPart, which is
+not verified: research 03 reads the import docs as 0..1 only and research 10 marks it [TEST].
+Settle it in Studio before the first export; if it does not repeat, bake each piece's sets into its
+own 0..1 atlas (as in section 3). The DR458's library builder and its sets live outside the repo
+(`drive-lab-assets/dr458/work/materials/`).
+
+```
+eye inventory ─► material map (+ photo per rule) ─► map check ─► apply (materials, UVs, debadged images) ─► eye renders
+                                                                   │
+                                                                   └─► SurfaceAppearance export (maps + contract)
+```
+
+- **See only what the driver sees.** `tools/blender/car_eye_inventory.py` renders object IDs over
+  the camera's eye range (`Config/CarCamera` EYE_RANGE, look yaw to 100 degrees) and lists every
+  visible mesh with its materials and UV density. The DR458: 184 of 309 meshes.
+- **The map** is JSON: object rules (whole object, or split by face normal, e.g. a floor up-facing
+  as diamond plate and its walls as paint), material rules by name, a `keep` list, derived sets and
+  `replace_images`. A material named after a library set needs no rule, so modellers who name
+  materials after sets and lay UVs at `tile_m` are covered by a lookup. Every rule names the photo
+  it rests on. `tools/assets/car_material_map_check.py` fails on any visible slot neither mapped
+  nor kept.
+- **Apply** with `tools/blender/car_materials_apply.py`: one material per set, named after it,
+  Principled inputs wired from the maps (so `hero_car_materials.py` lists them per input), custom
+  properties `dl_set`, `dl_tile_m`, `dl_maps`. UVs are measured per tile size, area-weighted:
+  a layout already at scale keeps its faces and only off-scale ones are re-projected (a strap or a
+  tube keeps its direction); an atlas layout is re-projected whole with Smart UV Project and
+  scaled to `tile_m`. Image paths are made absolute and missing ones found by name
+  (`car_resolve_images.py`, also usable before any render script). It exits 1 on a missed slot, a
+  bad UV group or a replaced image still read; `--break uv|set|images` shows each.
+- **Debadge** atlases with `tools/assets/debadge_atlas.py` (boxes per image, new files). Two traps
+  met on the DR458's source: its normal maps are two-channel (flat is olive, not 128,128,255), and
+  a dash script that read as a texture was geometry in the chrome-trim object:
+  `car_find_islands.py` lists such islands inside a box for the mesh's owner, and
+  `car_delete_faces.py` deletes them, refusing a list made on another version of the mesh.
+- **Renders** from the eye with `tools/blender/car_eye_render.py`, two fixed lights: the team's
+  reference sun and a neutral overcast sky like the photos'. Under a blue sky every black reads
+  blue-grey, so judge blacks in the overcast one.
+- **Export** with `tools/assets/car_surface_appearances.py`: per set the four maps (at most
+  1024 px, square, colour opaque unless the set blends alpha, uniform maps at 16 px as in section
+  5, identical maps written once) and `surface_appearances.json` with the SurfaceAppearance and
+  MeshPart properties; the upload step swaps file names for asset ids.
+
 ## Open items on the SVJ
 
 | Item | Plan |
