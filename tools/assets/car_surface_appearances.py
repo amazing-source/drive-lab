@@ -8,8 +8,8 @@ given). Per set, as the SVJ was done (docs/pipelines/HERO_CAR.md sections 5-6):
   through), NormalMap (OpenGL), RoughnessMap and MetalnessMap; a map with one value everywhere is
   written as a 16 x 16 uniform map; identical files are written once (content hash in the name),
   so a map two sets share (carbon gloss and satin colour) uploads once;
-- source-derived sets with alpha (the stitch strip): ColorMap keeps alpha, AlphaMode Transparency
-  (the MeshPart then needs Transparency >= 0.02);
+- source-derived sets (a source texture on the mesh's own UVs): with alpha (the stitch strip) the
+  ColorMap keeps it, AlphaMode Transparency, MeshPart Transparency >= 0.02; without, opaque Overlay;
 - flat sets: no SurfaceAppearance, the MeshPart's Material, Color and Transparency only.
 `surface_appearances.json` maps each set to its files and properties; the upload step swaps file
 names for asset ids. Checks (exit 1): every map at most 1024 px and square power of two, colour
@@ -100,14 +100,15 @@ for name in used:
         contract[name] = c
         continue
     if kind == "source_derived":
-        col = Image.open(spec["color"]).convert("RGBA")
-        check(col, name, "ColorMap", alpha_ok=True)
-        sa = {"ColorMap": write(col, name, "color"), "AlphaMode": "Transparency"}
+        blended = spec.get("alpha") == "color"
+        col = Image.open(spec["color"]).convert("RGBA" if blended else "RGB")
+        check(col, name, "ColorMap", alpha_ok=blended)
+        sa = {"ColorMap": write(col, name, "color"), "AlphaMode": "Transparency" if blended else "Overlay"}
         rough = Image.fromarray(np.full((16, 16), round(spec["roughness"] * 255), np.uint8), "L")
         metal = Image.fromarray(np.full((16, 16), round(spec["metalness"] * 255), np.uint8), "L")
         sa["RoughnessMap"], sa["MetalnessMap"] = write(rough, name, "roughness"), write(metal, name, "metalness")
-        contract[name] = {"kind": kind, "SurfaceAppearance": sa, "MeshPart": {"Material": "SmoothPlastic",
-                                                                             "Transparency": 0.02},
+        part = {"Material": "SmoothPlastic", "Transparency": 0.02} if blended else {"Material": "SmoothPlastic"}
+        contract[name] = {"kind": kind, "SurfaceAppearance": sa, "MeshPart": part,
                           "note": "UVs kept from the mesh (one stitch per UV unit along U)"}
         continue
     col = Image.open(lib_path(name, "color")).convert("RGB")
