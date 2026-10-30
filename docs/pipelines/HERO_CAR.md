@@ -361,6 +361,14 @@ eye inventory ─► material map (+ photo per rule) ─► map check ─► app
 - **Renders** from the eye with `tools/blender/car_eye_render.py`, two fixed lights: the team's
   reference sun and a neutral overcast sky like the photos'. Under a blue sky every black reads
   blue-grey, so judge blacks in the overcast one.
+- **Livery** with `tools/assets/car_livery_sheets.py` and `tools/blender/car_livery_bake.py`, after
+  the apply step (then apply again for the rest of the paint). A game body's paint UVs are often
+  mirrored left to right (the DR458's door skins share one region), so text would read backwards on
+  one side. The bake gives the painted faces that face each side their own non-overlapping atlas
+  (Smart UV Project per object, blocks shelf-packed at one density: 3.6 mm per texel at 1024 on the
+  DR458) and colours every texel from its 3D position through a side-view decal sheet. Text then
+  reads right on both sides whatever the UVs do. The rest of the paint takes the tiled clear-coat
+  set. It fails if two faces share texels or if any sheet element lands nowhere.
 - **Export** with `tools/assets/car_surface_appearances.py`: per set the four maps (at most
   1024 px, square, colour opaque unless the set blends alpha, uniform maps at 16 px as in section
   5, identical maps written once) and `surface_appearances.json` with the SurfaceAppearance and
