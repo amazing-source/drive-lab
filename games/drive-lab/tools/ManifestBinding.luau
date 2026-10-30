@@ -175,14 +175,6 @@ local function direction(axis: Point): Point
 	}
 end
 
--- `point` turned by `angle` about the line through `pivot` along `axis`, all in the manifest's
--- frame; the turn follows the right-hand rule in Roblox's frame (Rules/Hinge), where the manifest
--- says a positive turn keeps its sense.
-function ManifestBinding.turned(point: Point, pivot: Point, axis: Point, angle: number): Point
-	local moved = Hinge.rotate(Hinge.chassis(point), Hinge.chassis(pivot), Hinge.chassis(axis), angle)
-	return { forward = -moved.z, right = moved.x, up = moved.y }
-end
-
 -- A part's travel from its modelled rest: the range itself, or its last position less its first.
 function ManifestBinding.travel(part: Part): number?
 	local range = part.range

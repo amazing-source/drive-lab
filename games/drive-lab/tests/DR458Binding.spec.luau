@@ -4,9 +4,12 @@
 	writes beside it (tests/fixtures/dr458_manifest.json).
 ]]
 local fs = require("@lune/fs")
+local roblox = require("@lune/roblox")
 local serde = require("@lune/serde")
 
 local DR458 = require("../src/shared/Config/Cars/DR458/Physics")
+local Geometry = require("../src/shared/Vehicle/Geometry")
+local Hinge = require("../src/shared/Rules/Hinge")
 local Model = require("../src/shared/Config/Cars/DR458/Model")
 local ModelPending = require("../src/shared/Config/Cars/DR458/ModelPending")
 local ManifestBinding = require("../tools/ManifestBinding")
@@ -14,8 +17,10 @@ local Screen = require("../src/shared/Config/Cars/DR458/Binnacle")
 local Settings = require("../tools/DR458Binding")
 local Startup = require("../src/shared/Config/Cars/DR458/Startup")
 local T = require("../../../tools/test/T")
+local Units = require("../src/shared/Units")
 
 local describe, it, expect = T.describe, T.it, T.expect
+local CFrame, Vector3 = roblox.CFrame, roblox.Vector3
 
 local MANIFEST: ManifestBinding.Manifest =
 	serde.decode("json", fs.readFile("games/drive-lab/tests/fixtures/dr458_manifest.json"))
@@ -32,13 +37,51 @@ local function vector(point: ManifestBinding.Point?): ManifestBinding.Point
 	return point
 end
 
-local function offset(
-	point: ManifestBinding.Point,
-	forward: number,
-	right: number,
-	up: number
-): ManifestBinding.Point
-	return { forward = point.forward + forward, right = point.right + right, up = point.up + up }
+-- The rig's chassis space (Car/CarRig carSpace): studs from the centre of mass, x right, y up,
+-- z toward the back.
+local function studs(point: ManifestBinding.Point): Vector3
+	local v = Hinge.chassis(point)
+	return Vector3.new(Units.metresToStuds(v.x), Units.metresToStuds(v.y), Units.metresToStuds(v.z))
+end
+
+local function metres(v: Vector3): ManifestBinding.Point
+	return {
+		forward = -Units.studsToMetres(v.Z),
+		right = Units.studsToMetres(v.X),
+		up = Units.studsToMetres(v.Y),
+	}
+end
+
+-- A frame at a binding's pivot, raised with the body as the rig raises it. Lune's CFrame.lookAt
+-- faces the opposite way to Roblox's, so frames are built from their axes.
+local function frameAt(
+	pivot: ManifestBinding.Point,
+	x: Hinge.Vector,
+	y: Hinge.Vector,
+	z: Hinge.Vector
+): CFrame
+	return CFrame.fromMatrix(
+		studs({ forward = pivot.forward, right = pivot.right, up = pivot.up + Model.bodyRaise }),
+		Vector3.new(x.x, x.y, x.z),
+		Vector3.new(y.x, y.y, y.z),
+		Vector3.new(z.x, z.y, z.z)
+	)
+end
+
+-- A hinge weld's rest C0 as Car/CarRig hingeFrame builds it, its X along the axis.
+local function hingeRest(pivot: ManifestBinding.Point, axis: ManifestBinding.Point): CFrame
+	local x, y, z = Hinge.frame(Hinge.chassis(axis))
+	return frameAt(pivot, x, y, z)
+end
+
+local function beside(frame: CFrame, forward: number, right: number, up: number): Vector3
+	return frame.Position + studs({ forward = forward, right = right, up = up })
+end
+
+-- Where a point on a welded part goes when the weld's C0 goes from `rest` to `posed`: a weld holds
+-- its Part1 at Part0 * C0 * C1:Inverse(), and C1 never changes.
+local function carried(point: Vector3, rest: CFrame, posed: CFrame): ManifestBinding.Point
+	return metres(posed * rest:Inverse() * point)
 end
 
 -- Every name the binding asks the model for.
@@ -153,58 +196,130 @@ describe("DR458 binding", function()
 	end)
 end)
 
-describe("DR458 binding: which way each part turns", function()
-	it("swings the driver's door's rear edge out to the car's left as it opens (75 degrees)", function()
-		local hinge = part("Door_L_Skin")
-		local pivot, axis = vector(hinge.pivot), vector(hinge.axis)
-		local rearEdge = offset(pivot, -1, 0, 0)
-		local open = ManifestBinding.turned(rearEdge, pivot, axis, math.rad(75))
-		expect(open.right < rearEdge.right - 0.5).toBe(true)
-		expect(math.abs(open.up - rearEdge.up) < 0.1).toBe(true)
-	end)
-
-	it("rolls each wheel forward on a positive turn: the top of the tyre moves toward the nose", function()
-		for _, group in Settings.wheelGroups do
-			local wheel = part(group)
-			local pivot, axis = vector(wheel.pivot), vector(wheel.axis)
-			local top = offset(pivot, 0, 0, 0.3)
-			expect(ManifestBinding.turned(top, pivot, axis, 0.1).forward > top.forward).toBe(true)
+-- The binding itself (Model), posed through the welds the rig builds and the turns the runtime
+-- applies to them, in the chassis's space.
+describe("DR458 binding: which way each part turns, as the rig turns it", function()
+	it(
+		"opens the driver's door 75 degrees, its rear edge out to the car's left (Controllers/CarDoor)",
+		function()
+			local door = Model.door
+			assert(door, "the DR458 has a door")
+			expect(door.openAngle).toBeNear(math.rad(75), 1e-3)
+			expect(door.pivot.right < 0).toBe(true)
+			local rest = hingeRest(door.pivot, door.axis)
+			local rearEdge = beside(rest, -1, 0, 0)
+			local shut = metres(rearEdge)
+			local open = carried(rearEdge, rest, rest * CFrame.Angles(Hinge.angle(1, door.openAngle), 0, 0))
+			expect(open.right < shut.right - 0.9).toBe(true)
+			expect(math.abs(open.up - shut.up) < 0.1).toBe(true)
 		end
-	end)
+	)
 
-	it("turns the steering wheel about an axis to the driver, anticlockwise as the driver sees it", function()
-		local wheel = part("SteeringWheel")
-		local pivot, axis = vector(wheel.pivot), vector(wheel.axis)
-		expect(axis.forward < 0).toBe(true)
-		local top = offset(pivot, 0.05, 0, 0.17)
-		expect(ManifestBinding.turned(top, pivot, axis, 0.1).right < top.right).toBe(true)
-	end)
+	-- The binding names no wheel axis: Car/VehicleRunner spins each bound tyre about the chassis's x
+	-- at its own centre. The binding decides which tyre each physics wheel turns and what rides it.
+	it(
+		"puts each physics wheel on the tyre at its corner, which rolls forward with its rim on a positive spin",
+		function()
+			local parents = Model.parents
+			assert(parents, "the DR458's wheels carry their rims")
+			local centre = ManifestBinding.centreOfMass(DR458)
+			local positions = Geometry.wheelPositions(DR458)
+			expect(#Model.wheels).toBe(#positions)
+			for slot, tyre in Model.wheels do
+				-- The corner's spin root, the rim, carries the wheel's centre and axle.
+				local rim = part(part(tyre).group)
+				local hub = ManifestBinding.toRig(vector(rim.pivot), centre)
+				expect(hub.forward).toBeNear(positions[slot].forward, 0.05)
+				expect(hub.right).toBeNear(positions[slot].right, 0.05)
+				expect(math.abs(vector(rim.axis).right)).toBeNear(1, 1e-3)
+				for _, rider in MANIFEST.parts do
+					if rider.group == rim.name and rider.name ~= tyre then
+						expect(parents[rider.name]).toBe(tyre)
+					end
+				end
+				for rider, carrier in parents do
+					if carrier == tyre then
+						expect(part(rider).group).toBe(rim.name)
+					end
+				end
+				local rest = CFrame.new(studs(hub))
+				local top = beside(rest, 0, 0, 0.3)
+				local spun = CFrame.new(rest.Position) * CFrame.Angles(-0.1, 0, 0) * rest.Rotation
+				expect(carried(top, rest, spun).forward > metres(top).forward).toBe(true)
+			end
+		end
+	)
 
 	it(
-		"turns the start-up's controls from off to on: key anticlockwise from above, guard up, switch up",
+		"turns the steering hub anticlockwise as the driver sees it, and clockwise on a right steer",
+		function()
+			local hub = Model.steeringHub
+			assert(hub, "the DR458's steering wheel turns on a hub")
+			local pivot, axis, seat = hub.pivot, hub.axis, Model.seat
+			local toSeat = {
+				forward = seat.forward - pivot.forward,
+				right = seat.right - pivot.right,
+				up = seat.up - pivot.up,
+			}
+			expect(axis.forward * toSeat.forward + axis.right * toSeat.right + axis.up * toSeat.up > 0).toBe(
+				true
+			)
+			-- As Car/VehicleRunner turns a steering wheel: its rest's +Z along the column toward the
+			-- driver, turned by CFrame.Angles(0, 0, -angle) for a steer of `angle` to the right.
+			local x, y, z = Hinge.frame(Hinge.chassis(axis))
+			local rest = frameAt(pivot, { x = -z.x, y = -z.y, z = -z.z }, y, x)
+			local top = rest * Vector3.new(0, Units.metresToStuds(0.17), 0)
+			local level = metres(top).right
+			expect(carried(top, rest, rest * CFrame.Angles(0, 0, 0.1)).right < level - 0.01).toBe(true)
+			expect(carried(top, rest, rest * CFrame.Angles(0, 0, -0.1)).right > level + 0.01).toBe(true)
+		end
+	)
+
+	it(
+		"turns the start-up's controls from rest to on (Controllers/CarDoor): key anticlockwise from above, guard up, switch from down to up",
 		function()
 			local controls = Model.controls
 			assert(controls, "the DR458 has controls")
-			local function turned(name: string, point: ManifestBinding.Point): ManifestBinding.Point
+			-- Its modelled pose, its rest (the binding's `rest` from there), and on: the start-up's move
+			-- turned in full from rest.
+			local function poses(name: string): (CFrame, CFrame, CFrame)
 				local hinge = controls[name]
-				local pivot, axis = vector(part(name).pivot), vector(part(name).axis)
-				local rested = ManifestBinding.turned(point, pivot, axis, hinge.rest or 0)
-				return ManifestBinding.turned(rested, pivot, axis, hinge.travel or 0)
+				assert(hinge, `the DR458's binding has {name}`)
+				local modelled = hingeRest(hinge.pivot, hinge.axis)
+				local rest = modelled * CFrame.Angles(hinge.rest or 0, 0, 0)
+				local angle = 0
+				for _, move in Startup.moves do
+					if move.control == name then
+						angle = Hinge.angle(1, move.angle)
+					end
+				end
+				return modelled, rest, rest * CFrame.Angles(angle, 0, 0)
 			end
-			local key = vector(part("TunnelKey_Master").pivot)
-			local grip = offset(key, 0.03, 0, 0)
-			expect(turned("TunnelKey_Master", grip).right < key.right - 0.02).toBe(true)
-			local guard = vector(part("PanelGuard_Ignition").pivot)
-			local edge = offset(guard, 0, 0, -0.03)
-			local lifted = turned("PanelGuard_Ignition", edge)
-			expect(lifted.forward < guard.forward and lifted.up > edge.up).toBe(true)
-			local switch = vector(part("PanelSwitch_Ignition").pivot)
-			local tip = offset(switch, -0.02, 0, 0)
-			local off = ManifestBinding.turned(tip, switch, vector(part("PanelSwitch_Ignition").axis), 0.35)
-			expect(off.up < switch.up).toBe(true)
-			expect(turned("PanelSwitch_Ignition", tip).up > switch.up).toBe(true)
+
+			local modelled, rest, on = poses("TunnelKey_Master")
+			local grip = beside(modelled, 0.03, 0, 0)
+			expect(carried(grip, modelled, on).right < carried(grip, modelled, rest).right - 0.02).toBe(true)
+
+			modelled, rest, on = poses("PanelGuard_Ignition")
+			local edge = beside(modelled, 0, 0, -0.03)
+			local closed, lifted = carried(edge, modelled, rest), carried(edge, modelled, on)
+			expect(lifted.up > closed.up + 0.02 and lifted.forward < closed.forward).toBe(true)
+
+			modelled, rest, on = poses("PanelSwitch_Ignition")
+			local tip = beside(modelled, -0.02, 0, 0)
+			local pivot = metres(modelled.Position)
+			expect(carried(tip, modelled, rest).up < pivot.up).toBe(true)
+			expect(carried(tip, modelled, on).up > pivot.up).toBe(true)
 		end
 	)
+
+	it("points each exhaust outlet out of the back of the car", function()
+		local outlets = Model.exhaustOutlets
+		assert(outlets and #outlets > 0, "the DR458 has exhaust outlets")
+		for _, outlet in outlets do
+			expect(outlet.axis.forward < -0.9).toBe(true)
+		end
+	end)
 end)
 
 describe("DR458 start-up", function()
