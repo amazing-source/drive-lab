@@ -8,7 +8,9 @@ them by position. Text and numerals on the right sheet are mirrored in that fram
 correctly from the right; shapes are the same on both sides. No brand, logo or sponsor name: the
 stickers are plain shapes. Each element's `roughness` is drawn under its alpha into
 livery_<side>_roughness.png. --overlay writes each sheet over an orthographic side render in the
-same frame, to check where elements land.
+same frame, to check where elements land. `top_elements` (centre x, y;
+text on a plate) are drawn on livery_top.png in `top_frame`, image top toward the rear, so they read
+from the front.
 """
 import json
 import math
@@ -145,6 +147,34 @@ def sheet(side):
     return img, rough
 
 
+def top_sheet():
+    """Top-view sheet for `top_elements` (keys x, y): image right is +x, image top is +y (the rear),
+    so text reads upright for someone standing in front of the car."""
+    T = spec["top_frame"]
+    assert abs(T["res_m"] - RES) < 1e-12, "top_frame res_m must equal frame res_m"
+    tw, th = round((T["x1"] - T["x0"]) / RES), round((T["y1"] - T["y0"]) / RES)
+    img = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
+    rough = Image.new("L", (tw, th), 0)
+    for el in spec["top_elements"]:
+        lay = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
+        if el["kind"] != "text":
+            raise ValueError(f"top element kind {el['kind']!r} not supported")
+        patch = text_patch(el["text"], el["height"], tuple(el["rgba"]),
+                           plate=(el["plate"]["w"], el["plate"]["h"], tuple(el["plate"]["rgba"]),
+                                  el["plate"]["radius"]) if "plate" in el else None,
+                           shear=el.get("shear", 0.18))
+        x, y = (el["x"] - T["x0"]) / RES, (T["y1"] - el["y"]) / RES
+        lay.alpha_composite(patch, (round(x - patch.width / 2), round(y - patch.height / 2)))
+        img.alpha_composite(lay)
+        rough.paste(round(el.get("roughness", 0.3) * 255), mask=lay.getchannel("A"))
+    return img, rough
+
+
+if spec.get("top_elements"):
+    t, tr = top_sheet()
+    t.save(out / "livery_top.png")
+    tr.save(out / "livery_top_roughness.png")
+    print("SHEET top", t.size, "->", out / "livery_top.png")
 for side in ("left", "right"):
     s, r = sheet(side)
     s.save(out / f"livery_{side}.png")

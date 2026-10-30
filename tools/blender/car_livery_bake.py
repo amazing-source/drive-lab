@@ -20,6 +20,8 @@ and dl_maps.
 
 Checks (exit 1): no two side faces share texels (overlap under 0.5 % of the used texels), every UV
 inside 0..1, and every sheet element landed on at least 50 texels of its side.
+With `top_elements` (a hood number), top-facing paint faces (world normal z >= 0.5) inside an
+element's box get a third atlas, `livery_top`, sampled from the top sheet by (x, y).
 `--break overlap` skips the packing (every object's block left at 0..1); `--break flag` drops the carbon objects, so the flag cannot land.
 """
 import json
@@ -64,14 +66,18 @@ def lin_to_srgb8(c):
     return np.round(np.where(c <= 0.0031308, c * 12.92, 1.055 * np.power(c, 1 / 2.4) - 0.055) * 255).astype(np.uint8)
 
 
+TOP = S.get("top_frame") if S.get("top_elements") else None
+SIDES = ("left", "right", "top") if TOP else ("left", "right")
+
+
 def load(path, mode):
     from PIL import Image  # Blender's Python ships Pillow only when installed; fall back below
     return np.asarray(Image.open(path).convert(mode))
 
 
 try:
-    SHEET = {s: load(sheets / f"livery_{s}.png", "RGBA").astype(np.float64) / 255 for s in ("left", "right")}
-    ROUGH = {s: load(sheets / f"livery_{s}_roughness.png", "L").astype(np.float64) / 255 for s in ("left", "right")}
+    SHEET = {s: load(sheets / f"livery_{s}.png", "RGBA").astype(np.float64) / 255 for s in SIDES}
+    ROUGH = {s: load(sheets / f"livery_{s}_roughness.png", "L").astype(np.float64) / 255 for s in SIDES}
     CARBON = load(S["carbon"]["color"], "RGB").astype(np.float64) / 255
     CARBON_R = load(S["carbon"]["roughness"], "L").astype(np.float64) / 255
 except ImportError:
@@ -81,8 +87,8 @@ except ImportError:
         a = np.array(img.pixels[:]).reshape(img.size[1], img.size[0], 4)[::-1]
         bpy.data.images.remove(img)
         return a[..., :channels] if channels > 1 else a[..., 0]
-    SHEET = {s: load_bpy(sheets / f"livery_{s}.png", 4) for s in ("left", "right")}
-    ROUGH = {s: load_bpy(sheets / f"livery_{s}_roughness.png", 1) for s in ("left", "right")}
+    SHEET = {s: load_bpy(sheets / f"livery_{s}.png", 4) for s in SIDES}
+    ROUGH = {s: load_bpy(sheets / f"livery_{s}_roughness.png", 1) for s in SIDES}
     CARBON = load_bpy(S["carbon"]["color"], 3)
     CARBON_R = load_bpy(S["carbon"]["roughness"], 1)
 
@@ -127,6 +133,15 @@ for el in S["elements"]:
     BOXES.append((el["name"], b))
 
 
+BOXES_TOP = [(el["name"], (el["x"] - el["plate"]["w"] / 2, el["y"] - el["plate"]["h"] / 2,
+                           el["x"] + el["plate"]["w"] / 2, el["y"] + el["plate"]["h"] / 2))
+             for el in S.get("top_elements", [])]
+
+
+def in_top_box(x, y, pad=0.05):
+    return any(b[0] - pad <= x <= b[2] + pad and b[1] - pad <= y <= b[3] + pad for _n, b in BOXES_TOP)
+
+
 def in_box(y, z, pad=0.03):
     return any(b[0] - pad <= y <= b[2] + pad and b[1] - pad <= z <= b[3] + pad for _n, b in BOXES)
 
@@ -150,8 +165,8 @@ def placeholder(name):
     return m
 
 
-side_faces = {"left": {}, "right": {}}
-counts = {"left": 0, "right": 0, "rest": 0}
+side_faces = {k: {} for k in SIDES}
+counts = {**{k: 0 for k in SIDES}, "rest": 0}
 for o in objs:
     slots = o.material_slots
     is_carbon = o.name in carbon_objs
@@ -161,7 +176,7 @@ for o in objs:
     mw, rot = o.matrix_world, o.matrix_world.to_3x3()
     me = o.data
     idx = {}
-    for name in ("livery_left", "livery_right") + (() if is_carbon else (S["rest_material"],)):
+    for name in tuple(f"livery_{k}" for k in SIDES) + (() if is_carbon else (S["rest_material"],)):
         mat = get_mat(name, placeholder)
         if mat.name not in [s.material.name for s in slots if s.material]:
             me.materials.append(mat)
@@ -173,6 +188,8 @@ for o in objs:
         n = (rot @ poly.normal).normalized()
         thr = 0.08 if in_box(c.y, c.z) else 0.25
         side = "left" if (c.x > 0 and n.x >= thr) else "right" if (c.x < 0 and n.x <= -thr) else None
+        if TOP and not is_carbon and n.z >= 0.5 and in_top_box(c.x, c.y):
+            side = "top"
         if side:
             side_faces[side].setdefault(o.name, []).append(poly.index)
             side_faces[side].setdefault("__carbon__" + o.name, is_carbon)
@@ -341,7 +358,7 @@ paint_lin = srgb_to_lin(S["paint_srgb"])
 tile = S["carbon"]["tile_m"]
 report.update({"faces": counts, "sides": {}})
 fail = []
-for side in ("left", "right"):
+for side in SIDES:
     if not [k for k in side_faces[side] if not k.startswith("__carbon__")]:
         fail.append(f"{side}: no faces")
         continue
@@ -352,8 +369,12 @@ for side in ("left", "right"):
     pos, nrm, carb, cover, outside = rasterise(side)
     used = cover > 0
     over = int((cover > 1).sum())
-    sx = (pos[..., 1] - Y0) / RES
-    sy = (Z1 - pos[..., 2]) / RES
+    if side == "top":
+        sx = (pos[..., 0] - TOP["x0"]) / TOP["res_m"]
+        sy = (TOP["y1"] - pos[..., 1]) / TOP["res_m"]
+    else:
+        sx = (pos[..., 1] - Y0) / RES
+        sy = (Z1 - pos[..., 2]) / RES
     dec = sample(SHEET[side], sx, sy)
     rgh = sample(ROUGH[side], sx, sy)
     base_lin = np.broadcast_to(paint_lin, pos.shape).copy()
@@ -383,8 +404,9 @@ for side in ("left", "right"):
     rimg.save()
     # Element landing: texels on this side whose position lies inside each element's box.
     landed = {}
-    for name, b in BOXES:
-        inside = used & (pos[..., 1] >= b[0]) & (pos[..., 1] <= b[2]) & (pos[..., 2] >= b[1]) & (pos[..., 2] <= b[3])
+    ax, bx = (0, 1) if side == "top" else (1, 2)
+    for name, b in (BOXES_TOP if side == "top" else BOXES):
+        inside = used & (pos[..., ax] >= b[0]) & (pos[..., ax] <= b[2]) & (pos[..., bx] >= b[1]) & (pos[..., bx] <= b[3])
         landed[name] = int(inside.sum())
         if landed[name] < 50:
             fail.append(f"{side}: element '{name}' landed on {landed[name]} texels")
