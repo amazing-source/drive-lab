@@ -17,6 +17,7 @@ local Startup = require("@self/Startup")
 
 return Contract.define({
 	physics = Physics,
+	modeLabels = { Strada = "Strada", Sport = "Sport", Corsa = "Corsa" },
 	model = Model,
 	door = Door,
 	startup = Startup,

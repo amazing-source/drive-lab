@@ -22,8 +22,8 @@ export type Tuning = {
 	-- Degrees of rumble as longitudinal g goes from fromG to toG, fading out by fadeKmh.
 	launch: { degrees: number, fromG: number, toG: number, fadeKmh: number, hz: number },
 	-- The upshift's pitch: down to `down` degrees over `dip` s, up to `up` over `rise` s, back to
-	-- level over `settle` s; scaled per drive mode (the ISR gearbox is harsh in Corsa).
-	shift: { down: number, up: number, dip: number, rise: number, settle: number, modes: { [string]: number } },
+	-- level over `settle` s; scaled by the input's `shiftScale`.
+	shift: { down: number, up: number, dip: number, rise: number, settle: number },
 	-- Per view (Chase, Cockpit, Hood); a view not listed takes Chase's.
 	views: { [string]: ViewShare },
 	scale: number,
@@ -35,7 +35,8 @@ export type Input = {
 	throttle: number,
 	longitudinalG: number,
 	gear: number,
-	mode: string,
+	-- The share of the upshift's kick the car's gearbox gives in its drive mode.
+	shiftScale: number,
 }
 
 -- Radians, and metres of lift.
@@ -120,7 +121,7 @@ function CarShake.step(state: State, input: Input, dt: number, tuning: Tuning): 
 	local last = state.gear
 	if last ~= nil and last >= 1 and gear > last then
 		state.shiftAge = 0
-		state.shiftScale = tuning.shift.modes[input.mode] or tuning.shift.modes.Sport or 1
+		state.shiftScale = input.shiftScale
 	else
 		state.shiftAge += dt
 	end

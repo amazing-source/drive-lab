@@ -144,7 +144,7 @@ function Model.new(car: CarConfig, help: InputHelp.InputHelp?): VehicleState
 			groundSpeed = 0,
 			throttle = 0,
 			brake = 0,
-			mode = car.modes.Strada,
+			mode = car.modes[car.modeOrder[1]],
 			gearboxMode = "auto",
 			holdGear = false,
 		},
@@ -263,6 +263,7 @@ local function runElectronics(
 	local braking = state.controls.brake > BRAKING or escBraking
 	Electronics.updateAbs(
 		car.electronics,
+		mode,
 		electronics,
 		input.assists.abs,
 		braking,
@@ -294,7 +295,7 @@ local function setLoads(state: VehicleState, mode: Types.ModeConfig, throttle: n
 	loads.clutchCapacity = Gearbox.clutchCapacity(car.gearbox, state.gearbox)
 	loads.couplingCapacity = Driveline.couplingCapacity(mode, drive.outputTorque, drive.clutchTorque >= 0)
 	loads.lsdCapacity =
-		Driveline.lsdCapacity(car.driveline, Driveline.rearInputTorque(state.driveline, drive))
+		Driveline.lsdCapacity(car.driveline, mode, Driveline.rearInputTorque(state.driveline, drive))
 	loads.lossCapacity = (1 - car.driveline.efficiency) * math.abs(drive.outputTorque)
 	for wheel = 1, Geometry.WHEELS do
 		loads.brakeCapacity[wheel] = Brakes.torque(

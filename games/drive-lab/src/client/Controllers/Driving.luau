@@ -15,6 +15,7 @@ local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
+local DriveModes = require(ReplicatedStorage.Shared.Rules.DriveModes)
 local DriverAssists = require(ReplicatedStorage.Shared.Rules.DriverAssists)
 local InputHelp = require(ReplicatedStorage.Shared.Config.InputHelp)
 local Interface = require(ReplicatedStorage.Shared.Vehicle.Interface)
@@ -23,14 +24,15 @@ local TyreSmokeConfig = require(ReplicatedStorage.Shared.Config.TyreSmoke)
 local Types = require(ReplicatedStorage.Shared.Config.Cars.Types)
 local VehicleRunner = require(ReplicatedStorage.Shared.Car.VehicleRunner)
 
-local MODES: { Types.DrivingMode } = { "Strada", "Sport", "Corsa" }
-
 local localPlayer = Players.LocalPlayer
 local runner: VehicleRunner.Runner? = nil
 local connection: RBXScriptConnection? = nil
 local pressed = { shiftUp = false, shiftDown = false }
 local gearboxMode: "auto" | "manual" = "auto"
-local modeIndex = 1
+-- The entry of the car being driven.
+local driven: Catalog.Entry? = nil
+-- The drive mode each car was left in, by its name, so a car keeps it from one drive to the next.
+local chosenMode: { [string]: Types.DrivingMode } = {}
 local escSwitch = DriverAssists.newSwitch()
 local tyreReadings: { TyreSmoke.Wheel } = {}
 
@@ -68,10 +70,18 @@ local function gamepadAxes(): (number, number, number)
 	return throttle, brake, steer
 end
 
-local function readInput(tuning: DriverAssists.Tuning): Interface.DriverInput
+local function modeOf(entry: Catalog.Entry): Types.DrivingMode
+	return DriveModes.current(entry.physics.modeOrder, chosenMode[entry.physics.name])
+end
+
+local function readInput(entry: Catalog.Entry, mode: Types.DrivingMode): Interface.DriverInput
 	local padThrottle, padBrake, padSteer = gamepadAxes()
 	local keySteer = (if held(Controls.RIGHT) then 1 else 0) - (if held(Controls.LEFT) then 1 else 0)
-	DriverAssists.updateSwitch(escSwitch, held(Controls.ESC_OFF), os.clock(), tuning)
+	local tuning = entry.assists
+	local button = tuning.escButton
+	if button then
+		DriverAssists.updateSwitch(escSwitch, held(Controls.ESC_OFF), os.clock(), button)
+	end
 	local input: Interface.DriverInput = {
 		throttle = math.max(if held(Controls.THROTTLE) then 1 else 0, padThrottle),
 		brake = math.max(if held(Controls.BRAKE) then 1 else 0, padBrake),
@@ -80,8 +90,8 @@ local function readInput(tuning: DriverAssists.Tuning): Interface.DriverInput
 		shiftUp = pressed.shiftUp,
 		shiftDown = pressed.shiftDown,
 		gearboxMode = gearboxMode,
-		drivingMode = MODES[modeIndex],
-		assists = DriverAssists.assists(escSwitch.off, tuning),
+		drivingMode = mode,
+		assists = DriverAssists.assists(escSwitch.off, mode, tuning),
 	}
 	pressed.shiftUp, pressed.shiftDown = false, false
 	return input
@@ -98,7 +108,12 @@ local function gated(entry: Catalog.Entry, model: Model, input: Interface.Driver
 	return input
 end
 
-local function publish(model: Model, result: Interface.StepResult, current: VehicleRunner.Runner)
+local function publish(
+	model: Model,
+	result: Interface.StepResult,
+	current: VehicleRunner.Runner,
+	mode: Types.DrivingMode
+)
 	local telemetry = result.telemetry
 	model:SetAttribute("SpeedKmh", telemetry.speedKmh)
 	model:SetAttribute("Rpm", telemetry.rpm)
@@ -108,7 +123,7 @@ local function publish(model: Model, result: Interface.StepResult, current: Vehi
 	model:SetAttribute("Steer", telemetry.steer)
 	model:SetAttribute("LongitudinalG", current.longitudinalG)
 	model:SetAttribute("LateralG", current.lateralG)
-	model:SetAttribute("DrivingMode", MODES[modeIndex])
+	model:SetAttribute("DrivingMode", mode)
 	model:SetAttribute("GearboxMode", gearboxMode)
 	model:SetAttribute("Shifting", telemetry.shifting)
 	model:SetAttribute("Limiter", telemetry.limiter)
@@ -128,6 +143,7 @@ end
 local function stop()
 	-- ESC is back on for the next drive, as at a new ignition cycle (the car's assists).
 	escSwitch = DriverAssists.newSwitch()
+	driven = nil
 	if connection then
 		connection:Disconnect()
 		connection = nil
@@ -150,10 +166,12 @@ local function start(seat: Seat)
 		else InputHelp.keyboard
 	local current = VehicleRunner.new(rig, entry.physics, help)
 	runner = current
+	driven = entry
 	connection = RunService.PreSimulation:Connect(function(dt: number)
-		local result = VehicleRunner.step(current, gated(entry, model, readInput(entry.assists)), dt)
+		local mode = modeOf(entry)
+		local result = VehicleRunner.step(current, gated(entry, model, readInput(entry, mode)), dt)
 		VehicleRunner.animate(current, dt)
-		publish(model, result, current)
+		publish(model, result, current, mode)
 	end)
 end
 
@@ -191,7 +209,10 @@ function Controller.start()
 		elseif contains(Controls.GEARBOX_MODE, key) then
 			gearboxMode = if gearboxMode == "auto" then "manual" else "auto"
 		elseif contains(Controls.DRIVING_MODE, key) then
-			modeIndex = modeIndex % #MODES + 1
+			local entry = driven
+			if entry then
+				chosenMode[entry.physics.name] = DriveModes.after(entry.physics.modeOrder, modeOf(entry))
+			end
 		end
 	end)
 	if localPlayer.Character then

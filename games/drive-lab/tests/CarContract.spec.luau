@@ -141,3 +141,62 @@ describe("Car contract: the display", function()
 		end).toThrow()
 	end)
 end)
+
+describe("Car contract: drive modes", function()
+	it("refuses a part keyed by drive mode that leaves one of the car's modes out", function()
+		local leaveOut: { (any) -> () } = {
+			function(entry)
+				entry.modeLabels.Sport = nil
+			end,
+			function(entry)
+				entry.camera.shiftKick.Sport = nil
+			end,
+			function(entry)
+				entry.audio.popTriggers.liftChance.Sport = nil
+			end,
+			function(entry)
+				entry.audio.popTriggers.upshiftChance.Sport = nil
+			end,
+			function(entry)
+				entry.audio.popTriggers.downshiftChance.Sport = nil
+			end,
+		}
+		for _, change in leaveOut do
+			expect(function()
+				Contract.define(svjWith(change))
+			end).toThrow()
+		end
+	end)
+
+	it("refuses a part keyed by drive mode that names a mode the car does not have", function()
+		local stray: { (any) -> () } = {
+			function(entry)
+				entry.modeLabels.Pista = "Pista"
+			end,
+			function(entry)
+				entry.camera.shiftKick.Pista = 1
+			end,
+			function(entry)
+				entry.audio.popTriggers.liftChance.Pista = 1
+			end,
+			function(entry)
+				entry.cluster.modes.Pista = entry.cluster.modes.Corsa
+			end,
+			function(entry)
+				entry.assists.modes = { Pista = entry.assists.on }
+			end,
+		}
+		for _, change in stray do
+			expect(function()
+				Contract.define(svjWith(change))
+			end).toThrow()
+		end
+	end)
+
+	it("accepts assists set by one of the car's own modes", function()
+		local entry = Contract.define(svjWith(function(entry)
+			entry.assists.modes = { Corsa = { abs = true, tc = false, esc = true } }
+		end))
+		expect(entry.assists.modes and entry.assists.modes.Corsa.tc).toBe(false)
+	end)
+end)

@@ -17,6 +17,10 @@ local DriverAssists = require("./Cars/SVJ/Assists")
 local InputHelp = require("./InputHelp")
 local Rules = require("../Rules/ControlsHelp")
 
+-- The screen explains the SVJ's ESC button.
+local escButton = DriverAssists.escButton
+assert(escButton, "the SVJ has no ESC button to explain")
+
 export type ControlsHelpConfig = {
 	HELP: Rules.Help,
 	-- Seconds a gamepad press may last to count as the controls button's tap: under
@@ -322,7 +326,7 @@ local HELP: Rules.Help = {
 		EXIT_HOLD = CarEntry.EXIT_HOLD_SECONDS,
 		EXIT_KMH = CarEntry.EXIT_MAX_KMH,
 		DOOR_KMH = CarEntry.DOOR_MAX_KMH,
-		ESC_HOLD = DriverAssists.offHoldSeconds,
+		ESC_HOLD = escButton.holdSeconds,
 		PAD_HOLD = CarLights.PAD_HOLD_SECONDS,
 		REVERSE_HOLD = InputHelp.REVERSE_HOLD_SECONDS,
 		LAUNCH_RPM = SVJ.engine.launchRpm,

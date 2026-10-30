@@ -24,12 +24,19 @@ local CarShakeConfig = require(ReplicatedStorage.Shared.Config.CarShake)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local ChaseView = require(script.Parent.ChaseView)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
+local DriveModes = require(ReplicatedStorage.Shared.Rules.DriveModes)
 local Rules = require(ReplicatedStorage.Shared.Rules.CarCamera)
 local Units = require(ReplicatedStorage.Shared.Units)
 
 local EntryView = require(script.Parent.EntryView)
 
-type Drive = { model: Model, chassis: BasePart, bodyRaise: number, views: CarCamera.CarViews }
+type Drive = {
+	model: Model,
+	chassis: BasePart,
+	bodyRaise: number,
+	views: CarCamera.CarViews,
+	modes: { string },
+}
 
 local localPlayer = Players.LocalPlayer
 local viewIndex = 1
@@ -60,7 +67,13 @@ local function currentDrive(): Drive?
 	if chassis == nil or not chassis:IsA("BasePart") or entry == nil then
 		return nil
 	end
-	return { model = model, chassis = chassis, bodyRaise = entry.model.bodyRaise, views = entry.camera }
+	return {
+		model = model,
+		chassis = chassis,
+		bodyRaise = entry.model.bodyRaise,
+		views = entry.camera,
+		modes = entry.physics.modeOrder,
+	}
 end
 
 local function number(model: Model, name: string): number
@@ -194,14 +207,14 @@ local function update(dt: number)
 	)
 	local model = drive.model
 	local speed = number(model, "SpeedKmh")
-	local mode = model:GetAttribute("DrivingMode")
+	local mode = DriveModes.current(drive.modes, model:GetAttribute("DrivingMode"))
 	local offset = CarShake.step(shake, {
 		view = view,
 		speedKmh = speed,
 		throttle = number(model, "Throttle"),
 		longitudinalG = number(model, "LongitudinalG"),
 		gear = number(model, "Gear"),
-		mode = if typeof(mode) == "string" then mode else "",
+		shiftScale = drive.views.shiftKick[mode],
 	}, dt, CarShakeConfig)
 	camera.CFrame = placed * CFrame.Angles(offset.pitch, offset.yaw, offset.roll)
 		+ placed.UpVector * studs(offset.lift)

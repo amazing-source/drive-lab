@@ -10,7 +10,8 @@
 local CarAudioEvents = require("./CarAudioEvents")
 local Types = require("../Config/Cars/Types")
 
-export type ByMode = { Strada: number, Sport: number, Corsa: number }
+-- Keyed by every one of the car's drive modes (Config/Cars/Contract checks it).
+export type ByMode = { [string]: number }
 export type Range = { from: number, to: number }
 
 export type Tuning = {
@@ -39,7 +40,7 @@ export type State = {
 local ExhaustPops = {}
 
 local function forMode(values: ByMode, mode: Types.DrivingMode): number
-	return if mode == "Corsa" then values.Corsa elseif mode == "Sport" then values.Sport else values.Strada
+	return values[mode]
 end
 
 function ExhaustPops.new(tuning: Tuning): State

@@ -14,10 +14,10 @@ local describe, it, expect = T.describe, T.it, T.expect
 
 local DT = 1 / 60
 local KMH = 1 / 3.6
+local BUTTON: DriverAssists.EscButton = { holdSeconds = 3, off = { abs = true, tc = false, esc = false } }
 local TUNING: DriverAssists.Tuning = {
-	offHoldSeconds = 3,
 	on = { abs = true, tc = true, esc = true },
-	off = { abs = true, tc = false, esc = false },
+	escButton = BUTTON,
 	lampFlashHz = 2,
 }
 local MODES: { Types.DrivingMode } = { "Strada", "Sport", "Corsa" }
@@ -30,7 +30,7 @@ end
 -- The most smoke either rear tyre makes in 3 s of full throttle from rest, with the game's own
 -- thresholds; with `launchControl`, after 1.5 s held on the brake at full throttle first.
 local function launchSmoke(mode: Types.DrivingMode, escOff: boolean, launchControl: boolean): number
-	local assists = DriverAssists.assists(escOff, Config)
+	local assists = DriverAssists.assists(escOff, mode, Config)
 	local sim = DriveSim.new(SVJ)
 	if launchControl then
 		local hold = DriveSim.input(input({ throttle = 1, brake = 1, drivingMode = mode }, assists))
@@ -57,7 +57,7 @@ export type Stop = { distance: number, absActed: boolean, leastRolling: number }
 -- Full brake from 100 km/h in Strada. `leastRolling` is the lowest share of its ground speed any
 -- wheel's tread kept above 5 m/s: 0 is a locked wheel.
 local function brakeFrom100(escOff: boolean): Stop
-	local assists = DriverAssists.assists(escOff, Config)
+	local assists = DriverAssists.assists(escOff, "Strada", Config)
 	local sim = DriveSim.new(SVJ)
 	DriveSim.setSpeed(sim, 100 * KMH, 3)
 	local coast = DriveSim.input(input({ drivingMode = "Strada" }, assists))
@@ -86,50 +86,77 @@ end
 describe("The ESC control", function()
 	it("switches ESC off only once held for the hold time", function()
 		local switch = DriverAssists.newSwitch()
-		expect(DriverAssists.updateSwitch(switch, true, 10, TUNING)).toBe(false)
-		expect(DriverAssists.updateSwitch(switch, true, 12.9, TUNING)).toBe(false)
+		expect(DriverAssists.updateSwitch(switch, true, 10, BUTTON)).toBe(false)
+		expect(DriverAssists.updateSwitch(switch, true, 12.9, BUTTON)).toBe(false)
 		expect(switch.off).toBe(false)
-		expect(DriverAssists.updateSwitch(switch, true, 13, TUNING)).toBe(true)
+		expect(DriverAssists.updateSwitch(switch, true, 13, BUTTON)).toBe(true)
 		expect(switch.off).toBe(true)
 	end)
 
 	it("never switches ESC off on taps, however many", function()
 		local switch = DriverAssists.newSwitch()
 		for tap = 0, 20 do
-			DriverAssists.updateSwitch(switch, true, tap, TUNING)
-			DriverAssists.updateSwitch(switch, true, tap + 0.5, TUNING)
-			DriverAssists.updateSwitch(switch, false, tap + 0.6, TUNING)
+			DriverAssists.updateSwitch(switch, true, tap, BUTTON)
+			DriverAssists.updateSwitch(switch, true, tap + 0.5, BUTTON)
+			DriverAssists.updateSwitch(switch, false, tap + 0.6, BUTTON)
 		end
 		expect(switch.off).toBe(false)
 	end)
 
 	it("switches once per hold, and back on at once with the next press", function()
 		local switch = DriverAssists.newSwitch()
-		DriverAssists.updateSwitch(switch, true, 0, TUNING)
-		DriverAssists.updateSwitch(switch, true, 3, TUNING)
-		expect(DriverAssists.updateSwitch(switch, true, 9, TUNING)).toBe(false)
+		DriverAssists.updateSwitch(switch, true, 0, BUTTON)
+		DriverAssists.updateSwitch(switch, true, 3, BUTTON)
+		expect(DriverAssists.updateSwitch(switch, true, 9, BUTTON)).toBe(false)
 		expect(switch.off).toBe(true)
-		DriverAssists.updateSwitch(switch, false, 9.5, TUNING)
-		expect(DriverAssists.updateSwitch(switch, true, 10, TUNING)).toBe(true)
+		DriverAssists.updateSwitch(switch, false, 9.5, BUTTON)
+		expect(DriverAssists.updateSwitch(switch, true, 10, BUTTON)).toBe(true)
 		expect(switch.off).toBe(false)
 		-- The press that switched it back on, held on, does not switch it off again.
-		expect(DriverAssists.updateSwitch(switch, true, 20, TUNING)).toBe(false)
+		expect(DriverAssists.updateSwitch(switch, true, 20, BUTTON)).toBe(false)
 		expect(switch.off).toBe(false)
-		DriverAssists.updateSwitch(switch, false, 21, TUNING)
-		DriverAssists.updateSwitch(switch, true, 22, TUNING)
-		DriverAssists.updateSwitch(switch, true, 25, TUNING)
+		DriverAssists.updateSwitch(switch, false, 21, BUTTON)
+		DriverAssists.updateSwitch(switch, true, 22, BUTTON)
+		DriverAssists.updateSwitch(switch, true, 25, BUTTON)
 		expect(switch.off).toBe(true)
 	end)
 
 	it("takes traction and stability control when off, and leaves ABS", function()
-		local on = DriverAssists.assists(false, Config)
+		local on = DriverAssists.assists(false, "Strada", Config)
 		expect(on.abs).toBe(true)
 		expect(on.tc).toBe(true)
 		expect(on.esc).toBe(true)
-		local off = DriverAssists.assists(true, Config)
+		local off = DriverAssists.assists(true, "Strada", Config)
 		expect(off.abs).toBe(true)
 		expect(off.tc).toBe(false)
 		expect(off.esc).toBe(false)
+	end)
+end)
+
+describe("The assists a drive mode sets", function()
+	-- A manettino car: no ESC button, and its OFF position switches traction control off.
+	local TC_OFF: Interface.Assists = { abs = true, tc = false, esc = true }
+	local MANETTINO: DriverAssists.Tuning = {
+		on = { abs = true, tc = true, esc = true },
+		modes = { OFF = TC_OFF },
+		lampFlashHz = 2,
+	}
+
+	it("runs a mode's own systems in that mode, and the car's in a mode that sets none", function()
+		expect(DriverAssists.assists(false, "OFF", MANETTINO)).toBe(TC_OFF)
+		expect(DriverAssists.assists(false, "1", MANETTINO)).toBe(MANETTINO.on)
+	end)
+
+	it("never switches ESC off on a car without the button", function()
+		expect(DriverAssists.assists(true, "1", MANETTINO)).toBe(MANETTINO.on)
+		expect(DriverAssists.assists(true, "OFF", MANETTINO)).toBe(TC_OFF)
+	end)
+
+	it("puts the ESC button's systems over the mode's", function()
+		local both = table.clone(MANETTINO)
+		both.escButton = BUTTON
+		expect(DriverAssists.assists(true, "OFF", both)).toBe(BUTTON.off)
+		expect(DriverAssists.assists(false, "OFF", both)).toBe(TC_OFF)
 	end)
 end)
 
