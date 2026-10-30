@@ -25,15 +25,15 @@ function Launch.newState(): LaunchState
 	return { phase = "Off" }
 end
 
--- Whether the drive mode and ESC are as launch control needs them.
-function Launch.selected(config: Types.LaunchConfig, input: Interface.DriverInput): boolean
-	return input.drivingMode == config.mode and not input.assists.esc
+-- Whether the car has launch control and the drive mode and ESC are as it needs them.
+function Launch.selected(config: Types.LaunchConfig?, input: Interface.DriverInput): boolean
+	return config ~= nil and input.drivingMode == config.mode and not input.assists.esc
 end
 
 -- Whether launch control can arm now: selected, stopped (under `standstill`, m/s) in first, not
 -- mid-shift.
 function Launch.available(
-	config: Types.LaunchConfig,
+	config: Types.LaunchConfig?,
 	input: Interface.DriverInput,
 	gear: number,
 	shifting: boolean,
@@ -56,7 +56,7 @@ end
 
 -- One frame, on the pedals the car gets (after the input filter).
 function Launch.update(
-	config: Types.LaunchConfig,
+	config: Types.LaunchConfig?,
 	state: LaunchState,
 	selected: boolean,
 	available: boolean,
@@ -65,6 +65,10 @@ function Launch.update(
 	gear: number,
 	groundSpeed: number
 )
+	if config == nil then
+		state.phase = "Off"
+		return
+	end
 	local phase = state.phase
 	if phase == "Off" then
 		if available and brake >= HELD and throttle >= FULL then
