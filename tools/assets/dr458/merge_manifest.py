@@ -18,6 +18,9 @@ Each area file is {"file", "frame", "parts": [...]} as manifest_schema.json desc
 - every group resolves: a part's group is another part (the thing it rides on), an assembly in the
   parts draft, or Chassis; following groups from part to part never loops. A static part riding a
   moving one may be named <its group>_<Piece>.
+- optional "points" per area file, {name: {forward, right, up, how}}: named reference points in the
+  same frame (such as the driver's H-point), merged into a top-level "points"; names unique across
+  files, numeric forward/right/up in metres, "how" a non-empty provenance string.
 Rotation sense: axes are the Blender axis converted component-wise and a positive turn is the
 right-hand rule in Blender's frame. The {forward, right, up} frame itself is left-handed, but mapped
 to Roblox as (x = right, y = up, z = -forward) the whole chain is Blender (x, y, z) -> Roblox
@@ -69,8 +72,19 @@ def vec(e, k):
     return [v["forward"], v["right"], v["up"]]
 
 
+points, point_from = {}, {}
 for path in areas:
     doc = json.load(open(path))
+    for pn, pv in (doc.get("points") or {}).items():
+        where = f"{Path(path).name}:points.{pn}"
+        if pn in point_from:
+            problems.append(f"{where}: point name also in {point_from[pn]}")
+        point_from[pn] = Path(path).name
+        if vec({"p": pv}, "p") is None:
+            problems.append(f"{where}: needs numeric forward, right, up in metres")
+        if not (isinstance(pv, dict) and isinstance(pv.get("how"), str) and pv["how"].strip()):
+            problems.append(f"{where}: needs a 'how' provenance string")
+        points[pn] = pv
     for e in doc["parts"]:
         n = e.get("name", "?")
         where = f"{Path(path).name}:{n}"
@@ -135,5 +149,7 @@ merged = {"about": "DR458 merged manifest, written by merge_manifest.py; do not 
           "frame": schema["frame"],
           "rotation_sense": "axes are Blender axes converted component-wise; a positive turn is the right-hand rule in Blender's frame, and stays so in Roblox when mapped as x = right, y = up, z = -forward (Blender (x, y, z) -> Roblox (-x, z, y) is a proper rotation); never compute a rotation in the {forward, right, up} components themselves, a left-handed frame; each moving part's 'positive' says physically what it does",
           "sources": [Path(p).name for p in areas], "parts": parts}
+if points:
+    merged["points"] = points
 json.dump(merged, open(out, "w"), indent=1)
-print(f"MANIFEST OK: {len(parts)} parts from {len(areas)} files -> {out}")
+print(f"MANIFEST OK: {len(parts)} parts, {len(points)} points from {len(areas)} files -> {out}")

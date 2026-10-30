@@ -1,14 +1,19 @@
-"""Resolve depth fighting left after tools/blender/dr458/clean_hidden.py, pair by pair, with the scan's own test.
+"""Resolve depth fighting left after clean_v11.py, pair by pair, with the scan's own test.
 
-blender -b <DR458_WORK>/assembly/dr458_master_v11_vis.blend --factory-startup -P tools/blender/dr458/zfix.py -- <out.blend> <report.json>
+blender -b <budgeted master.blend> --factory-startup -P tools/blender/dr458/zfix.py -- <out.blend> <report.json>
 
 Test (as tools/blender/dr458/zfight_scan.py, own seed): an area sample fights when another object's face lies
 within 1.5 mm, facing the same way (normals within 25 degrees), along the sample's normal (at most
 0.3 mm to the side, so a seam where two panels only meet is not a fight).
-Per pair over 1 cm2 the overlay moves and the other surface stays: the overlay is the object whose
-fighting share of its own area is larger (a stitch line, a trim strip, a lamp rim), except that
-Cabin_InnerSkin (a filler copied from the body) and body_metal_ (the door-sill scuff plate with the
-wordmark, which the unbadged car drops) are always the ones to move, and always sink. Otherwise the
+Cabin_InnerSkin (a filler copied 3 mm inside the body) never moves: sunk, its outline left the door
+frames and the roof trims it meets and opened slits seen from the seat. Where it fights, only its
+faces lying entirely within 2 mm of the other surface are deleted (that surface already covers the
+shell there), except under the driver's door, which opens; what it fights over a partial face, or
+under that door, stays and is reported.
+Per other pair over 1 cm2 the overlay moves and the other surface stays: the overlay is the object
+whose fighting share of its own area is larger (a stitch line, a trim strip, a lamp rim), except
+that body_metal_ (the door-sill scuff plate with the wordmark, which the unbadged car drops) is
+always the one to move, and always sinks. Otherwise the
 signed offset (overlay minus other, along the overlay's normal, averaged over its fighting samples)
 decides: in front or level, the overlay's fighting faces lift 2.5 mm and the other's faces lying
 entirely within 2 mm of it (hidden behind it) are deleted; behind, the overlay sinks 2.5 mm. A
@@ -19,6 +24,11 @@ Pairs whose fighting samples sit on both sides (surfaces crossing at a shallow a
 as crossings in the report.
 All changes of a pass come from that pass's scan and are applied together. Pairs inside the Wheels
 collection are listed, not touched (a spinning tyre against a static caliper is a fit question).
+Glass and lenses: what lies behind glass stays visible through it, so nothing under glass is ever
+deleted, and glass never sinks. Glass in front of an opaque surface lifts; glass that also fights
+another glass layer stays put (a frit band moved between the clear glass and the surround bounced
+from one to the other pass after pass and opened a strip of sky along the windscreen's top).
+A skin pair left after the skin's own deletion is treated as any pair, with the skin staying.
 Repeats until no treatable pair is over 1 cm2, at most 8 passes.
 """
 import json
@@ -36,7 +46,9 @@ out_blend, out_json = sys.argv[sys.argv.index("--") + 1:][:2]
 T0 = time.time()
 DIST, COS, LATERAL, SAMPLE_CM2, MAX_SAMPLES, LIMIT = 0.0015, math.cos(math.radians(25)), 0.0003, 0.5, 40000, 1.0
 GONE_MM, SINK, PASSES = 0.002, 0.0025, 8
-LOSERS = ("Cabin_InnerSkin", "body_metal_")
+LOSERS = ("body_metal_",)
+YIELDS = ("Cabin_InnerSkin",)
+OPENS = ("doorLF_", "glassLF", "mirrorL_", "Door_L")  # the driver's door swings open: never delete what it covers
 rng = np.random.default_rng(37)
 report = {"passes": [], "skipped_wheels": []}
 
@@ -112,18 +124,36 @@ def loser(o):
     return any(s in o.name for s in LOSERS)
 
 
+def yields(o):
+    return o.name in YIELDS
+
+
+def glassy(o):
+    n = o.name.lower()
+    return "glass" in n or "_window_" in n or "lens" in n
+
+
 MOVES = {}
+YIELDED = set()
+report["yield_kept"] = []
 for npass in range(PASSES + 1):
     cur, pair_area, fight, total, offset, sides = scan()
     over = sorted(((a, b, v) for (a, b), v in pair_area.items() if v > LIMIT), key=lambda r: -r[2])
     wheels = [(a, b, v) for a, b, v in over if cur[a].users_collection[0].name == "Wheels" and cur[b].users_collection[0].name == "Wheels"]
-    todo = [r for r in over if r not in wheels]
+    glass = [(a, b, v) for a, b, v in over if glassy(cur[a]) or glassy(cur[b])]
+    sandwiched = {k for a, b, _v in glass if glassy(cur[a]) and glassy(cur[b]) for k in (a, b)}
+    todo = [r for r in over if r not in wheels and not (glassy(cur[r[0]]) and glassy(cur[r[1]]))
+            and not (r in glass and (r[0] in sandwiched or r[1] in sandwiched))]
+    if npass:
+        report["yield_kept"] = [{"a": cur[a].name, "b": cur[b].name, "cm2": round(v, 1)} for a, b, v in over
+                                if frozenset((cur[a].name, cur[b].name)) in YIELDED]
     log(f"pass {npass}: {len(over)} sampled pairs over {LIMIT} cm2 ({len(wheels)} inside Wheels, not treated)")
     entry = {"pass": npass, "pairs_over": len(over), "wheels_pairs": len(wheels),
              "top": [{"a": cur[a].name, "b": cur[b].name, "cm2": round(v, 1)} for a, b, v in over[:30]], "treated": []}
     report["passes"].append(entry)
     if npass == 0:
         report["skipped_wheels"] = [{"a": cur[a].name, "b": cur[b].name, "cm2": round(v, 1)} for a, b, v in wheels]
+        report["skipped_glass"] = [{"a": cur[a].name, "b": cur[b].name, "cm2": round(v, 1)} for a, b, v in glass]
     if not todo or npass == PASSES:
         break
     deletions, moves, done = {}, {}, set()
@@ -132,18 +162,43 @@ for npass in range(PASSES + 1):
         if key in done:
             continue
         done.add(key)
+        forced = None
+        if (yields(cur[a]) or yields(cur[b])) and frozenset((cur[a].name, cur[b].name)) in YIELDED:
+            forced = (b, a) if yields(cur[a]) else (a, b)
+        elif glassy(cur[a]) != glassy(cur[b]):
+            forced = (a, b) if glassy(cur[a]) else (b, a)
+        if forced is None and (yields(cur[a]) or yields(cur[b])):
+            sk, ot = (a, b) if yields(cur[a]) else (b, a)
+            S, N = cur[sk], cur[ot]
+            gone = []
+            if not any(s in N.name for s in OPENS) and not glassy(N):
+                nt = obj_bvh(N)
+                mw = S.matrix_world
+                gone = [i for i in fight.get((sk, ot), set())
+                        if all(nt.find_nearest(p, GONE_MM)[0] is not None
+                               for p in [mw @ S.data.polygons[i].center] + [mw @ S.data.vertices[vi].co for vi in S.data.polygons[i].vertices])]
+            deletions.setdefault(sk, set()).update(gone)
+            YIELDED.add(frozenset((S.name, N.name)))
+            entry["treated"].append({"yields": S.name, "covered_by": N.name, "faces_deleted": len(gone),
+                                     "fighting_faces": len(fight.get((sk, ot), ()))})
+            continue
         sa = pair_area.get((a, b), 0.0) / max(total[a], 1e-9)
         sb = pair_area.get((b, a), 0.0) / max(total[b], 1e-9)
         mov, oth = (a, b) if sa >= sb else (b, a)
         if loser(cur[oth]) and not loser(cur[mov]):
             mov, oth = oth, mov
+        if forced is not None:
+            mov, oth = forced
         M, N = cur[mov], cur[oth]
         nfs = sum(sides.get((mov, oth), [0, 0, 0]))
         front = (not loser(M)) and offset.get((mov, oth), 0.0) >= 0.0
+        if glassy(M) and not front:
+            entry["treated"].append({"glass_behind_left": M.name, "over": N.name})
+            continue
         sd = sides.get((mov, oth), [0, 0, 0])
         crossing = min(sd[0], sd[1]) >= 0.25 * max(1, nfs)
         gone = []
-        if front:
+        if front and not glassy(M):
             mt = obj_bvh(M)
             mw = N.matrix_world
             for i in fight.get((oth, mov), set()):

@@ -1,5 +1,5 @@
 """Render the master from seeded random viewpoints with one flat colour per object, for before/after
-comparisons (tools/assets/dr458/render_diff.py) that catch visible geometry lost or moved by a clean-up or decimation.
+comparisons (render_diff.py) that catch visible geometry lost or moved by a clean-up or decimation.
 
 blender -b <master.blend> --factory-startup -P tools/blender/dr458/render_ids.py -- <out dir> [seed] [count]
 
@@ -11,7 +11,7 @@ so they differ from the fixed ones the clean-up itself used:
 - the cockpit eye anywhere in the camera's range (Config/CarCamera EYE_RANGE), looking forward,
   left, right, at the dash, down into the driver's footwell and across to the passenger's;
 - three points at the open driver's door, with the door's own objects hidden.
-Each cockpit-eye view is also rendered with the glass shown (`<name>_holes.png`): from inside the
+Each cockpit-eye view is also rendered with the glass shown, both sides (`<name>_holes.png`): from inside the
 closed car every pixel should be car or glass, so a background pixel there is a hole (holes_check.py).
 Colours are a hash of each object's name, so deleting one object never recolours another;
 colours.json maps them back. Workbench, flat, no anti-aliasing, Standard view transform.
@@ -59,6 +59,17 @@ meshes = [o for o in sc.objects if o.type == "MESH"]
 base_hidden = {o.name: o.hide_render for o in meshes}
 GLASS = ("_glass", "_window_", "glassLHL", "glassRHL", "glassLTL", "glassRTL")
 DOOR_L = ("doorLF_", "mirrorL_", "glassLF_", "Door_L")
+# The glass faces outward, so from inside it is culled and would count as a hole: the holes frames
+# draw each glass mesh with a reversed twin, so a background pixel there is sky seen through the body.
+for o in [o for o in meshes if any(s in o.name for s in GLASS)]:
+    tw = o.copy()
+    tw.data = o.data.copy()
+    tw.name = o.name + "__back"
+    tw.data.flip_normals()
+    for c in o.users_collection:
+        c.objects.link(tw)
+    meshes.append(tw)
+    base_hidden[tw.name] = base_hidden[o.name]
 
 
 def shoot(name, loc, tgt, fov_v_deg, hide, holes=False):
@@ -98,6 +109,6 @@ for k in range(3):
     loc = (rng.uniform(1.0, 2.0), rng.uniform(-2.3, -0.9), rng.uniform(0.5, 2.0))
     shoot(f"door{k:02d}", loc, (rng.uniform(-0.2, 0.5), rng.uniform(-2.3, -1.2), rng.uniform(0.15, 0.6)), 60, GLASS + DOOR_L)
     n += 1
-json.dump({o.name: list(o.color[:3]) for o in meshes if not base_hidden[o.name]
+json.dump({o.name: list(o.color[:3]) for o in meshes if not base_hidden[o.name] and not o.name.endswith("__back")
            and not any(c.name.startswith("Replaced") for c in o.users_collection)}, open(out / "colours.json", "w"))
 print("IDS", out, n, "views, seed", seed)
