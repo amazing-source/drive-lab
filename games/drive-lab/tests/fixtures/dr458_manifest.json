@@ -378,6 +378,16 @@
       "name": "Cage_Paint_Foot04"
     },
     {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_Node01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Cage_Paint_Node02"
+    },
+    {
       "group": "Door_L",
       "motion": "static",
       "name": "Door_L_Card"
@@ -422,9 +432,9 @@
       "motion": "hinge",
       "name": "WindowNet",
       "pivot": {
-        "forward": 1.50943,
-        "right": -0.64867,
-        "up": 0.46865
+        "forward": 1.50808,
+        "right": -0.64936,
+        "up": 0.47344
       },
       "range": 1.7453292519943295
     },
@@ -790,6 +800,11 @@
       "name": "Harness_WebbingYellow_01"
     },
     {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Pedal_Box_AnodisedBlack_01"
+    },
+    {
       "axis": {
         "forward": -0.0,
         "right": -1,
@@ -820,9 +835,9 @@
       "motion": "hinge",
       "name": "Pedal_Throttle",
       "pivot": {
-        "forward": 2.545,
+        "forward": 2.395,
         "right": -0.106,
-        "up": 0.128
+        "up": 0.14
       },
       "range": 0.18
     },
@@ -830,11 +845,6 @@
       "group": "Pedal_Throttle",
       "motion": "static",
       "name": "Pedal_Throttle_Arm"
-    },
-    {
-      "group": "Chassis",
-      "motion": "static",
-      "name": "Pedal_Box_AnodisedBlack_01"
     },
     {
       "group": "Chassis",
