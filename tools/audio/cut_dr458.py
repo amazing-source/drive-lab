@@ -19,15 +19,17 @@ exciter (300 Hz to 3 kHz driven into tanh, its harmonics above 1.2 kHz mixed bac
 above 2 kHz; then stereo, whose side is bank B's nearest-rpm loop resampled to the same rpm and
 high-passed at 800 Hz, its seam folded. --raw keeps the bank as recorded, for an A/B.
 
-Neither bank has a start-up: it is synthesised. A starter cranks (pinion whine, brush noise and a
-compression pulse at the cranking speed's 4th order), then the engine catches, flares and
-settles, rendered from this set's own loops along an rpm path.
+Neither bank has a start-up. It is cut from a real recording passed in with its start and end:
+a few milliseconds faded in, its last STARTUP_FADE_SECONDS faded out (the idle loop takes over),
+its settled stretch before that fade matched to the idle loop's loudness, lower if a peak would
+pass the ceiling, the difference recorded as the boost to play it with.
 
-    python -I tools/audio/cut_dr458.py <bank A> <bank B> <out dir> [--raw]
+    python -I tools/audio/cut_dr458.py <bank A> <bank B> <start-up recording> <from s> <to s> <out dir> [--raw]
 """
 
 import json
 import os
+import subprocess
 import sys
 
 import numpy as np
@@ -83,16 +85,9 @@ LIMITER_RHYTHM_HZ = 15.0
 LIMITER_FIRE_SHARE = 0.55
 LIMITER_CUT_DB = -20.0
 
-# The start-up, seconds and rpm. The settled idle is the preview drive's assumption (no source).
-CRANK_SECONDS = 0.85
-CRANK_RPM = 230.0
-STARTER_PINION_RATIO = 12.0
-STARTER_PINION_TEETH = 10
-FLARE_PATH = [(0.0, CRANK_RPM, 1.0), (0.3, 3200.0, 1.0), (0.42, 3100.0, 0.0), (1.0, 1700.0, 0.0), (1.8, 1300.0, 0.15), (4.0, 1150.0, 0.15), (8.5, 1000.0, 0.12), (9.65, 1000.0, 0.12)]
 STARTUP_FADE_SECONDS = 2.0
-# Mirrors the pack's engineTuning (Config/Cars/DR458/Audio) for the start-up's own mix.
-QUIET_RPM, QUIET_DB, LOUD_RPM, LOUD_DB = 1000.0, -12.0, 8500.0, 0.0
-CROSSFADE_OCTAVES = 0.5
+# The stretch before the fade-out whose loudness is matched to the idle loop's.
+STARTUP_SETTLED_SECONDS = 1.5
 SEAM_SECONDS = 0.05
 SEAM_SEARCH_SECONDS = 0.25
 
@@ -266,78 +261,33 @@ def far_loop(bank_a: dict) -> tuple[np.ndarray, str]:
     return stereo(low - low.mean()), f"{', '.join(FAR_SOURCES)} summed, low-passed at {FAR_CUTOFF_HZ:g} Hz"
 
 
-def render_engine(loops: list, path: list, level_rpm: float) -> np.ndarray:
-    """The set's loops along an rpm and throttle path (time s, rpm, throttle), crossfaded as
-    Rules/EngineSound does, at unity gain at `level_rpm` and louder with rpm as the pack is."""
-    end = path[-1][0]
-    t = np.arange(int(end * RATE)) / RATE
-    rpm = np.interp(t, [p[0] for p in path], [p[1] for p in path])
-    throttle = np.interp(t, [p[0] for p in path], [p[2] for p in path])
-    out = np.zeros((len(t), 2))
-    half = 2 ** (CROSSFADE_OCTAVES / 2)
-    for load, gain in (("On", np.sin(throttle * np.pi / 2)), ("Off", np.cos(throttle * np.pi / 2))):
-        chain = sorted((loop for loop in loops if loop["load"] in (load, "Both")), key=lambda loop: loop["rpm"])
-        weights = [np.zeros(len(t)) for _ in chain]
-        weights[0][rpm <= chain[0]["rpm"]] = 1
-        weights[-1][rpm >= chain[-1]["rpm"]] = 1
-        for i in range(len(chain) - 1):
-            low, high = chain[i]["rpm"], chain[i + 1]["rpm"]
-            inside = (rpm > low) & (rpm < high)
-            centre = np.sqrt(low * high)
-            a, b = max(centre / half, low), min(centre * half, high)
-            share = np.clip(np.log(rpm[inside] / a) / np.log(b / a), 0, 1)
-            weights[i][inside] = np.cos(share * np.pi / 2)
-            weights[i + 1][inside] = np.sin(share * np.pi / 2)
-        for loop, weight in zip(chain, weights):
-            if weight.max() == 0:
-                continue
-            audio = loop["audio"]
-            position = np.cumsum(np.clip(rpm / loop["rpm"], 0.1, 2.5)) % len(audio)
-            index = np.floor(position).astype(np.int64)
-            frac = (position - index)[:, None]
-            played = audio[index] * (1 - frac) + audio[(index + 1) % len(audio)] * frac
-            out += played * (gain * weight * loop["volume"])[:, None]
-    def loudness(at):
-        share = np.clip(np.log(at / QUIET_RPM) / np.log(LOUD_RPM / QUIET_RPM), 0, 1)
-        return QUIET_DB + (LOUD_DB - QUIET_DB) * share
-
-    return out * (10 ** ((loudness(rpm) - loudness(level_rpm)) / 20))[:, None]
+def decode(path: str) -> np.ndarray:
+    """Any file ffmpeg reads, as stereo float at RATE."""
+    raw = subprocess.run(
+        ["ffmpeg", "-v", "error", "-i", path, "-f", "f32le", "-ac", "2", "-ar", str(RATE), "-"],
+        check=True,
+        capture_output=True,
+    ).stdout
+    return np.frombuffer(raw, dtype=np.float32).reshape(-1, 2).astype(np.float64)
 
 
-def crank(seconds: float) -> np.ndarray:
-    """A starter turning the engine: pinion whine, brush noise and the compression pulse."""
-    rng = np.random.default_rng(11)
-    t = np.arange(int(seconds * RATE)) / RATE
-    pulse_hz = CRANK_RPM / 60 * ORDER
-    pulse = 0.5 * (1 + np.sin(2 * np.pi * pulse_hz * t))
-    crank_rpm = CRANK_RPM * (1 - 0.12 * pulse)
-    mesh_hz = crank_rpm * STARTER_PINION_RATIO / 60 * STARTER_PINION_TEETH
-    phase = 2 * np.pi * np.cumsum(mesh_hz) / RATE
-    whine = sum(np.sin(k * phase) / k for k in (1, 2, 3, 4))
-    brush = sosfilt(butter(2, [2000, 6000], "bandpass", fs=RATE, output="sos"), rng.standard_normal(len(t)))
-    chuff = sosfilt(butter(2, [60, 220], "bandpass", fs=RATE, output="sos"), rng.standard_normal(len(t))) * pulse**3
-    engage = np.exp(-t / 0.01) * sosfilt(butter(2, 1500, "highpass", fs=RATE, output="sos"), rng.standard_normal(len(t)))
-    x = 0.25 * whine * (0.6 + 0.4 * pulse) + 0.08 * brush + 0.9 * chuff + 0.6 * engage
-    x *= np.minimum(1, t / 0.02) * np.minimum(1, (seconds - t) / 0.05)
-    return stereo(x[:, None] * 0.3)
-
-
-def startup(loops: list) -> tuple[np.ndarray, dict]:
-    cranking = crank(CRANK_SECONDS)
-    engine = render_engine(loops, FLARE_PATH, FLARE_PATH[-1][1])
-    lead = int(0.03 * RATE)
-    engine[:lead] *= np.linspace(0, 1, lead)[:, None]
-    x = np.concatenate([cranking, np.zeros((len(engine), 2))])
-    x[len(cranking) - lead : len(cranking) - lead + len(engine)] += engine
-    fade = int(STARTUP_FADE_SECONDS * RATE)
-    x[-fade:] *= np.cos(np.linspace(0, np.pi / 2, fade))[:, None]
+def startup(path: str, start: float, end: float) -> tuple[np.ndarray, dict]:
+    x = decode(path)[int(start * RATE) : int(end * RATE)].copy()
+    x -= x.mean(axis=0)
+    fade_in, fade_out = int(0.005 * RATE), int(STARTUP_FADE_SECONDS * RATE)
+    x[:fade_in] *= np.linspace(0, 1, fade_in)[:, None]
+    settled = x[-fade_out - int(STARTUP_SETTLED_SECONDS * RATE) : -fade_out]
+    x[-fade_out:] *= np.cos(np.linspace(0, np.pi / 2, fade_out))[:, None]
+    level_db = LOOP_LUFS - C.loudness(settled, periodic=False)
     peak_db = 20 * np.log10(np.max(np.abs(x)) + 1e-12)
-    gain_db = min(0.0, C.PEAK_CEILING_DB - peak_db)
+    gain_db = min(level_db, C.PEAK_CEILING_DB - peak_db)
     x *= 10 ** (gain_db / 20)
     return x, {
-        "source": f"synthesised: {CRANK_SECONDS:g} s of starter cranking at {CRANK_RPM:g} rpm, then this set's loops along {FLARE_PATH}; last {STARTUP_FADE_SECONDS:g} s faded out",
+        "source": f"{os.path.basename(path)} {start:g}-{end:g} s, last {STARTUP_FADE_SECONDS:g} s faded out",
+        "gain_db": round(gain_db, 2),
         "peak_dbfs": round(20 * np.log10(np.max(np.abs(x)) + 1e-12), 2),
-        "boost_vs_idle_db": round(-gain_db, 2),
+        # Play it this many dB louder than the idle loop's gain, so its settled idle meets the loop's.
+        "boost_vs_idle_db": round(level_db - gain_db, 2),
     }
 
 
@@ -347,7 +297,7 @@ def one_shot(bank: dict, name: str, target: float) -> tuple[np.ndarray, dict]:
     return y, {"source": f"bank B {name}", "loudness_lufs_400ms_max": round(lufs, 2), "peak_dbfs": round(peak, 2)}
 
 
-def main(bank_a_path: str, bank_b_path: str, out: str, raw: bool):
+def main(bank_a_path: str, bank_b_path: str, startup_path: str, startup_from: float, startup_to: float, out: str, raw: bool):
     os.makedirs(os.path.join(out, "wav"), exist_ok=True)
     bank_a, bank_b = read_bank(bank_a_path), read_bank(bank_b_path)
     manifest, loops = [], []
@@ -388,7 +338,7 @@ def main(bank_a_path: str, bank_b_path: str, out: str, raw: bool):
     manifest.append(save(out, "far", far, {"name": "far", "kind": "far_loop", "rpm": None, "loop": True, "source": source, "loudness_lufs": round(lufs, 2), "peak_dbfs": round(peak, 2), "seam": seam(far)}))
 
     shots = []
-    start, info = startup(loops)
+    start, info = startup(startup_path, startup_from, startup_to)
     shots.append(({"name": "startup", "kind": "startup", "loop": False, **info}, start))
     gear, info = one_shot(bank_b, f"ferrari_458_{GEAR}", GEAR_LUFS)
     shots.append(({"name": "gear", "kind": "gear", "loop": False, **info}, stereo(gear)))
@@ -415,4 +365,4 @@ def main(bank_a_path: str, bank_b_path: str, out: str, raw: bool):
 
 if __name__ == "__main__":
     arguments = [a for a in sys.argv[1:] if a != "--raw"]
-    main(arguments[0], arguments[1], arguments[2], "--raw" in sys.argv[1:])
+    main(arguments[0], arguments[1], arguments[2], float(arguments[3]), float(arguments[4]), arguments[5], "--raw" in sys.argv[1:])
