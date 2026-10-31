@@ -1,0 +1,37 @@
+Deliberate breaks for the gesture-sync PR (#163), each applied alone to Rules/HandGestures, the full
+spec suite run (lune run tools/test/run), then the file restored from git; the tree was clean after.
+Baseline: 93 spec files, 970 passed, 0 failed.
+
+== 1 a button acts at the press, not at the thumb's contact: 7 failing; 93 spec files, 963 passed, 7 failed
+   FAIL Control timing on the DR458 > acts on every gestured control as the hand works it, once, never at the key: games/drive-lab/tests/ControlTiming.spec:90: e
+   FAIL Control timing on the DR458 > steps the wiper once per press: two presses on the thumb's way apply together at its contact: games/drive-lab/tests/Control
+   FAIL Control timing on the DR458 > a press of another control on the same hand waits its turn, then acts at its own contact: games/drive-lab/tests/ControlTimi
+   FAIL Control timing on the DR458 > turns the manettino one position per press, each at its own turn: games/drive-lab/tests/ControlTiming.spec:188: expected 2,
+   FAIL Hand gestures: the instant the hand works its control > reports a button once, as the thumb reaches it, and again on a press while it is held: games/driv
+   FAIL Hand gestures: the instant the hand works its control > reports a knob as its turn completes, not when the hand reaches its end: games/drive-lab/tests/Ha
+   FAIL Hand gestures: every press owed once > gives back what a hand leaving the wheel still owed, and nothing it has already settled: games/drive-lab/tests/Han
+== 2 merged presses not counted: 3 failing; 93 spec files, 967 passed, 3 failed
+   FAIL Control timing on the DR458 > steps the wiper once per press: two presses on the thumb's way apply together at its contact: games/drive-lab/tests/Control
+   FAIL Control timing on the DR458 > a press while the thumb holds its button acts on the next frame: games/drive-lab/tests/ControlTiming.spec:130: expected 1, 
+   FAIL Hand gestures: every press owed once > gives back what a hand leaving the wheel still owed, and nothing it has already settled: games/drive-lab/tests/Han
+== 3 a full queue still takes the press: 1 failing; 93 spec files, 969 passed, 1 failed
+   FAIL Hand gestures: every press owed once > refuses a press when the hand's queue is full: it is the caller's at once: games/drive-lab/tests/HandGestures.spec
+== 4 a knob acts when the hand reaches its end, not when its turn completes: 1 failing; 93 spec files, 969 passed, 1 failed
+   FAIL Hand gestures: the instant the hand works its control > reports a knob as its turn completes, not when the hand reaches its end: games/drive-lab/tests/Ha
+== 5 a knob's turn does not act: 3 failing; 93 spec files, 967 passed, 3 failed
+   FAIL Control timing on the DR458 > acts on every gestured control as the hand works it, once, never at the key: games/drive-lab/tests/ControlTiming.spec:93: e
+   FAIL Control timing on the DR458 > turns the manettino one position per press, each at its own turn: games/drive-lab/tests/ControlTiming.spec:188: expected 2,
+   FAIL Hand gestures: the instant the hand works its control > reports a knob as its turn completes, not when the hand reaches its end: games/drive-lab/tests/Ha
+== 6 the button held until the hand is home, not until it starts back: 1 failing; 93 spec files, 969 passed, 1 failed
+   FAIL Control timing on the DR458 > runs the washer and the flasher while the thumb holds the button: from contact to the way back: games/drive-lab/tests/Contr
+== 7 a hand leaving the wheel forgets its queue: 1 failing; 93 spec files, 969 passed, 1 failed
+   FAIL Hand gestures: every press owed once > gives back what a hand leaving the wheel still owed, and nothing it has already settled: games/drive-lab/tests/Han
+== 8 a press with no track is lost: 1 failing; 93 spec files, 969 passed, 1 failed
+   FAIL Hand gestures: every press owed once > owes at once a press whose gesture has no track from the control's state: games/drive-lab/tests/HandGestures.spec:
+clean
+
+-- Added with the at-key hold (commit "Held controls act at their key ..."), baseline 972 passed:
+== 9 a button the hands could not take is never held: 1 failing; 93 spec files, 971 passed, 1 failed
+   FAIL Hand gestures: held buttons > holds a button the hands could not take for as long as its key is held, then lets it go
+== 10 a let-go button stays held: 1 failing; 93 spec files, 971 passed, 1 failed
+   FAIL Hand gestures: held buttons > holds a button the hands could not take for as long as its key is held, then lets it go
