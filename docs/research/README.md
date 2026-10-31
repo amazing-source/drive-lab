@@ -18,7 +18,8 @@ on Space, waiting for the owner's go.
 
 `14_game_handling.md` (2026-10-31, the systems agent with the researcher's web research, issue #158)
 covers how racing games make realistic cars playable on a keyboard and a pad. It also holds Drive
-Lab's measured behaviour at the limit, and the slide assist with its three game-feel notches.
+Lab's measured behaviour at the limit, and the slide assist with its three game-feel notches. The
+assist was removed at the owner's request after playing it (#182); the note stays as research.
 
 These are research notes, dated where they say so: the code and `games/drive-lab/README.md` are
 the current truth when they disagree.
