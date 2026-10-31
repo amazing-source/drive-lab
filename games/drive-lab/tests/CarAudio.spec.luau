@@ -133,10 +133,37 @@ describe("CarAudio config", function()
 		expect(DR458.pops.speed.to).toBe(SVJ.pops.speed.to)
 	end)
 
-	it("DR458: plays them 4.5 dB under the SVJ's level, keeping the SVJ's spread", function()
+	it("DR458: plays them 4.5 dB under the SVJ's balance with its engine, in the SVJ's spread", function()
+		-- A pop plays at its volume times the car's level; its engine at the car's engine volume.
+		local function againstEngine(pack: CarAudio.Pack, volume: number): number
+			return volume * CarAudio.carGain(pack) / pack.engineVolume
+		end
 		local gain = 10 ^ (-4.5 / 20)
-		expect(DR458.pops.volume.from).toBeNear(SVJ.pops.volume.from * gain, 1e-9)
-		expect(DR458.pops.volume.to).toBeNear(SVJ.pops.volume.to * gain, 1e-9)
+		local levels = {
+			{ DR458.pops.volume.from, SVJ.pops.volume.from },
+			{ DR458.pops.volume.to, SVJ.pops.volume.to },
+		}
+		for _, pair in levels do
+			expect(againstEngine(DR458, pair[1])).toBeNear(againstEngine(SVJ, pair[2]) * gain, 1e-9)
+		end
+	end)
+
+	it("plays the SVJ at its loops' level and the DR458 8 dB over it", function()
+		expect(SVJ.engineVolume).toBe(1)
+		expect(CarAudio.carGain(SVJ)).toBe(1)
+		expect(DR458.engineVolume).toBeNear(10 ^ (8 / 20), 1e-9)
+	end)
+
+	it("makes a car's controls, start-up, one-shots, road and tyres follow its level", function()
+		local louder = table.clone(DR458) :: any
+		louder.engineVolume = DR458.engineVolume * 2
+		expect(CarAudio.carGain(louder) / CarAudio.carGain(DR458)).toBeNear(2, 1e-12)
+		expect(CarAudio.idleLevel(louder) / CarAudio.idleLevel(DR458)).toBeNear(2, 1e-12)
+	end)
+
+	it("DR458: plays its start-up 6 dB over its idle, about as the SVJ's (5.4)", function()
+		expect(DR458.startup.boostDb).toBe(6)
+		expect(math.abs(DR458.startup.boostDb - SVJ.startup.boostDb) <= 1).toBeTruthy()
 	end)
 
 	it("DR458: pops on the SVJ's Corsa timing in every manettino position", function()

@@ -72,6 +72,8 @@ export type ControlSounds = {
 export type Pack = {
 	engineLayers: { EngineLayer },
 	engineTuning: EngineSound.Tuning,
+	-- The car's level (linear): its engine loops, limiter and far loop play at it, and its one-shots,
+	-- its controls and the road and tyre sounds heard in it follow it (carGain).
 	engineVolume: number,
 	-- `region` as an engine layer's.
 	limiter: {
@@ -131,6 +133,10 @@ export type CarAudio = {
 	ENGINE_LEVEL_ATTRIBUTE: string,
 	-- The uploaded file a pack's pops are cut from.
 	popsSoundId: (pack: Pack) -> string,
+	-- The gain everything the car plays, and the road and tyre sounds heard in it, takes from its
+	-- level: its pops and gear click (their volumes are against the engine), and Controllers/RoadAudio
+	-- and Controllers/TyreAudio while it is driven.
+	carGain: (pack: Pack) -> number,
 	-- The idle loop's volume at idle: the lowest layer, at its own rpm and the pack's volume. The
 	-- start-up and the cockpit controls' sounds are levelled against it.
 	idleLevel: (pack: Pack) -> number,
@@ -148,6 +154,9 @@ local CarAudio: CarAudio = table.freeze({
 	COCKPIT_VIEW = "Cockpit",
 	VIEW_HALF_LIFE = 0.06,
 	ENGINE_LEVEL_ATTRIBUTE = "EngineLevel",
+	carGain = function(pack: Pack): number
+		return pack.engineVolume
+	end,
 	popsSoundId = function(pack: Pack): string
 		return pack.pops.soundId or pack.eventsSoundId
 	end,
