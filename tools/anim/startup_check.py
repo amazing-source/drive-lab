@@ -10,8 +10,11 @@ and the arm the controller would draw: the forearm and the upper arm as capsules
 smaller half-widths, the elbow from the controller's rule. Then:
 
 - a hand vertex is inside a surface when most of its eight nearest surface samples face away from
-  it (one sample alone misfires on thin double-faced parts) and it is within MAX_DEPTH of the
-  surface; its depth is the distance to the nearest sample. Further off, the vote says nothing:
+  it (one sample alone misfires on thin double-faced parts), it is within MAX_DEPTH of the
+  surface, and, where that object's surface is closed, a ray from it crosses its triangles an odd
+  number of times (two rays of three: a finger in a cover's open cavity faces the cover's inner
+  walls and fooled the vote; on an open surface the vote stands);
+  its depth is the distance to the nearest sample. Further off, the vote says nothing:
   13 cm from an open strap, samples facing away were read as "inside" on the first bake. A hand
   sunk deeper than MAX_DEPTH into anything still fails, on the vertices nearer its surface. The controls the start-up turns are sampled at rest and the hand is turned back
   into their frame at each moment, so a guard or a key is checked where the game draws it;
@@ -58,7 +61,7 @@ HANDOVER_TURN = math.radians(0.1)
 # The sleeves' smaller half-widths (tools/blender/driver_sleeves.py): forearm toward the wrist,
 # upper arm.
 FOREARM_RADIUS, UPPER_RADIUS = 0.029, 0.046
-SPACING = 0.002
+SPACING = 0.0015
 MAX_DEPTH = 0.02
 REGION_MARGIN = 0.08
 STRICT_ARM = ("SwitchPanel", "Panel", "SteeringWheel", "WheelButton", "WheelRotary", "Cage", "Binnacle", "Dash", "dash")
@@ -122,15 +125,24 @@ def openness(t, move):
     return max(0.0, min(1.0, 1 - (t - back) / move["move"]))
 
 
-def surface_samples(v, t, spacing):
+def surface_samples(v, t, spacing, ids=None):
+    """Points over the triangles `t` about `spacing` apart, with each triangle's normal and index.
+    With `ids` (each triangle's index in the whole dump) a triangle always gets the same points,
+    whatever else is sampled with it: a depth must not change because the region did."""
     a, b, c = v[t[:, 0]], v[t[:, 1]], v[t[:, 2]]
     n = np.cross(b - a, c - a)
     area = 0.5 * np.linalg.norm(n, axis=1)
     n = n / np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12)
     k = np.maximum(1, np.ceil(area / (spacing * spacing * 0.5))).astype(int)
     tri = np.repeat(np.arange(len(t)), k)
-    rng = np.random.default_rng(0)
-    r1, r2 = rng.random(len(tri)), rng.random(len(tri))
+    if ids is None:
+        rng = np.random.default_rng(0)
+        r1, r2 = rng.random(len(tri)), rng.random(len(tri))
+    else:
+        nth = np.arange(len(tri)) - np.repeat(np.cumsum(k) - k, k)
+        seed = np.asarray(ids)[tri].astype(np.float64) * 7919.0 + nth
+        r1 = np.modf(np.abs(np.sin(seed * 12.9898) * 43758.5453))[0]
+        r2 = np.modf(np.abs(np.sin(seed * 78.233) * 43758.5453))[0]
     f = r1 + r2 > 1
     r1[f], r2[f] = 1 - r1[f], 1 - r2[f]
     p = a[tri] + (b[tri] - a[tri]) * r1[:, None] + (c[tri] - a[tri]) * r2[:, None]
@@ -142,6 +154,35 @@ def inside_depth(tree, samples, normals, points, votes=8):
     facing = np.einsum("ijk,ijk->ij", points[:, None, :] - samples[idx], normals[idx]) < 0
     inside = (facing.mean(1) > 0.5) & (dist[:, 0] < MAX_DEPTH)
     return np.where(inside, dist[:, 0], 0.0), idx[:, 0]
+
+
+RAYS = np.array([[0.267, 0.535, 0.802], [-0.577, 0.577, -0.577], [0.707, -0.3, -0.64]])
+
+
+def parity_inside(points, triangles):
+    """Whether each point is inside the closed surface `triangles` (m, 3, 3): odd crossings along
+    a ray, by a majority of three rays. The normal vote alone reads a point in a cover's open
+    cavity, facing its inner walls, as inside the cover."""
+    if len(points) == 0:
+        return np.zeros(0, bool)
+    a, b, c = triangles[:, 0], triangles[:, 1], triangles[:, 2]
+    e1, e2 = b - a, c - a
+    odd = np.zeros((len(RAYS), len(points)), bool)
+    for r, d in enumerate(RAYS / np.linalg.norm(RAYS, axis=1, keepdims=True)):
+        h = np.cross(d, e2)
+        det = np.einsum("ij,ij->i", e1, h)
+        ok = np.abs(det) > 1e-12
+        e1o, e2o, ao, ho, inv = e1[ok], e2[ok], a[ok], h[ok], 1.0 / det[ok]
+        for start in range(0, len(points), 64):
+            p = points[start : start + 64]
+            sv = p[:, None, :] - ao[None]
+            u = np.einsum("pij,ij->pi", sv, ho) * inv
+            q = np.cross(sv, e1o[None])
+            v = np.einsum("j,pij->pi", d, q) * inv
+            t = np.einsum("pij,ij->pi", q, e2o) * inv
+            hit = (u >= 0) & (v >= 0) & (u + v <= 1) & (t > 1e-9)
+            odd[r, start : start + 64] = hit.sum(1) % 2 == 1
+    return odd.sum(0) >= 2
 
 
 def elbow(shoulder, wrist, along, sign, upper, lower, bias):
@@ -253,9 +294,21 @@ def main(argv):
     surfaces = {}
     for key, masks in groups.items():
         mask = np.any(masks, 0)
-        p, n, tri = surface_samples(verts, tris[mask], SPACING)
+        p, n, tri = surface_samples(verts, tris[mask], SPACING, np.flatnonzero(mask))
         obj = owner[mask][tri]
         surfaces[key] = (cKDTree(p), p, n, obj)
+
+    cache = {}
+
+    def object_triangles(obj):
+        """The object's triangles when its surface is closed (every edge on two triangles), else
+        None: on an open surface a ray's parity proves nothing, so the vote stands."""
+        if obj not in cache:
+            faces = tris[owner == obj]
+            edges = np.sort(np.concatenate([faces[:, [0, 1]], faces[:, [1, 2]], faces[:, [2, 0]]]), axis=1)
+            _, counts = np.unique(edges, axis=0, return_counts=True)
+            cache[obj] = verts[faces] if np.all(counts == 2) else None
+        return cache[obj]
 
     seated = json.load(open(inputs["seatedPose"]))["boxes"]["Torso"]
     cols = np.array(seated["axes_blender_columns_xyz"]).T
@@ -295,6 +348,13 @@ def main(argv):
             tree, sp, sn, so = surfaces["static"]
             depth, idx = inside_depth(tree, sp, sn, pts)
             if depth.max() > 0:
+                flagged = np.flatnonzero(depth > 0)
+                for obj in np.unique(so[idx[flagged]]):
+                    closed = object_triangles(obj)
+                    if closed is not None:
+                        mine = flagged[so[idx[flagged]] == obj]
+                        depth[mine[~parity_inside(pts[mine], closed)]] = 0.0
+            if depth.max() > 0:
                 for obj in np.unique(so[idx[depth > 0]]):
                     name = names[obj]
                     hits = (so[idx] == obj) & (depth > 0)
@@ -317,6 +377,11 @@ def main(argv):
                 back = rotation(control["axis"], -angle)
                 local = (pts - pivot) @ back.T + pivot
                 d_c, _ = inside_depth(tree_c, cp, cn, local)
+                if d_c.max() > 0:
+                    flagged = np.flatnonzero(d_c > 0)
+                    closed = object_triangles(names.index(name))
+                    if closed is not None:
+                        d_c[flagged[~parity_inside(local[flagged], closed)]] = 0.0
                 if d_c.max() > 0:
                     allowed = touch is not None and touch["control"] == name
                     k = int(np.argmax(d_c))

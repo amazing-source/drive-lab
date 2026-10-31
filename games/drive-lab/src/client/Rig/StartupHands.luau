@@ -39,7 +39,8 @@ export type Hands = {
 }
 
 local STUDS_PER_METRE = 1 / Units.METRES_PER_STUD
-local REST: DriverStartup.Shape, POINT: DriverStartup.Shape, PINCH: DriverStartup.Shape = "Rest", "Point", "Pinch"
+local REST: DriverStartup.Shape, POINT: DriverStartup.Shape, PINCH: DriverStartup.Shape =
+	"Rest", "Point", "Pinch"
 
 local StartupHands = {}
 
