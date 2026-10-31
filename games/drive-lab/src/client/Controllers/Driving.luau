@@ -2,7 +2,9 @@
 --[[
 	Drives the car the local player sits in. The server hands this client the car's assembly,
 	so the physics runs here every frame against the player's own input, with no round trip.
-	The car's live readings go out as attributes on its model for the camera and the HUD.
+	The car's live readings go out as attributes on its model for the camera and the HUD. The
+	drive-mode knob and the pit limiter act when the driver's hand works them, on a car whose hand
+	gestures play them (Rig/ControlPresses), and at their key otherwise.
 ]]
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -14,6 +16,7 @@ local CarEntry = require(ReplicatedStorage.Shared.Rules.CarEntry)
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
+local ControlPresses = require(script.Parent.Parent.Rig.ControlPresses)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local DriveModes = require(ReplicatedStorage.Shared.Rules.DriveModes)
 local DriverAssists = require(ReplicatedStorage.Shared.Rules.DriverAssists)
@@ -228,6 +231,31 @@ local function onCharacter(character: Model)
 	end)
 end
 
+-- One press of the drive-mode knob or the pit limiter takes effect.
+local function apply(control: string)
+	local entry, model = driven, drivenModel
+	if entry == nil or model == nil then
+		return
+	end
+	if control == "DRIVING_MODE" then
+		chosenMode[entry.physics.name] = DriveModes.after(entry.physics.modeOrder, modeOf(entry))
+	elseif control == "PIT_LIMITER" then
+		local tuning = entry.switches.pitLimiter
+		if tuning then
+			PitLimiter.press(pitLimiter, tuning, published(model, "Gear"), published(model, "SpeedKmh"))
+		end
+	end
+end
+
+-- A key press of `control`: at once, unless the car's hand gestures play it (Rig/ControlPresses),
+-- when it takes effect as the hand works it.
+local function pressSwitch(control: string)
+	local model = drivenModel
+	if model and not ControlPresses.claimed(model, control) then
+		apply(control)
+	end
+end
+
 local Controller = {}
 
 function Controller.start()
@@ -243,15 +271,15 @@ function Controller.start()
 		elseif contains(Controls.GEARBOX_MODE, key) then
 			gearboxMode = if gearboxMode == "auto" then "manual" else "auto"
 		elseif contains(Controls.DRIVING_MODE, key) then
-			local entry = driven
-			if entry then
-				chosenMode[entry.physics.name] = DriveModes.after(entry.physics.modeOrder, modeOf(entry))
-			end
+			pressSwitch("DRIVING_MODE")
 		elseif contains(Controls.PIT_LIMITER, key) then
-			local entry, model = driven, drivenModel
-			local tuning = entry and entry.switches.pitLimiter
-			if tuning and model then
-				PitLimiter.press(pitLimiter, tuning, published(model, "Gear"), published(model, "SpeedKmh"))
+			pressSwitch("PIT_LIMITER")
+		end
+	end)
+	ControlPresses.connect(function(model: Model, name: string, presses: number)
+		if model == drivenModel and ControlPresses.claimed(model, name) then
+			for _ = 1, presses do
+				apply(name)
 			end
 		end
 	end)
