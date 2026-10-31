@@ -3,8 +3,10 @@
 	Turns a car's merged 3D manifest (drive-lab-assets/<car>/work/manifest) into its model binding
 	(Config/Cars/Binding): checks that every part's group leads to the body, moves every point from
 	the manifest's frame (the rear-axle midpoint on the ground) to the rig's (the centre of mass),
-	and lists what the binding still lacks instead of inventing it. Pure: tools/dr458_binding reads
-	and writes the files.
+	and lists what the binding still lacks instead of inventing it: a part the settings name that the
+	manifest does not carry yet is pending, and a car with anything pending stays out of the catalog.
+	A feature a car does not have (a drive-mode knob, a display screen, shift lights) is simply left
+	out of its settings. Pure: tools/car_binding reads and writes the files (tools/CarBindings).
 ]]
 local Binding = require("../src/shared/Config/Cars/Binding")
 local Hinge = require("../src/shared/Rules/Hinge")
@@ -27,6 +29,10 @@ export type Part = {
 	mesh: boolean?,
 	screen: Screen?,
 	outlet: { centre: Point, axis: Point, diameter_m: number }?,
+	-- A "gate" part (an H-pattern lever): its two axes and each gear's [side, fore] angles.
+	axis_fore: Point?,
+	axis_side: Point?,
+	gates_rad: { [string]: { number } }?,
 }
 
 -- Named points with no part, such as the driver's hip point.
@@ -43,15 +49,18 @@ export type Settings = {
 	steeringWheel: string,
 	-- Groups that name no part: the part that moves them, or the body.
 	assemblies: { [string]: string },
-	door: { group: string, hinge: string },
+	door: { group: string, hinge: string }?,
 	controls: { string },
 	pedals: { string },
-	modeKnob: { part: string, modes: { string } },
+	modeKnob: { part: string, modes: { string } }?,
 	glazing: { string },
-	screen: string,
+	-- The live display's screen part; nil on a car with none (its gauges are needles).
+	screen: string?,
 	exhaust: { string },
-	shiftLights: { string },
-	panelLamps: { [string]: string },
+	shiftLights: { string }?,
+	panelLamps: { [string]: string }?,
+	-- The H-pattern gear lever's "gate" part.
+	shifter: string?,
 	steeringWheelLift: number,
 	bodyRaise: number,
 	hullClearance: number,
@@ -255,6 +264,14 @@ function ManifestBinding.binding(
 	local byName = ManifestBinding.index(manifest)
 	local centre = ManifestBinding.centreOfMass(car)
 	local pending: { string } = {}
+	-- Whether the manifest carries a part the settings name; one it lacks is listed as pending.
+	local function has(name: string, what: string): boolean
+		if byName[name] then
+			return true
+		end
+		table.insert(pending, `{what}: the manifest has no {name}`)
+		return false
+	end
 
 	-- The tyre stands for its corner (the rig's ground and scale); the rest of the corner rides it.
 	local wheels: { string } = {}
@@ -262,7 +279,7 @@ function ManifestBinding.binding(
 	local corner: { [string]: string } = {}
 	for _, group in settings.wheelGroups do
 		local tyre = group .. settings.tyreSuffix
-		need(byName[tyre], `the manifest has no {tyre}`)
+		has(tyre, "wheels")
 		table.insert(wheels, tyre)
 		corner[group] = tyre
 	end
@@ -271,7 +288,7 @@ function ManifestBinding.binding(
 	for _, part in manifest.parts do
 		if corner[part.group] and part.name ~= corner[part.group] then
 			parents[part.name] = corner[part.group]
-		elseif part.group == door.group then
+		elseif door and part.group == door.group then
 			table.insert(doorParts, part.name)
 		else
 			local mover = ManifestBinding.mover(byName, settings, part)
@@ -282,75 +299,122 @@ function ManifestBinding.binding(
 	end
 	table.sort(doorParts)
 
-	local wheel = need(byName[settings.steeringWheel], `the manifest has no {settings.steeringWheel}`)
-	local wheelPivot = need(wheel.pivot, "the steering wheel has no pivot")
-	local wheelAxis = need(wheel.axis, "the steering wheel has no axis")
-	local steeringHub = if wheel.mesh == false
-		then { pivot = ManifestBinding.toRig(wheelPivot, centre), axis = direction(wheelAxis) }
-		else nil
+	local steeringHub = nil
+	if has(settings.steeringWheel, "steering wheel") then
+		local wheel = byName[settings.steeringWheel]
+		local wheelPivot = need(wheel.pivot, "the steering wheel has no pivot")
+		local wheelAxis = need(wheel.axis, "the steering wheel has no axis")
+		steeringHub = if wheel.mesh == false
+			then { pivot = ManifestBinding.toRig(wheelPivot, centre), axis = direction(wheelAxis) }
+			else nil
+	end
 
-	local doorHinge = hinge(byName, door.hinge, centre)
-	local openAngle = need(doorHinge.travel, `{door.hinge} has no range`)
+	local doorBinding = nil
+	if door and has(door.hinge, "door") then
+		local doorHinge = hinge(byName, door.hinge, centre)
+		doorBinding = {
+			parts = doorParts,
+			pivot = doorHinge.pivot,
+			axis = doorHinge.axis,
+			openAngle = need(doorHinge.travel, `{door.hinge} has no range`),
+		}
+	end
 
 	local controls: { [string]: Binding.Hinge } = {}
 	for _, name in settings.controls do
-		local state = need(settings.controlStates[name], `{name} has no rest and other end`)
-		controls[name] = hinge(byName, name, centre, state)
+		if has(name, "controls") then
+			local state = need(settings.controlStates[name], `{name} has no rest and other end`)
+			controls[name] = hinge(byName, name, centre, state)
+		end
 	end
 	-- Controllers/DriverLegs turns a pedal about the seat's x, the car's right, by its footwell's
 	-- signed travel; so every pedal's axis points right, and its travel carries the sign that presses
 	-- it (a manifest's positive turn presses it).
 	local pedals: { Binding.Hinge } = {}
 	for _, name in settings.pedals do
-		local pedal = hinge(byName, name, centre)
-		if pedal.axis.right < 0 then
-			local axis = pedal.axis
-			pedal.axis = { forward = -axis.forward + 0, right = -axis.right, up = -axis.up + 0 }
-			pedal.travel = if pedal.travel then -pedal.travel else nil
-		end
-		table.insert(pedals, pedal)
-		if byName[name].positive == nil then
-			table.insert(pending, `{name}: no "positive" note; which way presses it is unchecked`)
+		if has(name, "pedals") then
+			local pedal = hinge(byName, name, centre)
+			if pedal.axis.right < 0 then
+				local axis = pedal.axis
+				pedal.axis = { forward = -axis.forward + 0, right = -axis.right, up = -axis.up + 0 }
+				pedal.travel = if pedal.travel then -pedal.travel else nil
+			end
+			table.insert(pedals, pedal)
+			if byName[name].positive == nil then
+				table.insert(pending, `{name}: no "positive" note; which way presses it is unchecked`)
+			end
 		end
 	end
 
+	local modeKnob = nil
 	local knob = settings.modeKnob
-	local knobPart = need(byName[knob.part], `the manifest has no {knob.part}`)
-	local detents = knobPart.range
-	assert(type(detents) == "table" and #detents == #knob.modes, `{knob.part} has a position per mode`)
-	local positions: { [string]: number } = {}
-	for index, mode in knob.modes do
-		positions[mode] = round(detents[index] - detents[1])
+	if knob and has(knob.part, "drive-mode knob") then
+		local detents = byName[knob.part].range
+		assert(type(detents) == "table" and #detents == #knob.modes, `{knob.part} has a position per mode`)
+		local positions: { [string]: number } = {}
+		for index, mode in knob.modes do
+			positions[mode] = round(detents[index] - detents[1])
+		end
+		modeKnob = { hinge = hinge(byName, knob.part, centre), positions = positions }
 	end
 
-	local screenPart = need(byName[settings.screen], `the manifest has no {settings.screen}`)
-	local screen: Screen = need(screenPart.screen, `{settings.screen} has no screen`)
+	local cluster = { forward = 0, right = 0, up = 0, width = 0, height = 0, tilt = 0 }
+	local screenName = settings.screen
+	if screenName == nil then
+		table.insert(pending, "cluster: no live display screen named")
+	elseif has(screenName, "cluster") then
+		local screen: Screen = need(byName[screenName].screen, `{screenName} has no screen`)
+		cluster = {
+			forward = round(screen.centre.forward - centre.forward),
+			right = round(screen.centre.right - centre.right),
+			up = round(screen.centre.up - centre.up),
+			width = round(screen.width_m),
+			height = round(screen.height_m),
+			tilt = round(math.rad(screen.tilt_back_deg)),
+		}
+	end
 
 	local outlets = {}
 	for _, name in settings.exhaust do
-		local outlet = need(need(byName[name], `the manifest has no {name}`).outlet, `{name} has no outlet`)
-		table.insert(outlets, {
-			centre = ManifestBinding.toRig(outlet.centre, centre),
-			axis = direction(outlet.axis),
-			diameter = round(outlet.diameter_m),
-		})
+		if has(name, "exhaust") then
+			local outlet = need(byName[name].outlet, `{name} has no outlet`)
+			table.insert(outlets, {
+				centre = ManifestBinding.toRig(outlet.centre, centre),
+				axis = direction(outlet.axis),
+				diameter = round(outlet.diameter_m),
+			})
+		end
 	end
 
+	for _, set in settings.calipers do
+		for _, name in set do
+			has(name, "calipers")
+		end
+	end
 	for _, name in settings.glazing do
-		need(byName[name], `the manifest has no {name}`)
+		has(name, "glazing")
 	end
-	for _, name in settings.shiftLights do
-		need(byName[name], `the manifest has no {name}`)
+	local shiftLights = settings.shiftLights
+	if shiftLights then
+		for _, name in shiftLights do
+			has(name, "shift lights")
+		end
 	end
-	for _, name in settings.panelLamps do
-		need(byName[name], `the manifest has no {name}`)
+	local panelLamps = settings.panelLamps
+	if panelLamps then
+		for _, name in panelLamps do
+			has(name, "panel lamps")
+		end
 	end
 
 	local points = manifest.points or {}
-	local seat = ManifestBinding.toRig(
-		need(points[settings.hipPoint], `the manifest has no point {settings.hipPoint}`),
-		centre
-	)
+	local seat = { forward = 0, right = 0, up = 0 }
+	local hip = points[settings.hipPoint]
+	if hip then
+		seat = ManifestBinding.toRig(hip, centre)
+	else
+		table.insert(pending, `seat: the manifest has no point {settings.hipPoint}`)
+	end
 	local windshield = windscreen(points, settings, centre)
 	if windshield == nil then
 		table.insert(pending, "windshield: no windscreen corners in the manifest")
@@ -358,26 +422,48 @@ function ManifestBinding.binding(
 	if not ManifestBinding.hasLamps(manifest) then
 		table.insert(pending, "lamps: no exterior lamps in the manifest")
 	end
-	table.sort(pending)
 
 	local wiper = nil
 	local wiperSettings = settings.wiper
-	if wiperSettings then
+	if wiperSettings and has(wiperSettings.arm, "wiper") then
 		local arm = hinge(byName, wiperSettings.arm, centre)
 		need(arm.travel, `{wiperSettings.arm} has no range`)
-		local function point(name: string): Point
-			return ManifestBinding.toRig(need(points[name], `the manifest has no point {name}`), centre)
+		local inner, outer = points[wiperSettings.blade[1]], points[wiperSettings.blade[2]]
+		if inner and outer then
+			local nozzles = {}
+			for index, nozzle in wiperSettings.nozzles do
+				nozzles[index] = ManifestBinding.toRig(nozzle, centre)
+			end
+			wiper = {
+				hinge = arm,
+				blade = {
+					inner = ManifestBinding.toRig(inner, centre),
+					outer = ManifestBinding.toRig(outer, centre),
+				},
+				nozzles = nozzles,
+			}
+		else
+			table.insert(pending, "wiper: the manifest has no point for an end of the blade")
 		end
-		local nozzles = {}
-		for index, nozzle in wiperSettings.nozzles do
-			nozzles[index] = ManifestBinding.toRig(nozzle, centre)
+	end
+
+	local shifter = nil
+	local lever = settings.shifter
+	if lever and has(lever, "gear lever") then
+		local part = byName[lever]
+		local gates: { [string]: { side: number, fore: number } } = {}
+		for gear, angles in need(part.gates_rad, `{lever} has no gates`) do
+			gates[gear] = { side = round(angles[1]), fore = round(angles[2]) }
 		end
-		wiper = {
-			hinge = arm,
-			blade = { inner = point(wiperSettings.blade[1]), outer = point(wiperSettings.blade[2]) },
-			nozzles = nozzles,
+		shifter = {
+			part = lever,
+			pivot = ManifestBinding.toRig(need(part.pivot, `{lever} has no pivot`), centre),
+			axisFore = direction(need(part.axis_fore, `{lever} has no fore axis`)),
+			axisSide = direction(need(part.axis_side, `{lever} has no side axis`)),
+			gates = gates,
 		}
 	end
+	table.sort(pending)
 
 	local model: Binding.CarModel = {
 		wheels = wheels,
@@ -387,31 +473,20 @@ function ManifestBinding.binding(
 		seat = seat,
 		hullClearance = settings.hullClearance,
 		bodyRaise = settings.bodyRaise,
-		cluster = {
-			forward = round(screen.centre.forward - centre.forward),
-			right = round(screen.centre.right - centre.right),
-			up = round(screen.centre.up - centre.up),
-			width = round(screen.width_m),
-			height = round(screen.height_m),
-			tilt = round(math.rad(screen.tilt_back_deg)),
-		},
+		cluster = cluster,
 		glazing = settings.glazing,
 		windshield = windshield or {},
-		door = {
-			parts = doorParts,
-			pivot = doorHinge.pivot,
-			axis = doorHinge.axis,
-			openAngle = openAngle,
-		},
+		door = doorBinding,
 		controls = controls,
 		pedals = pedals,
 		parents = parents,
 		steeringHub = steeringHub,
-		modeKnob = { hinge = hinge(byName, knob.part, centre), positions = positions },
-		exhaustOutlets = outlets,
-		shiftLights = settings.shiftLights,
-		panelLamps = settings.panelLamps,
+		modeKnob = modeKnob,
+		exhaustOutlets = if #outlets > 0 then outlets else nil,
+		shiftLights = shiftLights,
+		panelLamps = panelLamps,
 		wiper = wiper,
+		shifter = shifter,
 	}
 	return model, pending
 end
@@ -428,6 +503,11 @@ local ORDER = {
 	"centre",
 	"pivot",
 	"axis",
+	"axisFore",
+	"axisSide",
+	"gates",
+	"side",
+	"fore",
 	"rest",
 	"travel",
 	"diameter",
@@ -459,6 +539,7 @@ local ORDER = {
 	"shiftLights",
 	"panelLamps",
 	"wiper",
+	"shifter",
 }
 local RANK: { [string]: number } = {}
 for index, key in ORDER do
