@@ -181,7 +181,7 @@ local function pop(current: Session, mode: Types.DrivingMode)
 	local volume = between(pops.volume)
 	oneShot(
 		current.pack,
-		current.pack.eventsSoundId,
+		CarAudio.popsSoundId(current.pack),
 		pops.regions[random:NextInteger(1, #pops.regions)],
 		current.eventsGroup,
 		current.exhaustPoint,
