@@ -78,6 +78,15 @@ local function currentDrive(): Drive?
 	}
 end
 
+local function anyHeld(keys: { Enum.KeyCode }): boolean
+	for _, key in keys do
+		if UserInputService:IsKeyDown(key) then
+			return true
+		end
+	end
+	return false
+end
+
 local function number(model: Model, name: string): number
 	local value = model:GetAttribute(name)
 	return if typeof(value) == "number" then value else 0
@@ -254,9 +263,15 @@ function Controller.start()
 		then
 			local range = CarCamera.EYE_RANGE
 			local notch = math.sign(input.Position.Z) * range.step
-			if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+			local drive = currentDrive()
+			local clutchMode = drive ~= nil and drive.model:GetAttribute("GearboxMode") == "manualClutch"
+			local move = Rules.eyeScroll(
+				UserInputService:IsKeyDown(Enum.KeyCode.LeftShift),
+				clutchMode and anyHeld(Controls.CLUTCH)
+			)
+			if move == "Height" then
 				eyeUp = math.clamp(eyeUp + notch, range.up[1], range.up[2])
-			else
+			elseif move == "Forward" then
 				eyeForward = math.clamp(eyeForward + notch, range.forward[1], range.forward[2])
 			end
 		end

@@ -59,6 +59,18 @@ local function upshiftDips(mode: Types.DrivingMode): { number }
 	return dips
 end
 
+describe("Cockpit eye scroll", function()
+	it(
+		"moves the eye up with its modifier, forward without it, and not at all while the clutch key is in use",
+		function()
+			expect(Rules.eyeScroll(true, false)).toBe("Height")
+			expect(Rules.eyeScroll(false, false)).toBe("Forward")
+			expect(Rules.eyeScroll(true, true)).toBe(nil)
+			expect(Rules.eyeScroll(false, true)).toBe(nil)
+		end
+	)
+end)
+
 describe("CarCamera", function()
 	it("closes the same share of a gap whatever the frame rate", function()
 		local coarse = Rules.blend(0.1, 0.25)
