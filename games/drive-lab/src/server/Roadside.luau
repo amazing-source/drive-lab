@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config.Roadside)
 local Log = require(ReplicatedStorage.Kit.Log)
 local Rules = require(ReplicatedStorage.Shared.Rules.Roadside)
+local Scatter = require(ReplicatedStorage.Shared.Rules.Scatter)
 local Track = require(ReplicatedStorage.Shared.Config.Track)
 local Units = require(ReplicatedStorage.Shared.Units)
 
@@ -69,9 +70,23 @@ local function vergeFrame(frame: Frame, s: number, side: number, setback: number
 	return CFrame.fromMatrix(position, along * side, Vector3.yAxis)
 end
 
-local function layDelineators(frame: Frame, from: number, to: number, seed: number, parent: Instance)
-	local spots =
-		Rules.delineators(from, to, seed, Config.DELINEATORS, Config.GUARDRAILS, Config.DELINEATOR_CLEARANCE)
+local function layDelineators(
+	frame: Frame,
+	from: number,
+	to: number,
+	seed: number,
+	parent: Instance,
+	keepOut: { Scatter.Zone }?
+)
+	local spots = Rules.delineators(
+		from,
+		to,
+		seed,
+		Config.DELINEATORS,
+		Config.GUARDRAILS,
+		Config.DELINEATOR_CLEARANCE,
+		keepOut
+	)
 	for _, spot in spots do
 		place(
 			Config.ASSETS.delineator,
@@ -81,9 +96,9 @@ local function layDelineators(frame: Frame, from: number, to: number, seed: numb
 	end
 end
 
-local function layGuardrails(frame: Frame, from: number, to: number, seed: number, parent: Instance)
+local function layGuardrails(frame: Frame, pieces: { Rules.Piece }, parent: Instance)
 	local layout = Config.GUARDRAILS
-	for _, piece in Rules.guardrailPieces(from, to, seed, layout) do
+	for _, piece in pieces do
 		if piece.kind == "Section" then
 			-- Laid along the chord of its 12 m, from whichever end is the model's origin.
 			local first = frame(piece.s)
@@ -103,8 +118,15 @@ local function layGuardrails(frame: Frame, from: number, to: number, seed: numbe
 	end
 end
 
-local function layGantries(frame: Frame, from: number, to: number, seed: number, parent: Instance)
-	for _, s in Rules.gantries(from, to, seed, Config.GANTRIES) do
+local function layGantries(
+	frame: Frame,
+	from: number,
+	to: number,
+	seed: number,
+	parent: Instance,
+	keepOut: { Scatter.Zone }?
+)
+	for _, s in Rules.gantries(from, to, seed, Config.GANTRIES, keepOut) do
 		local centre, along = frame(s)
 		place(Config.ASSETS.gantry, CFrame.fromMatrix(centre, along, Vector3.yAxis), parent)
 	end
@@ -138,14 +160,31 @@ end
 local Roadside = {}
 
 -- Lays the furniture and marks of road arc lengths [from, to) (metres) into parent, yielding
--- every few pieces.
-function Roadside.lay(frame: Frame, from: number, to: number, seed: number, parent: Instance)
+-- every few pieces. No verge furniture stands in a keep-out zone; `guardrails` are further
+-- guardrail pieces to lay, those in [from, to) laid here.
+function Roadside.lay(
+	frame: Frame,
+	from: number,
+	to: number,
+	seed: number,
+	parent: Instance,
+	keepOut: { Scatter.Zone }?,
+	guardrails: { Rules.Piece }?
+)
 	for _, mark in Rules.marks(from, to, seed, Config.MARKS) do
 		layMark(frame, mark, parent)
 	end
-	layDelineators(frame, from, to, seed, parent)
-	layGuardrails(frame, from, to, seed, parent)
-	layGantries(frame, from, to, seed, parent)
+	layDelineators(frame, from, to, seed, parent, keepOut)
+	local pieces = Rules.guardrailPieces(from, to, seed, Config.GUARDRAILS, keepOut)
+	if guardrails then
+		for _, piece in guardrails do
+			if piece.s >= from and piece.s < to then
+				table.insert(pieces, piece)
+			end
+		end
+	end
+	layGuardrails(frame, pieces, parent)
+	layGantries(frame, from, to, seed, parent, keepOut)
 end
 
 -- Closes the road's start, whose centre and direction are given (studs, unit), with a line of

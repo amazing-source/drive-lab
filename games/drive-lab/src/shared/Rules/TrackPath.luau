@@ -43,10 +43,10 @@ local function noise(t: number, seed: number): number
 end
 
 -- Curvature (1/m, positive bends right) at distance `s` along the road. `bends` defaults to
--- Track.BENDS; without bends the road is one straight line.
+-- whether Track.LAYOUT is "Bends"; without bends the road is one straight line.
 function TrackPath.curvature(s: number, seed: number, bends: boolean?): number
 	local into = s - Track.START_STRAIGHT
-	if into <= 0 or not (if bends == nil then Track.BENDS else bends) then
+	if into <= 0 or not (if bends == nil then Track.LAYOUT == "Bends" else bends) then
 		return 0
 	end
 	local n = noise(into / Track.WAVELENGTH, seed)
@@ -81,6 +81,18 @@ function TrackPath.generate(start: Point, count: number, ds: number, seed: numbe
 		points[i] = point
 	end
 	return points
+end
+
+-- The angle (radians, unsigned) the road turns through between two points.
+function TrackPath.turn(a: Point, b: Point): number
+	return math.abs(math.atan2(a.dirX * b.dirZ - a.dirZ * b.dirX, a.dirX * b.dirX + a.dirZ * b.dirZ))
+end
+
+-- The length (metres) of the block laid for a step of `length` metres, `width` wide, turning by
+-- `turn`: longer by what the bend opens at its outer edge and a metre more, so consecutive
+-- blocks leave no gap.
+function TrackPath.blockLength(length: number, width: number, turn: number): number
+	return length + width * turn + 1
 end
 
 -- Which of the place's car spawns the road starts at, by their names: the first by name, so every
