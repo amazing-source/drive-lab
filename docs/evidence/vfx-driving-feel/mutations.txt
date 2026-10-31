@@ -54,3 +54,5 @@ AIR STREAKS (tests/AirDebris.spec.luau, 11 passing when restored)
 - STREAKS.speeds.from 100: FAIL "draws its streaks only at speed" (line 113).
 - STREAKS.transparency 0.4: FAIL the same spec (line 116).
 - STREAKS.shape.width 0.006: FAIL "keeps its longest streak within the Squash range" (line 123).
+- (found in the Play check) the pull floor removed (`off` ignored): FAIL "counts a pull under its
+  floor as none, so the blur switches off after a pull" (line 139: expected 0, got 0.005).

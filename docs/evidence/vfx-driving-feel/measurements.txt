@@ -68,3 +68,28 @@ FOV speed target + ease + field of view          183 / 216 ns
 blur pull share + ease + depth + depth of field  555 / 495 ns
 streaks share + three rates + cap                468 / 462 ns
 streak resize fit (only on a 5 % speed change)   345 / 309 ns
+
+PLAY CHECK (Studio solo Play, muted: every Sound routed to a zero-volume SoundGroup and the wires
+into each AudioDeviceOutput detached, session only; no DataStore exists in the game)
+Read on the client every 0.25 s while driving. The road start sends the car off the road after a
+few seconds, so the high-speed states were reached by placing the car on the road at 70 m/s.
+SVJ (entered with E, started with R, full throttle from rest):
+  7.4 s  49.4 km/h 1.13 g gear 1  chase fov 79.98, depth of field near 0.31 far 0.18
+  8.4 s  82.4 km/h 0.87 g gear 2  chase fov 80.26, depth of field near 0.42 far 0.25
+  at 217 km/h, no pull:           chase fov 67.4 (60 + 7.1 + a little kick); near 0.256 (rule 0.255),
+                                  far 0; streaks 3 emitters 7.2/s, Size 4.73 studs, Squash 0.88;
+                                  wind volume 0.209 (rule 0.208), cutoff 5705 Hz
+  at 75 km/h, cockpit:            fov 61.0; depth of field focused on the body (6.4 studs); wind
+                                  0.047 (rule 0.046), wind EQ mid -4 high -12; no streaks
+  Found: after a pull the depth of field stayed enabled at 0.000/0.000 (the eased pull never
+  reaches 0). Fixed with a floor (ACCELERATION.off 0.02) and re-checked below.
+DR458 (entered with E, started with R; it did not move from the spawn under W, 0.1 km/h after
+2.5 s, so its launch from rest is not covered):
+  at 232 km/h on the road, chase: fov 71.7, near 0.326 far 0.022 (rule 0.289 for speed alone; the
+                                  rest is the pull left by the placement's speed jump); streaks
+                                  10/s, Size 4.86, Squash 0.93; wind 0.226 (rule 0.226), cutoff 6636
+  after the fix, 26.7 km/h cockpit, no pull: depth of field OFF (was enabled at 0 before the fix)
+No script error in the session logs (only a Studio plugin's network warnings and the
+Atmosphere's existing MaterialService note).
+Place restored to origin/main dcb2a51 afterwards from a temporary worktree (14 written, 1 removed,
+then 0 written): the main clone's working tree was still at 5a8853e.
