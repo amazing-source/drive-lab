@@ -60,6 +60,9 @@ def loudness(x):
 
 def main(timeline_path, loops, out, start=None, stop=None):
     timeline = json.load(open(timeline_path))
+    own = timeline.get("startupSound")
+    if own:
+        print(f"start-up: {own['id']} cannot be downloaded, so the render starts silent until its hand-over")
     files = timeline["files"]
     frames = timeline["frames"]
     times = np.array([f["t"] for f in frames])

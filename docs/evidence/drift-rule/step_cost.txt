@@ -1,0 +1,24 @@
+Model.step cost, 60 FPS, 2000 steps x 7 rounds per run, median of the 7, in microseconds; SVJ then DR458.
+Method: tools/calibrate.luau's stepCost loop on each car, main ffa73c9 and this branch alternating, on a laptop under load from other agents.
+
+First A/B (before the idle substep path returned early):
+main 1 median 209.1 median 282.7 
+branch 1 median 224.6 median 309.2 
+main 2 median 225.5 median 305.4 
+branch 2 median 237.2 median 346.1 
+main 3 median 248.8 median 291.3 
+branch 3 median 236.0 median 318.9 
+main 4 median 228.0 median 388.0 
+branch 4 median 316.6 median 424.7 
+
+Final A/B (idle substeps do no drift work), branch first in each pair:
+branch 1 median 288.1 median 318.5 
+main 1 median 417.0 median 451.7 
+branch 2 median 311.9 median 349.4 
+main 2 median 292.4 median 313.9 
+branch 3 median 289.1 median 296.6 
+main 3 median 278.6 median 303.9 
+branch 4 median 298.6 median 299.5 
+main 4 median 287.9 median 289.0 
+
+Reading: pairs 2-4 differ by -3 % to +7 %, inside the run-to-run noise (main alone moved 209 -> 417 us across runs); pair 1's main was throttled. No difference is measurable above this machine's noise.

@@ -78,6 +78,13 @@ function EngineSound.level(mix: Mix): number
 	return math.sqrt(sum)
 end
 
+-- An equal-power hand-over from a one-shot to the loops over `from` to `to` seconds into the
+-- one-shot: the loops' share and the one-shot's gain at `position`.
+function EngineSound.handOver(from: number, to: number, position: number): (number, number)
+	local progress = math.clamp((position - from) / (to - from), 0, 1)
+	return math.sin(progress * math.pi / 2), math.cos(progress * math.pi / 2)
+end
+
 -- Where `rpm` sits in the hand-over from `lower` to `upper`: 0 is all lower, 1 all upper.
 local function handover(lower: Layer, upper: Layer, tuning: Tuning, rpm: number): number
 	local centre = lower.crossoverRpm or math.sqrt(lower.rpm * upper.rpm)

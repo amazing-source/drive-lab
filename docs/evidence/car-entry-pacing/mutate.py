@@ -1,10 +1,11 @@
 """Deliberate breaks of the changed rules, one at a time: each must turn its spec red, and the
 file is restored byte for byte afterwards (checked by hash)."""
 import hashlib
+import os
 import subprocess
 import sys
 
-ROOT = "C:/Users/bfhdh/Downloads/drive-lab/.worktrees/car-entry-pacing"
+ROOT = os.path.expanduser("~/Downloads/drive-lab/.worktrees/car-entry-pacing")
 RULES = f"{ROOT}/games/drive-lab/src/shared/Rules/CarEntry.luau"
 CONFIG = f"{ROOT}/games/drive-lab/src/shared/Config/CarEntry.luau"
 

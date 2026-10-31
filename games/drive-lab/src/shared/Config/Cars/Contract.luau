@@ -49,6 +49,9 @@ export type Entry = {
 -- What a car has of the controls not every car has (Config/CarSwitches.NEEDS), by name.
 export type Features = { [string]: boolean }
 
+-- Seconds two readings of one start-up's timing may differ by: about a frame.
+local TIMING_TOLERANCE = 0.02
+
 local Contract = {}
 
 local function deepFreeze<T>(value: T): T
@@ -198,12 +201,52 @@ local function checkSwitches(entry: Entry)
 	assert(pages == nil or (pages >= 2 and pages % 1 == 0), "a display with pages has two or more")
 end
 
+-- Seconds after the press at which a start-up's revs leave the starter's.
+local function crankingEnds(curve: CarEntry.Curve): number
+	local index = 1
+	while curve.values[index + 1] == curve.values[1] do
+		index += 1
+	end
+	return curve.times[index]
+end
+
+-- A start-up played from its own sound keeps to the start-up's timing: it is an uploaded asset
+-- with a level, its times run in order, the engine catches in it when the start-up says, and the
+-- instruments hold the starter's revs from the starter's end to the catch.
+function Contract.checkStartupSound(startup: CarEntry.Startup, pack: CarAudio.Pack)
+	local sound = pack.startup.sound
+	if sound == nil then
+		return
+	end
+	assert(string.match(sound.id, "^rbxassetid://%d+$") ~= nil, "the start-up sound is not an uploaded asset")
+	assert(sound.volume > 0, "the start-up sound has no level")
+	assert(
+		0 <= sound.from
+			and sound.from < sound.starterEnds
+			and sound.starterEnds <= sound.catchAt
+			and sound.catchAt < sound.handOver
+			and sound.handOver < sound.to,
+		"the start-up sound's times are out of order"
+	)
+	assert(
+		math.abs(startup.catchAfter - (sound.catchAt - sound.from)) <= TIMING_TOLERANCE,
+		"the engine catches in the start-up sound at another time than the start-up says"
+	)
+	local cranking = crankingEnds(startup.rpm)
+	assert(
+		cranking >= sound.starterEnds - sound.from - TIMING_TOLERANCE
+			and cranking <= startup.catchAfter + TIMING_TOLERANCE,
+		"the instruments leave the starter's revs before the start-up sound's starter stops or after it catches"
+	)
+end
+
 function Contract.define(entry: Entry): Entry
 	checkStartup(entry)
 	checkFootwell(entry)
 	checkModes(entry)
 	checkDisplay(entry)
 	checkSwitches(entry)
+	Contract.checkStartupSound(entry.startup, entry.audio)
 	return deepFreeze(entry)
 end
 

@@ -4,7 +4,8 @@
 	controller would play: each engine loop's volume and speed, the shift dip, the limiter, the
 	start-up's hand-over, and every one-shot (gear clunks, pops) with its region, volume and
 	speed. tools/audio/render_preview.py turns it into a listening file, so the sound can be
-	judged without Studio.
+	judged without Studio. A start-up played from the car's own sound is named in `startupSound`,
+	not among the one-shots.
 
 	    lune run games/drive-lab/tools/audio_timeline.luau [SVJ|DR458] [mode] > timeline.json
 
@@ -118,6 +119,7 @@ local pops = ExhaustPops.new(pack.popTriggers)
 local frames, shots = {}, {}
 local dip, limiterShare = 1, 0
 local startup = pack.startup
+local own = startup.sound
 local startupLength = startup.region.to - startup.region.from
 -- Level with the idle loop it hands over to, as Controllers/CarAudio sets it.
 local idle = pack.engineLayers[1]
@@ -126,17 +128,27 @@ for _, layer in pack.engineLayers do
 		idle = layer
 	end
 end
-table.insert(shots, {
-	t = 0,
-	kind = "startup",
-	from = startup.region.from,
-	to = startup.region.to,
-	volume = pack.engineVolume
-		* idle.volume
-		* EngineSound.loudness(pack.engineTuning, idle.rpm)
-		* 10 ^ (startup.boostDb / 20),
-	speed = 1,
-})
+local idleLevel = pack.engineVolume * idle.volume * EngineSound.loudness(pack.engineTuning, idle.rpm)
+-- The car's own start-up sound cannot be downloaded, so the preview does not render it.
+local startupSound = if own
+	then {
+		id = own.id,
+		from = own.from,
+		handOver = own.handOver,
+		to = own.to,
+		volume = idleLevel * own.volume,
+	}
+	else nil
+if own == nil then
+	table.insert(shots, {
+		t = 0,
+		kind = "startup",
+		from = startup.region.from,
+		to = startup.region.to,
+		volume = idleLevel * 10 ^ (startup.boostDb / 20),
+		speed = 1,
+	})
+end
 
 for index, readout in readouts do
 	local time = (index - 1) * DT
@@ -152,8 +164,14 @@ for index, readout in readouts do
 		pack.limiter.halfLife
 	)
 	-- The start-up's own hand-over: none until its fade-out begins, then equal power.
-	local progress = math.clamp((time - startup.handOver) / (startupLength - startup.handOver), 0, 1)
-	local master = pack.engineVolume * dip * math.sin(progress * math.pi / 2)
+	local share
+	if own then
+		share = EngineSound.handOver(own.handOver, own.to, own.from + time)
+	else
+		local progress = math.clamp((time - startup.handOver) / (startupLength - startup.handOver), 0, 1)
+		share = math.sin(progress * math.pi / 2)
+	end
+	local master = pack.engineVolume * dip * share
 	local onDuck = 1 - (1 - pack.limiter.onDuck) * limiterShare
 	local volumes, speeds = {}, {}
 	for layerIndex, layer in pack.engineLayers do
@@ -196,6 +214,12 @@ for index, readout in readouts do
 end
 
 local files = if car == "DR458" then FILES.DR458 else FILES.SVJ
-print(
-	serde.encode("json", { dt = DT, car = car, mode = mode, files = files, frames = frames, shots = shots })
-)
+print(serde.encode("json", {
+	dt = DT,
+	car = car,
+	mode = mode,
+	files = files,
+	frames = frames,
+	shots = shots,
+	startupSound = startupSound,
+}))

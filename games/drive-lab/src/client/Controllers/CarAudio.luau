@@ -10,6 +10,7 @@
 	DriveLabView attribute picks the shaping: the engine loops are cabin recordings, dry in the
 	cockpit and equalised toward the exhaust outside, where the far loop joins with distance.
 ]]
+local ContentProvider = game:GetService("ContentProvider")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -59,8 +60,18 @@ type Session = {
 	eventsEqualiser: EqualizerSoundEffect,
 	enginePoint: Attachment,
 	exhaustPoint: Attachment,
+	-- The idle loop's volume at idle: each start-up is levelled against it.
+	idleLevel: number,
 	startup: Sound?,
+	-- The car's own start-up sound while it plays; nil while the events file's region plays.
+	startupSound: CarAudio.StartupSound?,
+	-- The playing start-up's volume at a full share.
+	startupVolume: number,
+	-- The car's own start-up sound has caught up with the engine since it loaded.
+	startupCaughtUp: boolean,
 	startedAt: number,
+	-- os.clock() at the START press.
+	pressedAt: number,
 	-- Engine share during the start-up, 0 to 1, once the start-up hands over early.
 	handedOver: number?,
 	dip: number,
@@ -139,9 +150,11 @@ local function loop(
 	return sound
 end
 
--- A one-shot cut from the packed events file; it removes itself once played.
+-- A one-shot cut from an uploaded sound (most from the packed events file); it removes itself
+-- once played.
 local function oneShot(
 	pack: CarAudio.Pack,
+	soundId: string,
 	region: CarAudio.Region,
 	soundGroup: SoundGroup,
 	parent: Instance,
@@ -149,7 +162,7 @@ local function oneShot(
 	speed: number
 ): Sound
 	local sound = Instance.new("Sound")
-	sound.SoundId = pack.eventsSoundId
+	sound.SoundId = soundId
 	sound.PlaybackRegionsEnabled = true
 	sound.PlaybackRegion = NumberRange.new(region.from, region.to)
 	sound.Volume = volume
@@ -173,6 +186,7 @@ local function pop(current: Session)
 	local volume = between(pops.volume)
 	oneShot(
 		current.pack,
+		current.pack.eventsSoundId,
 		pops.regions[random:NextInteger(1, #pops.regions)],
 		current.eventsGroup,
 		current.exhaustPoint,
@@ -201,11 +215,65 @@ local function equalise(
 	equaliser.HighGain = inside.high + (outside.high - inside.high) * share
 end
 
+-- The events file's start-up, from where the engine is `sincePress` seconds after the press.
+local function playRegion(current: Session, sincePress: number)
+	local pack = current.pack
+	local settings = pack.startup
+	local volume = current.idleLevel * 10 ^ (settings.boostDb / 20)
+	local startup = oneShot(
+		pack,
+		pack.eventsSoundId,
+		settings.region,
+		current.engineGroup,
+		current.enginePoint,
+		volume,
+		1
+	)
+	if sincePress > 0 then
+		startup.TimePosition = settings.region.from + sincePress
+	end
+	current.startup = startup
+	current.startupSound = nil
+	current.startupVolume = volume
+	current.startedAt = os.clock()
+end
+
+-- The car's own start-up sound. Should it fail to load (it can be taken down), the events file's
+-- start-up plays instead, from where the engine is by then; never both.
+local function playOwn(current: Session, own: CarAudio.StartupSound)
+	local volume = current.idleLevel * own.volume
+	local region = { from = own.from, to = own.to }
+	local startup = oneShot(current.pack, own.id, region, current.engineGroup, current.enginePoint, volume, 1)
+	current.startup = startup
+	current.startupSound = own
+	current.startupVolume = volume
+	current.startupCaughtUp = false
+	current.startedAt = os.clock()
+	task.spawn(function()
+		ContentProvider:PreloadAsync({ startup }, function(_: string, status: Enum.AssetFetchStatus)
+			local failed = status == Enum.AssetFetchStatus.Failure or status == Enum.AssetFetchStatus.TimedOut
+			if not failed or session ~= current or current.startup ~= startup or current.handedOver then
+				return
+			end
+			startup:Destroy()
+			playRegion(current, os.clock() - current.pressedAt)
+		end)
+	end)
+end
+
 -- The engine's share while the start-up plays: none, then an equal-power hand-over as the
 -- start-up's own fade-out begins, or a quick one if the driver revs it first or it never loads.
 local function startupShare(current: Session, rpm: number, dt: number): number
 	local startup = current.startup
 	if startup == nil then
+		return 1
+	end
+	-- Playing is set by Play() itself, so unlike IsPlaying it is not false while the sound loads.
+	local ended = startup.Parent == nil or not startup.Playing
+	-- The car's own sound is removed as it ends: the load timeout below must not take that for a
+	-- sound that never loaded, which hands the engine back from silence.
+	if current.startupSound and current.handedOver == nil and ended then
+		current.startup = nil
 		return 1
 	end
 	local settings = current.pack.startup
@@ -231,10 +299,24 @@ local function startupShare(current: Session, rpm: number, dt: number): number
 	if not startup.IsLoaded then
 		return 0
 	end
-	-- Playing is set by Play() itself, so unlike IsPlaying it is not false while the sound loads.
-	if startup.Parent == nil or not startup.Playing then
+	if ended then
 		current.startup = nil
 		return 1
+	end
+	-- The car's own sound is not faded in its file: it is faded here, against the engine.
+	local own = current.startupSound
+	if own then
+		local position = startup.TimePosition
+		if not current.startupCaughtUp then
+			-- A time position set before the sound loads is lost: it catches up with the engine
+			-- here, the starter cut short by however late it loaded.
+			current.startupCaughtUp = true
+			position = own.from + os.clock() - current.pressedAt
+			startup.TimePosition = position
+		end
+		local share, gain = EngineSound.handOver(own.handOver, own.to, position)
+		startup.Volume = current.startupVolume * gain
+		return share
 	end
 	local length = settings.region.to - settings.region.from
 	local elapsed = startup.TimePosition - settings.region.from
@@ -294,7 +376,15 @@ local function update(current: Session, dt: number)
 	if events.gear then
 		local gear = pack.gear
 		local speed = if events.gear == "Up" then gear.upSpeed else gear.downSpeed
-		oneShot(pack, gear.region, current.eventsGroup, current.enginePoint, gear.volume, speed)
+		oneShot(
+			pack,
+			pack.eventsSoundId,
+			gear.region,
+			current.eventsGroup,
+			current.enginePoint,
+			gear.volume,
+			speed
+		)
 	end
 	if ExhaustPops.step(current.pops, events, car, mode, os.clock(), draw) then
 		pop(current)
@@ -346,11 +436,6 @@ local function start(model: Model, entry: Catalog.Entry, sincePress: number)
 			idle = layer
 		end
 	end
-	-- Level with the idle loop it hands over to.
-	local startupVolume = pack.engineVolume
-		* idle.volume
-		* EngineSound.loudness(pack.engineTuning, idle.rpm)
-		* 10 ^ (pack.startup.boostDb / 20)
 	local current: Session = {
 		model = model,
 		pack = pack,
@@ -369,8 +454,13 @@ local function start(model: Model, entry: Catalog.Entry, sincePress: number)
 		eventsEqualiser = eventsEqualiser,
 		enginePoint = enginePoint,
 		exhaustPoint = exhaustPoint,
-		startup = oneShot(pack, pack.startup.region, engineGroup, enginePoint, startupVolume, 1),
+		idleLevel = pack.engineVolume * idle.volume * EngineSound.loudness(pack.engineTuning, idle.rpm),
+		startup = nil,
+		startupSound = nil,
+		startupVolume = 0,
+		startupCaughtUp = false,
 		startedAt = os.clock(),
+		pressedAt = os.clock() - sincePress,
 		handedOver = nil,
 		dip = 1,
 		limiterShare = 0,
@@ -379,10 +469,11 @@ local function start(model: Model, entry: Catalog.Entry, sincePress: number)
 	}
 	current.far.PlaybackSpeed = pack.far.speed
 	session = current
-	-- Joined late in the start-up, the recording picks up where the engine is.
-	local startup = current.startup
-	if startup and sincePress > 0 then
-		startup.TimePosition = pack.startup.region.from + sincePress
+	local own = pack.startup.sound
+	if own then
+		playOwn(current, own)
+	else
+		playRegion(current, sincePress)
 	end
 end
 

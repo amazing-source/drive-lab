@@ -1,0 +1,69 @@
+Break: gate speed ignored (games/drive-lab/src/shared/Vehicle/Drift.luau)
+  16 passed, 2 failed
+  FAIL Drift gate and engagement > engages only with the button held, above 30 km/h, and steered past the gate: tests/Drift.spec:39: expected false, got true
+  FAIL Drift button and handbrake > is the plain handbrake below 30 km/h and with the wheel straight: tests/Drift.spec:272: expected 0.19884352735191638, got 4.677745863624713
+Break: engagement jumps to full (games/drive-lab/src/shared/Vehicle/Drift.luau)
+  15 passed, 3 failed
+  FAIL Drift gate and engagement > rises to full in 0.25 s and falls to nothing in 0.5 s: tests/Drift.spec:46: expected true, got false
+  FAIL Drift through the model > exits the DR458's slow, light-throttle drift without sliding back the other way: tests/Drift.spec:159: expected true, got false
+  FAIL Drift through the model > costs at most 12 km/h a second on a light throttle and at most 1 on full: tests/Drift.spec:169: expected true, got false
+Break: target never zero the other way (games/drive-lab/src/shared/Vehicle/Drift.luau)
+  16 passed, 2 failed
+  FAIL Drift gate and engagement > aims at 15Â° centred, the car's maximum at full lock, and nothing the other way: tests/Drift.spec:62: expected 0, got 0.2617993877991494
+  FAIL Drift through the model > carries a held drift through an S-bend: right, straight, then left: tests/Drift.spec:231: expected true, got false
+Break: rear grip share never applied (games/drive-lab/src/shared/Vehicle/Model.luau)
+  15 passed, 3 failed
+  FAIL Drift through the model > holds every drift near its target without a spin at 50, 80 and 130 km/h: tests/Drift.spec:129: expected true, got false
+  FAIL Drift through the model > drifts the same at 30, 60 and 120 FPS, with TC on and off: tests/Drift.spec:148: expected true, got false
+  FAIL Drift through the model > costs at most 12 km/h a second on a light throttle and at most 1 on full: tests/Drift.spec:169: expected true, got false
+Break: shares from the frame's motion, not the substep's (games/drive-lab/src/shared/Vehicle/Model.luau)
+  14 passed, 4 failed
+  FAIL Drift through the model > holds every drift near its target without a spin at 50, 80 and 130 km/h: tests/Drift.spec:131: expected true, got false
+  FAIL Drift through the model > drifts the same at 30, 60 and 120 FPS, with TC on and off: tests/Drift.spec:148: expected true, got false
+  FAIL Drift through the model > exits the DR458's slow, light-throttle drift without sliding back the other way: tests/Drift.spec:159: expected true, got false
+  FAIL Drift through the model > carries a held drift through an S-bend: right, straight, then left: tests/Drift.spec:232: expected true, got false
+Break: no torque fade (games/drive-lab/src/shared/Vehicle/Drift.luau)
+  17 passed, 1 failed
+  FAIL Drift shares and assists > holds the rear at its hold share on target, frees it past the target, and fades the torque: tests/Drift.spec:97: expected 0, got 1
+Break: ESC not set aside (games/drive-lab/src/shared/Vehicle/Model.luau)
+  11 passed, 7 failed
+  FAIL Drift through the model > holds every drift near its target without a spin at 50, 80 and 130 km/h: tests/Drift.spec:131: expected true, got false
+  FAIL Drift through the model > drifts the same at 30, 60 and 120 FPS, with TC on and off: tests/Drift.spec:150: expected true, got false
+  FAIL Drift through the model > exits the DR458's slow, light-throttle drift without sliding back the other way: tests/Drift.spec:159: expected true, got false
+  FAIL Drift through the model > costs at most 12 km/h a second on a light throttle and at most 1 on full: tests/Drift.spec:169: expected true, got false
+  FAIL Drift through the model > keeps TC on, relaxed: the rear spins past the mode's slip but well under TC off: tests/Drift.spec:181: expected true, got false
+  FAIL Drift through the model > sets ESC aside and caps the SVJ's front share at 10 % while drifting, then gives both back: tests/Drift.spec:191: expected 0, got 1
+  FAIL Drift through the model > carries a held drift through an S-bend: right, straight, then left: tests/Drift.spec:231: expected true, got false
+Break: coupling never capped (games/drive-lab/src/shared/Vehicle/Drift.luau)
+  15 passed, 3 failed
+  FAIL Drift shares and assists > relaxes TC to the profile's slip and caps the coupling at its front share while engaged: tests/Drift.spec:108: expected 300 within 1e-09, got 1200
+  FAIL Drift through the model > keeps TC on, relaxed: the rear spins past the mode's slip but well under TC off: tests/Drift.spec:183: expected true, got false
+  FAIL Drift through the model > sets ESC aside and caps the SVJ's front share at 10 % while drifting, then gives both back: tests/Drift.spec:192: expected true, got false
+Break: TC never relaxed (games/drive-lab/src/shared/Vehicle/Drift.luau)
+  13 passed, 5 failed
+  FAIL Drift shares and assists > relaxes TC to the profile's slip and caps the coupling at its front share while engaged: tests/Drift.spec:107: expected 0.3 within 1e-12, got 0.08
+  FAIL Drift through the model > holds every drift near its target without a spin at 50, 80 and 130 km/h: tests/Drift.spec:131: expected true, got false
+  FAIL Drift through the model > exits the DR458's slow, light-throttle drift without sliding back the other way: tests/Drift.spec:159: expected true, got false
+  FAIL Drift through the model > costs at most 12 km/h a second on a light throttle and at most 1 on full: tests/Drift.spec:169: expected true, got false
+  FAIL Drift through the model > keeps TC on, relaxed: the rear spins past the mode's slip but well under TC off: tests/Drift.spec:181: expected true, got false
+Break: handbrake kept while drifting (games/drive-lab/src/shared/Vehicle/Model.luau)
+  17 passed, 1 failed
+  FAIL Drift button and handbrake > releases the handbrake once a drift engages, so the rear never locks: tests/Drift.spec:283: expected true, got false
+Break: idle torque share not exactly 1 (games/drive-lab/src/shared/Vehicle/Drift.luau)
+  17 passed, 1 failed
+  FAIL Drift shares and assists > leaves grip, torque, TC, the coupling and the steering exactly as they are while not engaged: tests/Drift.spec:76: expected 1, got 0.9999
+Break: steering assist sign flipped (games/drive-lab/src/shared/Vehicle/Drift.luau)
+  15 passed, 3 failed
+  FAIL Drift through the model > holds every drift near its target without a spin at 50, 80 and 130 km/h: tests/Drift.spec:132: expected true, got false
+  FAIL Drift through the model > drifts the same at 30, 60 and 120 FPS, with TC on and off: tests/Drift.spec:150: expected true, got false
+  FAIL Drift through the model > exits the DR458's slow, light-throttle drift without sliding back the other way: tests/Drift.spec:159: expected true, got false
+Break: rate gain back to 1 per 100 deg/s (games/drive-lab/src/shared/Config/Drift.luau)
+  16 passed, 2 failed
+  FAIL Drift through the model > drifts the same at 30, 60 and 120 FPS, with TC on and off: tests/Drift.spec:149: expected true, got false
+  FAIL Drift through the model > exits the DR458's slow, light-throttle drift without sliding back the other way: tests/Drift.spec:159: expected true, got false
+Break: gear not held while drifting (games/drive-lab/src/shared/Vehicle/Model.luau)
+  17 passed, 1 failed
+  FAIL Drift through the model > holds its gear through a drift in the automatic, as a driver would: tests/Drift.spec:202: expected 0, got 1
+Break: no direction switch while held (games/drive-lab/src/shared/Vehicle/Drift.luau)
+  17 passed, 1 failed
+  FAIL Drift through the model > carries a held drift through an S-bend: right, straight, then left: tests/Drift.spec:231: expected true, got false
