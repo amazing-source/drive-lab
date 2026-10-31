@@ -14,6 +14,7 @@
 ]]
 local Aero = require("./Aero")
 local Brakes = require("./Brakes")
+local Drift = require("./Drift")
 local Driveline = require("./Driveline")
 local Electronics = require("./Electronics")
 local Engine = require("./Engine")
@@ -77,6 +78,15 @@ export type VehicleState = {
 	spins: { number },
 	sumForward: { number },
 	sumRight: { number },
+	-- Each tyre's peak forces at this frame's load and grip, before the drift scales the rear's.
+	basePeakX: { number },
+	basePeakY: { number },
+	drift: Drift.DriftState,
+	-- The handbrake the brakes get (the drift releases it), the steering the wheels get, and the
+	-- engine torque's share the drift allows this substep.
+	handbrake: number,
+	wheelSteer: number,
+	driftTorque: number,
 	throttle: number,
 	meanGrip: number,
 	context: Gearbox.Context,
@@ -135,6 +145,12 @@ function Model.new(car: CarConfig, help: InputHelp.InputHelp?): VehicleState
 		spins = table.create(Geometry.WHEELS, 0),
 		sumForward = table.create(Geometry.WHEELS, 0),
 		sumRight = table.create(Geometry.WHEELS, 0),
+		basePeakX = table.create(Geometry.WHEELS, 0),
+		basePeakY = table.create(Geometry.WHEELS, 0),
+		drift = Drift.newState(),
+		handbrake = 0,
+		wheelSteer = 0,
+		driftTorque = 1,
 		throttle = 0,
 		meanGrip = 1,
 		context = {
@@ -169,6 +185,7 @@ local function gearboxContext(
 	context.gearboxMode = input.gearboxMode
 	local launch = state.car.launch
 	context.holdGear = state.launch.phase == "Launching" and launch ~= nil and not launch.autoUpshift
+		or Drift.engaged(state.drift)
 	return context
 end
 
@@ -203,7 +220,9 @@ local function updateCorners(
 		local load = state.wheelLoads[wheel]
 		load = if state.grounded[wheel] then load + (state.suspensionForces[wheel] - load) * follow else 0
 		state.wheelLoads[wheel] = load
-		Tyre.setLoad(state.tyres[wheel], state.tyreStates[wheel], load, wheels[wheel].grip)
+		local tyre = state.tyreStates[wheel]
+		Tyre.setLoad(state.tyres[wheel], tyre, load, wheels[wheel].grip)
+		state.basePeakX[wheel], state.basePeakY[wheel] = tyre.peakX, tyre.peakY
 		state.spins[wheel] = Driveline.wheelSpeed(state.driveline, state.drive, wheel)
 		local angle = state.steering.angles[wheel]
 		state.cosines[wheel], state.sines[wheel] = math.cos(angle), math.sin(angle)
@@ -224,6 +243,7 @@ local function engineThrottle(
 		* electronics.tcFactor
 		* electronics.escFactor
 		* Gearbox.reverseCut(state.car.gearbox, state.gearbox.gear, prediction.forward)
+		* state.driftTorque
 	local driveTorque = Engine.output(engine, engineSpeed, driver)
 	local context = gearboxContext(state, input, math.abs(prediction.forward), driveTorque)
 	local cut, blip = Gearbox.update(state.car.gearbox, state.car.engine, state.gearbox, context, dt)
@@ -256,7 +276,8 @@ local function runElectronics(
 	motion.frontSteer = (angles[Geometry.FRONT_LEFT] + angles[Geometry.FRONT_RIGHT]) / 2
 	motion.rearSteer = angles[Geometry.REAR_LEFT]
 	motion.grip = state.meanGrip
-	Electronics.updateEsc(car, mode, electronics, input.assists.esc, motion, dt)
+	local esc = input.assists.esc and not Drift.assisting(state.drift)
+	Electronics.updateEsc(car, mode, electronics, esc, motion, dt)
 	local escBraking = false
 	for wheel = 1, Geometry.WHEELS do
 		escBraking = escBraking or electronics.escBrake[wheel] > 0
@@ -275,9 +296,11 @@ local function runElectronics(
 	-- A launch works the tyres at its own slip, even with TC switched off.
 	local launch = car.launch
 	local launching = state.launch.phase == "Launching"
+	local profile = car.drift
+	local tcSlip = if profile then Drift.tcSlip(profile, state.drift, mode.tcSlipRatio) else mode.tcSlipRatio
 	Electronics.updateTc(
 		car.electronics,
-		if launching and launch then launch.slipRatio else mode.tcSlipRatio,
+		if launching and launch then launch.slipRatio else tcSlip,
 		electronics,
 		input.assists.tc or launching,
 		state.controls.throttle,
@@ -296,6 +319,11 @@ local function setLoads(state: VehicleState, mode: Types.ModeConfig, throttle: n
 		else Gearbox.ratio(car.gearbox, state.gearbox.gear)
 	loads.clutchCapacity = Gearbox.clutchCapacity(car.gearbox, state.gearbox)
 	loads.couplingCapacity = Driveline.couplingCapacity(mode, drive.outputTorque, drive.clutchTorque >= 0)
+	local profile = car.drift
+	if profile then
+		loads.couplingCapacity =
+			Drift.couplingCapacity(profile, state.drift, loads.couplingCapacity, drive.outputTorque)
+	end
 	loads.lsdCapacity =
 		Driveline.lsdCapacity(car.driveline, mode, Driveline.rearInputTorque(state.driveline, drive))
 	loads.lossCapacity = (1 - car.driveline.efficiency) * math.abs(drive.outputTorque)
@@ -304,7 +332,7 @@ local function setLoads(state: VehicleState, mode: Types.ModeConfig, throttle: n
 			state.brakes,
 			wheel,
 			state.controls.brake,
-			state.controls.handbrake,
+			state.handbrake,
 			state.electronics.absFactor[wheel],
 			state.electronics.escBrake[wheel]
 		) + Tyre.rollingResistanceTorque(state.tyres[wheel], state.wheelLoads[wheel], state.ground[wheel])
@@ -321,6 +349,17 @@ local function substep(
 	dt: number
 )
 	local car, positions = state.car, state.positions
+	local profile = car.drift
+	if profile then
+		local grip, torque = Drift.shares(profile, state.drift, prediction.forward, prediction.right, dt)
+		state.driftTorque = torque
+		if Drift.engaged(state.drift) then
+			for wheel = Geometry.REAR_LEFT, Geometry.REAR_RIGHT do
+				state.tyreStates[wheel].peakX = state.basePeakX[wheel] * grip
+				state.tyreStates[wheel].peakY = state.basePeakY[wheel] * grip
+			end
+		end
+	end
 	local dForward = prediction.forward - chassis.forwardSpeed
 	local dRight = prediction.right - chassis.rightSpeed
 	local dYaw = prediction.yaw - chassis.yawRate
@@ -424,7 +463,9 @@ local function buildResult(state: VehicleState, chassis: ChassisMotion, dt: numb
 			limiter = state.engineState.limiterCut,
 			alaOpen = state.aero.alaOpen,
 			launch = state.launch.phase,
-			steer = state.controls.steer,
+			drift = state.drift.engagement,
+			driftTarget = state.drift.target,
+			steer = if Drift.engaged(state.drift) then state.wheelSteer else state.controls.steer,
 			rearSteerAngle = state.steering.rearAngle,
 		},
 	}
@@ -472,7 +513,24 @@ function Model.step(
 	-- The wheels hold one angle through the frame's substeps: the frame's mean steer rather than
 	-- its end, or at 30 FPS a turning wheel leads the 240 FPS car by half a frame (3 to 4 % more
 	-- yaw half a second into a slow keyboard turn, measured 2026-10-29).
-	Steering.update(car, state.steering, (steerBefore + state.controls.steer) / 2, forward, dt)
+	local steer = (steerBefore + state.controls.steer) / 2
+	local profile = car.drift
+	if profile then
+		local held = input.drift == true
+		Drift.update(
+			profile,
+			state.drift,
+			held,
+			InputFilter.shape(state.help, pedals.steer),
+			forward,
+			right,
+			dt
+		)
+		steer = Drift.steer(car, state.drift, steer, forward, right, yaw)
+	end
+	state.wheelSteer = steer
+	state.handbrake = if state.drift.wants then 0 else controls.handbrake
+	Steering.update(car, state.steering, steer, forward, dt)
 	updateCorners(state, wheels, mode, dt)
 	local alaTarget =
 		Aero.alaTarget(car.aero, forward, state.controls.throttle, state.controls.brake, yaw * forward)

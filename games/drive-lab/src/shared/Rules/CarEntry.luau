@@ -87,8 +87,11 @@ end
 
 -- The clips a sequence plays in order; it skips opening a door that is already open. Getting in
 -- closes the door within GetIn itself; getting out ends in OutsideClose's stance clear of the car.
+-- A direct door's sequences play nothing: the driver is seated or stood out at once.
 function CarEntry.steps(car: Car, kind: EntryKind, doorOpen: boolean): { Step }
-	if kind == "Enter" then
+	if car.door.direct then
+		return {}
+	elseif kind == "Enter" then
 		return chain(car.door, if doorOpen then ENTER_OPEN else ENTER_SHUT)
 	elseif kind == "Exit" then
 		return chain(car.door, if doorOpen then EXIT_OPEN else EXIT_SHUT, car.door.exitEnd.at)

@@ -47,6 +47,9 @@ export type Sim = {
 	chassis: Model.ChassisMotion,
 	time: number,
 	grip: number,
+	-- Per-wheel multipliers on `grip`, in Vehicle/Geometry's wheel order: what VehicleRunner's
+	-- surface grip would give each wheel.
+	wheelGrip: { number },
 }
 
 export type InputOptions = {
@@ -61,6 +64,7 @@ export type InputOptions = {
 	abs: boolean?,
 	tc: boolean?,
 	esc: boolean?,
+	drift: boolean?,
 }
 
 local DriveSim = {}
@@ -99,6 +103,7 @@ function DriveSim.new(car: Types.CarConfig, help: InputHelp.InputHelp?): Sim
 		chassis = { forwardSpeed = 0, rightSpeed = 0, yawRate = 0 },
 		time = 0,
 		grip = 1,
+		wheelGrip = table.create(Geometry.WHEELS, 1),
 	}
 end
 
@@ -118,6 +123,7 @@ function DriveSim.input(options: InputOptions?): Model.DriverInput
 			tc = if o.tc == nil then true else o.tc,
 			esc = if o.esc == nil then true else o.esc,
 		},
+		drift = o.drift,
 	}
 end
 
@@ -162,7 +168,7 @@ local function measure(sim: Sim)
 		contact.compressionSpeed = if contact.grounded then -riseRate else 0
 		contact.forwardSpeed = forward - body.yawRate * position.right + body.pitchRate * height
 		contact.rightSpeed = right + body.yawRate * position.forward - body.rollRate * height
-		contact.grip = sim.grip
+		contact.grip = sim.grip * sim.wheelGrip[wheel]
 	end
 	sim.chassis.forwardSpeed = forward
 	sim.chassis.rightSpeed = right

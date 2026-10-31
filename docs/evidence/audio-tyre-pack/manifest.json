@@ -1,0 +1,290 @@
+{
+ "tyres_ac": [
+  {
+   "name": "tyres_ac",
+   "kind": "pack",
+   "file": "tyres_ac.ogg",
+   "duration_s": 7.6415,
+   "decoded_length_diff": 0,
+   "bytes": 309504,
+   "guard_s": 0.25,
+   "asset_id": "101810748485104",
+   "moderation": "Approved (Open Cloud Assets API, 2026-10-31 02:21)"
+  },
+  {
+   "name": "squeal",
+   "kind": "loop",
+   "source": "ac_skid_ext_mono.wav whole (3.400 s at 44100 Hz)",
+   "seam_source": {
+    "level_step_db": 0.13,
+    "level_step_elsewhere_p50_p95": [
+     2.17,
+     4.12
+    ],
+    "level_step_rank_pct": 9.1,
+    "spectrum_change_db": 0.87,
+    "spectrum_change_elsewhere_p50_p95": [
+     3.25,
+     4.53
+    ],
+    "spectrum_change_rank_pct": 0.0,
+    "jump_vs_p999": 0.137
+   },
+   "click_source": {
+    "seam_vs_p999": 6.2,
+    "seam_rank_pct": 99.94
+   },
+   "declipped_samples": 0,
+   "seam_repair": {
+    "shortened_ms": 29.21,
+    "match": 0.757
+   },
+   "loudness_lufs": -20.0,
+   "gain_db": -8.78,
+   "peak_dbfs": -9.08,
+   "limiter_max_db": 0.0,
+   "limiter_samples_pct": 0.0,
+   "seam_before_ogg": {
+    "level_step_db": 1.01,
+    "level_step_elsewhere_p50_p95": [
+     2.11,
+     4.07
+    ],
+    "level_step_rank_pct": 37.5,
+    "spectrum_change_db": 1.79,
+    "spectrum_change_elsewhere_p50_p95": [
+     3.25,
+     4.53
+    ],
+    "spectrum_change_rank_pct": 0.0,
+    "jump_vs_p999": 0.106
+   },
+   "click_before_ogg": {
+    "seam_vs_p999": 0.22,
+    "seam_rank_pct": 86.938
+   },
+   "duration_s": 3.3712,
+   "pack": {
+    "file": "tyres_ac.ogg",
+    "start_s": 0.25,
+    "end_s": 3.621229
+   },
+   "seam_after_ogg": {
+    "level_step_db": 1.02,
+    "level_step_elsewhere_p50_p95": [
+     2.12,
+     4.08
+    ],
+    "level_step_rank_pct": 37.5,
+    "spectrum_change_db": 1.78,
+    "spectrum_change_elsewhere_p50_p95": [
+     3.23,
+     4.54
+    ],
+    "spectrum_change_rank_pct": 0.0,
+    "jump_vs_p999": 0.12
+   },
+   "click_after_ogg": {
+    "seam_vs_p999": 0.23,
+    "seam_rank_pct": 89.519
+   }
+  },
+  {
+   "name": "skid",
+   "kind": "loop",
+   "source": "ac_Skid.wav whole (3.270 s at 44100 Hz)",
+   "seam_source": {
+    "level_step_db": 0.13,
+    "level_step_elsewhere_p50_p95": [
+     0.47,
+     1.02
+    ],
+    "level_step_rank_pct": 6.5,
+    "spectrum_change_db": 0.74,
+    "spectrum_change_elsewhere_p50_p95": [
+     3.3,
+     4.63
+    ],
+    "spectrum_change_rank_pct": 0.0,
+    "jump_vs_p999": 0.032
+   },
+   "click_source": {
+    "seam_vs_p999": 0.11,
+    "seam_rank_pct": 65.323
+   },
+   "declipped_samples": 8,
+   "loudness_lufs": -20.0,
+   "gain_db": -14.04,
+   "peak_dbfs": -13.89,
+   "limiter_max_db": 0.0,
+   "limiter_samples_pct": 0.0,
+   "seam_before_ogg": {
+    "level_step_db": 0.13,
+    "level_step_elsewhere_p50_p95": [
+     0.47,
+     1.02
+    ],
+    "level_step_rank_pct": 6.5,
+    "spectrum_change_db": 0.73,
+    "spectrum_change_elsewhere_p50_p95": [
+     3.31,
+     4.63
+    ],
+    "spectrum_change_rank_pct": 0.0,
+    "jump_vs_p999": 0.041
+   },
+   "click_before_ogg": {
+    "seam_vs_p999": 0.11,
+    "seam_rank_pct": 65.826
+   },
+   "duration_s": 3.2702,
+   "pack": {
+    "file": "tyres_ac.ogg",
+    "start_s": 4.121229,
+    "end_s": 7.391458
+   },
+   "seam_after_ogg": {
+    "level_step_db": 0.14,
+    "level_step_elsewhere_p50_p95": [
+     0.48,
+     1.03
+    ],
+    "level_step_rank_pct": 9.7,
+    "spectrum_change_db": 0.77,
+    "spectrum_change_elsewhere_p50_p95": [
+     3.35,
+     4.64
+    ],
+    "spectrum_change_rank_pct": 0.0,
+    "jump_vs_p999": 0.004
+   },
+   "click_after_ogg": {
+    "seam_vs_p999": 0.12,
+    "seam_rank_pct": 67.424
+   }
+  }
+ ],
+ "tyres_real": [
+  {
+   "name": "tyres_real",
+   "kind": "pack",
+   "file": "tyres_real.ogg",
+   "duration_s": 8.7,
+   "decoded_length_diff": 0,
+   "bytes": 372554,
+   "guard_s": 0.25,
+   "asset_id": "94272123883693",
+   "moderation": "Approved (Open Cloud Assets API, 2026-10-31 02:21)"
+  },
+  {
+   "name": "squeal",
+   "kind": "loop",
+   "source": "freesound_71739.ogg 5.6-10.200 s",
+   "high_pass_hz": 500.0,
+   "loudness_lufs": -20.0,
+   "gain_db": -5.64,
+   "peak_dbfs": -9.8,
+   "limiter_max_db": 0.0,
+   "limiter_samples_pct": 0.0,
+   "seam_before_ogg": {
+    "level_step_db": 0.23,
+    "level_step_elsewhere_p50_p95": [
+     1.64,
+     3.4
+    ],
+    "level_step_rank_pct": 5.1,
+    "spectrum_change_db": 2.27,
+    "spectrum_change_elsewhere_p50_p95": [
+     2.96,
+     5.18
+    ],
+    "spectrum_change_rank_pct": 13.3,
+    "jump_vs_p999": 0.013
+   },
+   "click_before_ogg": {
+    "seam_vs_p999": 0.04,
+    "seam_rank_pct": 77.913
+   },
+   "duration_s": 4.1,
+   "pack": {
+    "file": "tyres_real.ogg",
+    "start_s": 0.25,
+    "end_s": 4.35
+   },
+   "seam_after_ogg": {
+    "level_step_db": 0.23,
+    "level_step_elsewhere_p50_p95": [
+     1.64,
+     3.42
+    ],
+    "level_step_rank_pct": 5.1,
+    "spectrum_change_db": 2.16,
+    "spectrum_change_elsewhere_p50_p95": [
+     2.94,
+     5.48
+    ],
+    "spectrum_change_rank_pct": 13.3,
+    "jump_vs_p999": 0.026
+   },
+   "click_after_ogg": {
+    "seam_vs_p999": 0.05,
+    "seam_rank_pct": 84.059
+   }
+  },
+  {
+   "name": "skid",
+   "kind": "loop",
+   "source": "freesound_628044.ogg 6.1-10.200 s",
+   "high_pass_hz": 800.0,
+   "loudness_lufs": -20.0,
+   "gain_db": -1.84,
+   "peak_dbfs": -8.76,
+   "limiter_max_db": 0.0,
+   "limiter_samples_pct": 0.0,
+   "seam_before_ogg": {
+    "level_step_db": 0.71,
+    "level_step_elsewhere_p50_p95": [
+     0.68,
+     1.63
+    ],
+    "level_step_rank_pct": 52.9,
+    "spectrum_change_db": 3.9,
+    "spectrum_change_elsewhere_p50_p95": [
+     4.15,
+     4.95
+    ],
+    "spectrum_change_rank_pct": 38.5,
+    "jump_vs_p999": 0.009
+   },
+   "click_before_ogg": {
+    "seam_vs_p999": 0.17,
+    "seam_rank_pct": 78.52
+   },
+   "duration_s": 3.6,
+   "pack": {
+    "file": "tyres_real.ogg",
+    "start_s": 4.85,
+    "end_s": 8.45
+   },
+   "seam_after_ogg": {
+    "level_step_db": 0.67,
+    "level_step_elsewhere_p50_p95": [
+     0.67,
+     1.62
+    ],
+    "level_step_rank_pct": 47.1,
+    "spectrum_change_db": 3.95,
+    "spectrum_change_elsewhere_p50_p95": [
+     4.18,
+     4.93
+    ],
+    "spectrum_change_rank_pct": 38.5,
+    "jump_vs_p999": 0.049
+   },
+   "click_after_ogg": {
+    "seam_vs_p999": 0.66,
+    "seam_rank_pct": 98.723
+   }
+  }
+ ]
+}

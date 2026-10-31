@@ -14,6 +14,7 @@
 local CarEntry = require("./CarEntry")
 local CarLights = require("./CarLights")
 local Contract = require("./Cars/Contract")
+local Drift = require("./Drift")
 local InputHelp = require("./InputHelp")
 local Rules = require("../Rules/ControlsHelp")
 
@@ -184,7 +185,7 @@ local HELP: Rules.Help = {
 				},
 				{
 					label = "Handbrake",
-					text = "Locks the rear wheels, to hold the car still or to swing the tail round a tight bend.",
+					text = "Locks the rear wheels to hold the car still; held through a bend above {DRIFT_KMH} km/h with the wheel turned, it drifts the car instead, steered toward the bend for more angle and away to straighten.",
 					controls = { "HANDBRAKE" },
 				},
 			},
@@ -408,6 +409,7 @@ local HELP: Rules.Help = {
 		DOOR_KMH = CarEntry.DOOR_MAX_KMH,
 		PAD_HOLD = CarLights.PAD_HOLD_SECONDS,
 		REVERSE_HOLD = InputHelp.REVERSE_HOLD_SECONDS,
+		DRIFT_KMH = math.round(Drift.MIN_SPEED * 3.6),
 	},
 	maxLabelLength = 26,
 	maxTextLength = 300,

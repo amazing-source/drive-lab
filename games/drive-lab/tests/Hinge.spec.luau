@@ -120,3 +120,47 @@ describe("Hinge", function()
 		expect(Hinge.sound(1, 1)).toBe(nil)
 	end)
 end)
+
+describe("Steering column frame", function()
+	local roblox = require("@lune/roblox")
+	local DR458Model = require("../src/shared/Config/Cars/DR458/Model")
+	local CFrame, Vector3 = roblox.CFrame, roblox.Vector3
+
+	it("puts z along the column toward the driver, x to the car's right, y up the wheel", function()
+		local hub = assert(DR458Model.steeringHub, "the DR458 has a steering hub")
+		local axis = Hinge.chassis(hub.axis)
+		local x, y, z = Hinge.column(axis)
+		near(z, axis, 1e-5)
+		expect(x.x > 0.9 and y.y > 0.9).toBe(true)
+		expect(x.x * y.x + x.y * y.y + x.z * y.z).toBeNear(0, 1e-9)
+		near({ x = x.y * y.z - x.z * y.y, y = x.z * y.x - x.x * y.z, z = x.x * y.y - x.y * y.x }, z, 1e-9)
+	end)
+
+	it("turns the DR458's wheel clockwise to the driver on a right turn, as the runner turns it", function()
+		local hub = assert(DR458Model.steeringHub, "the DR458 has a steering hub")
+		local x, y, z = Hinge.column(Hinge.chassis(hub.axis))
+		local rest = CFrame.fromMatrix(
+			Vector3.new(0, 0, 0),
+			Vector3.new(x.x, x.y, x.z),
+			Vector3.new(y.x, y.y, y.z),
+			Vector3.new(z.x, z.y, z.z)
+		)
+		-- Car/VehicleRunner: C0 = rest * CFrame.Angles(0, 0, -angle), a right turn being positive.
+		local top = rest * Vector3.new(0, 1, 0)
+		local turned = rest * CFrame.Angles(0, 0, -0.5) * Vector3.new(0, 1, 0)
+		expect(turned.X > top.X + 0.4).toBe(true)
+	end)
+end)
+
+describe("Hinge rest", function()
+	local DR458Model = require("../src/shared/Config/Cars/DR458/Model")
+
+	it("rests a control at its binding's rest, so its travel ends where the model says it is on", function()
+		local controls = assert(DR458Model.controls, "the DR458 has start-up controls")
+		local switch = controls.PanelSwitch_Ignition
+		-- The cockpit modeller: modelled straight out, off tipped down (+0.35), on tipped up (-0.35).
+		expect(Hinge.restAngle(switch)).toBeNear(0.35, 1e-9)
+		expect(Hinge.restAngle(switch) + assert(switch.travel, "a travel")).toBeNear(-0.35, 1e-9)
+		expect(Hinge.restAngle(controls.TunnelKey_Master)).toBe(0)
+	end)
+end)
