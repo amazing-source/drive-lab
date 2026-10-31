@@ -26,13 +26,15 @@ describe("Car catalog", function()
 		expect(Catalog.of(modelNamed(1))).toBe(nil)
 	end)
 
-	it("admits a car only once its model binding has nothing pending", function()
+	it("admits a car only once its model binding and its start-up have nothing pending", function()
 		local fs = require("@lune/fs")
 		for name in Catalog.cars do
-			local path = `games/drive-lab/src/shared/Config/Cars/{name}/ModelPending.luau`
-			if fs.isFile(path) then
-				local pending = (require :: any)(`../src/shared/Config/Cars/{name}/ModelPending`)
-				expect(`{name}: {table.concat(pending, "; ")}`).toBe(`{name}: `)
+			for _, list in { "ModelPending", "StartupPending" } do
+				local path = `games/drive-lab/src/shared/Config/Cars/{name}/{list}.luau`
+				if fs.isFile(path) then
+					local pending = (require :: any)(`../src/shared/Config/Cars/{name}/{list}`)
+					expect(`{name} {list}: {table.concat(pending, "; ")}`).toBe(`{name} {list}: `)
+				end
 			end
 		end
 		expect(Catalog.of(modelNamed("DR458"))).toBe(Catalog.cars.DR458)
@@ -85,12 +87,50 @@ describe("Car contract", function()
 		end).toThrow()
 	end)
 
-	it("refuses a control moved twice, moved in no time, or turned back before it arrives", function()
-		expect(function()
-			Contract.define(svjWith(function(entry)
-				table.insert(entry.startup.moves, table.clone(entry.startup.moves[1]))
+	it("accepts two moves of one control, as an ignition key's ON then START", function()
+		local entry = Contract.define(svjWith(function(entry)
+			table.insert(entry.startup.moves, table.clone(entry.startup.moves[1]))
+		end))
+		expect(#entry.startup.moves).toBe(2)
+	end)
+
+	it(
+		"refuses a start-up clutch outside 0 to 1, an interlock it does not press, or a key for no mode",
+		function()
+			local changes: { (any) -> () } = {
+				function(startup)
+					startup.clutch = 0
+				end,
+				function(startup)
+					startup.clutch = 1.5
+				end,
+				function(startup)
+					startup.interlock = "Clutch"
+				end,
+				function(startup)
+					startup.keys = { Track = "TracKey" }
+				end,
+				function(startup)
+					startup.keys = { Corsa = "Standard" }
+				end,
+			}
+			for _, change in changes do
+				expect(function()
+					Contract.define(svjWith(function(entry)
+						change(entry.startup)
+					end))
+				end).toThrow()
+			end
+			local entry = Contract.define(svjWith(function(entry)
+				entry.startup.clutch = 1
+				entry.startup.interlock = "Clutch"
+				entry.startup.keys = { Corsa = "TracKey" }
 			end))
-		end).toThrow()
+			expect(entry.startup.interlock).toBe("Clutch")
+		end
+	)
+
+	it("refuses a control moved in no time, or turned back before it arrives", function()
 		expect(function()
 			Contract.define(svjWith(function(entry)
 				entry.startup.moves[1].move = 0

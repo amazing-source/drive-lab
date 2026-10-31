@@ -100,6 +100,35 @@ local function send(car: Model, action: Rules.Action, at: number?)
 	Net.send(Remotes.CAR_ACTION, { car = car, action = action, at = at })
 end
 
+-- The start key: refused while a clutch interlock is not met (the reason shown on the car for a
+-- moment, Config/CarEntry.CLUTCH_INTERLOCK), else asked with the key the drive mode turns.
+local function askStart(car: Model)
+	local entry = Catalog.of(car)
+	if entry == nil then
+		return
+	end
+	local interlock = Config.CLUTCH_INTERLOCK
+	local refusal = Rules.startRefusal(
+		entry,
+		CarState.read(car),
+		car:GetAttribute("GearboxMode"),
+		car:GetAttribute(interlock.pedalAttribute)
+	)
+	if refusal then
+		car:SetAttribute(interlock.hintAttribute, refusal)
+		task.delay(interlock.hintSeconds, function()
+			if car:GetAttribute(interlock.hintAttribute) == refusal then
+				car:SetAttribute(interlock.hintAttribute, nil)
+			end
+		end)
+		return
+	end
+	car:SetAttribute(interlock.hintAttribute, nil)
+	local mode = car:GetAttribute("DrivingMode")
+	local key = Rules.startKey(entry, if typeof(mode) == "string" then mode else nil)
+	Net.send(Remotes.CAR_ACTION, { car = car, action = "Start", key = key })
+end
+
 local function seatedCar(): Model?
 	local current = body
 	local seat = current and current.humanoid.SeatPart
@@ -373,7 +402,9 @@ local function onInputBegan(input: InputObject, processed: boolean)
 		return
 	end
 	local action = Rules.seatedPress(key.Name, processed, SEATED_KEYS)
-	if action == "Door" or action == "Start" then
+	if action == "Start" then
+		askStart(car)
+	elseif action == "Door" then
 		send(car, action)
 	elseif action == "Exit" then
 		exitHeld = { key = key, since = os.clock(), asked = false }

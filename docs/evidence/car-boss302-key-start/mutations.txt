@@ -1,0 +1,17 @@
+Deliberate breaks for the Boss 302 key start stub, each applied alone, the full spec suite run
+(lune run tools/test/run), then the file restored (break 6: a temporary DR458/StartupPending.luau, deleted
+after); the tree was clean after. Baseline: 94 spec files, 987 passed, 0 failed.
+
+== 1 the key reaches START after the press: 1 failing; 94 spec files, 986 passed, 1 failed
+   FAIL Boss 302 key start > turns the key to ON, on to START at the press, and lets it spring back to ON as it cranks: games/drive-lab/tests/Boss302Startup.spec:37:
+== 2 the key held until the engine catches: 1 failing; 94 spec files, 986 passed, 1 failed
+   FAIL Boss 302 key start > turns the key to ON, on to START at the press, and lets it spring back to ON as it cranks: games/drive-lab/tests/Boss302Startup.spec:40:
+== 3 no clutch held during the start: 1 failing; 94 spec files, 986 passed, 1 failed
+   FAIL Boss 302 key start > holds the clutch down from the key until driving unlocks, as the starter interlock needs: games/drive-lab/tests/Boss302Startup.spec:53: 
+== 4 no TracKey: 1 failing; 94 spec files, 986 passed, 1 failed
+   FAIL Boss 302 key start > starts with the TracKey in the TracKey drive mode and the standard key otherwise: games/drive-lab/tests/Boss302Startup.spec:62: expected
+== 5 START turned to 100 degrees: 1 failing; 94 spec files, 986 passed, 1 failed
+   FAIL Boss 302 key start > turns the key to ON, on to START at the press, and lets it spring back to ON as it cranks: games/drive-lab/tests/Boss302Startup.spec:38:
+== 6 a catalog car with a start-up still pending (DR458/StartupPending added): 1 failing; 94 spec files, 986 passed, 1 failed
+   FAIL Car catalog > admits a car only once its model binding and its start-up have nothing pending: games/drive-lab/tests/CarContract.spec:36: expected DR458 Start
+clean
