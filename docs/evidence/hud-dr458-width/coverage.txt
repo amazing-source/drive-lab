@@ -1,0 +1,22 @@
+Road coverage of the HUD panel at the SVJ's width, offline (#185): no Studio for agents, so the frame
+images were laid at the HUD's placement (bottom centre at the view's height share in the chase view,
+bottom right in the cockpit, 14 px margin; the DR458's height from Rules/Hud.frameHeight) on an
+earlier chase capture of the SVJ (1721 x 865, horizon at row 340), alpha-weighted.
+
+chase    SVJ    now      panel 641x147 px  screen 5.13%  ground 8.45%
+chase    DR458  now      panel 441x147 px  screen 4.33%  ground 7.14%
+chase    DR458  matched  panel 641x214 px  screen 9.17%  ground 15.11%
+cockpit  SVJ    now      panel 490x112 px  screen 2.99%  ground 4.92%
+cockpit  DR458  now      panel 337x112 px  screen 2.52%  ground 4.16%
+cockpit  DR458  matched  panel 490x163 px  screen 5.34%  ground 8.80%
+
+At the SVJ's width the DR458's panel hides 1.79 times the ground the SVJ's does in the chase view
+(1.79 in the cockpit). Its top edge sits 0.077 of the screen's height higher than the SVJ's; in this
+capture it reaches the car's diffuser, which the SVJ's does not.
+
+Proposed, not applied (for the owner):
+- frameTransparency in Config/Cars/DR458/Hud.luau (present, 0): fades the whole frame image, the
+  panel and its lettering alike; the live digits, labels and segments stay opaque.
+- A frame re-exported with a see-through panel fill and opaque lettering: the panel alone fades;
+  needs a third upload.
+- width below 1 in the same file: a narrower, shorter HUD between the two sizes.
