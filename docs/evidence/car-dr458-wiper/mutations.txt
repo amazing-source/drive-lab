@@ -2,9 +2,9 @@ Deliberate breaks for PR 3 of #163 (agent/car-dr458-wiper), each applied alone, 
 suite run (lune run tools/test/run), then the file restored from git; the tree was clean after.
 Run on the 3D artist's refitted wiper fields. Baseline: 86 spec files, 842 passed, 0 failed.
 
-Sweep measured with Rules/WiperSweep on the binding's windscreen quad (80 x 80 samples):
-  before the refit: 39.8% of the quad swept; the Driver_Eye level line of sight just above it.
-  after the refit:  60.1% swept (driver's half 69.9%, passenger's 50.4%); level line of sight
+Sweep measured with Rules/WiperSweep on the binding's windscreen quad:
+  before the refit (60 x 60 samples): 39.8% of the quad swept; the Driver_Eye level line of sight just above it.
+  after the refit (80 x 80 samples): 60.1% swept (driver's half 69.9%, passenger's 50.4%); level line of sight
                     and 1, 3, 6, 10 deg below all swept. The 3D artist's own measure on the curved
                     glass: 37.4% before, 57.7% after.
 
