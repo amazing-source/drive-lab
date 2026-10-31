@@ -1,0 +1,32 @@
+Issue #169: engine loops can share one file, each looping its own region.
+
+Gates at cee93e4: stylua --check, selene (0 errors, 0 warnings), luau-lsp analyze (src), lune run
+tools/test/run (85 spec files, 830 passed, 0 failed), lune run tools/test/tools (17 tools, 17 run,
+0 failed), rojo build.
+
+Deliberate breaks of Contract.checkLoopRegions, one at a time, each restored with
+`git checkout -- games` (830 passed after):
+M1  the overlap test replaced by `true`
+    FAIL Car contract: loop regions > refuses two loops whose regions overlap in their file
+M2  a loop sharing a file allowed without a region (the assert made `true`, the loop skipped)
+    FAIL Car contract: loop regions > refuses a loop that shares a file without a region of its own
+M3  `region.to > region.from` loosened to `>=`
+    FAIL Car contract: loop regions > refuses a region that does not run forward from 0 or later
+M4  `region.from >= 0` removed
+    FAIL the same spec (its second case, a region from -1)
+M5  Contract.define no longer calls checkLoopRegions
+    FAIL refuses a loop that shares a file without a region of its own
+    FAIL refuses two loops whose regions overlap in their file
+    FAIL refuses a region that does not run forward from 0 or later
+
+No pack uses regions yet: the offline timelines (lune run games/drive-lab/tools/audio_timeline.luau
+<car> <mode> [fallback]) are byte-identical to main for SVJ Strada, Sport, Corsa and DR458 1, 2,
+OFF and 1 with the fallback start-up (cmp against outputs written from main dcb2a51).
+
+Packed against separate files: the DR458's candidate bank (20 loops and its limiter, cut from
+Pole Position's Ferrari 458 ramps) rendered through pack=<json> twice, once from 21 separate
+WAVs, once from one 98.6 s WAV holding all 21 with each loop's region: the two renders are
+identical, sample for sample (max absolute difference 0.0, 1,512,000 frames).
+
+Not checked: Roblox's own LoopRegion playback (whether its loop point is seamless, and its
+precision on region times). Agents do not use Studio now; the owner judges by ear in game.

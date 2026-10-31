@@ -4,6 +4,11 @@ A HUD drawn as one image (the owner's, from ChatGPT) and brought to life in game
 frame stays an image, and everything that moves is drawn over it at boxes measured off the same
 image. The same route fits any HUD or dashboard design delivered as a picture.
 
+Two routes cut a design, by how it is delivered: one painted image (the SVJ's, §1), or a pair of
+pixel-aligned exports, the frame alone and the frame with example values, with their cut-out
+regions (the DR458's, §4). Each car shows its own HUD when its Contract entry has one (§5); the
+SVJ has none and shows the global HUD of `Config/Hud`.
+
 ## 1. Cut the design
 
     python -I tools/assets/hud_layers.py <design.png> <out dir>
@@ -65,3 +70,57 @@ and put the ids and the layout's numbers in `Config/Hud.luau`.
 Checked in edit mode, no playtest: the controller built into StarterGui with readouts set on a
 stand-in model (8650 rpm in manual, then 6400 in automatic in the cockpit placement), captured,
 then removed.
+
+## 4. A design delivered as a pair (the DR458's)
+
+    python -I tools/assets/hud_pair_layers.py <static.png> <full.png> <regions.json> <out dir>         --font <Sarpanch-Bold.ttf> --height 205 --width 0.627 --bars 0.03 --gap 0.06
+
+The DR458's pack of 2026-10-31 is two 2172 × 724 exports with a transparent background, the
+static one with every live part left out, and `cutout_regions.json` ([x, y, w, h] for the ten
+segments, the mode pictogram and value, TC, ABS, A, the gear, the speed, the headlight, the
+indicators). The script refuses a pair that does not line up: the same size and alpha, drawn ink
+(the full export against the static one) only inside a region, and every lit segment
+pixel-identical, since one mask then serves all ten. It writes:
+- `hud_frame.png`: the static export cropped to what is drawn, brought to 1024 wide.
+- `hud_parts.png`: white masks with 2 px of padding (the pack's boxes are tight to the ink): the
+  segment, the mode pictogram, the headlight, the two indicator arrows (unlit grey in the design,
+  so drawn at all times in game) and, with `--font`, the glyphs 0-9, N and R.
+- `hud_layout.json`: the boxes in the frame's pixels, the glyph outlines of the live texts (TC and
+  ABS split from their lines at the empty rows between), the atlas rectangles, the glyph metrics.
+- `recomposed.png` (the parts laid back over the frame in their drawn colours, which must come
+  within 40 levels of the full export: 10.8 on the DR458's), `frame_on_grey.png`,
+  `glyphs_preview.png`.
+
+The glyphs exist because the design's gear and speed are slanted and neither squared face Roblox
+ships (Michroma, Sarpanch) has an italic, nor can a TextLabel be skewed. Each glyph is set in the
+given face at four times its size, narrowed to `--width` of its own width (three digits have to fit
+between the gear's hexagon and `km/h`), its horizontal bars thickened by `--bars` of its height,
+slanted, and brought down. The slant is measured, not given: a line fitted to the half-coverage
+crossings of both sides of the drawn speed and gear, from 45% to 80% of their height (clear of a
+rounded corner and of the 1's flag); the DR458's are 0.190 and 0.180, so 0.185, about 10.5
+degrees (the rev segments are 0.406, not the digits' slant). The digits share one cell, the widest
+digit's, so the speed does not shift as it changes. The owner chose the size from a comparison
+against the drawn digits (205 px of three heights).
+
+Upload the two images (§2) and put the image ids, the boxes and the metrics in the car's `Hud`.
+
+## 5. A car's own HUD
+
+A car's Contract entry may carry `hud`, a `Config/HudDesign` (plain data, so Lune loads it).
+`Contract.define` checks it at load: uploaded images, ten segments, every box inside the frame,
+every mask inside the atlas and drawn at its own size, every glyph there, tabular digits, three
+speed digits within their box (whose left edge is the hexagon's clearance) and every gear within
+the hexagon's inner edges at the drawn digit's lowest row. `Ui/HudLook` makes a look of it (or of
+`Config/Hud` for a car without one), `Ui/HudView` draws it, one view per look built at start, and
+`Controllers/Hud` shows the driven car's. Without `glyphs` the gear and speed fall back to upright
+text in the design's digit face, at the `texts` boxes. A face's capitals are a share of its
+TextSize and their middle sits below the label's: Michroma 0.542 and 0.052 (measured in Studio for
+the binnacle); Sarpanch Bold 0.457 and 0.03, predicted from its metrics by the ratio that holds for
+Michroma and Montserrat (within 3%), not yet measured in Studio.
+
+`tests/HudHarness.luau` runs the controller in Lune with stand-ins for the instances and services
+and writes out every property the HUD sets. `tests/CarHud.spec.luau` compares the SVJ's HUD, frame
+by frame, with a recording of the controller before cars had their own HUD
+(`tests/fixtures/hud_svj_dump.txt`, from dcb2a51), and checks the DR458's glyph runs, red zone,
+masks and fonts. What it cannot see: layout, fonts as Roblox draws them, images loading.
+

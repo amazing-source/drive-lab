@@ -42,6 +42,9 @@ export type Rig = {
 	doorRest: CFrame,
 	-- The cabin controls, by the binding's names; one whose part has not streamed in is missing.
 	controls: { [string]: Hinged },
+	-- The wiper's arm, turned about its C0's X from parked; nil on a model without one or before
+	-- it has streamed in.
+	wiper: Hinged?,
 	-- The door's pull strap (Rules/DoorStrap) on its own weld from the chassis, posed by its C0
 	-- (the strap's centre, its -Y down the strap) and its part's Size.Y; nil on a model without
 	-- one or before it has streamed in.
@@ -278,9 +281,10 @@ local function doorParts(model: Model, binding: Binding.CarModel): ({ BasePart }
 	return door, if strap and strap:IsA("BasePart") then strap else nil
 end
 
--- The hinged parts the binding names and the model has (its pedals or its cabin controls), each
--- with its hinge frame and rest. Each hangs on its own Weld named after it, which
--- Controllers/DriverLegs (pedals) and Controllers/CarDoor (controls) turn about X from its rest.
+-- The hinged parts the binding names and the model has (its pedals, its cabin controls or its
+-- wiper), each with its hinge frame and rest. Each hangs on its own Weld named after it, which
+-- Controllers/DriverLegs (pedals), Controllers/CarDoor (controls) and Controllers/CarWiper (the
+-- wiper) turn about X from its rest.
 local function hingeParts<K>(
 	model: Model,
 	hinges: { [K]: Binding.Hinge }?,
@@ -485,7 +489,8 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: Binding.CarMo
 	end
 	local pedals = hingeParts(model, binding.pedals, binding.bodyRaise)
 	local controls = hingeParts(model, binding.controls, binding.bodyRaise)
-	for _, set in { pedals, controls } do
+	local wiper = hingeParts(model, if binding.wiper then { binding.wiper.hinge } else nil, binding.bodyRaise)
+	for _, set in { pedals, controls, wiper } do
 		for part in set do
 			hinged[part] = true
 		end
@@ -515,7 +520,7 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: Binding.CarMo
 		end
 	end
 	hang(model, chassis, binding, door, strapPart)
-	for _, set in { pedals, controls } do
+	for _, set in { pedals, controls, wiper } do
 		for part, hinge in set do
 			hingeWeld(part.Name, chassis, part, hinge.frame, hinge.rest)
 		end
@@ -598,6 +603,10 @@ function CarRig.find(model: Model, binding: Binding.CarModel): Rig?
 			end
 		end
 	end
+	local wiperWeld, wiperRest = nil, CFrame.identity
+	if binding.wiper then
+		wiperWeld, wiperRest = hingeOf(chassis, binding.wiper.hinge.part)
+	end
 	local strap = hingeOf(chassis, DOOR_STRAP)
 	local steeringWeld = chassis:FindFirstChild(binding.steeringWheel)
 	local steeringRest = steeringWeld and steeringWeld:GetAttribute("RestC0")
@@ -620,6 +629,7 @@ function CarRig.find(model: Model, binding: Binding.CarModel): Rig?
 		door = doorHinge,
 		doorRest = doorRest,
 		controls = controls,
+		wiper = if wiperWeld then { weld = wiperWeld, rest = wiperRest } else nil,
 		strap = strap,
 		seat = seat,
 		prompt = prompt,

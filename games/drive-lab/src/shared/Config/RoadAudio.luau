@@ -3,12 +3,9 @@
 	The sound of speed: the uploaded pack and the mix's tuning. The pack is one file made by
 	tools/audio/cut_road.py (manifest.json beside it, in drive-lab-assets/road_audio/cut): the wind
 	and the roar are regions of it, in seconds, both matched at -20 LUFS, so the volumes here are
-	the balance. The engine's loops are matched at -18 LUFS and play at 0 dB from 8000 rpm (the
-	SVJ's pack, Config/Cars/SVJ/Audio), and the SVJ is near 8000 rpm at its top speed in 7th, so
-	at top speed outside the wind sits 8 dB and the roar 12 dB under the engine, the two together 6.5 dB
-	under it; slower, the engine's lead only grows (tests/RoadAudio.spec.luau checks it in the
-	highest gear, where the engine is quietest). The offline render of a full-throttle run
-	measured the engine 7.4 dB over both at its closest, lifting at 319 km/h.
+	the balance. The engine's loops are matched at -18 LUFS, so the engine's lead over the two is
+	read off these volumes: tests/RoadAudio.spec.luau keeps it at 6 dB or more for every car, on
+	and off throttle, in its highest gear (where the engine is quietest) up to its top speed.
 
 	Sources, both CC0 BigSoundBank: the wind is 1450 (a storm in trees, June 2019), its gusts
 	ridden down to a steady rush; the roar is 3097 (a petrol Citroen C3's cabin on a 90 km/h
@@ -53,12 +50,14 @@ local Config: RoadAudioConfig = {
 	TUNING = {
 		-- The SVJ's top speed (README: 354 km/h in the calibration).
 		topKmh = 350,
-		-- Aerodynamic noise power grows about 17-18 dB per doubling of speed; a square law in
-		-- amplitude gives 12 dB, and the opening low-pass adds the rest.
-		windVolume = 0.5,
-		windExponent = 2,
-		cutoffKmh = { from = 50, to = 350 },
-		cutoffHz = { from = 500, to = 8000 },
+		-- Real wind noise grows about 17-18 dB per doubling of speed and stays under the engine
+		-- until near top speed. The game wants it heard from everyday speeds, so it grows slower
+		-- (7 dB per doubling, flatter than the roar) and rises in pitch instead: its low-pass
+		-- opens from a rumble to a hiss. Its level at top speed is held by the engine's 6 dB lead.
+		windVolume = 0.37,
+		windExponent = 1.2,
+		cutoffKmh = { from = 30, to = 250 },
+		cutoffHz = { from = 800, to = 8000 },
 		windSpeed = { from = 0.9, to = 1.1 },
 		-- Tyre noise grows about 30 log10(speed) dB, so amplitude with speed ^ 1.5 (the weather's
 		-- spray uses the same law). The roar was recorded near 90 km/h, where its speed is 0.99.
@@ -68,15 +67,15 @@ local Config: RoadAudioConfig = {
 		speedHalfLife = 0.08,
 		viewSeconds = 0.35,
 		-- Outside, the cabin recording of the roar loses its boom and gains some bite. In the
-		-- cockpit the wind is muffled as the weather's rain is (0.35 of the outside, mid -4 dB,
-		-- high -12 dB, here a little more), while the roar comes up through the floor: almost its
-		-- full level, its lows kept.
+		-- cockpit the wind loses its highs as the weather's rain does (mid -4 dB, high -12 dB) but
+		-- keeps most of its level, so the cabin still hears it, while the roar comes up through the
+		-- floor: almost its full level, its lows kept.
 		outside = {
 			wind = FLAT,
 			road = { gain = 0, low = -6, mid = 2, high = 4 },
 		},
 		cockpit = {
-			wind = { gain = -10, low = 0, mid = -4, high = -12 },
+			wind = { gain = -2, low = 0, mid = -4, high = -12 },
 			road = { gain = -1, low = 2, mid = -2, high = -8 },
 		},
 		-- EST: a coarse surface roars louder and brighter, a soft one turns it to a dull rumble.

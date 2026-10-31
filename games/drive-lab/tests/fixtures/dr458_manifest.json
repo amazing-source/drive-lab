@@ -1454,6 +1454,38 @@
         "right": -0.3443,
         "up": 0.7254
       }
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Mirror_Interior"
+    },
+    {
+      "group": "Mirror_Interior",
+      "motion": "static",
+      "name": "Mirror_Interior_Glass"
+    },
+    {
+      "axis": {
+        "forward": -0.64048,
+        "right": 0.07345,
+        "up": -0.76446
+      },
+      "group": "Chassis",
+      "motion": "hinge",
+      "name": "Wiper_Arm",
+      "pivot": {
+        "forward": 2.715,
+        "right": -0.15,
+        "up": 0.72312
+      },
+      "positive": "lifts the blade off its park line along the screen's base, up across the driver's side",
+      "range": 1.97222
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Body_WiperSpindle"
     }
   ],
   "points": {
@@ -1486,6 +1518,16 @@
       "forward": 1.7937,
       "right": 0.5346,
       "up": 1.0585
+    },
+    "Wiper_BladeInner": {
+      "forward": 2.6037,
+      "right": 0.04719,
+      "up": 0.76242
+    },
+    "Wiper_BladeOuter": {
+      "forward": 2.34768,
+      "right": 0.53392,
+      "up": 0.82393
     }
   }
 }

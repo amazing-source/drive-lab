@@ -7,7 +7,7 @@
 	on the camera as "DriveLabView" for the weather effects, "OnFoot" when not driving. On top
 	of each view's placement: the vibrations of Rules/CarShake, noise around the place computed
 	this frame (never a lag), and each view's field of view widening under acceleration, held
-	through a gear change.
+	through a gear change, and with speed.
 ]]
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -48,6 +48,8 @@ local eyeForward, eyeUp = 0, 0
 local hidden: { BasePart } = {}
 local shake = CarShake.new()
 local kick = Rules.newKick()
+-- Degrees the view is widened by the speed, eased.
+local widen = 0
 local chaseState = ChaseView.new()
 
 local function studs(metres: number): number
@@ -123,6 +125,7 @@ local function release(camera: Camera)
 	active, looking = false, false
 	lookYaw, lookPitch = 0, 0
 	shake, kick, chaseState = CarShake.new(), Rules.newKick(), ChaseView.new()
+	widen = 0
 	hideHead(false)
 	UserInputService.MouseBehavior = Enum.MouseBehavior.Default
 	local humanoid = localPlayer.Character and localPlayer.Character:FindFirstChildOfClass("Humanoid")
@@ -180,6 +183,7 @@ end
 local function follow(drive: Drive, dt: number)
 	ChaseView.step(chaseState, drive.model, drive.chassis.CFrame, drive.chassis.AssemblyLinearVelocity, dt)
 	Rules.stepKick(kick, Rules.kickTarget(number(drive.model, "LongitudinalG")), dt)
+	widen = Rules.stepSpeedWiden(widen, Rules.speedTarget(number(drive.model, "SpeedKmh")), dt)
 end
 
 local function update(dt: number)
@@ -218,7 +222,7 @@ local function update(dt: number)
 	}, dt, CarShakeConfig)
 	camera.CFrame = placed * CFrame.Angles(offset.pitch, offset.yaw, offset.roll)
 		+ placed.UpVector * studs(offset.lift)
-	camera.FieldOfView = Rules.fieldOfView(view, kick.degrees)
+	camera.FieldOfView = Rules.fieldOfView(view, kick.degrees, widen)
 	camera:SetAttribute("DriveLabView", view)
 end
 

@@ -276,22 +276,39 @@ describe("Car contract: drive modes", function()
 end)
 
 describe("Car contract: switches", function()
-	local PIT = { limitKmh = 60, armGear = 2, armBelowKmh = 60, band = 3 }
-	local WIPER = { wipeSeconds = 1.2, afterWash = 3 }
+	local PIT = { limitKmh = 60, armFromGear = 2, armToGear = 2, armBelowKmh = 60, band = 3, hazards = false }
+	local WIPER = { speeds = { 1.4, 0.9 }, afterWash = 3 }
 
 	it("accepts a pit limiter, a wiper and display pages that make sense", function()
 		local entry = Contract.define(svjWith(function(entry)
 			entry.switches.pitLimiter = table.clone(PIT)
 			entry.switches.wiper = table.clone(WIPER)
 			entry.switches.displayPages = 3
+			entry.switches.radio = true
 		end))
+		expect(Contract.features(entry).radio).toBe(true)
 		expect(Contract.features(entry).pitLimiter).toBe(true)
 		expect(Contract.features(entry).wiper).toBe(true)
 		expect(Contract.features(entry).displayPages).toBe(true)
 	end)
 
-	it("refuses a pit limiter with no band or one that arms above its own limit", function()
-		for _, change in { { band = 0 }, { limitKmh = 0 }, { armBelowKmh = 80 } } do
+	it("accepts a pit limiter that arms in any forward gear at any speed", function()
+		local entry = Contract.define(svjWith(function(entry)
+			entry.switches.pitLimiter = { limitKmh = 60, armFromGear = 1, band = 3, hazards = true }
+		end))
+		expect(Contract.features(entry).pitLimiter).toBe(true)
+	end)
+
+	it("refuses a pit limiter with no band, no forward arming gear, or arming above its limit", function()
+		local changes = {
+			{ band = 0 },
+			{ limitKmh = 0 },
+			{ armBelowKmh = 80 },
+			{ armFromGear = 0 },
+			{ armFromGear = 1.5 },
+			{ armToGear = 1 },
+		}
+		for _, change in changes do
 			expect(function()
 				Contract.define(svjWith(function(entry)
 					local pit = table.clone(PIT) :: any
@@ -304,8 +321,15 @@ describe("Car contract: switches", function()
 		end
 	end)
 
-	it("refuses a wiper with no wipe time or a part of a wipe after a wash", function()
-		for _, change in { { wipeSeconds = 0 }, { afterWash = 1.5 }, { afterWash = -1 } } do
+	it("refuses a wiper with no speed, a zero wipe time, speeds out of order, or a part wipe", function()
+		local changes = {
+			{ speeds = {} },
+			{ speeds = { 1.4, 0 } },
+			{ speeds = { 0.9, 1.4 } },
+			{ afterWash = 1.5 },
+			{ afterWash = -1 },
+		}
+		for _, change in changes do
 			expect(function()
 				Contract.define(svjWith(function(entry)
 					local wiper = table.clone(WIPER) :: any
@@ -332,9 +356,13 @@ describe("Car contract: switches", function()
 		local features = Contract.features(Catalog.cars.SVJ)
 		expect(features.escButton and features.launch).toBe(true)
 		expect(features.cabinLight).toBe(true)
-		expect(features.pitLimiter or features.wiper or features.rainLight or features.displayPages).toBe(
-			false
-		)
+		expect(
+			features.pitLimiter
+				or features.wiper
+				or features.rainLight
+				or features.displayPages
+				or features.radio
+		).toBe(false)
 	end)
 end)
 
@@ -591,5 +619,88 @@ describe("Car contract: flames", function()
 				end))
 			end).toThrow()
 		end
+	end)
+end)
+
+describe("Car contract: loop regions", function()
+	local SHARED = "rbxassetid://1"
+
+	-- Every loop of the SVJ's pack in one file, each with its own region, then `change`.
+	local function packed(change: ((any) -> ())?): Contract.Entry
+		return svjWith(function(entry)
+			local pack = entry.audio
+			local from = 0
+			local function place(loop: any, seconds: number)
+				loop.soundId = SHARED
+				loop.region = { from = from, to = from + seconds }
+				from += seconds
+			end
+			for _, layer in pack.engineLayers do
+				place(layer, 5)
+			end
+			place(pack.limiter, 2)
+			place(pack.far, 3)
+			if change then
+				change(pack)
+			end
+		end)
+	end
+
+	it("accepts loops that share one file through regions that do not overlap", function()
+		local entry = Contract.define(packed())
+		local regions = {}
+		for _, layer in entry.audio.engineLayers do
+			table.insert(regions, layer.region and layer.region.from)
+		end
+		expect(table.concat(regions, ",")).toBe("0,5,10")
+		expect(entry.audio.far.region and entry.audio.far.region.to).toBe(20)
+	end)
+
+	it("accepts a loop alone in its file with a region, and the catalog's packs without any", function()
+		Contract.define(svjWith(function(entry)
+			entry.audio.engineLayers[2].region = { from = 0.5, to = 4 }
+		end))
+		for _, entry in Catalog.cars do
+			Contract.checkLoopRegions(entry.audio)
+		end
+	end)
+
+	it("refuses a loop that shares a file without a region of its own", function()
+		expect(function()
+			Contract.define(packed(function(pack)
+				pack.engineLayers[3].region = nil
+			end))
+		end).toThrow()
+		expect(function()
+			Contract.define(packed(function(pack)
+				pack.limiter.region = nil
+			end))
+		end).toThrow()
+	end)
+
+	it("refuses two loops whose regions overlap in their file", function()
+		expect(function()
+			Contract.define(packed(function(pack)
+				pack.engineLayers[2].region = { from = 4.9, to = 10 }
+			end))
+		end).toThrow()
+		expect(function()
+			Contract.define(packed(function(pack)
+				pack.far.region = { from = 1, to = 2 }
+			end))
+		end).toThrow()
+	end)
+
+	it("refuses a region that does not run forward from 0 or later", function()
+		expect(function()
+			Contract.define(packed(function(pack)
+				pack.engineLayers[1].region = { from = 0, to = 0 }
+			end))
+		end).toThrow()
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				entry.audio.far.region = { from = -1, to = 2 }
+			end))
+		end).toThrow()
 	end)
 end)

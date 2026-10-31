@@ -27,8 +27,8 @@ export type Optics = { BLUR: RainOptics.Blur, FOCUS: RainOptics.Focus, LENS: Len
 local Optics: Optics = table.freeze({
 	-- The brief's ceiling: 0 to 0.35 px, only as drops land, gone in a fraction of a second.
 	BLUR = table.freeze({ max = 0.35, perDrop = 0.12, halfLife = 0.15 }),
-	-- Rain's far blur, light, with a broad sharp range; the chase view focuses on the car. At
-	-- speed the sharp range hugs the car and the road before it blurs (Config/MotionBlur).
+	-- Rain's far blur, light, with a broad sharp range; the chase view focuses on the car. While
+	-- the motion blurs (Config/MotionBlur) the sharp range hugs the car, or the car's own body.
 	FOCUS = table.freeze({
 		far = 0.12,
 		radius = Units.metresToStuds(8),
@@ -36,6 +36,8 @@ local Optics: Optics = table.freeze({
 		onFoot = Units.metresToStuds(10),
 		margin = Units.metresToStuds(2),
 		nearMargin = Units.metresToStuds(0.3),
+		-- Sharp to 2.4 m: the dashboard and pillars from the seat, the bonnet from the hood camera.
+		body = Units.metresToStuds(1.2),
 	}),
 	LENS = table.freeze({
 		texture = "rbxassetid://118920452521682",

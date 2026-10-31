@@ -9,8 +9,10 @@
 	(Config/CarSwitches), even with the headlights off, X and C toggle the left and right
 	indicators, L the cabin light; on a pad, D-pad left and right are the indicators and D-pad down steps the
 	headlights Auto, On, high beam, Off on a tap and switches the cabin light on a hold. The car this player drives also shows its brakes and
-	reverse from its readouts, and its rain light from its switch (RainLightOn, Controllers/
-	CarSwitches); other cars show what this client can know: running lights and headlights.
+	reverse from its readouts, its rain light from its switch (RainLightOn, Controllers/
+	CarSwitches), and its hazards while its pit limiter is armed, on a car whose limiter flashes
+	them (Config/CarSwitches); other cars show what this client can know: running lights and
+	headlights.
 	Everything here is local.
 ]]
 local CollectionService = game:GetService("CollectionService")
@@ -27,6 +29,7 @@ local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local Config = require(ReplicatedStorage.Shared.Config.CarLights)
+local ControlPresses = require(script.Parent.Parent.Rig.ControlPresses)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local Rules = require(ReplicatedStorage.Shared.Rules.CarLights)
 local StreetLamps = require(ReplicatedStorage.Shared.Rules.StreetLamps)
@@ -42,6 +45,8 @@ local indicatorSince = 0
 local cabin = false
 local rainLightOn = false
 local rainLightSince = 0
+local hazards = false
+local hazardsSince = 0
 local pad: Rules.Press = { since = nil, spent = false }
 local sinceScan = 0
 
@@ -127,6 +132,16 @@ local function update(dt: number)
 		rainLightOn = rainSwitch
 		rainLightSince = now
 	end
+	local drivenEntry = driven and Catalog.of(driven)
+	local pit = drivenEntry and drivenEntry.switches.pitLimiter
+	local pitHazards = driven ~= nil
+		and pit ~= nil
+		and pit.hazards
+		and driven:GetAttribute("PitLimiter") == true
+	if pitHazards ~= hazards then
+		hazards = pitHazards
+		hazardsSince = now
+	end
 	for model, lamps in cars do
 		if model.Parent == nil then
 			cars[model] = nil
@@ -151,6 +166,8 @@ local function update(dt: number)
 			gear = if mine then number(model, "Gear", 1) else 1,
 			indicator = if mine then indicator else nil,
 			indicating = now - indicatorSince,
+			hazards = mine and hazards,
+			hazardsFor = now - hazardsSince,
 			cabin = mine and cabin,
 			rainLight = mine and rainLight ~= nil and rainLightOn,
 			rainLightFor = now - rainLightSince,
@@ -180,12 +197,14 @@ function Controller.start()
 		end
 	end)
 	UserInputService.InputBegan:Connect(function(input, processed)
-		if processed or drivenModel() == nil then
+		local driven = drivenModel()
+		if processed or driven == nil then
 			return
 		end
 		local key = input.KeyCode
 		if table.find(Controls.HEADLIGHTS, key) then
 			mode = Rules.nextMode(mode)
+			ControlPresses.fire(driven, "HEADLIGHTS")
 		elseif table.find(Controls.HIGH_BEAM, key) then
 			local driving = drivenModel()
 			local entry = driving and Catalog.of(driving)
@@ -196,8 +215,10 @@ function Controller.start()
 			cabin = not cabin
 		elseif table.find(Controls.INDICATOR_LEFT, key) then
 			toggleIndicator("Left")
+			ControlPresses.fire(driven, "INDICATOR_LEFT")
 		elseif table.find(Controls.INDICATOR_RIGHT, key) then
 			toggleIndicator("Right")
+			ControlPresses.fire(driven, "INDICATOR_RIGHT")
 		end
 	end)
 	RunService.Heartbeat:Connect(update)

@@ -45,6 +45,17 @@ describe("WindshieldDrops", function()
 		expect(pane.centre.y).toBeNear(1.2 - 0.35 * math.cos(LEAN), 1e-9)
 	end)
 
+	it("takes each corner's pane coordinates back to the corner itself", function()
+		local pane = WindshieldDrops.pane(CORNERS, { x = 0, y = 0, z = 1 })
+		for index, corner in CORNERS do
+			local at = pane.polygon[index]
+			local point = WindshieldDrops.point(pane, at.x, at.y)
+			expect(point.x).toBeNear(corner.x, 1e-9)
+			expect(point.y).toBeNear(corner.y, 1e-9)
+			expect(point.z).toBeNear(corner.z, 1e-9)
+		end
+	end)
+
 	it("places a drop only where all of its sprite lies inside the slanted windscreen", function()
 		local polygon = WindshieldDrops.pane(CORNERS, { x = 0, y = 0, z = 1 }).polygon
 		expect(WindshieldDrops.inside(polygon, 0.7, 0.35, 0.05)).toBe(true)

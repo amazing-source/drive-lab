@@ -34,4 +34,46 @@ function Hud.modeText(modeName: unknown, launching: boolean, launchText: string)
 	return if typeof(modeName) == "string" then string.upper(modeName) else ""
 end
 
+-- Glyph sprites, slanted already: each one's rect { x, y, width, height } in its atlas, its
+-- capitals' height with `pad` around them, and the advance from one digit to the next.
+export type Glyphs = {
+	rects: { [string]: { number } },
+	height: number,
+	pad: number,
+	advance: number,
+}
+
+export type Align = "Right" | "Center"
+
+-- Where each character of `text` is drawn from its glyph sprite, { x0, y0, x1, y1 } in the
+-- units of `box`, whose height the capitals fill: the run's right edge on the box's (the top of
+-- its slanted last glyph) or the run centred in it. A character with no glyph is skipped.
+function Hud.glyphBoxes(text: string, glyphs: Glyphs, box: { number }, align: Align): { { number } }
+	local scale = (box[4] - box[2]) / glyphs.height
+	local pad = glyphs.pad * scale
+	local count = #text
+	local last = glyphs.rects[string.sub(text, count, count)]
+	local width = (count - 1) * glyphs.advance + (if last then last[3] else 0)
+	local left = if align == "Right"
+		then box[3] + pad - width * scale
+		else (box[1] + box[3] - width * scale) / 2
+	local boxes = {}
+	for index = 1, count do
+		local rect = glyphs.rects[string.sub(text, index, index)]
+		if rect then
+			local x0 = left + (index - 1) * glyphs.advance * scale
+			table.insert(boxes, { x0, box[2] - pad, x0 + rect[3] * scale, box[4] + pad })
+		end
+	end
+	return boxes
+end
+
+-- How far the slanted run of `text` reaches to the left at its baseline, in the units of `box`:
+-- the first glyph's sprite less its padding.
+function Hud.glyphRunLeft(text: string, glyphs: Glyphs, box: { number }, align: Align): number
+	local boxes = Hud.glyphBoxes(text, glyphs, box, align)
+	local scale = (box[4] - box[2]) / glyphs.height
+	return if #boxes > 0 then boxes[1][1] + glyphs.pad * scale else box[1]
+end
+
 return table.freeze(Hud)

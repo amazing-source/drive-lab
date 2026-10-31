@@ -20,6 +20,7 @@ local DriverGestures = require("../DriverGestures")
 local DriverStartup = require("../DriverStartup")
 local Driving = require("../Driving")
 local ExhaustFlames = require("../../Rules/ExhaustFlames")
+local HudDesign = require("../HudDesign")
 local RimBlur = require("../RimBlur")
 local StartupArms = require("../../Rules/StartupArms")
 local Types = require("./Types")
@@ -60,12 +61,17 @@ export type Entry = {
 	-- The car's display: a dial face, or a binnacle screen with pages and shift lights. One of them.
 	cluster: Cluster.Face?,
 	binnacle: Binnacle.Screen?,
+	-- The car's own driving HUD; without it, Config/Hud's.
+	hud: HudDesign.Design?,
 	assists: DriverAssists.Tuning,
 	switches: CarSwitches.Switches,
 }
 
 -- What a car has of the controls not every car has (Config/CarSwitches.NEEDS), by name.
 export type Features = { [string]: boolean }
+
+-- One of a pack's loops, for the region check.
+type Loop = { soundId: string, region: CarAudio.Region?, what: string }
 
 -- Seconds two readings of one start-up's timing may differ by: about a frame.
 local TIMING_TOLERANCE = 0.02
@@ -300,18 +306,27 @@ local function checkDisplay(entry: Entry)
 	end
 end
 
--- The switches' numbers are usable: a limiter with a band, a wiper with a wipe time, more than
--- one display page.
+-- The switches' numbers are usable: a limiter with a band that arms in a forward gear, a wiper
+-- with a wipe time per speed, slowest first, more than one display page.
 local function checkSwitches(entry: Entry)
 	local switches = entry.switches
 	local pit = switches.pitLimiter
 	if pit then
 		assert(pit.limitKmh > 0 and pit.band > 0, "the pit limiter needs a limit and a band")
-		assert(pit.armBelowKmh <= pit.limitKmh, "the pit limiter arms above its own limit")
+		assert(
+			pit.armBelowKmh == nil or pit.armBelowKmh <= pit.limitKmh,
+			"the pit limiter arms above its own limit"
+		)
+		assert(pit.armFromGear >= 1 and pit.armFromGear % 1 == 0, "the pit limiter arms from a forward gear")
+		assert(pit.armToGear == nil or pit.armToGear >= pit.armFromGear, "the pit limiter has no arming gear")
 	end
 	local wiper = switches.wiper
 	if wiper then
-		assert(wiper.wipeSeconds > 0, "the wiper needs a wipe time")
+		assert(#wiper.speeds >= 1, "the wiper needs a speed")
+		for index, seconds in wiper.speeds do
+			assert(seconds > 0, "the wiper needs a wipe time at each speed")
+			assert(index == 1 or seconds < wiper.speeds[index - 1], "the wiper's speeds go slowest first")
+		end
 		assert(
 			wiper.afterWash >= 0 and wiper.afterWash % 1 == 0,
 			"the wiper's wipes after a wash are a count"
@@ -360,16 +375,66 @@ function Contract.checkStartupSound(startup: CarEntry.Startup, pack: CarAudio.Pa
 	)
 end
 
+-- A pack's loops (its engine layers, limiter and far loop) may share one uploaded file, each
+-- looping its own region of it: every region runs forward from 0 or later, and loops that share a
+-- file each have a region, none overlapping another's.
+function Contract.checkLoopRegions(pack: CarAudio.Pack)
+	local loops: { Loop } = {}
+	for _, layer in pack.engineLayers do
+		table.insert(
+			loops,
+			{ soundId = layer.soundId, region = layer.region, what = `the {layer.name} loop` }
+		)
+	end
+	table.insert(
+		loops,
+		{ soundId = pack.limiter.soundId, region = pack.limiter.region, what = "the limiter" }
+	)
+	table.insert(loops, { soundId = pack.far.soundId, region = pack.far.region, what = "the far loop" })
+	local byFile: { [string]: { Loop } } = {}
+	for _, loop in loops do
+		local region = loop.region
+		assert(
+			region == nil or (region.from >= 0 and region.to > region.from),
+			`{loop.what}'s region does not run forward from 0 or later`
+		)
+		local shared = byFile[loop.soundId] or {}
+		table.insert(shared, loop)
+		byFile[loop.soundId] = shared
+	end
+	for _, shared in byFile do
+		if #shared < 2 then
+			continue
+		end
+		for index, loop in shared do
+			local region = loop.region
+			assert(region, `{loop.what} shares its file with another loop but has no region`)
+			for later = index + 1, #shared do
+				local other = shared[later]
+				local otherRegion = other.region
+				assert(
+					otherRegion == nil or region.to <= otherRegion.from or otherRegion.to <= region.from,
+					`{loop.what} and {other.what} overlap in their file`
+				)
+			end
+		end
+	end
+end
+
 function Contract.define(entry: Entry): Entry
 	checkStartup(entry)
 	checkFootwell(entry)
 	checkDriverSize(entry)
 	checkModes(entry)
 	checkDisplay(entry)
+	if entry.hud then
+		HudDesign.check(entry.hud)
+	end
 	checkSwitches(entry)
 	checkGestures(entry)
 	checkFlames(entry)
 	Contract.checkStartupSound(entry.startup, entry.audio)
+	Contract.checkLoopRegions(entry.audio)
 	return deepFreeze(entry)
 end
 
@@ -452,6 +517,7 @@ function Contract.features(entry: Entry): Features
 		wiper = switches.wiper ~= nil,
 		rainLight = switches.rainLight,
 		displayPages = switches.displayPages ~= nil,
+		radio = switches.radio == true,
 		escButton = entry.assists.escButton ~= nil,
 		launch = entry.physics.launch ~= nil,
 		cabinLight = entry.model.cabinLight ~= nil,

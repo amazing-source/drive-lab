@@ -21,6 +21,22 @@ export type Layout = {
 -- side is -1 (left) or 1 (right); slot is the lattice index, for further seeded choices.
 export type Spot = { s: number, side: number, slot: number }
 
+-- A stretch of road, by arc length in metres, where nothing scattered may stand.
+export type Zone = { from: number, to: number }
+
+-- Whether [from, to] (metres of arc length) stays clear of every zone.
+function Scatter.outside(zones: { Zone }?, from: number, to: number): boolean
+	if zones == nil then
+		return true
+	end
+	for _, zone in zones do
+		if to > zone.from and from < zone.to then
+			return false
+		end
+	end
+	return true
+end
+
 -- A value in [0, 1) from the seed, a slot and a channel: integer mixing, the same everywhere.
 function Scatter.hash(seed: number, slot: number, channel: number): number
 	local h = bit32.bxor(seed * 374761393, slot * 668265263, channel * 2246822519)

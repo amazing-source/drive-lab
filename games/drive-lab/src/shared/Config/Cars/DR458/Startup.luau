@@ -28,13 +28,14 @@ local Startup: CarEntry.Startup = {
 	pressAt = 2.4,
 	wheelAt = 3.9,
 	drivableAt = 4.1,
-	-- The start-up sound is the store recording (Audio's startup.sound), started at the press: its
-	-- catch and revs follow that recording's firing order and end at the car's idle; the starter's
-	-- revs are EST, as its sound carries no engine order.
-	catchAfter = 0.71,
+	-- The start-up is the F40 LM's (Audio's startup region), started at the press: the starter turns
+	-- until it catches, then the revs settle from about 1,290 rpm to the car's idle by the hand-over,
+	-- read off that recording's firing line; the starter's revs are EST, as its sound carries no
+	-- engine order.
+	catchAfter = 1.4,
 	rpm = {
-		times = { 0, 0.70, 0.95, 1.15, 1.45, 1.65, 2.05, 2.45, 2.98 },
-		values = { 250, 250, 2170, 2480, 2360, 2200, 1450, 1160, 1000 },
+		times = { 0, 1.38, 1.55, 3.0, 3.5, 4.0, 4.3, 4.6, 5.0 },
+		values = { 250, 250, 1290, 1284, 1236, 1208, 1087, 1026, 1000 },
 	},
 	-- As the SVJ's: the right foot holds the brake from the key until driving unlocks.
 	brake = 0.6,

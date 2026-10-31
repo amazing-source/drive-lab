@@ -131,6 +131,17 @@ function WindshieldDrops.pane(corners: { Vector }, toward: Vector): Pane
 	}
 end
 
+-- The pane's point at (x, y): metres from its rectangle's left edge and from its top, in the frame
+-- its corners were given in.
+function WindshieldDrops.point(pane: Pane, x: number, y: number): Vector
+	local across, down = x - pane.width / 2, y - pane.height / 2
+	return {
+		x = pane.centre.x + pane.right.x * across + pane.down.x * down,
+		y = pane.centre.y + pane.right.y * across + pane.down.y * down,
+		z = pane.centre.z + pane.right.z * across + pane.down.z * down,
+	}
+end
+
 -- Whether a circle of `radius` at (x, y) lies wholly inside a convex polygon, its corners in
 -- either winding order.
 function WindshieldDrops.inside(polygon: { Point }, x: number, y: number, radius: number): boolean
