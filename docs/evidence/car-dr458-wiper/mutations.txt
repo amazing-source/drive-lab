@@ -33,3 +33,8 @@ Sweep measured with Rules/WiperSweep on the binding's windscreen quad:
    FAIL DR458 binding > writes the wiper from its hinge part and its blade's points, moved to the centre of mass: games/drive-lab/tests/DR458Binding.spec:227: ex
    FAIL WiperSweep > ships the 3D artist's wiper in the DR458's binding: games/drive-lab/tests/WiperSweep.spec:88: expected 1.97222, got 1.9
 clean
+
+-- The jets were then moved to the 3D artist's measured points (5ab36c6); break 9 re-run on them:
+== 9 (re-run on the measured jets) a nozzle moved in the settings without re-running the writer: 2 failing; 91 spec files, 924 passed, 2 failed
+   FAIL DR458 binding > is the writer's output for the manifest, not a hand edit
+   FAIL DR458 binding > writes the wiper from its hinge part and its blade's points, moved to the centre of mass
