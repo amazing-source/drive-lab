@@ -3,8 +3,9 @@
 	The air a fast car drives through: dust, grit and the odd leaf, or fine water on a wet road,
 	emitted at rest in three slabs of air (left, right, above) along the path the car will take
 	a moment from now, so it is the car's own motion that streams them past. Nothing is emitted
-	in the car's own path, so nothing goes through the cabin. The car's wake also lifts the odd
-	leaf and chip off a dry road from its rear corners. Rules/AirDebris has the reasoning.
+	in the car's own path, so nothing goes through the cabin. At high speed the same slabs carry
+	faint streaks of air (Effects/AirStreaks). The car's wake also lifts the odd leaf and chip off
+	a dry road from its rear corners. Rules/AirDebris has the reasoning.
 ]]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -12,6 +13,8 @@ local Workspace = game:GetService("Workspace")
 local Config = require(ReplicatedStorage.Shared.Config.AirDebris)
 local Rules = require(ReplicatedStorage.Shared.Rules.AirDebris)
 local Units = require(ReplicatedStorage.Shared.Units)
+
+local AirStreaks = require(script.Parent.AirStreaks)
 
 export type Motion = {
 	model: Model,
@@ -35,6 +38,7 @@ export type AirDebris = {
 	slabs: { Slab },
 	-- Every slab's emitters, one list.
 	emitting: { Emitting },
+	streaks: AirStreaks.AirStreaks,
 	parts: { BasePart },
 	frames: { CFrame },
 	wake: Wake?,
@@ -227,16 +231,19 @@ function AirDebris.new(): AirDebris
 	local slabs: { Slab } = {}
 	local emitting: { Emitting } = {}
 	local parts: { BasePart } = {}
+	local streakSlabs: { AirStreaks.Slab } = {}
 	for _, side: Side in SIDES do
 		local slab = newSlab(side, folder, emitting)
 		table.insert(slabs, slab)
 		table.insert(parts, slab.part)
+		table.insert(streakSlabs, slab)
 	end
 	folder.Parent = Workspace
 	return {
 		folder = folder,
 		slabs = slabs,
 		emitting = emitting,
+		streaks = AirStreaks.new(streakSlabs),
 		parts = parts,
 		frames = table.create(#parts, CFrame.identity),
 		wake = nil,
@@ -251,6 +258,7 @@ function AirDebris.idle(debris: AirDebris)
 	for _, item in debris.emitting do
 		setRate(item, 0)
 	end
+	AirStreaks.idle(debris.streaks)
 	if debris.wake then
 		for _, item in debris.wake.emitting do
 			setRate(item, 0)
@@ -308,6 +316,7 @@ function AirDebris.update(debris: AirDebris, motion: Motion?, wetness: number)
 	for index, item in debris.emitting do
 		setRate(item, wanted[index])
 	end
+	AirStreaks.update(debris.streaks, metresPerSecond, 1 - water)
 	local wake = debris.wake
 	if wake then
 		local each = Config.WAKE.rate * share * (1 - water) / #Config.WAKE_KINDS
