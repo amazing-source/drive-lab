@@ -209,6 +209,71 @@ Captures of 2026-10-28: `drive-lab-assets/driver/captures_v4_gloves/` (the start
 cockpit eye at rest, 0.9 s and 1.5 s, the driving grip, the full arms from outside in the Chase
 view, and two sheets beside the reference).
 
+## 10. Another car's start-up: the controls as data (the DR458)
+
+The SVJ's path (section 8c) is keyed by hand for one flap. A car whose start-up turns several
+controls (the DR458: master key, ignition guard, toggle, then ENGINE START) is keyed from a list
+of touches by the same script, so a moved control or a changed time is a re-run:
+
+    lune run games/drive-lab/tools/startup_config DR458 <startup_config.json>
+    python -I tools/blender/rest_pose.py --car <car_rest.json> <poses.json> <REST_POSE.json>
+    blender -b --factory-startup --python-exit-code 1 -P tools/blender/startup_paths.py -- \
+        <inputs.json> games/drive-lab/src/shared/Config/Cars/DR458/StartupPaths.luau <out dir>
+    stylua games/drive-lab/src/shared/Config/Cars/DR458/StartupPaths.luau
+    python tools/anim/startup_check.py <out dir>/paths.json --json <out dir>/check.json
+
+- `startup_config.luau` prints the car's start-up as the game plays it: its times, each control
+  move, and the binding's hinge of every control it turns, in the seat frame.
+- `rest_pose.py --car` puts the resting hands on another car's thighs (`car_rest.json`: the
+  driver's scale, each thigh's hip and knee, the arm controller's shoulders, the R6 shoulder
+  joints, the arms). The same file is what the entry's last frame aims its blocky arms at, so the
+  hand-over from getting in is one source; the check asserts the first keys are its wrist frames.
+- `hand_poses.py` has a third shape, **Pinch**: the thumb's pad searched (the metacarpal's turn
+  and the two curls) onto the thumb side of the curled index's middle bone with a key's blade
+  (9 mm) between the skins. `poses.json` gives the pinch point and the axis across the blade.
+- An inputs file with a `sequence` goes to `startup_sequence.py`. It reads the cabin dump (the
+  numpy file the entry tools use), measures each control's contact on its own mesh and keys:
+  - `pinch` (a key): the Pinch hand on the top of the grip, its open side down the key's axis,
+    turning with the key about the binding's hinge; the turn is centred on the hand's natural
+    roll, so the wrist turns a quarter each way;
+  - `edge` (a guard) and `tip` (a toggle's lever): the Point hand's index end riding just behind
+    the free edge or the lever's end while the game turns it;
+  - `press` (ENGINE START): onto the face along the press axis from the manifest, held while the
+    starter turns (`PRESS_HOLD`), then away.
+
+  Touches are keyed every 0.025 s along the arc; the lead-in and back-out of each fit inside the
+  time between touches (the key order is asserted). Per touch, `aimFrom` aims the hand from a
+  point beside the shoulder (to come at a toggle under an open guard from the side) and
+  `rollDeg` turns it about its own axis; a reach past 96 % of the arm stops the script. Both
+  hands come round behind the rim, open, and close on it at the last frame. The bake is every
+  1/60 s plus the moment each control starts and stops: the game samples the keys with a cubic,
+  which rounds a corner between keys.
+- `StartupPaths.luau` carries `TOUCHES` (the control, the shape, the hand's contact point in its
+  wrist frame and the control's point at rest) instead of the SVJ's `FLAP`;
+  `tests/StartupArmsDR458.spec.luau` checks the sampled hand against each control as
+  `Rules/CarEntry` and `Rules/Hinge` turn it (2 mm), the press and the shapes, and fails when a
+  time or a control moves without a re-bake.
+- `startup_check.py` is the penetration and contact check (shown failing on a deliberate break,
+  `--break z=-0.02`): every hand mesh and both sleeves against the cabin, the turning controls
+  in their frame at each moment, the seated torso; hands fail above 2 mm (3 mm on the control
+  being worked and for the closed grip on the rim), sleeves above 5 mm on the switch panel, the
+  wheel, the cage or the dash; contacts that must touch fail beyond 2 mm; the first keys must be
+  the shared rest pose's wrist frames. A contact that cannot be avoided goes in an allow list
+  (`--allow`, as the entry's: object, side, hand shape, seconds, depth, why, who decided), and
+  every allowance is printed with its worst depth.
+
+`Rig/StartupHands` draws the Pinch mesh (`HandPinch_R` / `_L`, uploaded like the others) and
+stands the Point hand in for it in a place without one.
+
+**Named contacts for the DR458 start-up, decided 2026-10-31** (`allow` list next to the bake;
+measured on the cockpit dump c6 with the v9_a10 grip):
+
+| Contact | When | Depth (limit) | Why it is not avoided | Decided by |
+|---|---|---|---|---|
+| The open left hand closing onto the rim | last 0.15 s before its grip | 3.6 mm (6) | a posed hand swaps from Rest to Grip; the open fingers dip into the rim before they close | coordinator, on renders |
+| The open right hand closing onto the rim | last 0.15 s before its grip | about 1.5 mm (3) | as above | coordinator |
+| The left hand brushing the A-pillar's cage padding | taking the rim | 3.5 mm (5) | the left grip itself rests 1.7 mm into that padding, so there is no clean way in; tighten if the padding is opened | coordinator |
+
 ## Owner decisions
 
 | Date | Decision |
