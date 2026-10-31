@@ -230,6 +230,38 @@ local function hingeWeld(name: string, chassis: BasePart, part: BasePart, frame:
 	joint.Parent = chassis
 end
 
+-- The drive-mode knob rides the steering wheel on its own Weld from the wheel's part, named after
+-- the knob and kept on the chassis with the controls' welds, turned about X from its rest by the
+-- driver's gestures (Rig/WheelGestures). Nil without a knob in the binding or the model.
+local function knobPart(
+	model: Model,
+	binding: Binding.CarModel,
+	wheel: BasePart?
+): { part: BasePart, frame: CFrame, rest: number }?
+	local knob = binding.modeKnob
+	local part = knob and model:FindFirstChild(knob.hinge.part, true)
+	if knob == nil or wheel == nil or part == nil or not part:IsA("BasePart") then
+		return nil
+	end
+	return {
+		part = part,
+		frame = hingeFrame(knob.hinge.pivot, knob.hinge.axis, binding.bodyRaise),
+		rest = Hinge.restAngle(knob.hinge),
+	}
+end
+
+local function knobWeld(chassis: BasePart, wheel: BasePart, part: BasePart, frame: CFrame, rest: number)
+	local hinge = chassis.CFrame * frame
+	local joint = Instance.new("Weld")
+	joint.Name = part.Name
+	joint.Part0 = wheel
+	joint.Part1 = part
+	joint.C0 = wheel.CFrame:ToObjectSpace(hinge) * CFrame.Angles(rest, 0, 0)
+	joint.C1 = part.CFrame:ToObjectSpace(hinge)
+	joint:SetAttribute("RestC0", joint.C0)
+	joint.Parent = chassis
+end
+
 -- The door's parts and the door's strap that the binding names and the model has.
 local function doorParts(model: Model, binding: Binding.CarModel): ({ BasePart }, BasePart?)
 	local door = {}
@@ -458,6 +490,11 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: Binding.CarMo
 			hinged[part] = true
 		end
 	end
+	local wheelPart = if steeringWheel and steeringWheel:IsA("BasePart") then steeringWheel else nil
+	local knob = knobPart(model, binding, wheelPart)
+	if knob then
+		hinged[knob.part] = true
+	end
 	for _, part in model:GetDescendants() do
 		if part:IsA("BasePart") and part ~= chassis then
 			part.Massless = true
@@ -482,6 +519,9 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: Binding.CarMo
 		for part, hinge in set do
 			hingeWeld(part.Name, chassis, part, hinge.frame, hinge.rest)
 		end
+	end
+	if knob and wheelPart then
+		knobWeld(chassis, wheelPart, knob.part, knob.frame, knob.rest)
 	end
 	addHull(model, chassis, ground, binding.hullClearance)
 	addSeat(model, chassis, binding)
