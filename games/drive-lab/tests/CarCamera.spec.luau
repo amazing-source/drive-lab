@@ -114,12 +114,26 @@ describe("CarCamera", function()
 		end
 	end)
 
-	it("widens 12 degrees per g of pull, none braking, within its cap", function()
+	it("widens its degrees per g of pull, none braking, within its cap", function()
 		local kick = CarCamera.FOV_KICK
 		expect(Rules.kickTarget(0.5)).toBeNear(kick.perG * 0.5, 1e-12)
 		expect(Rules.kickTarget(-1.2)).toBe(0)
 		expect(Rules.kickTarget(5)).toBe(kick.max)
 		expect(Rules.kickTarget(0 / 0)).toBe(0)
+	end)
+
+	it("leaves room under the cap for a launch's 1.1 g", function()
+		expect(Rules.kickTarget(1.1)).toBeNear(CarCamera.FOV_KICK.perG * 1.1, 1e-12)
+	end)
+
+	it("widens the cockpit and the hood at least 7 degrees under 1 g, never more than the chase", function()
+		local fov = CarCamera.FOV
+		for _, view: CarCamera.View in { "Cockpit", "Hood" } do
+			local widened = Rules.fieldOfView(view, Rules.kickTarget(1), 0) - fov[view].base
+			expect(widened >= 7).toBe(true)
+			expect(fov[view].kickShare <= fov.Chase.kickShare).toBe(true)
+			expect(fov[view].speedShare <= fov.Chase.speedShare).toBe(true)
+		end
 	end)
 
 	it("eases the widening in with the attack half-life at any frame rate", function()
@@ -195,13 +209,51 @@ describe("CarCamera", function()
 		expect(moved < math.rad(2)).toBe(true)
 	end)
 
-	it("sets each view's field of view from its base and its share of the widening, not speed", function()
+	it("sets each view's field of view from its base and its shares of the kick and the speed", function()
 		local fov = CarCamera.FOV
-		expect(Rules.fieldOfView("Chase", 0)).toBe(fov.Chase.base)
-		expect(Rules.fieldOfView("Chase", 8)).toBeNear(fov.Chase.base + 8 * fov.Chase.kickShare, 1e-12)
-		expect(Rules.fieldOfView("Cockpit", 8)).toBeNear(fov.Cockpit.base + 8 * fov.Cockpit.kickShare, 1e-12)
-		expect(Rules.fieldOfView("Hood", 8)).toBeNear(fov.Hood.base + 8 * fov.Hood.kickShare, 1e-12)
-		expect(Rules.fieldOfView("Cockpit", 0 / 0)).toBe(fov.Cockpit.base)
+		expect(Rules.fieldOfView("Chase", 0, 0)).toBe(fov.Chase.base)
+		for _, view: CarCamera.View in CarCamera.VIEWS do
+			local at = fov[view]
+			expect(Rules.fieldOfView(view, 8, 0)).toBeNear(at.base + 8 * at.kickShare, 1e-12)
+			expect(Rules.fieldOfView(view, 0, 6)).toBeNear(at.base + 6 * at.speedShare, 1e-12)
+			expect(Rules.fieldOfView(view, 8, 6)).toBeNear(at.base + 8 * at.kickShare + 6 * at.speedShare, 1e-12)
+		end
+		expect(Rules.fieldOfView("Cockpit", 0 / 0, 0 / 0)).toBe(fov.Cockpit.base)
+	end)
+end)
+
+describe("Field of view with speed", function()
+	local widen = CarCamera.FOV_SPEED
+
+	it("widens nothing up to its start, then its degrees per km/h, either way, up to its cap", function()
+		expect(Rules.speedTarget(0)).toBe(0)
+		expect(Rules.speedTarget(widen.fromKmh)).toBe(0)
+		expect(Rules.speedTarget(widen.fromKmh + 50)).toBeNear(50 * widen.perKmh, 1e-12)
+		expect(Rules.speedTarget(-(widen.fromKmh + 50))).toBeNear(50 * widen.perKmh, 1e-12)
+		expect(Rules.speedTarget(1000)).toBe(widen.max)
+		expect(Rules.speedTarget(0 / 0)).toBe(0)
+		expect(Rules.speedTarget(math.huge)).toBe(0)
+		local previous = -1
+		for kmh = 0, 400, 5 do
+			local degrees = Rules.speedTarget(kmh)
+			expect(degrees >= previous).toBe(true)
+			previous = degrees
+		end
+	end)
+
+	it("reaches its cap at speeds the cars drive, not in town", function()
+		local full = widen.fromKmh + widen.max / widen.perKmh
+		expect(full >= 200 and full <= 300).toBe(true)
+	end)
+
+	it("follows the speed with its half-life, the same at any frame rate", function()
+		for _, fps in { 30, 60, 144, 240 } do
+			local degrees = 0
+			for _ = 1, math.floor(widen.halfLife * fps + 0.5) do
+				degrees = Rules.stepSpeedWiden(degrees, 8, 1 / fps)
+			end
+			expect(degrees).toBeNear(4, 1e-9)
+		end
 	end)
 end)
 

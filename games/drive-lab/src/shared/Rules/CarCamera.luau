@@ -2,8 +2,8 @@
 --[[
 	The numbers behind the driving cameras: where the chase camera hangs on the car, its shift
 	with the car's g, the optional spring on its yaw, and the field of view widening under
-	acceleration. Every easing is an exact exponential or spring, so it moves the same at any
-	frame rate.
+	acceleration and with speed. Every easing is an exact exponential or spring, so it moves the
+	same at any frame rate.
 ]]
 local CarCamera = require("../Config/CarCamera")
 local Geometry = require("../Vehicle/Geometry")
@@ -150,10 +150,23 @@ function Rules.stepKick(kick: Kick, target: number, dt: number)
 	end
 end
 
--- The view's field of view (degrees) with the kick: the base, plus the view's share of it.
-function Rules.fieldOfView(view: CarCamera.View, kickDegrees: number): number
+-- Degrees the view widens at `speedKmh`, either way: none under `fromKmh`, then `perKmh` a km/h
+-- up to `max`.
+function Rules.speedTarget(speedKmh: number): number
+	local widen = CarCamera.FOV_SPEED
+	return math.clamp((math.abs(finite(speedKmh)) - widen.fromKmh) * widen.perKmh, 0, widen.max)
+end
+
+-- `current` moved toward `target`, half the gap every FOV_SPEED.halfLife s.
+function Rules.stepSpeedWiden(current: number, target: number, dt: number): number
+	return current + (target - current) * Rules.blend(dt, CarCamera.FOV_SPEED.halfLife)
+end
+
+-- The view's field of view (degrees): the base, plus the view's shares of the kick and of the
+-- speed's widening.
+function Rules.fieldOfView(view: CarCamera.View, kickDegrees: number, speedDegrees: number): number
 	local fov = CarCamera.FOV[view]
-	return fov.base + finite(kickDegrees) * fov.kickShare
+	return fov.base + finite(kickDegrees) * fov.kickShare + finite(speedDegrees) * fov.speedShare
 end
 
 return table.freeze(Rules)

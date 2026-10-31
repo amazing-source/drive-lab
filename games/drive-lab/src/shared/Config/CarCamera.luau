@@ -42,8 +42,13 @@ export type Chase = {
 -- the `release` half-life.
 export type Kick = { perG: number, max: number, attack: number, hold: number, release: number }
 
--- Each view's field of view at rest, and the share of the kick it takes.
-export type ViewFov = { base: number, kickShare: number }
+-- Degrees the view widens with speed: `perKmh` for every km/h over `fromKmh`, at most `max`;
+-- it follows the speed with the `halfLife` (s), so a noisy speed reading never flickers it.
+export type SpeedWiden = { fromKmh: number, perKmh: number, max: number, halfLife: number }
+
+-- Each view's field of view at rest, and the share of the kick and of the speed's widening it
+-- takes.
+export type ViewFov = { base: number, kickShare: number, speedShare: number }
 
 -- One car's own camera points (its entry's camera), metres: the cockpit eye ahead of and above
 -- the head's centre, and the hood camera from the centre of mass, along the car and up.
@@ -61,6 +66,7 @@ export type CarCamera = {
 	EYE_RANGE: { forward: { number }, up: { number }, step: number },
 	FOV: { [View]: ViewFov },
 	FOV_KICK: Kick,
+	FOV_SPEED: SpeedWiden,
 	LOOK_SENSITIVITY: number,
 	LOOK_RETURN_HALF_LIFE: number,
 	MAX_LOOK_YAW: number,
@@ -69,17 +75,16 @@ export type CarCamera = {
 
 local VIEWS: { View } = { "Chase", "Cockpit", "Hood" }
 
--- No speed term: in the owner's reference the view stays put while cruising and widens only as
--- the car pulls (2026-10-28). Chase 60 is Assetto Corsa's default. The cockpit is 4 degrees
--- wider than Assetto Corsa's 56: from the default seat the cluster's screen then ends at 95 % of
--- the frame's height with its bezel in view, where at 56 it touched the frame's bottom edge
--- (edit-mode captures, 2026-10-28). The cockpit and the hood take a quarter of the kick (4.5
--- degrees per g), or the dashboard and the bonnet zoom; the cockpit had an eighth until the
--- owner found the widening too faint (2026-10-29).
+-- Chase 60 is Assetto Corsa's default. The cockpit is 4 degrees wider than Assetto Corsa's 56:
+-- from the default seat the cluster's screen then ends at 95 % of the frame's height with its
+-- bezel in view, where at 56 it touched the frame's bottom edge (edit-mode captures). The
+-- cockpit and the hood take 0.4 of the kick (7.2 degrees per g) and half of the speed's
+-- widening, as the dashboard and the bonnet in view make the same widening read stronger than
+-- in the chase view.
 local FOV: { [View]: ViewFov } = {
-	Chase = table.freeze({ base = 60, kickShare = 1 }),
-	Cockpit = table.freeze({ base = 60, kickShare = 0.25 }),
-	Hood = table.freeze({ base = 70, kickShare = 0.25 }),
+	Chase = table.freeze({ base = 60, kickShare = 1, speedShare = 1 }),
+	Cockpit = table.freeze({ base = 60, kickShare = 0.4, speedShare = 0.5 }),
+	Hood = table.freeze({ base = 70, kickShare = 0.4, speedShare = 0.5 }),
 }
 
 local CarCamera: CarCamera = table.freeze({
@@ -118,8 +123,12 @@ local CarCamera: CarCamera = table.freeze({
 	FOV = table.freeze(FOV),
 	-- First sized so full throttle shrinks the chase car by about the 16 % of the reference
 	-- (frames 02 and 03), held through a gear change: frame 03 is mid-upshift and still wide.
-	-- Raised by half (12 per g up to 10) when the owner found it not marked enough (2026-10-29).
-	FOV_KICK = table.freeze({ perG = 18, max = 15, attack = 0.15, hold = 0.25, release = 0.5 }),
+	-- Raised by half (12 per g up to 10) when the owner found it not marked enough (2026-10-29);
+	-- the cap leaves room for a launch's 1.1 g.
+	FOV_KICK = table.freeze({ perG = 18, max = 20, attack = 0.15, hold = 0.25, release = 0.5 }),
+	-- A wider view reads faster (Holm, Skovhus and Kraus 2017), and Project CARS widens its view
+	-- with speed the same way: here up to 10 degrees, reached at 290 km/h.
+	FOV_SPEED = table.freeze({ fromKmh = 40, perKmh = 0.04, max = 10, halfLife = 0.5 }),
 	-- Right mouse button (or right stick) to look around; the view eases back on release.
 	LOOK_SENSITIVITY = math.rad(0.25),
 	LOOK_RETURN_HALF_LIFE = 0.25,
