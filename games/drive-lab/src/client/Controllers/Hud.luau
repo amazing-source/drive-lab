@@ -3,8 +3,8 @@
 	The driving HUD (Ui/HudView, in the driven car's look from Ui/HudLook): ten rev segments of a
 	thousand rpm, filling as a needle would and red past the redline, the drive mode, TC and ABS lit
 	while they act (red while switched off), A or M and the gear, the speed, the headlight tell-tale
-	and the indicators. Shown while this player drives, bottom centre, or bottom right in the
-	cockpit; U cycles full, minimal (the same, smaller) and off. Reads the readouts the driving and
+	and the indicators. Shown while this player drives, at the corner and size Config/Hud gives each
+	view; U cycles full, minimal (the same, smaller) and off. Reads the readouts the driving and
 	lights controllers publish on the car model.
 ]]
 local CollectionService = game:GetService("CollectionService")

@@ -27,6 +27,12 @@ function Hud.frameHeight(height: number, width: number, aspect: number, referenc
 	return height * (width * referenceAspect / aspect)
 end
 
+-- The pixel offset holding a frame `margin` in from the screen's edge along one axis, for an anchor
+-- of 0 (left or top), 0.5 (centre) or 1 (right or bottom), and between.
+function Hud.inset(anchor: number, margin: number): number
+	return margin * (1 - 2 * anchor)
+end
+
 -- Whether the lit segments flash for the upshift: only in manual, past the shift point, in the
 -- lit half of a blink (the automatic shifts by itself, so a flash would be noise).
 function Hud.shiftFlash(rpm: number, shiftAt: number, manual: boolean, time: number, hz: number): boolean
