@@ -196,3 +196,72 @@ describe("Driver legs, per car", function()
 		end
 	end)
 end)
+
+-- A clutch for the specs: the SVJ's brake moved 13 cm toward the door and 6 cm toward the driver
+-- (the SVJ has no clutch; a car's real one comes from tools/blender/footwell.py).
+local function withClutch(): any
+	local footwell = copy(FOOTWELL)
+	local clutch = copy(FOOTWELL.brake)
+	clutch.part = "Pedal_Clutch"
+	for _, point in { clutch.hinge, clutch.heel, clutch.ball } do
+		point.x -= 0.13
+		point.z += 0.06
+	end
+	footwell.clutch = clutch
+	return footwell
+end
+
+describe("Driver legs: the left foot on a clutch", function()
+	it("keeps the left foot on its footrest in a car without a clutch, whatever the inputs", function()
+		local rest = Legs.left(FOOTWELL, LEFT_HIP)
+		local asked = Legs.left(FOOTWELL, LEFT_HIP, 1, 0.3)
+		expect(distance(asked.ankle, rest.ankle)).toBe(0)
+		expect(distance(asked.knee, rest.knee)).toBe(0)
+		expect(Legs.clutchAngle(FOOTWELL, 1, 1)).toBe(0)
+	end)
+
+	it("moves the sole from the footrest onto the clutch, rocking on its heel", function()
+		local footwell = withClutch()
+		local heel, ball = Legs.leftSole(footwell, 0, 0)
+		expect(distance(heel, footwell.footrest.heel)).toBeNear(0, 1e-9)
+		expect(distance(ball, footwell.footrest.ball)).toBeNear(0, 1e-9)
+		heel, ball = Legs.leftSole(footwell, 1, 0)
+		expect(distance(heel, footwell.clutch.heel)).toBeNear(0, 1e-9)
+		expect(distance(ball, footwell.clutch.ball)).toBeNear(0, 1e-9)
+		local midHeel, midBall = Legs.leftSole(footwell, 0.5, 0)
+		local straight = (footwell.footrest.ball.y + footwell.clutch.ball.y) / 2
+		expect(midBall.y > straight + Config.SWITCH_LIFT / 2).toBe(true)
+		expect(midHeel.y).toBeNear((footwell.footrest.heel.y + footwell.clutch.heel.y) / 2, 1e-9)
+	end)
+
+	it("presses the clutch only under the foot, by its value", function()
+		local footwell = withClutch()
+		local travel = footwell.clutch.travel
+		expect(Legs.clutchAngle(footwell, 0, 1)).toBe(0)
+		expect(Legs.clutchAngle(footwell, 1, 1)).toBeNear(travel, 1e-12)
+		expect(Legs.clutchAngle(footwell, 1, 0.5)).toBeNear(travel / 2, 1e-12)
+		expect(Legs.clutchAngle(footwell, 1, 0)).toBe(0)
+		local halfWay = Legs.clutchAngle(footwell, 0.5, 1)
+		expect(math.abs(halfWay) > 0 and math.abs(halfWay) < math.abs(travel)).toBe(true)
+		expect(Legs.clutchAngle(footwell, 2, 3)).toBeNear(travel, 1e-12)
+	end)
+
+	it("carries the ball down with the clutch, about the clutch's hinge", function()
+		local footwell = withClutch()
+		local pedal = footwell.clutch
+		local _, rest = Legs.leftSole(footwell, 1, 0)
+		local _, pressed = Legs.leftSole(footwell, 1, pedal.travel)
+		expect(pressed.z < rest.z - 0.02).toBe(true)
+		expect(distance(pressed, pedal.hinge)).toBeNear(distance(rest, pedal.hinge), 1e-9)
+	end)
+
+	it("reaches the pressed clutch from the seated hips with the knee bent toward its point", function()
+		local footwell = withClutch()
+		local leg = Legs.left(footwell, LEFT_HIP, 1, footwell.clutch.travel)
+		local asked = distance(leg.hip, leg.ankle)
+		expect(leg.reach).toBeNear(asked, 1e-9)
+		expect(asked < (Config.THIGH + Config.SHIN) * 0.985).toBe(true)
+		expect(distance(leg.knee, leg.hip)).toBeNear(Config.THIGH, 1e-9)
+		expect(leg.knee.y > leg.hip.y - Config.THIGH).toBe(true)
+	end)
+end)

@@ -156,8 +156,41 @@ function DriverLegs.right(
 	return leg(hip, heel, ball, footwell.kneeToward.right)
 end
 
-function DriverLegs.left(footwell: Config.Footwell, hip: Vector): Leg
-	return leg(hip, footwell.footrest.heel, footwell.footrest.ball, footwell.kneeToward.left)
+-- The clutch's angle (radians about its hinge): it goes down only under the foot. `onClutch` is how
+-- far the left foot has come from the footrest onto the clutch, 0 to 1; `clutch` the pedal's
+-- press, 0 up to 1 down. 0 in a car without a clutch.
+function DriverLegs.clutchAngle(footwell: Config.Footwell, onClutch: number, clutch: number): number
+	local pedal = footwell.clutch
+	if pedal == nil then
+		return 0
+	end
+	return pedal.travel * math.clamp(clutch, 0, 1) * ease(math.clamp(onClutch, 0, 1))
+end
+
+-- Where the left sole is: on the footrest, or the heel on the floor and the ball on the clutch's
+-- pad turning with it; in between the heel slides across the floor while the ball lifts over the
+-- pads, as the right foot crosses between its pedals.
+function DriverLegs.leftSole(
+	footwell: Config.Footwell,
+	onClutch: number,
+	clutchAngle: number
+): (Vector, Vector)
+	local rest, pedal = footwell.footrest, footwell.clutch
+	if pedal == nil then
+		return rest.heel, rest.ball
+	end
+	local over = math.clamp(onClutch, 0, 1)
+	local share = ease(over)
+	local lift = scale(LIFT_DIRECTION, Config.SWITCH_LIFT * 4 * over * (1 - over))
+	local heel = lerp(rest.heel, pedal.heel, share)
+	local ball = lerp(rest.ball, DriverLegs.turned(pedal, pedal.ball, clutchAngle), share)
+	return heel, add(ball, lift)
+end
+
+-- `onClutch` and `clutchAngle` default to the foot on its footrest.
+function DriverLegs.left(footwell: Config.Footwell, hip: Vector, onClutch: number?, clutchAngle: number?): Leg
+	local heel, ball = DriverLegs.leftSole(footwell, onClutch or 0, clutchAngle or 0)
+	return leg(hip, heel, ball, footwell.kneeToward.left)
 end
 
 -- The ankle a sole asks for, before the leg's reach is applied.

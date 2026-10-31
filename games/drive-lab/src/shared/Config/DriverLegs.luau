@@ -21,12 +21,13 @@ export type Pedal = {
 	ball: Point,
 }
 
--- One car's footwell: the pedals the right foot works, the footrest the left foot rests on, and
--- the point each knee bends toward: the knee stays in the plane through the hip, the ankle and
--- this point.
+-- One car's footwell: the pedals the right foot works, the footrest the left foot rests on, the
+-- clutch it moves onto in a car that has one, and the point each knee bends toward: the knee stays
+-- in the plane through the hip, the ankle and this point.
 export type Footwell = {
 	throttle: Pedal,
 	brake: Pedal,
+	clutch: Pedal?,
 	footrest: { heel: Point, ball: Point },
 	kneeToward: { right: Point, left: Point },
 }
