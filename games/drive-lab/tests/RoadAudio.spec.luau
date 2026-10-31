@@ -347,6 +347,24 @@ describe("RoadAudio config", function()
 		expect(RoadAudio.cutoff(tuning, AUDIBLE_KMH) >= AUDIBLE_CUTOFF_HZ).toBeTruthy()
 	end)
 
+	it("keeps the wind and the roar within AudioPlayer's 0 to 10 in every car, view and surface", function()
+		local tuning = Config.TUNING
+		local surfaceGain = tuning.otherSurface.gain
+		for _, surface in tuning.surfaces do
+			surfaceGain = math.max(surfaceGain, surface.gain)
+		end
+		for _, entry in CARS do
+			local gain = CarAudio.carGain(entry.pack)
+			for _, view in { tuning.outside, tuning.cockpit } do
+				local wind = RoadAudio.wind(tuning, entry.topKmh) * 10 ^ (view.wind.gain / 20) * gain
+				local road = RoadAudio.road(tuning, entry.topKmh)
+					* 10 ^ ((view.road.gain + surfaceGain) / 20)
+					* gain
+				expect(wind <= 10 and road <= 10).toBeTruthy()
+			end
+		end
+	end)
+
 	it("follows the SVJ's own top speed and plays the roar near as recorded at 90 km/h", function()
 		local tuning = Config.TUNING
 		expect(math.abs(tuning.topKmh - 350) <= 10).toBeTruthy()
