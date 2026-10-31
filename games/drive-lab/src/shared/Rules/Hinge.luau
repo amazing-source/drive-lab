@@ -46,6 +46,17 @@ function Hinge.frame(axis: Vector): (Vector, Vector, Vector)
 	return x, y, cross(x, y)
 end
 
+-- A steering column's frame: z along the axis (toward the driver), y as near the chassis's up as
+-- the axis allows, x to the right. A hub built on it turns the wheel about its own z, as a
+-- steering wheel's pivot does (Car/VehicleRunner).
+function Hinge.column(axis: Vector): (Vector, Vector, Vector)
+	local z = unit(axis)
+	local up = if math.abs(z.y) < 0.99 then { x = 0, y = 1, z = 0 } else { x = 0, y = 0, z = -1 }
+	local along = dot(up, z)
+	local y = unit({ x = up.x - z.x * along, y = up.y - z.y * along, z = up.z - z.z * along })
+	return cross(y, z), y, z
+end
+
 -- `point` turned by `angle` radians about the line through `pivot` along `axis` (Rodrigues).
 function Hinge.rotate(point: Vector, pivot: Vector, axis: Vector, angle: number): Vector
 	local k = unit(axis)

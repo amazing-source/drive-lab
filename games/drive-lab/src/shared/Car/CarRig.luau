@@ -12,6 +12,7 @@ local CollectionService = game:GetService("CollectionService")
 local Workspace = game:GetService("Workspace")
 
 local Binding = require("../Config/Cars/Binding")
+local CarParts = require("../Rules/CarParts")
 local Geometry = require("../Vehicle/Geometry")
 local Hinge = require("../Rules/Hinge")
 local Types = require("../Config/Cars/Types")
@@ -122,6 +123,18 @@ local function weld(part0: BasePart, part1: BasePart): Weld
 	return joint
 end
 
+-- The piece each piece of the model rides (Rules/CarParts), by name.
+local function carriersOf(model: Model, binding: Binding.CarModel): { [string]: string }
+	local pieces: { CarParts.Piece } = {}
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") then
+			local from = part:GetAttribute(CarParts.PART_ATTRIBUTE)
+			table.insert(pieces, { name = part.Name, part = if typeof(from) == "string" then from else nil })
+		end
+	end
+	return CarParts.carriers(pieces, binding.parents)
+end
+
 -- Imports are real scale; the world is Units.WORLD_SCALE times bigger. Scales the model to it and
 -- sets the tyres back on whatever is under the car.
 local function scaleToWorld(model: Model, binding: Binding.CarModel)
@@ -144,19 +157,19 @@ local function scaleToWorld(model: Model, binding: Binding.CarModel)
 	model:PivotTo(model:GetPivot() + Vector3.new(0, floor.Position.Y - lowest, 0))
 end
 
--- Lifts every part but the wheels and calipers off the wheels, where the model sits its body
--- too low; the wheels stay on the ground, so the physics is unchanged.
-local function raiseBody(model: Model, binding: Binding.CarModel)
+-- Lifts every part but the wheels, the calipers and what rides them off the wheels, where the
+-- model sits its body too low; the wheels stay on the ground, so the physics is unchanged.
+local function raiseBody(model: Model, binding: Binding.CarModel, carriers: { [string]: string })
 	local lift = Vector3.new(0, Units.metresToStuds(binding.bodyRaise), 0)
-	local fixed: { [BasePart]: true } = {}
+	local fixed: { [string]: true } = {}
 	for index, name in binding.wheels do
-		fixed[findPart(model, name)] = true
+		fixed[name] = true
 		for _, caliper in binding.calipers[index] do
-			fixed[findPart(model, caliper)] = true
+			fixed[caliper] = true
 		end
 	end
 	for _, part in model:GetDescendants() do
-		if part:IsA("BasePart") and not fixed[part] then
+		if part:IsA("BasePart") and not fixed[CarParts.root(carriers, part.Name)] then
 			part.CFrame += lift
 		end
 	end
@@ -174,6 +187,24 @@ local function weldSteeringWheel(chassis: BasePart, wheel: BasePart, lift: numbe
 	joint.C1 = wheel.PivotOffset
 	joint:SetAttribute("RestC0", joint.C0)
 	joint.Parent = chassis
+end
+
+-- A steering wheel the model has no part for: an invisible hub at the binding's pivot, its Z along
+-- the column toward the driver, which the wheel's parts ride (raised with the body).
+local function addSteeringHub(model: Model, chassis: BasePart, binding: Binding.CarModel)
+	local hub = binding.steeringHub
+	if hub == nil or model:FindFirstChild(binding.steeringWheel, true) then
+		return
+	end
+	local x, y, z = Hinge.column(Hinge.chassis(hub.axis))
+	local frame = CFrame.fromMatrix(
+		carSpace(hub.pivot, hub.pivot.up + binding.bodyRaise),
+		Vector3.new(x.x, x.y, x.z),
+		Vector3.new(y.x, y.y, y.z),
+		Vector3.new(z.x, z.y, z.z)
+	)
+	local part = newPart("Part", binding.steeringWheel, Vector3.new(0.2, 0.2, 0.2), chassis.CFrame * frame)
+	part.Parent = model
 end
 
 -- A hinge in chassis space: at its pivot (raised with the body), X along its axis (Rules/Hinge).
@@ -369,7 +400,7 @@ end
 function CarRig.build(model: Model, car: Types.CarConfig, binding: Binding.CarModel): Rig
 	assert(model:FindFirstChild("Chassis") == nil, `{model:GetFullName()} is already rigged`)
 	scaleToWorld(model, binding)
-	raiseBody(model, binding)
+	raiseBody(model, binding, carriersOf(model, binding))
 	local frame, ground = rigFrame(model, binding, car)
 	local box = inertiaBox(car)
 	local chassis = newPart("Part", "Chassis", box, frame)
@@ -395,6 +426,8 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: Binding.CarMo
 	torque.Torque = Vector3.zero
 	torque.Parent = chassis
 	addMounts(chassis, car)
+	addSteeringHub(model, chassis, binding)
+	local carriers = carriersOf(model, binding)
 
 	local moving: { [BasePart]: true } = {}
 	local steeringWheel = model:FindFirstChild(binding.steeringWheel, true)
@@ -432,8 +465,11 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: Binding.CarMo
 			if moving[part] and part ~= steeringWheel then
 				weld(chassis, part)
 			elseif not moving[part] and not hinged[part] then
+				-- A part riding another (Rules/CarParts) moves with it; any other is the body.
+				local carrierName = carriers[part.Name]
+				local carrier = if carrierName then model:FindFirstChild(carrierName, true) else nil
 				local joint = Instance.new("WeldConstraint")
-				joint.Part0 = chassis
+				joint.Part0 = if carrier and carrier:IsA("BasePart") then carrier else chassis
 				joint.Part1 = part
 				joint.Parent = part
 			end
