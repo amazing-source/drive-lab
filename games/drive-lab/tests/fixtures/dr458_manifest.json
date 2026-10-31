@@ -290,12 +290,22 @@
     {
       "group": "Chassis",
       "motion": "emissive",
-      "name": "Light_RearLeft_Fog"
+      "name": "Light_RearLeft_Reverse"
     },
     {
       "group": "Chassis",
       "motion": "emissive",
       "name": "Light_RearRight_Reverse"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearLeft_Fog"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearRight_Fog"
     },
     {
       "group": "Chassis",
