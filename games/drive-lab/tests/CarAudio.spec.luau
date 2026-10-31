@@ -11,10 +11,14 @@ local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect
 
--- Each car's pack with the length of its events.ogg, seconds (manifest.json beside the files).
-local PACKS: { { name: string, pack: CarAudio.Pack, eventsLength: number } } = {
-	{ name = "SVJ", pack = SVJ, eventsLength = 18.6001 },
-	{ name = "DR458", pack = DR458, eventsLength = 14.6917 },
+-- The length of each uploaded events.ogg, seconds (manifest.json beside the files).
+local SVJ_EVENTS_LENGTH = 18.6001
+local DR458_EVENTS_LENGTH = 14.6917
+
+-- Each car's pack with the length of its events file and of the file its pops are cut from.
+local PACKS: { { name: string, pack: CarAudio.Pack, eventsLength: number, popsLength: number } } = {
+	{ name = "SVJ", pack = SVJ, eventsLength = SVJ_EVENTS_LENGTH, popsLength = SVJ_EVENTS_LENGTH },
+	{ name = "DR458", pack = DR458, eventsLength = DR458_EVENTS_LENGTH, popsLength = SVJ_EVENTS_LENGTH },
 }
 
 -- The DR458's own start-up sound's length, seconds (its Sound.TimeLength, read in Studio).
@@ -34,6 +38,7 @@ describe("CarAudio config", function()
 			expect(uploaded(pack.limiter.soundId)).toBeTruthy()
 			expect(uploaded(pack.far.soundId)).toBeTruthy()
 			expect(uploaded(pack.eventsSoundId)).toBeTruthy()
+			expect(uploaded(CarAudio.popsSoundId(pack))).toBeTruthy()
 		end
 	end)
 
@@ -49,20 +54,25 @@ describe("CarAudio config", function()
 			expect(uploaded(Pack.eventsSoundId)).toBeTruthy()
 		end)
 
-		it(`{car.name}: keeps every one-shot region inside the events file, in order and apart`, function()
-			local regions = { Pack.startup.region, Pack.gear.region }
-			for _, region in Pack.pops.regions do
-				table.insert(regions, region)
+		it(
+			`{car.name}: keeps every one-shot region inside the file it is cut from, in order and apart`,
+			function()
+				local function inOrder(regions: { CarAudio.Region }, from: number, length: number): number
+					local previousEnd = from
+					for _, region in regions do
+						expect(region.from >= previousEnd).toBeTruthy()
+						expect(region.to > region.from).toBeTruthy()
+						previousEnd = region.to
+					end
+					expect(previousEnd <= length).toBeTruthy()
+					return previousEnd
+				end
+				local eventsEnd = inOrder({ Pack.startup.region, Pack.gear.region }, 0, car.eventsLength)
+				local ownFile = CarAudio.popsSoundId(Pack) == Pack.eventsSoundId
+				inOrder(Pack.pops.regions, if ownFile then eventsEnd else 0, car.popsLength)
+				expect(Pack.startup.handOver < Pack.startup.region.to - Pack.startup.region.from).toBeTruthy()
 			end
-			local previousEnd = 0
-			for _, region in regions do
-				expect(region.from >= previousEnd).toBeTruthy()
-				expect(region.to > region.from).toBeTruthy()
-				previousEnd = region.to
-			end
-			expect(previousEnd <= car.eventsLength).toBeTruthy()
-			expect(Pack.startup.handOver < Pack.startup.region.to - Pack.startup.region.from).toBeTruthy()
-		end)
+		)
 
 		it(`{car.name}: hands the idle over before the next loop up, inside both loops`, function()
 			local idle = Pack.engineLayers[1]
@@ -103,6 +113,50 @@ describe("CarAudio config", function()
 			end
 			expect(count).toBe(#DR458Physics.modeOrder)
 		end
+	end)
+
+	it("SVJ: cuts its pops from its own events file", function()
+		expect(SVJ.pops.soundId).toBe(nil)
+		expect(CarAudio.popsSoundId(SVJ)).toBe(SVJ.eventsSoundId)
+	end)
+
+	it("DR458: plays the SVJ's pops, out of the SVJ's events file at the SVJ's level and speed", function()
+		expect(CarAudio.popsSoundId(DR458)).toBe(SVJ.eventsSoundId)
+		expect(#DR458.pops.regions).toBe(#SVJ.pops.regions)
+		for index, region in SVJ.pops.regions do
+			expect(DR458.pops.regions[index].from).toBe(region.from)
+			expect(DR458.pops.regions[index].to).toBe(region.to)
+		end
+		for _, pair in { { DR458.pops.volume, SVJ.pops.volume }, { DR458.pops.speed, SVJ.pops.speed } } do
+			expect(pair[1].from).toBe(pair[2].from)
+			expect(pair[1].to).toBe(pair[2].to)
+		end
+	end)
+
+	it("DR458: pops on the SVJ's Corsa timing in every manettino position", function()
+		local mine, svj = DR458.popTriggers, SVJ.popTriggers
+		for _, mode in DR458Physics.modeOrder do
+			expect(mine.liftChance[mode]).toBe(svj.liftChance.Corsa)
+			expect(mine.upshiftChance[mode]).toBe(svj.upshiftChance.Corsa)
+			expect(mine.downshiftChance[mode]).toBe(svj.downshiftChance.Corsa)
+			expect(mine.liftChance[mode]).toBe(1)
+			expect(mine.downshiftChance[mode]).toBe(1)
+			expect(mine.upshiftChance[mode]).toBe(1)
+		end
+		expect(mine.upshiftMinRpm).toBe(svj.upshiftMinRpm)
+		expect(mine.upshiftMinThrottle).toBe(svj.upshiftMinThrottle)
+		expect(mine.minRpm).toBe(svj.minRpm)
+		expect(mine.closedThrottle).toBe(svj.closedThrottle)
+		local ranges = {
+			{ mine.liftTrain, svj.liftTrain },
+			{ mine.downshiftTrain, svj.downshiftTrain },
+			{ mine.gap, svj.gap },
+		}
+		for _, pair in ranges do
+			expect(pair[1].from).toBe(pair[2].from)
+			expect(pair[1].to).toBe(pair[2].to)
+		end
+		expect(mine.upshiftMinRpm).toBe(4000)
 	end)
 
 	it("DR458: keeps its start-up timing to its own start-up sound", function()

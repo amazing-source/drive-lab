@@ -1,8 +1,9 @@
 --!strict
-local DR458Flames = require("../src/shared/Config/Cars/DR458/Flames")
+local Catalog = require("../src/shared/Config/Cars/Catalog")
 local DR458Model = require("../src/shared/Config/Cars/DR458/Model")
 local DR458Physics = require("../src/shared/Config/Cars/DR458/Physics")
 local ExhaustFlames = require("../src/shared/Rules/ExhaustFlames")
+local ExhaustPops = require("../src/shared/Rules/ExhaustPops")
 local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect
@@ -17,6 +18,10 @@ local FLAMES: ExhaustFlames.CarFlames = {
 	rise = 0,
 	dayShare = 0.35,
 }
+
+-- Config/ExhaustFlames.RISE, the rise a car without flames of its own throws at (that module holds
+-- Color3s, which Lune cannot load).
+local SHARED_RISE = 0.175
 
 local function always(value: number): () -> number
 	return function()
@@ -90,31 +95,26 @@ describe("ExhaustFlames", function()
 end)
 
 describe("ExhaustFlames on the DR458", function()
-	it("throws them out of the back of the car along each outlet in its binding", function()
+	it("throws them as the SVJ does: a jet and a fireball with every pop, in every position", function()
+		local flames = Catalog.cars.DR458.flames
+		expect(flames).toBe(Catalog.cars.SVJ.flames)
+		expect(flames).toBe(nil)
+		local kinds: { ExhaustPops.Kind } = { "Lift", "Downshift", "Upshift" }
+		for _, mode in DR458Physics.modeOrder do
+			for _, kind in kinds do
+				expect(ExhaustFlames.share(flames, mode, kind, 0.3, never)).toBe(0.3)
+			end
+		end
+		expect(ExhaustFlames.fireballs(0, 0)).toBe(1)
+	end)
+
+	it("throws them out of each outlet in its binding, back and a little up as the SVJ's", function()
 		local outlets = DR458Model.exhaustOutlets
 		assert(outlets and #outlets == 2, "the DR458 has its two outlets")
+		local length = math.sqrt(1 + SHARED_RISE ^ 2)
+		local svj = { x = 0, y = SHARED_RISE / length, z = 1 / length }
 		for _, outlet in outlets do
-			local way = ExhaustFlames.direction(outlet.axis, DR458Flames.rise)
-			expect(way.z > 0.99).toBe(true)
-			expect(math.abs(way.y) < 0.1).toBe(true)
+			expect(angleBetween(ExhaustFlames.direction(outlet.axis, SHARED_RISE), svj) < 1).toBe(true)
 		end
-	end)
-
-	it("throws them alike in every manettino position, from downshifts, lifts and upshifts", function()
-		for _, mode in DR458Physics.modeOrder do
-			local chances = DR458Flames.chance[mode]
-			assert(chances, `chances for the {mode} position`)
-			expect(chances.Downshift > 0 and chances.Lift > 0 and chances.Upshift > 0).toBe(true)
-			expect(chances.Downshift >= chances.Lift).toBe(true)
-			local first = DR458Flames.chance[DR458Physics.modeOrder[1]]
-			expect(chances.Lift == first.Lift and chances.Downshift == first.Downshift).toBe(true)
-			expect(chances.Upshift == first.Upshift).toBe(true)
-		end
-	end)
-
-	it("keeps the orange fireball for its loudest pops and its flames faint by day", function()
-		expect(DR458Flames.fireballFrom > DR458Flames.minStrength).toBe(true)
-		expect(ExhaustFlames.fireballs(DR458Flames.minStrength, DR458Flames.fireballFrom)).toBe(0)
-		expect(DR458Flames.dayShare < 1).toBe(true)
 	end)
 end)

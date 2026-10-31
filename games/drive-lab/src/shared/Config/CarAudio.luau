@@ -67,7 +67,9 @@ export type Pack = {
 	},
 	gear: { region: Region, volume: number, upSpeed: number, downSpeed: number },
 	shiftDip: { gain: number, downHalfLife: number, upHalfLife: number },
-	pops: { regions: { Region }, volume: Region, speed: Region },
+	-- The regions are cut from `soundId` when set (another car's uploaded events file), else from
+	-- this pack's events file.
+	pops: { regions: { Region }, volume: Region, speed: Region, soundId: string? },
 	popTriggers: ExhaustPops.Tuning,
 	events: CarAudioEvents.Tuning,
 	cockpit: ViewProfile,
@@ -89,6 +91,8 @@ export type CarAudio = {
 	-- Published on the driven car: what its engine plays, as one linear amplitude, before the
 	-- shift dip and the start-up (the tyres' ceiling reads it, Config/TyreAudio).
 	ENGINE_LEVEL_ATTRIBUTE: string,
+	-- The uploaded file a pack's pops are cut from.
+	popsSoundId: (pack: Pack) -> string,
 }
 
 local CarAudio: CarAudio = table.freeze({
@@ -96,6 +100,9 @@ local CarAudio: CarAudio = table.freeze({
 	COCKPIT_VIEW = "Cockpit",
 	VIEW_HALF_LIFE = 0.06,
 	ENGINE_LEVEL_ATTRIBUTE = "EngineLevel",
+	popsSoundId = function(pack: Pack): string
+		return pack.pops.soundId or pack.eventsSoundId
+	end,
 })
 
 return CarAudio
