@@ -96,7 +96,7 @@ client, which owns it.
 | SVJ into the R120 | FAIL of the check, not of the road: my next key call came about 5 s late, the car ran straight on at 76 km/h onto the grass outside the bend | `t=151.4 s=1383.0 lat=-14.54 v=56.1 under=Grass` |
 | SVJ through the R25 hairpin, attempt 1 | Turned in 20 m early and too hard (Steer 0.2-0.6), left the road on the inside before the apex at 32 km/h | `t=318.5 s=594 lat=4.64 under=Grass` |
 | SVJ through the R25 hairpin, attempt 2 | On the arc on asphalt from its start to s 617 at 38-28 km/h (lateral -1.9 to -3.9 m), then a glancing hit on the outer guardrail (two section colliders found there) that stopped it on the road | `t=343.0 s=601 lat=-1.94 v=38.2`, `t=345.0 s=617 lat=-3.86 v=28.3`, `t=345.3 v=6.6` |
-| DR458 over bridge 2 | NOT DONE. Seated the same way, its engine started (`Engine` On, start-up "Running", door closed, `drivable` true), but it never moved: it read `Throttle` 1.00 at rest with no key held from the first sample after it was seated (s 30 m, lateral +40 m: not where its spawn stands, -16 m, and why was not established), and W did nothing; S selected R and it read -1222 rpm at 0 km/h. Not anchored, owned by the player. E beside its driver door did not start an entry either. Cause not found; the shortcut seating is the first suspect | `t=400.6 s=30 v=0.0 g=1 thr=1.00`; `t=423.2 g=-1 thr=1.00` |
+| DR458 over bridge 2 | NOT DONE. Seated the same way, its engine started (`Engine` On, start-up "Running", door closed, `drivable` true), but it never moved: it read `Throttle` 1.00 at rest with no key held from the first sample after it was seated (s 30 m, lateral +40 m: not where its spawn stands, -16 m, and why was not established), and W did nothing; S selected R and it read -1222 rpm at 0 km/h. Not anchored, owned by the player. E beside its driver door did not start an entry either. Cause not found; a simulated key left held down is the unconfirmed explanation (see the end of this file) | `t=400.6 s=30 v=0.0 g=1 thr=1.00`; `t=423.2 g=-1 thr=1.00` |
 
 Driving through the bends with simulated keys proved coarse: each key call is a separate tool
 call, so steering is pre-planned rather than closed-loop. The bends' surface is covered by the
@@ -105,6 +105,19 @@ whole-lap grid above; how the cars drive them is for the owner's Play.
 No script error from the game appeared in the session's log (only a third-party plugin's
 warnings).
 
-## Seams after the fix (0bc40f8)
+## Not verified in Studio: for the owner to check while playing
 
-Pending: re-measured in a second short Studio session.
+Agents no longer use Studio (owner, 2026-10-31, after this session), so two checks planned for a
+second session were not run:
+
+- **The field after the seam fix (0bc40f8).** The tiles now overlap by 2 m, and `Circuit.tiles`
+  has a spec shown failing when tiles only meet. The fix rests on the fill behaviour measured
+  above, but the laid field was not re-measured. What to look for while playing: narrow straight
+  grooves in the grass, or in the river's surface, running across the whole field.
+- **The DR458 on the circuit.** In this session it started but never moved, reading `Throttle`
+  1.00 at rest. One explanation, unconfirmed: a key from Studio's simulated keyboard left held
+  down would read exactly as a full throttle at rest. Every key here was sent as a tap, but none
+  was released explicitly afterwards. The SVJ had also read `Throttle` 0.47 while rolling on the
+  grass after my last W tap. The owner drove the DR458 on the published build and the audio
+  agent drove it to 254 km/h on main after #164, so the car itself is not suspected. What to
+  look for while playing: the DR458 driving the lap and its two bridges as the SVJ does.
