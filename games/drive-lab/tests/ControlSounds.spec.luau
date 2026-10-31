@@ -95,8 +95,10 @@ describe("Control sounds", function()
 	it("hears a fresh start from its beginning when the engine is started again while watched", function()
 		local watch = ControlSounds.newWatch()
 		listen(watch, true, 10, 30, 1)
-		local heard = listen(watch, true, 40, 40, STARTUP.drivableAt + 1)
-		expect(#heard).toBe(#everyPress())
+		-- The new start reaches this client late, after its first move: that move still plays.
+		local late = STARTUP.moves[1].at + 0.1
+		local heard = listen(watch, true, 40, 40 + late, STARTUP.drivableAt + 1)
+		expect(table.concat(heard, ",")).toBe(table.concat(everyPress(), ","))
 	end)
 
 	it("opens and closes the radio on the edges of the push-to-talk only", function()
