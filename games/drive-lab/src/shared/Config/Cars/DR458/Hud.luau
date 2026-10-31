@@ -82,9 +82,9 @@ local Hud: HudDesign.Design = table.freeze({
 		height = 205,
 		pad = 2,
 		advance = 139.99,
-		-- The speed on the km/h baseline, its right edge the drawn digit's, its left reaching no
-		-- nearer than 29 px to the hexagon's corner; the gear between the hexagon's inner edges at
-		-- the drawn digit's lowest row.
+		-- The speed on the km/h baseline, its right edge the drawn digit's, its left kept clear of
+		-- the hexagon's corner; the gear between the hexagon's inner edges at the drawn digit's
+		-- lowest row.
 		speed = box(1289, 404, 1740, 609),
 		gear = box(991, 439, 1181, 657),
 	}),
@@ -93,7 +93,7 @@ local Hud: HudDesign.Design = table.freeze({
 		text = rgb(243, 244, 242),
 		redline = rgb(217, 47, 60),
 		flash = rgb(61, 123, 255),
-		-- The SVJ HUD's contrast against its panel (2.60 and 1.87), in the design's blue grey.
+		-- As dim against the panel as the SVJ HUD's, in the design's blue grey.
 		ready = rgb(78, 85, 94),
 		readyLine = rgb(58, 64, 70),
 		unlit = rgb(53, 58, 64),
