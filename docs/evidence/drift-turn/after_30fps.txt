@@ -1,0 +1,30 @@
+Drift on DriveSim at 30 FPS, keyboard help, Space and the right key, first mode
+
+Held drift: Space and the key held until the travel has turned 90 deg (or 4 s), then released.
+car | km/h | throttle | 90 deg heading at | 90 deg travel at | heading / travel in 30 m | held s | slip at release | heading moves in 2 s after | slip after | km/h after
+SVJ | 60 | 0 | 17 m | 20 m | 120 / 92 | 1.53 | -28 | 3 | -0 | 45
+SVJ | 60 | 1 | 21 m | 25 m | 117 / 90 | 1.50 | -26 | 3 | -0 | 67
+SVJ | 80 | 0 | 24 m | 29 m | 120 / 92 | 1.53 | -28 | 3 | -0 | 58
+SVJ | 80 | 1 | 27 m | 34 m | 100 / 73 | 1.53 | -27 | 3 | -0 | 78
+SVJ | 120 | 0 | 47 m | 55 m | 48 / 31 | 1.87 | -23 | 2 | -0 | 90
+SVJ | 120 | 1 | 58 m | 68 m | 42 / 26 | 2.03 | -18 | 2 | -0 | 119
+DR458 | 60 | 0 | 17 m | 20 m | 116 / 91 | 1.50 | -25 | 4 | -0 | 46
+DR458 | 60 | 1 | 21 m | 25 m | 116 / 91 | 1.50 | -25 | 4 | -0 | 68
+DR458 | 80 | 0 | 24 m | 29 m | 119 / 92 | 1.53 | -27 | 4 | -0 | 57
+DR458 | 80 | 1 | 27 m | 34 m | 99 / 73 | 1.53 | -26 | 3 | -0 | 76
+DR458 | 120 | 0 | 47 m | 55 m | 48 / 31 | 1.87 | -22 | 3 | -0 | 89
+DR458 | 120 | 1 | 58 m | 68 m | 41 / 26 | 2.03 | -18 | 2 | -0 | 120
+
+Tap: the right key held 1.5 s from 80 km/h, throttle off, with Space tapped 0.3 s at the start.
+car | heading turned with the tap | without
+SVJ | 54 | 39
+DR458 | 68 | 49
+
+Ending: Space and the key held from 50 km/h, throttle off, until the car drops under the gate;
+with braking, the brake joins at 0.6 s. Over the 2 s after the drift ends: the heading's swing
+back against the turn (a snap) and on with it (Space, held under the gate, is the handbrake again).
+car | ended by | ended at s | heading back | heading on | peak body slip | spun
+SVJ | the speed gate | 1.27 | 0 | 43 | 26 | no
+SVJ | braking | 0.97 | 0 | 30 | 25 | no
+DR458 | the speed gate | 1.33 | 0 | 44 | 23 | no
+DR458 | braking | 0.97 | 0 | 27 | 24 | no

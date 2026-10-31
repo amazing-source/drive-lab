@@ -1,0 +1,32 @@
+tools/drift_turn.luau and tools/DriftTurn.luau from this branch, run on main 2f81def (the drift before #195).
+
+Drift on DriveSim at 60 FPS, keyboard help, Space and the right key, first mode
+
+Held drift: Space and the key held until the travel has turned 90 deg (or 4 s), then released.
+car | km/h | throttle | 90 deg heading at | 90 deg travel at | heading / travel in 30 m | held s | slip at release | heading moves in 2 s after | slip after | km/h after
+SVJ | 60 | 0 | 27 m | 29 m | 111 / 90 | 2.67 | -21 | 8 | -0 | 21
+SVJ | 60 | 1 | 53 m | 73 m | 61 / 36 | 3.67 | -25 | 10 | -0 | 74
+SVJ | 80 | 0 | 46 m | 52 m | 56 / 31 | 3.22 | -25 | 3 | -0 | 34
+SVJ | 80 | 1 | 87 m | never | 46 / 21 | 4.03 | -25 | 15 | 0 | 99
+SVJ | 120 | 0 | 101 m | never | 39 / 12 | 4.03 | -25 | 10 | -0 | 63
+SVJ | 120 | 1 | never | never | 38 / 11 | 4.03 | -25 | 15 | 0 | 134
+DR458 | 60 | 0 | 21 m | 26 m | 115 / 90 | 2.10 | -25 | 12 | -0 | 31
+DR458 | 60 | 1 | 33 m | 46 m | 83 / 56 | 2.58 | -27 | 7 | -0 | 71
+DR458 | 80 | 0 | 36 m | 44 m | 73 / 46 | 2.52 | -27 | 2 | -0 | 41
+DR458 | 80 | 1 | 58 m | 81 m | 58 / 31 | 3.40 | -28 | 12 | -0 | 85
+DR458 | 120 | 0 | 76 m | 92 m | 46 / 18 | 3.58 | -27 | 7 | -0 | 59
+DR458 | 120 | 1 | 114 m | never | 43 / 15 | 4.03 | -28 | 18 | 0 | 120
+
+Tap: the right key held 1.5 s from 80 km/h, throttle off, with Space tapped 0.3 s at the start.
+car | heading turned with the tap | without
+SVJ | 42 | 40
+DR458 | 53 | 51
+
+Ending: Space and the key held from 50 km/h, throttle off, until the car drops under the gate;
+with braking, the brake joins at 0.6 s. Over the 2 s after the drift ends: the heading's swing
+back against the turn (a snap) and on with it (Space, held under the gate, is the handbrake again).
+car | ended by | ended at s | heading back | heading on | peak body slip | spun
+SVJ | the speed gate | 1.42 | 0 | 35 | 23 | no
+SVJ | braking | 1.03 | 0 | 24 | 33 | no
+DR458 | the speed gate | 1.38 | 0 | 31 | 25 | no
+DR458 | braking | 0.98 | 0 | 12 | 34 | no
