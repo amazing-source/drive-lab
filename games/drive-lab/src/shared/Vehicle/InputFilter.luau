@@ -7,9 +7,9 @@
 	rises; the return to centre is slow at rest and quick on the move; turning toward the other
 	side is quicker than turning in. At a game-feel notch above Realistic the slide assist
 	(Vehicle/SlideAssist) takes the target over while the car slides, at its own quicker pace.
-	Pedals ramp. Nothing here changes the car. The steering
-	runs in internal steps of at most STEER_STEP, so every frame rate follows the same path and
-	lands within a frame of the same time; the pedal ramps are exact in dt.
+	Pedals ramp. Nothing here changes the car. The steering runs in internal steps of at most
+	STEER_STEP, so every frame rate follows the same path and lands within a frame of the same
+	time; the pedal ramps are exact in dt.
 ]]
 local Geometry = require("./Geometry")
 local InputHelp = require("../Config/InputHelp")
