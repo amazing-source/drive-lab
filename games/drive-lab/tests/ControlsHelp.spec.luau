@@ -337,7 +337,9 @@ describe("ControlsHelp", function()
 		local help = dr458()
 		local text =
 			ControlsHelp.fill(firstRow(help, "PIT_LIMITER").text, ControlsHelp.formatted(help.values))
-		expect(string.find(text, "In gear 2 below 60 km/h", 1, true) ~= nil).toBe(true)
+		expect(string.find(text, "past 60 km/h", 1, true) ~= nil).toBe(true)
+		local wipe = ControlsHelp.fill(firstRow(help, "WIPER").text, ControlsHelp.formatted(help.values))
+		expect(string.find(wipe, "its 2 speeds", 1, true) ~= nil).toBe(true)
 		local wash = ControlsHelp.fill(firstRow(help, "WASHER").text, ControlsHelp.formatted(help.values))
 		expect(
 			string.find(wash, `makes {DR458Switches.wiper and DR458Switches.wiper.afterWash} more`, 1, true)

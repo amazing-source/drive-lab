@@ -110,6 +110,21 @@ describe("CarLights", function()
 		end
 	end)
 
+	it("flashes both indicators together as hazards, from the moment they start, only running", function()
+		local period = 1 / TUNING.blinkHz
+		for _, case in { { 0, true }, { 0.49 * period, true }, { 0.51 * period, false } } do
+			local lit = decide({ hazards = true, hazardsFor = case[1] })
+			expect(lit.left).toBe(case[2])
+			expect(lit.right).toBe(case[2])
+			expect(lit.drlLeft).toBe(TUNING.drlWhileIndicating)
+			expect(lit.drlRight).toBe(TUNING.drlWhileIndicating)
+		end
+		local off = decide({ hazards = true, hazardsFor = 0, running = false })
+		expect(off.left or off.right).toBe(false)
+		local none = decide({ hazards = false, hazardsFor = 0 })
+		expect(none.left or none.right).toBe(false)
+	end)
+
 	it("lights the tail lamps with the headlights, not with the running lights alone", function()
 		expect(decide({}).tail).toBe(false)
 		expect(decide({ night = true }).tail).toBe(true)
