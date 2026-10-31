@@ -724,3 +724,29 @@ describe("A car whose entry is not animated yet (a direct door)", function()
 		expect(Rules.drivable(direct, on, STARTUP.drivableAt)).toBe(true)
 	end)
 end)
+
+describe("CarEntry seated presses", function()
+	local KEYS: Rules.SeatedKeys = {
+		door = { "F", "ButtonL3" },
+		start = { "R", "ButtonA" },
+		exit = { "E", "ButtonB" },
+	}
+
+	it("asks for the door, the start-up or the exit hold from their keys", function()
+		expect(Rules.seatedPress("F", false, KEYS)).toBe("Door")
+		expect(Rules.seatedPress("ButtonA", false, KEYS)).toBe("Start")
+		expect(Rules.seatedPress("R", false, KEYS)).toBe("Start")
+		expect(Rules.seatedPress("ButtonB", false, KEYS)).toBe("Exit")
+		expect(Rules.seatedPress("W", false, KEYS)).toBe(nil)
+	end)
+
+	it("leaves the door and the engine alone when a screen took the press", function()
+		expect(Rules.seatedPress("ButtonA", true, KEYS)).toBe(nil)
+		expect(Rules.seatedPress("ButtonL3", true, KEYS)).toBe(nil)
+		expect(Rules.seatedPress("F", true, KEYS)).toBe(nil)
+	end)
+
+	it("still starts the exit hold when a screen took B, which also clears its selection", function()
+		expect(Rules.seatedPress("ButtonB", true, KEYS)).toBe("Exit")
+	end)
+end)

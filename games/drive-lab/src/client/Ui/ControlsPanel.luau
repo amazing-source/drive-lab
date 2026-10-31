@@ -1,9 +1,11 @@
 --!strict
 --[[
 	The controls screen's panel (Config/ControlsHelp, laid out by Rules/ControlsHelp): a title, the
-	groups in balanced columns, each row's label, keyboard and gamepad inputs and an (i). The (i)'s
-	sentence shows beside it on hover or gamepad selection, and stays on a click or tap until the
-	next. Built for one screen width, in the HUD's palette (Config/Hud).
+	player's settings first, then the groups, in balanced columns. A control's row shows its label,
+	keyboard and gamepad inputs and an (i); a setting's row its label, a button per option (the
+	chosen one in yellow; a click, a tap or a gamepad's or keyboard navigation's selection chooses)
+	and an (i). The (i)'s sentence shows beside it on hover or gamepad selection, and stays on a
+	click or tap until the next. Built for one screen width, in the HUD's palette (Config/Hud).
 ]]
 local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -11,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config.ControlsHelp)
 local Hud = require(ReplicatedStorage.Shared.Config.Hud)
 local Rules = require(ReplicatedStorage.Shared.Rules.ControlsHelp)
+local SettingsRules = require(ReplicatedStorage.Shared.Rules.Settings)
 
 local MONTSERRAT = "rbxasset://fonts/families/Montserrat.json"
 local BODY = Font.new(MONTSERRAT, Enum.FontWeight.Medium)
@@ -18,6 +21,16 @@ local BOLD = Font.new(MONTSERRAT, Enum.FontWeight.Bold)
 local KEY_HEX = `#{Hud.YELLOW:ToHex()}`
 local INFO_GLYPH = "i"
 local CLOSE_GLYPH = "×"
+-- Pixels between a setting's option buttons.
+local OPTION_GAP = 4
+
+-- The player's settings as the panel shows them, and how it reads and chooses one.
+export type SettingsView = {
+	title: string,
+	list: { SettingsRules.Setting },
+	get: (id: string) -> string?,
+	set: (id: string, value: string) -> boolean,
+}
 
 export type Panel = {
 	gui: ScreenGui,
@@ -26,6 +39,8 @@ export type Panel = {
 	tip: Frame,
 	tipText: TextLabel,
 	pinned: TextButton?,
+	-- Each setting row's repaint from the chosen options, run as the panel opens.
+	repaints: { () -> () },
 }
 
 local ControlsPanel = {}
@@ -186,6 +201,57 @@ local function row(
 	info(panel, frame, Rules.fill(entry.text, values))
 end
 
+local function settingRow(
+	panel: Panel,
+	parent: Instance,
+	setting: SettingsRules.Setting,
+	view: SettingsView,
+	order: number
+)
+	local frame = Instance.new("Frame")
+	frame.Name = setting.id
+	frame.BackgroundTransparency = 1
+	frame.AutomaticSize = Enum.AutomaticSize.Y
+	frame.Size = UDim2.new(1, 0, 0, Config.ROW_HEIGHT)
+	frame.LayoutOrder = order
+	frame.Parent = parent
+	local shares = Config.SHARES
+	cell(frame, escape(setting.label), 0, shares.label, Hud.WHITE)
+	local area = shares.keyboard + shares.gamepad
+	local count = #setting.options
+	local buttons: { [string]: TextButton } = {}
+	local strokes: { [string]: UIStroke } = {}
+	local function paint()
+		local chosen = view.get(setting.id)
+		for option, button in buttons do
+			local isChosen = option == chosen
+			button.TextColor3 = if isChosen then Hud.YELLOW else Hud.GREY
+			strokes[option].Color = if isChosen then Hud.YELLOW else Hud.LINE_GREY
+		end
+	end
+	for index, option in setting.options do
+		local button = Instance.new("TextButton")
+		button.Name = option
+		button.AutoButtonColor = false
+		button.BackgroundColor3 = ControlsPanel.panelColor()
+		button.Position = UDim2.new(shares.label + area * (index - 1) / count, 0, 0, 1)
+		button.Size = UDim2.new(area / count, -OPTION_GAP, 0, Config.ROW_HEIGHT - 2)
+		button.FontFace = BOLD
+		button.TextSize = Config.TEXT_SIZE
+		button.Text = option
+		button.Parent = frame
+		strokes[option] = ControlsPanel.round(button, 6, Hud.LINE_GREY)
+		buttons[option] = button
+		button.Activated:Connect(function()
+			view.set(setting.id, option)
+			paint()
+		end)
+	end
+	info(panel, frame, setting.text)
+	paint()
+	table.insert(panel.repaints, paint)
+end
+
 local function captions(parent: Instance)
 	local frame = Instance.new("Frame")
 	frame.Name = "Captions"
@@ -251,7 +317,7 @@ local function tooltip(gui: ScreenGui): (Frame, TextLabel)
 end
 
 -- `help` and `bindings` are one car's screen (Rules.forCar); `keyLayout` labels the keys as the
--- player's keyboard prints them.
+-- player's keyboard prints them; `settings`, when given, come first.
 function ControlsPanel.build(
 	parent: Instance,
 	help: Rules.Help,
@@ -259,7 +325,8 @@ function ControlsPanel.build(
 	keyLayout: Rules.Layout?,
 	screen: Vector2,
 	titles: { [string]: string },
-	onClose: () -> ()
+	onClose: () -> (),
+	settings: SettingsView?
 ): Panel
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "ControlsHelp"
@@ -297,10 +364,22 @@ function ControlsPanel.build(
 	local layout = list(body, Enum.FillDirection.Horizontal, Config.COLUMN_GAP)
 
 	local tip, tipText = tooltip(gui)
-	local panel: Panel =
-		{ gui = gui, columns = columns, infos = {}, tip = tip, tipText = tipText, pinned = nil }
+	local panel: Panel = {
+		gui = gui,
+		columns = columns,
+		infos = {},
+		tip = tip,
+		tipText = tipText,
+		pinned = nil,
+		repaints = {},
+	}
 	local groups = help.groups
-	local heights = table.create(#groups)
+	-- The settings, when given, are the first block laid out; each group follows.
+	local first = if settings then 1 else 0
+	local heights = table.create(#groups + first)
+	if settings then
+		table.insert(heights, #settings.list + 1)
+	end
 	for _, group in groups do
 		table.insert(heights, #group.rows + 1)
 	end
@@ -317,16 +396,27 @@ function ControlsPanel.build(
 		captions(column)
 		-- Below the captions (order 0), each group's title then its rows, in the config's order.
 		local order = 0
-		for _, member in members do
-			local group = groups[member]
+		local function heading(text: string)
 			order += 1
-			local title = label(column, escape(group.title), BOLD, Config.GROUP_SIZE, Hud.YELLOW)
+			local title = label(column, escape(text), BOLD, Config.GROUP_SIZE, Hud.YELLOW)
 			title.Size = UDim2.new(1, 0, 0, Config.ROW_HEIGHT + 4)
 			title.TextYAlignment = Enum.TextYAlignment.Bottom
 			title.LayoutOrder = order
-			for _, entry in group.rows do
-				order += 1
-				row(panel, column, entry, help, bindings, keyLayout, values, order)
+		end
+		for _, member in members do
+			if settings and member == 1 then
+				heading(settings.title)
+				for _, setting in settings.list do
+					order += 1
+					settingRow(panel, column, setting, settings, order)
+				end
+			else
+				local group = groups[member - first]
+				heading(group.title)
+				for _, entry in group.rows do
+					order += 1
+					row(panel, column, entry, help, bindings, keyLayout, values, order)
+				end
 			end
 		end
 	end
@@ -346,6 +436,9 @@ end
 
 function ControlsPanel.show(panel: Panel, selectFirst: boolean)
 	hideTip(panel)
+	for _, paint in panel.repaints do
+		paint()
+	end
 	panel.gui.Enabled = true
 	if selectFirst then
 		GuiService.SelectedObject = panel.infos[1]

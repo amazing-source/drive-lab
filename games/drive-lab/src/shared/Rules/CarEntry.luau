@@ -14,6 +14,8 @@ export type EngineState = "Off" | "On"
 export type Stage = "Off" | "Reaching" | "Cranking" | "Running"
 export type Action = "Enter" | "Exit" | "Door" | "Start" | "Cancel"
 export type ApproachPlan = "Settle" | "Straight" | "LineUp"
+-- The KeyCode names of the seated controls (Config/Controls DOOR, START_ENGINE, EXIT).
+export type SeatedKeys = { door: { string }, start: { string }, exit: { string } }
 
 export type State = {
 	-- The last sequence the server started, and when (server time).
@@ -411,6 +413,20 @@ end
 
 function CarEntry.parseAction(payload: unknown): Action?
 	return if typeof(payload) == "string" then ACTIONS[payload] else nil
+end
+
+-- What a seated key press asks of the car: the door, the start-up or the start of an exit hold.
+-- A press a screen already took (a pad's A choosing a selected button) asks for neither the door
+-- nor the start-up; the exit hold counts either way, since B also clears a screen's selection.
+function CarEntry.seatedPress(key: string, processed: boolean, keys: SeatedKeys): Action?
+	if table.find(keys.door, key) then
+		return if processed then nil else "Door"
+	elseif table.find(keys.start, key) then
+		return if processed then nil else "Start"
+	elseif table.find(keys.exit, key) then
+		return "Exit"
+	end
+	return nil
 end
 
 return table.freeze(CarEntry)

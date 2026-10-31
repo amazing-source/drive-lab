@@ -15,6 +15,8 @@ local MotionBlur = require(ReplicatedStorage.Shared.Rules.MotionBlur)
 local MotionBlurConfig = require(ReplicatedStorage.Shared.Config.MotionBlur)
 local RainOptics = require(ReplicatedStorage.Shared.Rules.RainOptics)
 
+local Settings = require(script.Parent.Parent.Settings)
+
 type Saved = { enabled: boolean, far: number, near: number, distance: number, radius: number }
 
 export type Optics = {
@@ -79,7 +81,9 @@ function Optics.update(
 	local acceleration = MotionBlurConfig.ACCELERATION
 	optics.pull =
 		MotionBlur.follow(optics.pull, MotionBlur.pullShare(longitudinalG, acceleration), dt, acceleration)
-	local near, far = MotionBlur.depth(view, speedKmh, optics.pull, MotionBlurConfig.SPEED, acceleration)
+	local scale = MotionBlur.level(MotionBlurConfig.LEVELS, Settings.get(MotionBlurConfig.SETTING))
+	local near, far =
+		MotionBlur.depth(view, speedKmh, optics.pull, MotionBlurConfig.SPEED, acceleration, scale)
 	local depth = RainOptics.depthOfField(view, intensity, near, far, carDistance, carLength, Config.FOCUS)
 	local focus = optics.focus
 	if focus.Enabled ~= depth.enabled then
