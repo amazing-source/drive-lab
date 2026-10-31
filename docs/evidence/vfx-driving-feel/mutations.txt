@@ -1,6 +1,7 @@
 Deliberate breaks for #160. Each break was made on a committed tree, the named spec run with a
 single-spec runner (the same T harness as tools/test/run), then the file restored with git checkout
-and the spec passing again. Line numbers are the failing expect.
+and the spec passing again. Line numbers are the failing expect at the time of each run (later
+specs inserted above shift them).
 
 WIND (tests/RoadAudio.spec.luau, 17 passing when restored)
 - Config/RoadAudio back to main's wind (volume 0.5, exponent 2, cutoff 500 Hz at 50 km/h to 8 kHz
