@@ -74,22 +74,10 @@ local FILES = {
 		limiter = "eng_limiter.ogg",
 		events = "events.ogg",
 	},
+	-- tools/audio/cut_dr458_gdc.py's packed bank: every loop a region of one file.
 	DR458 = {
-		layers = {
-			"idle.ogg",
-			"on_2100.ogg",
-			"on_2900.ogg",
-			"on_4900.ogg",
-			"on_5900.ogg",
-			"on_6900.ogg",
-			"on_8100.ogg",
-			"off_2000.ogg",
-			"off_3800.ogg",
-			"off_5000.ogg",
-			"off_7000.ogg",
-			"off_9000.ogg",
-		},
-		limiter = "limiter.ogg",
+		layers = table.create(#DR458Pack.engineLayers, "bank.ogg"),
+		limiter = "bank.ogg",
 		events = "events.ogg",
 		-- The SVJ's events.ogg, which its pops are cut from.
 		pops = "svj_events.ogg",
