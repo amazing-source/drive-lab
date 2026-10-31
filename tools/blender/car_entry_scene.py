@@ -50,6 +50,12 @@ COLOURS = {
     "sill": (0.10, 0.10, 0.11, 1),
     "door_glass": (0.55, 0.70, 0.80, 0.25),
     "ground": (0.32, 0.33, 0.35, 1),
+    # Groups of a manifest-built car (tools/anim/car_entry_prep_manifest.py).
+    "body": (0.62, 0.08, 0.07, 1),
+    "cage": (0.18, 0.18, 0.2, 1),
+    "seat": (0.45, 0.06, 0.06, 1),
+    "harness": (0.85, 0.65, 0.1, 1),
+    "cabin": (0.2, 0.2, 0.23, 1),
 }
 
 

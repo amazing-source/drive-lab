@@ -25,7 +25,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import r6_fk  # noqa: E402
-from beat_tracks import Body, write  # noqa: E402
+from beat_tracks import IDLE_LOCAL, Body, write  # noqa: E402
 from car_entry_keys import IDLE, IDLE_PELVIS, side_step, start_idle  # noqa: E402
 from car_scene import rotation_about  # noqa: E402
 
@@ -246,24 +246,26 @@ def entry(car, rest_path):
     out_feet, out_c = feet_at(car, OUT, yaw_pull * 0.5)
 
     both(b, 0, 1)
-    f = walk(b, 2, IDLE, pull_feet, 0.0, yaw_pull, "left_leg")
+    # The right foot leads: the first step's hip hike then leans the body away from the car.
+    f = walk(b, 2, IDLE, pull_feet, 0.0, yaw_pull, "right_leg")
     b.pelvis.at(2, IDLE_PELVIS).at(f, (pull_c[0], 2.0, pull_c[2]))
     b.torso.at(f, (-10, yaw_pull, 0))
-    pull, release = f, f + 6
+    pull, release = f, f + 4
     both(b, pull, release + 4)
-    b.hang("right_arm", 0, pull - 14)
-    b.targets["right_arm"].at(pull - 5, car.p(DOOR_HANDLE + np.array([0.12, 0.08, 0.03])))
+    b.hang("right_arm", 0, pull - 8)
+    b.targets["right_arm"].at(pull - 4, car.p(DOOR_HANDLE + np.array([0.22, 0.10, 0.06])))
     b.targets["right_arm"].attach(pull, release, handle)
     b.contact.append((pull, release))
     b.torso.at(release + 4, (4, yaw_pull, 0))
     f = walk(b, release + 4, pull_feet, out_feet, yaw_pull, yaw_pull * 0.5, "right_leg", pairs=1)
     b.pelvis.at(release + 4, (pull_c[0], 2.0, pull_c[2])).at(f, (out_c[0], 2.0, out_c[2]))
-    for fr, v in ((pull + 1, 0.0), (release, 0.025), (release + 8, 0.06), (f, 0.22), (f + 6, 0.6), (f + 13, 0.95), (f + 16, 1.0)):
+    for fr, v in ((pull + 1, 0.0), (release, 0.015), (release + 8, 0.06), (f, 0.22), (f + 6, 0.6), (f + 13, 0.95), (f + 16, 1.0)):
         b.door.at(fr, (v,))
-    b.targets["right_arm"].at(release + 3, car.p(DOOR_HANDLE + np.array([0.22, 0.10, -0.02])))
+    b.targets["right_arm"].at(release + 1, car.p(DOOR_HANDLE + np.array([0.26, 0.16, 0.06])))
     b.hang("right_arm", release + 12, OPEN_END)
     b.hang("left_arm", 0, OPEN_END)
     back = f + 2
+    both(b, f - 1, back)
     f = walk(b, back, out_feet, IDLE, yaw_pull * 0.5, 0.0, "left_leg", pairs=1)
     both(b, f, OPEN_END + 1)
     b.pelvis.at(back, (out_c[0], 2.0, out_c[2])).at(f, IDLE_PELVIS)
@@ -366,7 +368,8 @@ def getin(b, car, s, start, ends):
     b.torso.at(f, (0, yaw_in, 0))
     b.neck.at(WALK0 + 6, (-8, 25, 0)).at(f, (-10, 0, 0))
     b.hang("right_arm", WALK0, f - 2)
-    b.hang("left_arm", start, f - 2)
+    # The left arm hangs a little in toward the body near the end of the walk, clear of the open door.
+    b.hang("left_arm", start, f - 2, IDLE_LOCAL["left_arm"] + np.array([0.3, 0.0, 0.0]))
     # 2. Lean in under the rail, hands onto the bars.
     b.torso.at(LEAN0 + 2, (-6, yaw_in, 0)).at(HOP0, (-40, yaw_in, 0))
     b.neck.at(HOP0, (-20, 0, 0))
@@ -561,7 +564,7 @@ def entry_contacts():
     """Named contacts (depth, studs at scale 1) and held limbs, for car_entry_clear.py; the check's
     allow file is written from the same list at the measured depths."""
     allow = [
-        {"why": "right hand on the door's pull, pulling", "from": 34, "to": 50, "parts": ["Right Arm"], "groups": ["door"], "depth": 0.15},
+        {"why": "right hand on the door's pull, pulling (the pull is just ahead of the shut line: the hand also lies on the body behind it, as the SVJ's release hand does)", "from": 33, "to": 46, "parts": ["Right Arm"], "groups": ["door", "body"], "depth": 0.15},
         {"why": "hands on the door bars and the bucket, leaning in, pushing up, turning", "from": HOP0 - 2, "to": DROP + 2, "parts": ARMS, "groups": ["cage", "seat"], "depth": 0.15},
         {"why": "PROPOSED (rigid-thigh class): thighs over the sill and the door bars while the legs swing in", "from": HOP0 + 4, "to": DROP + 4, "parts": LEGS, "groups": ["cage", "sill"], "depth": 0.25},
         {"why": "PROPOSED: the bottom across the door bars while sitting and turning on them", "from": HOP0 + 4, "to": DROP, "parts": ["Torso"], "groups": ["cage"], "depth": 0.15},
