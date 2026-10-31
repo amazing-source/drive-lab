@@ -1,0 +1,31 @@
+Issue #202: the SVJ's start-up flap and START sounds; the DR458's start-up much louder, the SVJ's a
+little quieter.
+
+SVJ start-up presses (Rules/ControlSounds.startupPresses from Config/Cars/SVJ/Startup): StartFlap at
+1.0 s (the red flap's lift arriving), ENGINE_START at 1.5 s. Sounds, the DR458's owner-picked ones,
+from Roblox's Pro Sound Effects library (no upload), measured (tests/fixtures/control_sounds.json):
+  StartFlap     9119727134 0-0.3  -10.72 LUFS  db -13.3  -> 6.0 LU under the SVJ's idle loop (-18 LUFS)
+  ENGINE_START  9125343291 0-0.3  -20.50 LUFS  db -3.5   -> 6.0 LU under
+The fixture, regenerated from both cars' sounds, is byte-identical to the previous one: the SVJ reuses
+sounds already measured.
+
+Start-up levels, offline timeline (audio_timeline SVJ Corsa, DR458 1), main 2f81def against this branch:
+  SVJ   start-up volume 0.468 -> 0.372  (-2.00 dB, boostDb 5.4 -> 3.4)
+  DR458 start-up volume 1.757 -> 3.506  (+6.00 dB, boostDb 6 -> 12), under Roblox's 10
+  every other frame and shot of both timelines identical
+
+Gates at the branch head: stylua, selene (0/0/0), luau-lsp (src), lune run tools/test/run (92 spec
+files, 962 passed), lune run tools/test/tools (18 tools, 18 run, 0 failed), rojo build.
+
+Deliberate breaks, each restored with `git checkout -- games` (962 passed after):
+S1  the SVJ's START sound removed
+    FAIL SVJ: has a sound for its start-up's flap and START, and no other
+    FAIL gives every start-up move and the START press a sound, in each car with control sounds
+S2  the SVJ's flap at db +10
+    FAIL plays every car's control sounds under its idle engine, by their measured loudness
+S3  the DR458's boostDb back at 6
+    FAIL plays the DR458's start-up 12 dB over its idle, the SVJ's 2 dB under its match (3.4)
+S4  the SVJ's boostDb back at 5.4
+    FAIL the same spec
+S5  the DR458's boostDb at 30
+    FAIL keeps every Sound volume each car sets within Roblox's 0 to 10 (and the boost spec)

@@ -239,7 +239,7 @@ local Audio: CarAudio.Pack = {
 	-- last 0.8 s fade out while the idle loop fades in.
 	startup = {
 		region = { from = 0, to = 5.87125 },
-		boostDb = 6,
+		boostDb = 12,
 		handOver = 5.0713,
 		abortRpm = 1400,
 		abortHalfLife = 0.08,
@@ -281,7 +281,7 @@ local Audio: CarAudio.Pack = {
 	-- Roblox's licensed Pro Sound Effects library, but the wiper motor (in the events file). Each
 	-- `db` lands its loudest 100 ms 6 LU under the idle loop (the loops 12 LU, the radio's hiss 14
 	-- and its tail 8), by the loudness tools/audio/measure_control_sounds.py measured
-	-- (tests/fixtures/dr458_control_sounds.json).
+	-- (tests/fixtures/control_sounds.json).
 	controls = {
 		press = {
 			HIGH_BEAM = WHEEL_BUTTON,

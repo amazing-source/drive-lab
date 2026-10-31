@@ -61,8 +61,9 @@ local Audio: CarAudio.Pack = {
 	-- out while the idle loop fades in. Played from the moment START is pressed (Rules/CarEntry).
 	startup = {
 		region = { from = 0, to = 11 },
-		-- The start-up was cut 5.4 dB quieter than the idle loop's gain to keep its flare in range.
-		boostDb = 5.4,
+		-- The start-up was cut 5.4 dB quieter than the idle loop's gain to keep its flare in range; it
+		-- plays 2 dB under that match.
+		boostDb = 3.4,
 		handOver = 9.0,
 		abortRpm = 1400,
 		abortHalfLife = 0.08,
@@ -111,6 +112,17 @@ local Audio: CarAudio.Pack = {
 	farRollOff = { from = 60, to = 2000 },
 	enginePosition = { forward = -0.6, up = 0.3 },
 	exhaustPosition = { forward = -2.2, up = 0.5 },
+	-- The start-up's flap lifting and START pressed under it, with the DR458's picks for its guard and
+	-- START (Roblox's Pro Sound Effects library), each 6 LU under the idle loop by its measured loudness
+	-- (tests/fixtures/control_sounds.json).
+	controls = {
+		press = {
+			-- "Switch Impact On Flip Up Large Metal 2".
+			StartFlap = { soundId = "rbxassetid://9119727134", region = { from = 0, to = 0.3 }, db = -13.3 },
+			-- "1979 Ford F-150 Pick Up Door Lock Button".
+			ENGINE_START = { soundId = "rbxassetid://9125343291", region = { from = 0, to = 0.3 }, db = -3.5 },
+		},
+	},
 }
 
 return table.freeze(Audio)
