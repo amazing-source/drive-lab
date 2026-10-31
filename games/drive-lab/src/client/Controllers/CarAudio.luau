@@ -387,16 +387,12 @@ local function start(model: Model, entry: Catalog.Entry, sincePress: number)
 	local exhaustPoint = point(chassis, "DriveLabExhaustAudio", pack.exhaustPosition)
 	local layers: { Sound } = table.create(#pack.engineLayers)
 	local mixerLayers: { EngineSound.Layer } = table.create(#pack.engineLayers)
-	local idle = pack.engineLayers[1]
 	for _, layer in pack.engineLayers do
 		table.insert(layers, loop(layer.soundId, engineGroup, pack.rollOff, enginePoint, layer.region))
 		table.insert(
 			mixerLayers,
 			{ rpm = layer.rpm, load = layer.load, volume = layer.volume, crossoverRpm = layer.crossoverRpm }
 		)
-		if layer.rpm < idle.rpm then
-			idle = layer
-		end
 	end
 	local current: Session = {
 		model = model,
@@ -417,7 +413,7 @@ local function start(model: Model, entry: Catalog.Entry, sincePress: number)
 		eventsEqualiser = eventsEqualiser,
 		enginePoint = enginePoint,
 		exhaustPoint = exhaustPoint,
-		idleLevel = pack.engineVolume * idle.volume * EngineSound.loudness(pack.engineTuning, idle.rpm),
+		idleLevel = CarAudio.idleLevel(pack),
 		startup = nil,
 		startupVolume = 0,
 		handOver = nil,
