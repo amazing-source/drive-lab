@@ -15,7 +15,7 @@ Start-up levels, offline timeline (audio_timeline SVJ Corsa, DR458 1), main 2f81
   every other frame and shot of both timelines identical
 
 Gates at the branch head: stylua, selene (0/0/0), luau-lsp (src), lune run tools/test/run (92 spec
-files, 962 passed), lune run tools/test/tools (19 tools, 19 run, 0 failed), rojo build.
+files, 962 passed), lune run tools/test/tools (18 tools, 18 run, 0 failed), rojo build.
 
 Deliberate breaks, each restored with `git checkout -- games` (962 passed after):
 S1  the SVJ's START sound removed
