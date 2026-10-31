@@ -21,6 +21,7 @@ local DriverStartup = require("../DriverStartup")
 local Driving = require("../Driving")
 local ExhaustFlames = require("../../Rules/ExhaustFlames")
 local RimBlur = require("../RimBlur")
+local StartupArms = require("../../Rules/StartupArms")
 local Types = require("./Types")
 
 export type Driver = {
@@ -34,6 +35,10 @@ export type Driver = {
 	-- The drawn arms' lengths (studs at character scale 1), when this car's wheel needs other
 	-- than Config/DriverArms'.
 	arms: { upper: number, lower: number }?,
+	-- Where the drawn hands start when the body hands its arms over (each wrist in the DriverSeat
+	-- frame, as the start-up's keys), and the seconds they take to ease to their resting pose:
+	-- for a car whose body arms cannot end on the drawn ones' rest without entering the car.
+	handOver: { seconds: number, right: StartupArms.Pose, left: StartupArms.Pose }?,
 	-- What the hands do on the wheel's buttons and the panel's switches; none on a car without.
 	gestures: DriverGestures.Gestures?,
 }
@@ -117,6 +122,8 @@ local function checkDriverSize(entry: Entry)
 	assert(driver.scale == nil or driver.scale > 0, "the driver's scale must be positive")
 	local arms = driver.arms
 	assert(arms == nil or (arms.upper > 0 and arms.lower > 0), "the driver's arms need positive lengths")
+	local handOver = driver.handOver
+	assert(handOver == nil or handOver.seconds > 0, "the driver's hand-over needs a positive duration")
 end
 
 local DRAWN_SHAPES = table.freeze({ Grip = true, Rest = true, Point = true, Pinch = true })

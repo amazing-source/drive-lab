@@ -8,12 +8,14 @@ the body stands as at rest (feet together, upright, facing the car) and far enou
 server puts the root under it there, so nothing jumps.
 
   python car_entry_exit_end.py <exit.baked.json> --mark -0.88,0 [--min-outward 1.0] [--max-pose 0.1]
+      [--scale 0.857]
 
 --min-outward: game studs the stance must stand further out than the mark. Measured in Studio on
 the SVJ (2026-10-28): the collision box's side is 0.659 studs in front of the mark and a scale-1
 R6 torso sweeps 1.118 studs from its root as it turns, so anything under 0.46 hits the box.
 --max-pose: game studs any corner of any body part may stand off the rest pose, the root moved
 under the torso.
+--scale: the car's driver scale (the bake is at body scale 1); the SVJ's by default.
 
 The bake's frame is the exporter's: the standing root at the mark at (0, 3, 0), -Z toward the
 seat, +X toward the car's rear, in studs at body scale 1. The mark stands left of the seat
@@ -59,6 +61,7 @@ def main(argv):
     parser.add_argument("--mark", required=True)
     parser.add_argument("--min-outward", type=float, default=1.0)
     parser.add_argument("--max-pose", type=float, default=0.1)
+    parser.add_argument("--scale", type=float, default=DRIVER_SCALE)
     args = parser.parse_args(argv)
     mark_right, mark_forward = (float(v) for v in args.mark.split(","))
     if mark_right >= 0:
@@ -73,9 +76,9 @@ def main(argv):
     print(f"OutsideClose frames {start}-{end}, door shut from frame {shut}")
     for index in range(shut, end + 1):
         frame = frames[index]
-        pose = float(np.max(np.linalg.norm(body_points(frame) - rest, axis=1))) * DRIVER_SCALE
+        pose = float(np.max(np.linalg.norm(body_points(frame) - rest, axis=1))) * args.scale
         torso = frame["parts"]["Torso"]
-        outward = torso[2] * DRIVER_SCALE
+        outward = torso[2] * args.scale
         if pose <= args.max_pose:
             print(f"  frame {index}: {(index - start) / fps:.4f} s, pose {pose:.4f}, outward {outward:.4f}")
             if outward >= args.min_outward and (best is None or pose < best[1]):
@@ -84,8 +87,8 @@ def main(argv):
         sys.exit("no stance stands far enough out within the pose tolerance")
     index, pose, torso = best
     at = (index - start) / fps
-    right = mark_right - torso[2] * DRIVER_SCALE * METRES_PER_STUD
-    forward = mark_forward - torso[0] * DRIVER_SCALE * METRES_PER_STUD
+    right = mark_right - torso[2] * args.scale * METRES_PER_STUD
+    forward = mark_forward - torso[0] * args.scale * METRES_PER_STUD
     print(f"chosen frame {index}: pose {pose:.4f} studs off rest, torso height {torso[1]:.4f} (rest 3)")
     print(f"\texitEnd = table.freeze({{ at = {at:.3f}, right = {right:.4f}, forward = {forward:.4f} }}),")
 

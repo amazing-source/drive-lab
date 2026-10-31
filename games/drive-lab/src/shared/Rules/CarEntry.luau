@@ -128,6 +128,31 @@ function CarEntry.phase(car: Car, state: State, now: number): Phase
 	return "Exiting"
 end
 
+-- How far the drawn arms have come from the body's hands to their own resting pose, 0 to 1, over
+-- `seconds` (a car's Driver handOver): after the body sits it runs 0 to 1; as an exit begins it
+-- runs back to 0, the drawn arms still shown, so the body's arms take over where they stand. Nil
+-- when the drawn arms are not shown; 1 throughout for a car without a hand-over, or with a direct
+-- door (no body clips to hand over from).
+function CarEntry.handOverShare(car: Car, state: State, now: number, seconds: number?): number?
+	if car.door.direct then
+		seconds = nil
+	end
+	local phase = CarEntry.phase(car, state, now)
+	if phase == "Seated" then
+		if seconds == nil then
+			return 1
+		end
+		local seatedAt = state.entryAt + CarEntry.length(CarEntry.steps(car, "Enter", state.entryDoorOpen))
+		return math.clamp((now - seatedAt) / seconds, 0, 1)
+	elseif phase == "Exiting" and seconds ~= nil then
+		local into = now - state.entryAt
+		if into < seconds then
+			return 1 - math.max(into, 0) / seconds
+		end
+	end
+	return nil
+end
+
 function CarEntry.motionOpenness(car: Car, motion: Config.DoorMotion, t: number): number
 	if motion == "Closed" then
 		return 0

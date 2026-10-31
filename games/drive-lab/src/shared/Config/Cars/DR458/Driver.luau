@@ -1,15 +1,18 @@
 --!strict
 --[[
-	The driver in the DR458, until the animators' own module lands (#108): the grip and the
-	footwell are theirs for this cabin, the start-up paths and the hand gestures are keyed against
-	its controls, and the grip meshes posed for its rim are kept in their own folder (the SVJ's
-	stand in for them in a place without it).
+	The driver in the DR458: an R6 at 1.15 in the race bucket, its clips and seated pose authored
+	at that scale (Door.luau). The grip and the footwell are the animators' for this cabin, the
+	start-up paths and the hand gestures are keyed against its controls, and the grip meshes posed
+	for its rim are kept in their own folder (the SVJ's stand in for them in a place without it).
 ]]
 local Contract = require("../Contract")
 local Gestures = require("./Gestures")
 local StartupPaths = require("./StartupPaths")
 
 local Driver: Contract.Driver = {
+	scale = 1.15,
+	-- The drawn arms (studs at scale 1), sized for this wheel at this scale (seated_D_v1).
+	arms = table.freeze({ upper = 1.25, lower = 1.13 }),
 	-- The right hand, from hand_grip.py (grip v9_a10: 10 degrees above 3 o'clock, the thumb over the
 	-- spoke, bar tilt 10, wrist turn -10).
 	grip = table.freeze({
@@ -47,6 +50,19 @@ local Driver: Contract.Driver = {
 		}),
 	}),
 	startupPaths = StartupPaths,
+	-- The drawn hands start where the entry's blocky hands end and ease onto the resting pose over
+	-- `seconds` (metres, DriverSeat frame).
+	handOver = table.freeze({
+		seconds = 0.6,
+		right = table.freeze({
+			position = table.freeze({ x = 0.19835, y = 0.18843, z = -0.04913 }),
+			rotation = table.freeze({ w = 0.97773, x = 0.20689, y = 0.03443, z = -0.00729 }),
+		}),
+		left = table.freeze({
+			position = table.freeze({ x = -0.26627, y = 0.34659, z = -0.08182 }),
+			rotation = table.freeze({ w = 0.981, x = 0.18948, y = 0.04092, z = -0.0079 }),
+		}),
+	}),
 	gestures = Gestures,
 }
 

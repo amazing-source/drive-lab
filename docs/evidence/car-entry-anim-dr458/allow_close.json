@@ -1,0 +1,88 @@
+[
+ {
+  "why": "DECIDED (owner, option D): torso sides into the bucket's bolsters, 5.5 cm seated",
+  "from": 0,
+  "to": 48,
+  "parts": [
+   "Torso"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.2576,
+  "cap": 0.261,
+  "measured": 0.2575
+ },
+ {
+  "why": "DECIDED (seated pose): head on the headrest pad",
+  "from": 0,
+  "to": 48,
+  "parts": [
+   "Head"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.059,
+  "cap": 0.061,
+  "measured": 0.0589
+ },
+ {
+  "why": "DECIDED (coordinator, B): the blocky arms at their hand-over pose beside the torso, into the bucket's bolsters",
+  "from": 0,
+  "to": 48,
+  "parts": [
+   "Right Arm",
+   "Left Arm"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.2117,
+  "cap": 0.22,
+  "measured": 0.2116
+ },
+ {
+  "why": "DECIDED (coordinator): the blocky legs at their least-deep pose in the bucket, under the wheel",
+  "from": 0,
+  "to": 48,
+  "parts": [
+   "Right Leg",
+   "Left Leg"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.1649,
+  "cap": 0.17,
+  "measured": 0.1648
+ },
+ {
+  "why": "DECIDED (coordinator, owner's overnight mandate): the left blocky arm at the hand-over pose against the stowed window net and the upper door bar",
+  "from": 0,
+  "to": 48,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "cage"
+  ],
+  "depth": 0.2038,
+  "cap": 0.206,
+  "measured": 0.2037
+ },
+ {
+  "why": "DECIDED (coordinator, owner's overnight mandate): the left blocky arm at the hand-over pose against the door card",
+  "from": 0,
+  "to": 48,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "door"
+  ],
+  "depth": 0.2112,
+  "cap": 0.212,
+  "measured": 0.2111
+ }
+]

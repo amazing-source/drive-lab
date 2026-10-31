@@ -1,0 +1,345 @@
+[
+ {
+  "why": "DECIDED (coordinator, owner's overnight mandate): the left palm on the door card pushing the door from shut to 12 %, the arm's side along the card (a seated R6 at 1.15 reaches the card only this way)",
+  "from": 26,
+  "to": 36,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "door"
+  ],
+  "depth": 0.2954,
+  "cap": 0.3,
+  "measured": 0.2953
+ },
+ {
+  "why": "hands on the bucket and the door bars, climbing out and standing up",
+  "from": 74,
+  "to": 125,
+  "parts": [
+   "Right Arm",
+   "Left Arm"
+  ],
+  "groups": [
+   "cage",
+   "seat"
+  ],
+  "depth": 0.1498,
+  "cap": 0.15,
+  "measured": 0.1497
+ },
+ {
+  "why": "PROPOSED (rigid-thigh class): thighs over the door bars and the sill while the legs swing out, from the entry's frames mirrored (coordinator)",
+  "from": 70,
+  "to": 121,
+  "parts": [
+   "Right Leg",
+   "Left Leg"
+  ],
+  "groups": [
+   "cage",
+   "sill"
+  ],
+  "depth": 0.2499,
+  "cap": 0.25,
+  "measured": 0.2498
+ },
+ {
+  "why": "PROPOSED: the bottom across the door bars while turning on them, the torso's side on them sliding out: the entry's, mirrored (coordinator)",
+  "from": 72,
+  "to": 117,
+  "parts": [
+   "Torso"
+  ],
+  "groups": [
+   "cage"
+  ],
+  "depth": 0.1592,
+  "cap": 0.16,
+  "measured": 0.1591
+ },
+ {
+  "why": "DECIDED (owner, option D): torso sides into the bucket's bolsters, 5.5 cm seated",
+  "from": 0,
+  "to": 90,
+  "parts": [
+   "Torso"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.2587,
+  "cap": 0.261,
+  "measured": 0.2586
+ },
+ {
+  "why": "DECIDED (seated pose): head on the headrest pad: 0.0589 on the house checker's 0.05-stud cloud, 0.060 on a 0.04-stud one",
+  "from": 0,
+  "to": 76,
+  "parts": [
+   "Head"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.059,
+  "cap": 0.061,
+  "measured": 0.0589
+ },
+ {
+  "why": "DECIDED (coordinator, B): the blocky arms at their hand-over pose beside the torso, into the bucket's bolsters as the torso's sides are (until the hands go to the bucket's edge)",
+  "from": 0,
+  "to": 74,
+  "parts": [
+   "Right Arm",
+   "Left Arm"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.22,
+  "cap": 0.22,
+  "measured": 0.2734
+ },
+ {
+  "why": "PROPOSED (rigid-thigh class, as on the entry): thighs over the bucket's bolster and cushion edge while the body slides out",
+  "from": 74,
+  "to": 102,
+  "parts": [
+   "Right Leg",
+   "Left Leg"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.172,
+  "cap": 0.2,
+  "measured": 0.1719
+ },
+ {
+  "why": "DECIDED (coordinator): the blocky legs at their least-deep pose in the bucket, under the wheel",
+  "from": 0,
+  "to": 76,
+  "parts": [
+   "Right Leg",
+   "Left Leg"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.17,
+  "cap": 0.17,
+  "measured": 0.2446
+ },
+ {
+  "why": "right hand flat on the door card, tugging the door in",
+  "from": 229,
+  "to": 243,
+  "parts": [
+   "Right Arm"
+  ],
+  "groups": [
+   "door"
+  ],
+  "depth": 0.1157,
+  "cap": 0.12,
+  "measured": 0.1156
+ },
+ {
+  "why": "DECIDED (coordinator, owner's overnight mandate): the left blocky arm at the hand-over pose against the stowed window net and the upper door bar",
+  "from": 0,
+  "to": 20,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "cage"
+  ],
+  "depth": 0.2038,
+  "cap": 0.206,
+  "measured": 0.2037
+ },
+ {
+  "why": "DECIDED (coordinator, owner's overnight mandate): the left blocky arm at the hand-over pose against the door card",
+  "from": 0,
+  "to": 20,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "door"
+  ],
+  "depth": 0.2112,
+  "cap": 0.212,
+  "measured": 0.2111
+ },
+ {
+  "why": "DEVIATION, approved by the coordinator: the left arm coming off the hand-over pose toward the push, at the hand-over depths, two frames past the hand-over (a smooth departure instead of a one-frame pop)",
+  "from": 21,
+  "to": 22,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "cage"
+  ],
+  "depth": 0.1847,
+  "cap": 0.206,
+  "measured": 0.1846
+ },
+ {
+  "why": "DEVIATION, approved by the coordinator: the left arm coming off the hand-over pose toward the push, at the hand-over depths, two frames past the hand-over (a smooth departure instead of a one-frame pop)",
+  "from": 21,
+  "to": 22,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "door"
+  ],
+  "depth": 0.2088,
+  "cap": 0.212,
+  "measured": 0.2087
+ },
+ {
+  "why": "DEVIATION, approved by the coordinator: the left arm sliding along the door card from the hand-over pose to the push, at the hand-over depths (the limb planner found no clear pose of it f21-25)",
+  "from": 23,
+  "to": 25,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "cage"
+  ],
+  "depth": 0.1908,
+  "cap": 0.206,
+  "measured": 0.1907
+ },
+ {
+  "why": "DEVIATION, approved by the coordinator: the left arm sliding along the door card from the hand-over pose to the push, at the hand-over depths (the limb planner found no clear pose of it f21-25)",
+  "from": 23,
+  "to": 25,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "door"
+  ],
+  "depth": 0.2065,
+  "cap": 0.212,
+  "measured": 0.2064
+ },
+ {
+  "why": "DEVIATION, approved by the coordinator: the left arm on its hand-over pose as the body settles back after the push and until it rises (the entry's landing frame mirrored), at the hand-over depths (no clear pose of it f46-49 over its whole range, none f55-69 on the planner)",
+  "from": 46,
+  "to": 68,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "cage"
+  ],
+  "depth": 0.2038,
+  "cap": 0.206,
+  "measured": 0.2037
+ },
+ {
+  "why": "DEVIATION, approved by the coordinator: the left arm on its hand-over pose as the body settles back after the push and until it rises (the entry's landing frame mirrored), at the hand-over depths (no clear pose of it f46-49 over its whole range, none f55-69 on the planner)",
+  "from": 46,
+  "to": 68,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "door"
+  ],
+  "depth": 0.04,
+  "cap": 0.212,
+  "measured": 0.0
+ },
+ {
+  "why": "DECIDED (coordinator, option a): the entry's settle mirrored as the body rises, the right leg sliding under the wheel's rim",
+  "from": 69,
+  "to": 72,
+  "parts": [
+   "Right Leg"
+  ],
+  "groups": [
+   "wheel"
+  ],
+  "depth": 0.1379,
+  "cap": 0.1379,
+  "measured": 0.1378
+ },
+ {
+  "why": "DECIDED (coordinator, option a): the entry's settle mirrored as the body rises, the left leg sliding under the wheel's rim",
+  "from": 69,
+  "to": 72,
+  "parts": [
+   "Left Leg"
+  ],
+  "groups": [
+   "wheel"
+  ],
+  "depth": 0.0918,
+  "cap": 0.0918,
+  "measured": 0.0917
+ },
+ {
+  "why": "DECIDED (coordinator, option a): the entry's settle mirrored as the body rises, the right leg into the cushion",
+  "from": 69,
+  "to": 72,
+  "parts": [
+   "Right Leg"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.2447,
+  "cap": 0.2447,
+  "measured": 0.2446
+ },
+ {
+  "why": "DECIDED (coordinator, option a): the entry's settle mirrored as the body rises, the left leg into the cushion",
+  "from": 69,
+  "to": 72,
+  "parts": [
+   "Left Leg"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.2175,
+  "cap": 0.2175,
+  "measured": 0.2174
+ },
+ {
+  "why": "DECIDED (coordinator, option a): the entry's settle mirrored as the body rises, the left arm past the bolster",
+  "from": 69,
+  "to": 72,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.2735,
+  "cap": 0.2735,
+  "measured": 0.2734
+ },
+ {
+  "why": "DECIDED (coordinator, option a): the entry's settle mirrored as the body rises, the left arm onto the door bars",
+  "from": 69,
+  "to": 72,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "cage"
+  ],
+  "depth": 0.1166,
+  "cap": 0.1166,
+  "measured": 0.1165
+ }
+]

@@ -1,0 +1,276 @@
+[
+ {
+  "why": "right hand on the door's pull, pulling (the pull is just ahead of the shut line: the hand also lies on the body behind it, as the SVJ's release hand does)",
+  "from": 33,
+  "to": 46,
+  "parts": [
+   "Right Arm"
+  ],
+  "groups": [
+   "door",
+   "body"
+  ],
+  "depth": 0.1457,
+  "cap": 0.15,
+  "measured": 0.1456
+ },
+ {
+  "why": "hands on the door bars and the bucket, leaning in, pushing up, turning",
+  "from": 138,
+  "to": 180,
+  "parts": [
+   "Right Arm",
+   "Left Arm"
+  ],
+  "groups": [
+   "cage",
+   "seat"
+  ],
+  "depth": 0.1497,
+  "cap": 0.15,
+  "measured": 0.1496
+ },
+ {
+  "why": "PROPOSED (rigid-thigh class): thighs over the sill and the door bars while the legs swing in",
+  "from": 144,
+  "to": 188,
+  "parts": [
+   "Right Leg",
+   "Left Leg"
+  ],
+  "groups": [
+   "cage",
+   "sill"
+  ],
+  "depth": 0.2499,
+  "cap": 0.25,
+  "measured": 0.2498
+ },
+ {
+  "why": "PROPOSED: the bottom across the door bars while sitting and turning on them, the torso's side on them sliding in",
+  "from": 144,
+  "to": 186,
+  "parts": [
+   "Torso"
+  ],
+  "groups": [
+   "cage"
+  ],
+  "depth": 0.1592,
+  "cap": 0.16,
+  "measured": 0.1591
+ },
+ {
+  "why": "PROPOSED (rigid-thigh class): thighs over the bucket's bolster and cushion edge while the body slides in",
+  "from": 162,
+  "to": 182,
+  "parts": [
+   "Right Leg",
+   "Left Leg"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.172,
+  "cap": 0.2,
+  "measured": 0.1719
+ },
+ {
+  "why": "DECIDED (owner, option D): torso sides into the bucket's bolsters, 5.5 cm seated",
+  "from": 170,
+  "to": 232,
+  "parts": [
+   "Torso"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.2587,
+  "cap": 0.261,
+  "measured": 0.2586
+ },
+ {
+  "why": "DECIDED (seated pose): head on the headrest pad: 0.0589 on the house checker's 0.05-stud cloud, 0.060 on a 0.04-stud one (its 0.62-stud head box; the seated check's smaller box measured 0.89 cm)",
+  "from": 192,
+  "to": 232,
+  "parts": [
+   "Head"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.0598,
+  "cap": 0.061,
+  "measured": 0.0597
+ },
+ {
+  "why": "DECIDED (coordinator, B): the blocky arms at their hand-over pose beside the torso, into the bucket's bolsters as the torso's sides are",
+  "from": 184,
+  "to": 232,
+  "parts": [
+   "Right Arm",
+   "Left Arm"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.22,
+  "cap": 0.22,
+  "measured": 0.2734
+ },
+ {
+  "why": "DECIDED (coordinator): the blocky legs at their least-deep pose in the bucket, under the wheel",
+  "from": 182,
+  "to": 232,
+  "parts": [
+   "Right Leg",
+   "Left Leg"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.17,
+  "cap": 0.17,
+  "measured": 0.2446
+ },
+ {
+  "why": "DECIDED (coordinator, option a): the settle as the body lands, the right leg sliding under the wheel's rim",
+  "from": 186,
+  "to": 189,
+  "parts": [
+   "Right Leg"
+  ],
+  "groups": [
+   "wheel"
+  ],
+  "depth": 0.1379,
+  "cap": 0.1379,
+  "measured": 0.1378
+ },
+ {
+  "why": "DECIDED (coordinator, option a): the settle as the body lands, the left leg sliding under the wheel's rim",
+  "from": 186,
+  "to": 189,
+  "parts": [
+   "Left Leg"
+  ],
+  "groups": [
+   "wheel"
+  ],
+  "depth": 0.0918,
+  "cap": 0.0918,
+  "measured": 0.0917
+ },
+ {
+  "why": "DECIDED (coordinator, option a): the settle as the body lands, the right leg into the cushion",
+  "from": 186,
+  "to": 189,
+  "parts": [
+   "Right Leg"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.2447,
+  "cap": 0.2447,
+  "measured": 0.2446
+ },
+ {
+  "why": "DECIDED (coordinator, option a): the settle as the body lands, the left leg into the cushion",
+  "from": 186,
+  "to": 189,
+  "parts": [
+   "Left Leg"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.2175,
+  "cap": 0.2175,
+  "measured": 0.2174
+ },
+ {
+  "why": "DECIDED (coordinator, option a): the settle as the body lands, the left arm past the bolster",
+  "from": 186,
+  "to": 189,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.2735,
+  "cap": 0.2735,
+  "measured": 0.2734
+ },
+ {
+  "why": "DECIDED (coordinator, option a): the settle as the body lands, the left arm onto the door bars",
+  "from": 186,
+  "to": 189,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "cage"
+  ],
+  "depth": 0.1166,
+  "cap": 0.1166,
+  "measured": 0.1165
+ },
+ {
+  "why": "DECIDED (coordinator, owner's overnight mandate): the left blocky arm at the hand-over pose against the stowed window net and the upper door bar",
+  "from": 226,
+  "to": 232,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "cage"
+  ],
+  "depth": 0.2039,
+  "cap": 0.206,
+  "measured": 0.2038
+ },
+ {
+  "why": "DECIDED (coordinator, owner's overnight mandate): the left blocky arm at the hand-over pose against the door card",
+  "from": 226,
+  "to": 232,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "door"
+  ],
+  "depth": 0.2111,
+  "cap": 0.212,
+  "measured": 0.211
+ },
+ {
+  "why": "DEVIATION, approved by the coordinator: the left arm on its hand-over pose from the landing in the bucket, at the hand-over depths, while the door shuts (the limb planner found no pose of it in reach clear of the bars, the net and the bucket from f190 on)",
+  "from": 190,
+  "to": 225,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "cage"
+  ],
+  "depth": 0.2039,
+  "cap": 0.206,
+  "measured": 0.2038
+ },
+ {
+  "why": "DEVIATION, approved by the coordinator: the left arm on its hand-over pose from the landing in the bucket, at the hand-over depths, while the door shuts (the limb planner found no pose of it in reach clear of the bars, the net and the bucket from f190 on)",
+  "from": 190,
+  "to": 225,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "door"
+  ],
+  "depth": 0.2111,
+  "cap": 0.212,
+  "measured": 0.211
+ }
+]
