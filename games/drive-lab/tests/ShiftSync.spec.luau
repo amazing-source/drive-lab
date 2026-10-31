@@ -67,6 +67,20 @@ describe("ShiftSync", function()
 		end
 	end)
 
+	it("parks the lever where a fresh drive's first frame puts it, so sitting in moves nothing", function()
+		local column, row, knob = ShiftSync.parked(GATES)
+		local sim = DriveSim.new(Boss302)
+		local result =
+			DriveSim.frame(sim, DriveSim.input({ gearboxMode = "auto", drivingMode = "Normal" }), 1 / 60)
+		local readout = ShiftSync.readout(result.telemetry, sim.model.gearbox.hbox, GATES)
+		expect(column).toBe(readout.LeverColumn)
+		expect(row).toBe(readout.LeverRow)
+		expect(knob).toBe(readout.KnobDown)
+		-- On the Boss that is first's gate, forward and left: a parked manual is left in gear.
+		expect(column).toBe(GATES[1].column)
+		expect(row).toBe(GATES[1].row)
+	end)
+
 	it(
 		"moves the lever along the shift running and pushes the knob down only on the way into reverse",
 		function()

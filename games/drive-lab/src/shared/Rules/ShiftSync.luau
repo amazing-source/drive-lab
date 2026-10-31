@@ -5,6 +5,7 @@
 	engages (the lever entering its gate, the "SHIFT" press of Rig/ControlPresses). Plain values, so
 	Lune can test it.
 ]]
+local Gearbox = require("../Vehicle/Gearbox")
 local HBox = require("../Vehicle/HBox")
 local Interface = require("../Vehicle/Interface")
 local ShiftPlan = require("../Vehicle/ShiftPlan")
@@ -61,6 +62,12 @@ function ShiftSync.lever(
 	end
 	local gate = gates[gear]
 	return gate.column, gate.row, 0
+end
+
+-- Where the lever rests on a car nobody drives: where a fresh drive's first frame puts it, in the
+-- gate of the gear the gearbox starts in (Vehicle/Gearbox), so sitting in moves nothing.
+function ShiftSync.parked(gates: { [number]: Types.Gate }): (number, number, number)
+	return ShiftSync.lever(HBox.newState(), gates, Gearbox.newState().gear)
 end
 
 -- Whether a shift's gear engaged between the frame whose gear was `previousGear` and this one: the

@@ -3,7 +3,8 @@
 	The driven car's gear lever, drawn from its driver's shift readouts (LeverColumn, LeverRow and
 	KnobDown, Controllers/Driving): turned about its pivot to its place in the H, its knob pushed
 	down into reverse's lockout (Rules/ShiftHand, from the car's model binding). Local to the
-	driver's client: other clients see it at rest. Writes nothing but the lever's weld C0.
+	driver's client: other clients see it parked in the gate a drive starts in, as the server rigs it
+	(Car/CarRig). Writes nothing but the lever's weld C0.
 ]]
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -13,14 +14,14 @@ local Binding = require(ReplicatedStorage.Shared.Config.Cars.Binding)
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local ShiftHand = require(ReplicatedStorage.Shared.Rules.ShiftHand)
+local ShiftSync = require(ReplicatedStorage.Shared.Rules.ShiftSync)
 local Types = require(ReplicatedStorage.Shared.Config.Cars.Types)
-local Units = require(ReplicatedStorage.Shared.Units)
 
 type Drive = {
 	model: Model,
 	binding: Binding.CarModel,
 	lever: ShiftHand.Lever,
-	neutral: Types.Gate,
+	gates: { [number]: Types.Gate },
 	joint: CarRig.Hinged?,
 	-- The column, row and knob last written to the weld.
 	written: { number }?,
@@ -44,7 +45,8 @@ end
 local function park(current: Drive)
 	local joint = current.joint
 	if joint and joint.weld.Parent then
-		joint.weld.C0 = joint.rest
+		local column, row, knob = ShiftSync.parked(current.gates)
+		joint.weld.C0 = CarRig.leverC0(joint.rest, current.lever, column, row, knob)
 	end
 end
 
@@ -70,7 +72,7 @@ local function follow(): Drive?
 		model = model,
 		binding = entry.model,
 		lever = ShiftHand.leverFromBinding(shifter, manual.gates, entry.model.seat),
-		neutral = manual.gates[0],
+		gates = manual.gates,
 		joint = nil,
 		written = nil,
 		retry = 0,
@@ -102,18 +104,15 @@ local function update(dt: number)
 	if joint == nil then
 		return
 	end
-	local column = number(model, "LeverColumn", current.neutral.column)
-	local row = number(model, "LeverRow", current.neutral.row)
+	local parkedColumn, parkedRow = ShiftSync.parked(current.gates)
+	local column = number(model, "LeverColumn", parkedColumn)
+	local row = number(model, "LeverRow", parkedRow)
 	local knob = number(model, "KnobDown", 0)
 	local written = current.written
 	if written and written[1] == column and written[2] == row and written[3] == knob then
 		return
 	end
-	local turn, slide = ShiftHand.joint(current.lever, column, row, knob)
-	-- The weld's rest has the seat's axes (Car/CarRig), so the seat-frame joint applies as it is.
-	joint.weld.C0 = joint.rest
-		* CFrame.new(Vector3.new(slide.x, slide.y, slide.z) * Units.metresToStuds(1))
-		* CFrame.new(0, 0, 0, turn.x, turn.y, turn.z, turn.w)
+	joint.weld.C0 = CarRig.leverC0(joint.rest, current.lever, column, row, knob)
 	current.written = { column, row, knob }
 end
 

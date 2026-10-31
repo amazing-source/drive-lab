@@ -15,6 +15,8 @@ local Binding = require("../Config/Cars/Binding")
 local CarParts = require("../Rules/CarParts")
 local Geometry = require("../Vehicle/Geometry")
 local Hinge = require("../Rules/Hinge")
+local ShiftHand = require("../Rules/ShiftHand")
+local ShiftSync = require("../Rules/ShiftSync")
 local Types = require("../Config/Cars/Types")
 local Units = require("../Units")
 
@@ -226,7 +228,7 @@ local function hingeFrame(pivot: Hinge.CarPoint, axis: Hinge.CarPoint, bodyRaise
 end
 
 -- `rest` turns the part from its modelled pose to where it rests (Rules/Hinge.restAngle).
-local function hingeWeld(name: string, chassis: BasePart, part: BasePart, frame: CFrame, rest: number)
+local function hingeWeld(name: string, chassis: BasePart, part: BasePart, frame: CFrame, rest: number): Weld
 	local joint = Instance.new("Weld")
 	joint.Name = name
 	joint.Part0 = chassis
@@ -235,6 +237,7 @@ local function hingeWeld(name: string, chassis: BasePart, part: BasePart, frame:
 	joint.C1 = part.CFrame:ToObjectSpace(chassis.CFrame * frame)
 	joint:SetAttribute("RestC0", joint.C0)
 	joint.Parent = chassis
+	return joint
 end
 
 -- The drive-mode knob rides the steering wheel on its own Weld from the wheel's part, named after
@@ -538,9 +541,15 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: Binding.CarMo
 		knobWeld(chassis, wheelPart, knob.part, knob.frame, knob.rest)
 	end
 	local shifter = binding.shifter
+	local manual = if car.gearbox.kind == "manual" then car.gearbox.manual else nil
 	if shifter and leverPart then
 		local pivot = carSpace(shifter.pivot, shifter.pivot.up + binding.bodyRaise)
-		hingeWeld(leverPart.Name, chassis, leverPart, CFrame.new(pivot), 0)
+		local joint = hingeWeld(leverPart.Name, chassis, leverPart, CFrame.new(pivot), 0)
+		if manual then
+			local column, row, down = ShiftSync.parked(manual.gates)
+			local seated = ShiftHand.leverFromBinding(shifter, manual.gates, binding.seat)
+			joint.C0 = CarRig.leverC0(joint.C0, seated, column, row, down)
+		end
 	end
 	addHull(model, chassis, ground, binding.hullClearance)
 	addSeat(model, chassis, binding)
@@ -554,6 +563,21 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: Binding.CarMo
 		end
 	end
 	return CarRig.find(model, binding) :: Rig
+end
+
+-- The gear lever's weld C0 from its rest (the pivot with the seat's axes) with the lever at
+-- (`column`, `row`) and the knob pushed down by `knob` (Rules/ShiftHand).
+function CarRig.leverC0(
+	rest: CFrame,
+	lever: ShiftHand.Lever,
+	column: number,
+	row: number,
+	knob: number
+): CFrame
+	local turn, slide = ShiftHand.joint(lever, column, row, knob)
+	return rest
+		* CFrame.new(Vector3.new(slide.x, slide.y, slide.z) * Units.metresToStuds(1))
+		* CFrame.new(0, 0, 0, turn.x, turn.y, turn.z, turn.w)
 end
 
 -- A hinge weld and its rest C0, or nil while it or its part has not streamed in.
