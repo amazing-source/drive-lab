@@ -20,6 +20,7 @@ local DriverGestures = require("../DriverGestures")
 local DriverStartup = require("../DriverStartup")
 local Driving = require("../Driving")
 local ExhaustFlames = require("../../Rules/ExhaustFlames")
+local GearboxModes = require("../../Rules/GearboxModes")
 local HudDesign = require("../HudDesign")
 local RimBlur = require("../RimBlur")
 local StartupArms = require("../../Rules/StartupArms")
@@ -556,6 +557,7 @@ function Contract.features(entry: Entry): Features
 		escButton = entry.assists.escButton ~= nil,
 		launch = entry.physics.launch ~= nil,
 		cabinLight = entry.model.cabinLight ~= nil,
+		playerClutch = GearboxModes.offersClutch(entry.physics.gearbox, true),
 	}
 end
 

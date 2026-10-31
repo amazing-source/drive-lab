@@ -9,6 +9,7 @@ local Assists = require("../src/shared/Config/Cars/Boss302/Assists")
 local Boss302 = require("../src/shared/Config/Cars/Boss302/Physics")
 local DriveSim = require("../tools/DriveSim")
 local DriverAssists = require("../src/shared/Rules/DriverAssists")
+local InputHelp = require("../src/shared/Config/InputHelp")
 local Model = require("../src/shared/Vehicle/Model")
 local T = require("../../../tools/test/T")
 local Types = require("../src/shared/Config/Cars/Types")
@@ -232,6 +233,46 @@ describe("Boss 302's H box in the car", function()
 		end
 		expect(stalled).toBe(false)
 		expect(DriveSim.forwardSpeed(sim) > 5 * KMH).toBe(true)
+	end)
+
+	it("pulls away when the clutch key is let go with the accelerator held, stalls without it", function()
+		local function letGo(throttle: number): (boolean, number)
+			-- On the keyboard's pedal ramps, the key held down since before the start.
+			local sim = DriveSim.new(Boss302, InputHelp.keyboard)
+			sim.model.controls.clutch = 1
+			local stalled = false
+			while sim.time < 4 do
+				local key = if sim.time < 0.5 then 1 else 0
+				local input = DriveSim.input(
+					inputFor(
+						"Normal",
+						{ gearboxMode = "manualClutch", clutchPedal = key, throttle = throttle }
+					)
+				)
+				local frameStalled = DriveSim.frame(sim, input, DT).telemetry.stalled
+				stalled = stalled or frameStalled
+			end
+			return stalled, DriveSim.forwardSpeed(sim)
+		end
+		local stalled, speed = letGo(1)
+		expect(stalled).toBe(false)
+		expect(speed > 30 * KMH).toBe(true)
+		expect((letGo(0))).toBe(true)
+	end)
+
+	it("works the clutch key's pedal as a foot does: down at once, let up over the release time", function()
+		local sim = DriveSim.new(Boss302, InputHelp.keyboard)
+		local pedal = 0
+		while sim.time < 0.5 + InputHelp.keyboard.clutchReleaseTime / 2 do
+			local key = if sim.time < 0.5 then 1 else 0
+			local input =
+				DriveSim.input(inputFor("Normal", { gearboxMode = "manualClutch", clutchPedal = key }))
+			pedal = DriveSim.frame(sim, input, DT).telemetry.clutchPedal
+			if sim.time >= 0.25 and sim.time < 0.25 + DT then
+				expect(pedal).toBe(1)
+			end
+		end
+		expect(pedal).toBeNear(0.5, 2 * DT / InputHelp.keyboard.clutchReleaseTime)
 	end)
 
 	it("idles TracKey's lopey idle higher than Normal's", function()

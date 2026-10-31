@@ -311,6 +311,15 @@ local function start(car: Car, player: Player, request: Request)
 	end
 end
 
+-- The driver's car stalled (Rules/Stall): its engine stops, and the key it ran on goes with it.
+local function stall(car: Car, player: Player, _request: Request)
+	if driver(car) == player and Rules.canStall(CarState.read(car.model)) then
+		car.model:SetAttribute(ATTRIBUTE.ENGINE_AT, now())
+		car.model:SetAttribute(ATTRIBUTE.ENGINE, "Off")
+		car.model:SetAttribute(ATTRIBUTE.START_KEY, nil)
+	end
+end
+
 -- The player walked away or gave up before asking: their hold on the car ends.
 local function cancel(car: Car, player: Player, _request: Request)
 	local reservation = car.reservation
@@ -404,6 +413,7 @@ local HANDLERS: { [Rules.Action]: (Car, Player, Request) -> () } = {
 	Door = moveDoor,
 	Start = start,
 	Cancel = cancel,
+	Stall = stall,
 }
 
 local function parseRequest(payload: unknown): Request?

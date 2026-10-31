@@ -21,6 +21,8 @@ export type Controls = {
 	throttle: number,
 	brake: number,
 	handbrake: number,
+	-- The clutch pedal (0 up, 1 down), which an H box reads in "manualClutch".
+	clutch: number,
 }
 
 -- Raw device values the filter reads: steer in [−1, 1], pedals in [0, 1].
@@ -29,6 +31,7 @@ export type RawControls = {
 	throttle: number,
 	brake: number,
 	handbrake: number,
+	clutch: number,
 }
 
 local InputFilter = {}
@@ -37,7 +40,7 @@ local InputFilter = {}
 local STEER_STEP = 1 / 240
 
 function InputFilter.newState(): Controls
-	return { steer = 0, steerVelocity = 0, throttle = 0, brake = 0, handbrake = 0 }
+	return { steer = 0, steerVelocity = 0, throttle = 0, brake = 0, handbrake = 0, clutch = 0 }
 end
 
 function InputFilter.shape(help: InputHelp.InputHelp, value: number): number
@@ -171,6 +174,8 @@ function InputFilter.update(
 	state.brake = ramp(state.brake, math.clamp(raw.brake, 0, 1), help.brakeRiseTime, help.brakeFallTime, dt)
 	state.handbrake =
 		ramp(state.handbrake, math.clamp(raw.handbrake, 0, 1), help.brakeRiseTime, help.brakeFallTime, dt)
+	state.clutch =
+		ramp(state.clutch, math.clamp(raw.clutch, 0, 1), help.clutchPressTime, help.clutchReleaseTime, dt)
 end
 
 return table.freeze(InputFilter)

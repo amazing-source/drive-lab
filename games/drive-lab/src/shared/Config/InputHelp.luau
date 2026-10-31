@@ -37,6 +37,10 @@ export type InputHelp = {
 	throttleFallTime: number,
 	brakeRiseTime: number,
 	brakeFallTime: number,
+	-- Seconds for the clutch key's pedal to go down, and to come back up as a foot lets it out,
+	-- in the clutch mode (Vehicle/HBox).
+	clutchPressTime: number,
+	clutchReleaseTime: number,
 	-- Seconds the brake, held on its own at a standstill in automatic, takes to select reverse,
 	-- and the accelerator in reverse to select first; in reverse the pedals swap, as GTA and Forza
 	-- do (Vehicle/Selector). nil: the pedals select nothing and keep their meaning.
@@ -47,6 +51,7 @@ export type InputHelp = {
 -- selects nothing; shorter than the exit's hold (Config/CarEntry), so reversing is not slower
 -- than getting out.
 local REVERSE_HOLD_SECONDS = 0.3
+local CLUTCH_RELEASE_SECONDS = 0.8
 
 local InputHelp = {}
 
@@ -75,6 +80,10 @@ InputHelp.keyboard = table.freeze({
 	throttleFallTime = 0.1,
 	brakeRiseTime = 0.12,
 	brakeFallTime = 0.08,
+	-- EST: a foot stabs the clutch down, then lets it out over CLUTCH_RELEASE s, slow enough through
+	-- the bite to pull away with some throttle when the key is let go.
+	clutchPressTime = 0.08,
+	clutchReleaseTime = CLUTCH_RELEASE_SECONDS,
 	reverseHoldTime = REVERSE_HOLD_SECONDS,
 }) :: InputHelp
 
@@ -96,6 +105,9 @@ InputHelp.gamepad = table.freeze({
 	throttleFallTime = 0.05,
 	brakeRiseTime = 0.05,
 	brakeFallTime = 0.05,
+	-- A pad has no clutch key (Rules/GearboxModes); the keyboard's, should one be bound.
+	clutchPressTime = 0.08,
+	clutchReleaseTime = CLUTCH_RELEASE_SECONDS,
 	reverseHoldTime = REVERSE_HOLD_SECONDS,
 }) :: InputHelp
 
@@ -116,6 +128,8 @@ InputHelp.direct = table.freeze({
 	throttleFallTime = 0,
 	brakeRiseTime = 0,
 	brakeFallTime = 0,
+	clutchPressTime = 0,
+	clutchReleaseTime = 0,
 }) :: InputHelp
 
 return table.freeze(InputHelp)

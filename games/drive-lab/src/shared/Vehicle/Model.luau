@@ -125,7 +125,7 @@ function Model.new(car: CarConfig, help: InputHelp.InputHelp?): VehicleState
 		controls = InputFilter.newState(),
 		selector = Selector.newState(),
 		launch = Launch.newState(),
-		pedals = { steer = 0, throttle = 0, brake = 0, handbrake = 0 },
+		pedals = { steer = 0, throttle = 0, brake = 0, handbrake = 0, clutch = 0 },
 		engineState = Engine.newState(engine),
 		gearbox = Gearbox.newState(),
 		drive = Driveline.newState(engine.idleSpeed),
@@ -207,7 +207,7 @@ local function gearboxContext(
 	context.brake = state.controls.brake
 	context.mode = state.car.modes[input.drivingMode]
 	context.gearboxMode = input.gearboxMode
-	context.clutchPedal = input.clutchPedal or 0
+	context.clutchPedal = state.controls.clutch
 	local launch = state.car.launch
 	context.holdGear = state.launch.phase == "Launching" and launch ~= nil and not launch.autoUpshift
 		or Drift.engaged(state.drift)
@@ -538,7 +538,7 @@ local function buildResult(state: VehicleState, chassis: ChassisMotion, dt: numb
 			shiftTo = if plan then plan.to else gearbox.gear,
 			shiftElapsed = if plan then hbox.time else 0,
 			stalled = hbox.stalled,
-			shiftRefused = hbox.refused,
+			shiftRefusal = hbox.refusal,
 		},
 	}
 end
