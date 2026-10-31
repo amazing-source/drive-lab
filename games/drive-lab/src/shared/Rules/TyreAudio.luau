@@ -205,8 +205,9 @@ local function mixShaping(into: Shaping, a: Shaping, b: Shaping, t: number)
 	into.high = a.high + (b.high - a.high) * t
 end
 
--- Advances the mix by `dt`. The ceiling applies to the goal, before the view's gain, so the view
--- only ever makes the tyres quieter than the engine's own view shaping already does.
+-- Advances the mix by `dt`. The ceiling applies to the volumes that play, after the easing and the
+-- view's gain: an engine that falls faster than the release (a lock-up opening the clutch) still
+-- has the tyres under it the same frame.
 function TyreAudio.step(state: State, input: Input, dt: number): Mix
 	local tuning, mix = state.tuning, state.mix
 	local insideGoal = if input.cockpit then 1 else 0
@@ -225,9 +226,9 @@ function TyreAudio.step(state: State, input: Input, dt: number): Mix
 	local wetness = finite(input.wetness)
 	local front = if input.driving then TyreAudio.axle(tuning, input.front, wetness) else quietAxle(tuning)
 	local rear = if input.driving then TyreAudio.axle(tuning, input.rear, wetness) else quietAxle(tuning)
-	TyreAudio.limit(front, rear, cap)
 	stepAxle(mix.front, front, gainSqueal, gainSkid, tuning, dt)
 	stepAxle(mix.rear, rear, gainSqueal, gainSkid, tuning, dt)
+	TyreAudio.limit(mix.front, mix.rear, cap)
 	return mix
 end
 

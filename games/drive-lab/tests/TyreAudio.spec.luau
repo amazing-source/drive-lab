@@ -126,6 +126,20 @@ describe("Tyre audio mix", function()
 		expect(EngineSound.level({ volumes = { 0.3, 0.4 }, speeds = { 1, 1 } })).toBeNear(0.5, 1e-12)
 	end)
 
+	it("holds the ceiling the very next frame when the engine drops faster than the release", function()
+		local state = TyreAudio.new(TUNING)
+		local given = input(axle(4, 12))
+		given.front = axle(4, 12)
+		for _ = 1, 120 do
+			TyreAudio.step(state, given, DT)
+		end
+		given.engineLevel = 0.25
+		local mix = TyreAudio.step(state, given, DT)
+		local level =
+			math.sqrt(mix.front.squeal ^ 2 + mix.front.skid ^ 2 + mix.rear.squeal ^ 2 + mix.rear.skid ^ 2)
+		expect(level <= TyreAudio.ceiling(TUNING, 0.25) + 1e-9).toBe(true)
+	end)
+
 	it("lowers the ceiling 6 dB when the engine plays at half its loudness", function()
 		local full = { volumes = { 0.4, 0.3 }, speeds = { 1, 1 } }
 		local half = { volumes = { 0.2, 0.15 }, speeds = { 1, 1 } }

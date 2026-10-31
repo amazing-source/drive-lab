@@ -1,30 +1,32 @@
 Break: no lock-up cut (games/drive-lab/src/shared/Rules/TyreAudio.luau)
-  13 passed, 1 failed
+  14 passed, 1 failed
   FAIL Tyre audio layers > trades most of the squeal for the skid on a lock-up: tests/TyreAudio.spec:64: expected true, got false
 Break: no wet fade (games/drive-lab/src/shared/Rules/TyreAudio.luau)
-  13 passed, 1 failed
+  14 passed, 1 failed
   FAIL Tyre audio layers > fades out on a wet road over the smoke's range: tests/TyreAudio.spec:70: expected 0, got 1
 Break: no ceiling (games/drive-lab/src/shared/Rules/TyreAudio.luau)
-  13 passed, 1 failed
+  13 passed, 2 failed
   FAIL Tyre audio mix > keeps all four loops the headroom under what the engine plays, at every rpm, throttle and slip: tests/TyreAudio.spec:117: expected true, got false
+  FAIL Tyre audio mix > holds the ceiling the very next frame when the engine drops faster than the release: tests/TyreAudio.spec:140: expected true, got false
 Break: ceiling per axle, not car-wide (games/drive-lab/src/shared/Rules/TyreAudio.luau)
-  13 passed, 1 failed
+  13 passed, 2 failed
   FAIL Tyre audio mix > keeps all four loops the headroom under what the engine plays, at every rpm, throttle and slip: tests/TyreAudio.spec:117: expected true, got false
+  FAIL Tyre audio mix > holds the ceiling the very next frame when the engine drops faster than the release: tests/TyreAudio.spec:140: expected true, got false
 Break: engine level summed, not as one amplitude (games/drive-lab/src/shared/Rules/EngineSound.luau)
-  13 passed, 1 failed
+  14 passed, 1 failed
   FAIL Tyre audio mix > adds the engine's loops as powers into one amplitude: tests/TyreAudio.spec:126: expected 0.5 within 1e-12, got 0.7
 Break: no attack smoothing (games/drive-lab/src/shared/Rules/TyreAudio.luau)
-  13 passed, 1 failed
-  FAIL Tyre audio mix > makes next to nothing of a one-frame spike in the slip: tests/TyreAudio.spec:152: expected true, got false
+  14 passed, 1 failed
+  FAIL Tyre audio mix > makes next to nothing of a one-frame spike in the slip: tests/TyreAudio.spec:166: expected true, got false
 Break: plays while nobody drives (games/drive-lab/src/shared/Rules/TyreAudio.luau)
-  13 passed, 1 failed
-  FAIL Tyre audio mix > is silent while nobody drives: tests/TyreAudio.spec:141: expected 0 within 0.000001, got 0.4022397648975224
+  14 passed, 1 failed
+  FAIL Tyre audio mix > is silent while nobody drives: tests/TyreAudio.spec:155: expected 0 within 0.000001, got 0.4022397648975224
 Break: no cockpit gain (games/drive-lab/src/shared/Rules/TyreAudio.luau)
-  13 passed, 1 failed
-  FAIL Tyre audio mix > plays quieter in the cockpit: tests/TyreAudio.spec:160: expected true, got false
+  14 passed, 1 failed
+  FAIL Tyre audio mix > plays quieter in the cockpit: tests/TyreAudio.spec:174: expected true, got false
 Break: first tyre only, not the noisier (games/drive-lab/src/shared/Rules/TyreAudio.luau)
-  13 passed, 1 failed
+  14 passed, 1 failed
   FAIL Tyre audio layers > follows the axle's noisier tyre: tests/TyreAudio.spec:92: expected 0, got 0.45
 Break: skid needs no slide (games/drive-lab/src/shared/Rules/TyreAudio.luau)
-  13 passed, 1 failed
+  14 passed, 1 failed
   FAIL Tyre audio layers > needs the patch to slide for the skid: a creeping wheel past its peak slip only squeals: tests/TyreAudio.spec:78: expected 0, got 1
