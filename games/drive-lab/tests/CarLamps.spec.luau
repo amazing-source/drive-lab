@@ -62,6 +62,13 @@ describe("Car lamps: the DR458", function()
 		expect(Catalog.cars.DR458.flames).toBe(DR458Flames)
 	end)
 
+	it("keeps its lamp lenses out of the cockpit glazing, which turns its glass see-through", function()
+		expect(#DR458Model.glazing > 0).toBe(true)
+		for _, name in DR458Model.glazing do
+			expect(string.find(name, "^Lights?_")).toBe(nil)
+		end
+	end)
+
 	it("waits only for light pieces its model has: both projectors and both tail rings", function()
 		local parts = modelParts()
 		expect(#DR458.required > 0).toBe(true)
