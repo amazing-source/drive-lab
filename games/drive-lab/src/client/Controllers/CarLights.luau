@@ -84,15 +84,22 @@ local function toggleIndicator(side: Rules.Side)
 	indicatorSince = os.clock()
 end
 
+-- The cabin light's controls do nothing in a car whose model has no cabin lamp.
+local function hasCabinLight(model: Model?): boolean
+	local entry = model and Catalog.of(model)
+	return entry ~= nil and entry.model.cabinLight ~= nil
+end
+
 local function padButton(now: number)
 	local down = false
 	for _, key in Controls.LIGHTS_PAD do
 		down = down or UserInputService:IsGamepadButtonDown(Enum.UserInputType.Gamepad1, key)
 	end
-	local gesture = Rules.press(pad, down and drivenModel() ~= nil, now, Config.PAD_HOLD_SECONDS)
+	local driving = drivenModel()
+	local gesture = Rules.press(pad, down and driving ~= nil, now, Config.PAD_HOLD_SECONDS)
 	if gesture == "Tap" then
 		mode, highBeam = Rules.nextPadLights(mode, highBeam)
-	elseif gesture == "Hold" then
+	elseif gesture == "Hold" and hasCabinLight(driving) then
 		cabin = not cabin
 	end
 end
@@ -173,7 +180,7 @@ function Controller.start()
 			if entry and entry.switches.highBeam == "Toggle" then
 				highBeam = not highBeam
 			end
-		elseif table.find(Controls.CABIN_LIGHT, key) then
+		elseif table.find(Controls.CABIN_LIGHT, key) and hasCabinLight(drivenModel()) then
 			cabin = not cabin
 		elseif table.find(Controls.INDICATOR_LEFT, key) then
 			toggleIndicator("Left")

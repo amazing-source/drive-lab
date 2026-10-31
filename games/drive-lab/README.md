@@ -88,7 +88,7 @@ judgements and open gaps are in the commit that added it.
 | Headlights (auto, on, off) | H | tap D-pad down (auto, on, high beam, off) |
 | High beam on / off | J | a step of the D-pad down cycle above |
 | Indicators left / right | X / C | D-pad left / right |
-| Cabin light | L | hold D-pad down (no pad button is free while driving) |
+| Cabin light (a car with one: the SVJ) | L | hold D-pad down (no pad button is free while driving) |
 | HUD full / minimal / off | U | |
 | Controls screen (every control, with an (i) on each) | K | tap B (under 0.25 s; holding B stays the exit) |
 | Weather: clear day, rain by day, rain at night | N | |
@@ -146,5 +146,6 @@ changes: sync, then hand over.
 | 2026-10-30 | Swinging the wheel from one side to the other is 1.4 times as fast as turning in, at every speed (#81). On the move it took the quick return-to-centre pace instead, 4 to 5 times faster than turning in from 14 m/s, which the owner felt as an uncontrolled flick. |
 | 2026-10-30 | The DR458's binnacle is the owner's ChatGPT pack, drawn as the HUD is: the empty pages are the images, everything live is drawn over them at places measured off the pack (#106). The screen keeps its measured shape and the pages are centred on it, the sides in the page's own colours; TCS is red when OFF, POS stays OFF on its white pill, as in the pack and the photo. |
 | 2026-10-30 | The DR458's binnacle lights its first two rpm segments at idle, as the real screen does in photo `011` (the owner: stay realistic, #112). Two, not three: the count first reported was read off a reduced view. |
+| 2026-10-31 | A car without a cabin lamp offers no cabin-light control (#133): the DR458 has none (its bare roof, #126), so L and the gamepad's hold do nothing in it, and its controls screen shows neither the cabin light nor the hold. The SVJ keeps both. |
 
 Asset pipelines (how the walk, the car and the effects were made): `docs/pipelines/`.

@@ -23,8 +23,10 @@ export type Row = {
 	gamepadGesture: string?,
 	-- The cars (Config/Cars/Catalog names) this row is for; every car's when absent.
 	cars: { string }?,
-	-- A feature the car must have for the row to show (Config/Cars/Contract.features).
+	-- A feature the car must have for the row to show (Config/Cars/Contract.features), or must
+	-- lack: a row that says less on a car without it.
 	requires: string?,
+	lacks: string?,
 }
 
 export type Group = { title: string, rows: { Row } }
@@ -255,7 +257,8 @@ function ControlsHelp.forCar(
 		local rows: { Row } = {}
 		for _, row in group.rows do
 			local forCar = row.cars == nil or table.find(row.cars, car) ~= nil
-			local hasFeature = row.requires == nil or features[row.requires] == true
+			local hasFeature = (row.requires == nil or features[row.requires] == true)
+				and (row.lacks == nil or features[row.lacks] ~= true)
 			local hasControls = true
 			for _, control in row.controls do
 				hasControls = hasControls and carBindings[control] ~= nil

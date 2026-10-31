@@ -226,6 +226,7 @@ function Contract.features(entry: Entry): Features
 		displayPages = switches.displayPages ~= nil,
 		escButton = entry.assists.escButton ~= nil,
 		launch = entry.physics.launch ~= nil,
+		cabinLight = entry.model.cabinLight ~= nil,
 	}
 end
 
