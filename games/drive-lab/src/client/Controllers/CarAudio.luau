@@ -28,14 +28,13 @@ local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local DriveModes = require(ReplicatedStorage.Shared.Rules.DriveModes)
 local EngineSound = require(ReplicatedStorage.Shared.Rules.EngineSound)
 local ExhaustPops = require(ReplicatedStorage.Shared.Rules.ExhaustPops)
+local StartupHandOver = require(ReplicatedStorage.Shared.Rules.StartupHandOver)
 local Types = require(ReplicatedStorage.Shared.Config.Cars.Types)
 local Units = require(ReplicatedStorage.Shared.Units)
 
 local ExhaustFlames = require(script.Parent.Parent.Effects.ExhaustFlames)
 
 local STOP_FADE_SECONDS = 0.15
--- A start-up whose sound has not loaded by then is skipped rather than left holding the engine.
-local STARTUP_LOAD_TIMEOUT = 3
 -- A one-shot is removed when it ends, or this long after its region would have ended.
 local ONE_SHOT_GRACE = 5
 
@@ -63,17 +62,11 @@ type Session = {
 	-- The idle loop's volume at idle: each start-up is levelled against it.
 	idleLevel: number,
 	startup: Sound?,
-	-- The car's own start-up sound while it plays; nil while the events file's region plays.
-	startupSound: CarAudio.StartupSound?,
 	-- The playing start-up's volume at a full share.
 	startupVolume: number,
-	-- The car's own start-up sound has caught up with the engine since it loaded.
-	startupCaughtUp: boolean,
-	startedAt: number,
+	handOver: StartupHandOver.State?,
 	-- os.clock() at the START press.
 	pressedAt: number,
-	-- Engine share during the start-up, 0 to 1, once the start-up hands over early.
-	handedOver: number?,
 	dip: number,
 	limiterShare: number,
 	outside: number,
@@ -233,9 +226,8 @@ local function playRegion(current: Session, sincePress: number)
 		startup.TimePosition = settings.region.from + sincePress
 	end
 	current.startup = startup
-	current.startupSound = nil
 	current.startupVolume = volume
-	current.startedAt = os.clock()
+	current.handOver = StartupHandOver.new(settings, nil, current.pressedAt, os.clock())
 end
 
 -- The car's own start-up sound. Should it fail to load (it can be taken down), the events file's
@@ -244,15 +236,19 @@ local function playOwn(current: Session, own: CarAudio.StartupSound)
 	local volume = current.idleLevel * own.volume
 	local region = { from = own.from, to = own.to }
 	local startup = oneShot(current.pack, own.id, region, current.engineGroup, current.enginePoint, volume, 1)
+	local handOver = StartupHandOver.new(current.pack.startup, own, current.pressedAt, os.clock())
 	current.startup = startup
-	current.startupSound = own
 	current.startupVolume = volume
-	current.startupCaughtUp = false
-	current.startedAt = os.clock()
+	current.handOver = handOver
 	task.spawn(function()
 		ContentProvider:PreloadAsync({ startup }, function(_: string, status: Enum.AssetFetchStatus)
 			local failed = status == Enum.AssetFetchStatus.Failure or status == Enum.AssetFetchStatus.TimedOut
-			if not failed or session ~= current or current.startup ~= startup or current.handedOver then
+			if
+				not failed
+				or session ~= current
+				or current.startup ~= startup
+				or handOver.handedOver ~= nil
+			then
 				return
 			end
 			startup:Destroy()
@@ -261,67 +257,28 @@ local function playOwn(current: Session, own: CarAudio.StartupSound)
 	end)
 end
 
--- The engine's share while the start-up plays: none, then an equal-power hand-over as the
--- start-up's own fade-out begins, or a quick one if the driver revs it first or it never loads.
+-- The engine's share while the start-up plays (Rules/StartupHandOver).
 local function startupShare(current: Session, rpm: number, dt: number): number
-	local startup = current.startup
-	if startup == nil then
+	local startup, handOver = current.startup, current.handOver
+	if startup == nil or handOver == nil then
 		return 1
 	end
-	-- Playing is set by Play() itself, so unlike IsPlaying it is not false while the sound loads.
-	local ended = startup.Parent == nil or not startup.Playing
-	-- The car's own sound is removed as it ends: the load timeout below must not take that for a
-	-- sound that never loaded, which hands the engine back from silence.
-	if current.startupSound and current.handedOver == nil and ended then
-		current.startup = nil
-		return 1
+	local share, gain, seek = StartupHandOver.step(handOver, {
+		playing = startup.Parent ~= nil and startup.Playing,
+		loaded = startup.IsLoaded,
+		position = startup.TimePosition,
+	}, rpm, os.clock(), dt)
+	if seek then
+		startup.TimePosition = seek
 	end
-	local settings = current.pack.startup
-	local waited = os.clock() - current.startedAt
-	if
-		current.handedOver == nil
-		and (rpm > settings.abortRpm or (not startup.IsLoaded and waited > STARTUP_LOAD_TIMEOUT))
-	then
-		current.handedOver = 0
-	end
-	local handedOver = current.handedOver
-	if handedOver then
-		local step = EngineSound.blend(dt, settings.abortHalfLife)
-		startup.Volume *= 1 - step
-		local share = handedOver + (1 - handedOver) * step
-		current.handedOver = share
-		if share > 0.99 then
-			startup:Destroy()
-			current.startup = nil
-		end
-		return share
-	end
-	if not startup.IsLoaded then
-		return 0
-	end
-	if ended then
-		current.startup = nil
-		return 1
-	end
-	-- The car's own sound is not faded in its file: it is faded here, against the engine.
-	local own = current.startupSound
-	if own then
-		local position = startup.TimePosition
-		if not current.startupCaughtUp then
-			-- A time position set before the sound loads is lost: it catches up with the engine
-			-- here, the starter cut short by however late it loaded.
-			current.startupCaughtUp = true
-			position = own.from + os.clock() - current.pressedAt
-			startup.TimePosition = position
-		end
-		local share, gain = EngineSound.handOver(own.handOver, own.to, position)
+	if gain then
 		startup.Volume = current.startupVolume * gain
-		return share
 	end
-	local length = settings.region.to - settings.region.from
-	local elapsed = startup.TimePosition - settings.region.from
-	local progress = math.clamp((elapsed - settings.handOver) / (length - settings.handOver), 0, 1)
-	return math.sin(progress * math.pi / 2)
+	if handOver.done then
+		startup:Destroy()
+		current.startup = nil
+	end
+	return share
 end
 
 local function update(current: Session, dt: number)
@@ -455,12 +412,9 @@ local function start(model: Model, entry: Catalog.Entry, sincePress: number)
 		exhaustPoint = exhaustPoint,
 		idleLevel = pack.engineVolume * idle.volume * EngineSound.loudness(pack.engineTuning, idle.rpm),
 		startup = nil,
-		startupSound = nil,
 		startupVolume = 0,
-		startupCaughtUp = false,
-		startedAt = os.clock(),
+		handOver = nil,
 		pressedAt = os.clock() - sincePress,
-		handedOver = nil,
 		dip = 1,
 		limiterShare = 0,
 		outside = 1,
