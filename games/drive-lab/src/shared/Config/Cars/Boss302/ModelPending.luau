@@ -20,7 +20,6 @@ return {
 	"glazing: the manifest has no Glass_RearScreen",
 	"glazing: the manifest has no Glass_Windscreen",
 	"lamps: no exterior lamps in the manifest",
-	"seat: the manifest has no point Driver_HPoint",
 	"steering wheel: the manifest has no SteeringWheel",
 	"the 3D model: the promoted manifest and the import (this binding is from the cockpit parts draft)",
 	"the driver's shift animation (Shift.luau: the reach, release and foot timings)",

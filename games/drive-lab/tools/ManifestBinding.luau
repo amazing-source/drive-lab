@@ -36,6 +36,8 @@ export type Part = {
 	-- The knob's ball with the lever in neutral, and how far it goes down into reverse's lockout.
 	knob: { centre: Point, radius_m: number }?,
 	push_m: number?,
+	-- The knob centre's offset from its neutral place in each gate (Blender's own gate pose); specs only.
+	knob_offset_m: { [string]: Point }?,
 }
 
 -- Named points with no part, such as the driver's hip point.
