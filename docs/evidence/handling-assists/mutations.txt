@@ -1,0 +1,42 @@
+Deliberate breaks (tools/test runner on the named specs, each file restored from git after its run):
+== M1 detector never fires (SlideAssist.luau; specs SlideAssist, Handling): 11 passed, 10 failed
+   FAIL Slide assist detector > counts the rear past its start only while it slides more than the front: games/drive-lab/tests/SlideAssist.spec:56: expected 0.5 within 1e-09, got 0
+   FAIL Slide assist detector > counts the yaw rate past its start off ESC's reference: games/drive-lab/tests/SlideAssist.spec:73: expected 0.4999999999999997 within 1e-09, got 0
+   FAIL Slide assist stands aside > takes the steering in the same slide at Forgiving: games/drive-lab/tests/SlideAssist.spec:212: expected false, got true
+   FAIL Slide assist catches > Balanced: a light brake and full throttle in a held corner, on every row: games/drive-lab/tests/Handling.spec:111: SVJ Corsa ESC off: brake 66.50126533463798
+== M2 assist always on (InputFilter.luau; specs Handling): 7 passed, 2 failed
+   FAIL Slide assist catches > lets the tail out further at Balanced than at Forgiving, and less than at Realistic: games/drive-lab/tests/Handling.spec:151: SVJ Corsa ESC off
+   FAIL Slide assist leaves normal driving alone > never acts in a turn-in or a keyboard lane change, which drive exactly as at Realistic: games/drive-lab/tests/Handling.spec:164: SVJ Corsa ESC of
+== M3 no yaw damping (SlideAssist.luau; specs SlideAssist, Handling): 14 passed, 7 failed
+   FAIL Slide assist detector > steers to the front axle's path, less the yaw damping: games/drive-lab/tests/SlideAssist.spec:94: expected -0.1723358192884562 within 1e-12, got -0.0950188092530890
+   FAIL Slide assist catches > Balanced: a light brake and full throttle in a held corner, on every row: games/drive-lab/tests/Handling.spec:112: DR458 OFF: power 32.349618345645496
+   FAIL Slide assist catches > Balanced: a 20° slide on the keys, on a stick and hands off, with the systems off: games/drive-lab/tests/Handling.spec:121: SVJ Corsa ESC off, keys: settle inf, ove
+   FAIL Slide assist catches > Balanced: a 20° slide on the keys at 30 and 120 FPS, with the systems off: games/drive-lab/tests/Handling.spec:134: SVJ Corsa ESC off at 30 FPS: settle inf, over 89
+== M4 no hold (SlideAssist.luau; specs SlideAssist, Handling): 16 passed, 5 failed
+   FAIL Slide assist detector > holds a slide's share and hands it back over the hold time, never below nothing: games/drive-lab/tests/SlideAssist.spec:82: expected 0.75 within 1e-12, got 0
+   FAIL Slide assist catches > Balanced: a 20° slide on the keys, on a stick and hands off, with the systems off: games/drive-lab/tests/Handling.spec:121: SVJ Corsa ESC off, keys: settle inf, ove
+   FAIL Slide assist catches > Balanced: a 20° slide on the keys at 30 and 120 FPS, with the systems off: games/drive-lab/tests/Handling.spec:134: SVJ Corsa ESC off at 30 FPS: settle inf, over 24
+   FAIL Slide assist catches > Forgiving: a 20° slide on the keys, on a stick and hands off, with the systems off: games/drive-lab/tests/Handling.spec:121: SVJ Corsa ESC off, keys: settle inf, ov
+== M5 no quick rate (InputFilter.luau; specs Handling): 2 passed, 7 failed
+   FAIL Slide assist catches > Balanced: a light brake and full throttle in a held corner, on every row: games/drive-lab/tests/Handling.spec:111: SVJ Corsa ESC off: brake 89.74664295767394
+   FAIL Slide assist catches > Balanced: a 20° slide on the keys, on a stick and hands off, with the systems off: games/drive-lab/tests/Handling.spec:121: SVJ Corsa ESC off, keys: settle inf, ove
+   FAIL Slide assist catches > Balanced: a 20° slide on the keys at 30 and 120 FPS, with the systems off: games/drive-lab/tests/Handling.spec:134: SVJ Corsa ESC off at 30 FPS: settle inf, over 0
+   FAIL Slide assist catches > Forgiving: a light brake and full throttle in a held corner, on every row: games/drive-lab/tests/Handling.spec:111: SVJ Corsa ESC off: brake 31.080002859865537
+== M6 drift stand-aside removed (Model.luau; specs SlideAssist): 11 passed, 1 failed
+   FAIL Slide assist stands aside > changes nothing while the drift button is held, frame for frame, through a slide: games/drive-lab/tests/SlideAssist.spec:206: expected true, got false
+== M7 no level reads as the default (Model.luau; specs SlideAssist): 10 passed, 2 failed
+   FAIL Slide assist stands aside > changes nothing at Realistic, frame for frame, through a slide: games/drive-lab/tests/SlideAssist.spec:200: expected true, got false
+   FAIL Slide assist stands aside > takes the steering in the same slide at Forgiving: games/drive-lab/tests/SlideAssist.spec:212: expected false, got true
+== M8 profile not validated (Types.luau; specs SlideAssist): 11 passed, 1 failed
+   FAIL Game-feel level > refuses a profile that misses a notch, sets Realistic, names a stranger or has no band: games/drive-lab/tests/SlideAssist.spec:140: expected the function to throw
+== M9 HUD flash never ends (GameFeel.luau; specs SlideAssist): 11 passed, 1 failed
+   FAIL Game-feel level > names the level on the HUD only for a moment after a change: games/drive-lab/tests/SlideAssist.spec:115: expected nil, got FORGIVING
+== M10 key steps backwards (GameFeel.luau; specs SlideAssist): 11 passed, 1 failed
+   FAIL Game-feel level > steps Realistic, Balanced, Forgiving and back, starting at Balanced: games/drive-lab/tests/SlideAssist.spec:104: expected Balanced, got Forgiving
+== M11 Forgiving yaw start back to 0.25 (Handling.luau; specs Handling): 8 passed, 1 failed
+   FAIL Slide assist leaves normal driving alone > never acts in a turn-in or a keyboard lane change, which drive exactly as at Realistic: games/drive-lab/tests/Handling.spec:170: DR458 1 lane 0.4
+== M12 understeer counted as a slide (SlideAssist.luau; specs SlideAssist): 11 passed, 1 failed
+   FAIL Slide assist detector > counts the rear past its start only while it slides more than the front: games/drive-lab/tests/SlideAssist.spec:62: expected 0, got 0.5
+== M13 controls screen row removed (ControlsHelp.luau; specs ControlsHelp): 16 passed, 1 failed
+   FAIL ControlsHelp > explains every control in Config/Controls with a label and one sentence, for each car: games/drive-lab/tests/ControlsHelp.spec:114: the SVJ's controls screen is incomplete: 
+

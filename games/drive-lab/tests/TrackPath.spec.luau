@@ -84,6 +84,32 @@ describe("TrackPath", function()
 	end)
 end)
 
+describe("TrackPath: a step's block", function()
+	it("measures the turn between two points, whichever way it bends", function()
+		local a: TrackPath.Point = { x = 0, z = 0, dirX = 0, dirZ = -1, s = 0 }
+		local right: TrackPath.Point = { x = 0, z = 0, dirX = math.sin(0.1), dirZ = -math.cos(0.1), s = 6 }
+		local left: TrackPath.Point = { x = 0, z = 0, dirX = -math.sin(0.1), dirZ = -math.cos(0.1), s = 6 }
+		expect(TrackPath.turn(a, right)).toBeNear(0.1, 1e-12)
+		expect(TrackPath.turn(a, left)).toBeNear(0.1, 1e-12)
+		expect(TrackPath.turn(a, a)).toBe(0)
+	end)
+
+	it("reaches past the step by the bend's opening at its outer edge and a metre", function()
+		expect(TrackPath.blockLength(6, 11, 0)).toBe(7)
+		expect(TrackPath.blockLength(6, 11, 0.05)).toBeNear(6 + 11 * 0.05 + 1, 1e-12)
+	end)
+
+	it("bends only on the Bends layout when not told", function()
+		local bending = 0
+		for s = Track.START_STRAIGHT, Track.START_STRAIGHT + 3000, 10 do
+			if TrackPath.curvature(s, Track.SEED) ~= 0 then
+				bending += 1
+			end
+		end
+		expect(bending > 0).toBe(Track.LAYOUT == "Bends")
+	end)
+end)
+
 describe("TrackPath: the road's start among several car spawns", function()
 	it("starts at the first spawn by name, whatever order they are found in", function()
 		expect(TrackPath.startIndex({ "Workspace.SVJ", "Workspace.ZCar" })).toBe(1)

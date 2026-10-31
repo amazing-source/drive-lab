@@ -1,12 +1,14 @@
 --!strict
 --[[
-	Lays the endless test road as terrain, a chunk at a time. A chunk is laid while any player is
-	within LOOKAHEAD of it and cleared once every player is beyond KEEP_BEHIND, so the road
-	reaches ahead of the fastest driver and also comes back, identical, under anyone who turns
-	round. Asphalt on the road and grass on the verges: the tyres feel the difference through
-	Config/Surfaces. Lane lines are thin parts on top, and street lamps stand on both verges
-	(Rules/StreetLamps), laid and cleared with their chunk; Controllers/StreetLights lights them.
-	The rest of the furniture and the marks on the asphalt come from the server's Roadside.
+	Lays the test road as terrain, a chunk at a time. On the endless layouts a chunk is laid while
+	any player is within LOOKAHEAD of it and cleared once every player is beyond KEEP_BEHIND, so
+	the road reaches ahead of the fastest driver and also comes back, identical, under anyone who
+	turns round. The circuit is laid whole at start, on a grass field with its river and bridges
+	(the server's Circuit), and stays. Asphalt on the road and grass beside it: the tyres feel the
+	difference through Config/Surfaces. Lane lines are thin parts on top, and street lamps stand on
+	both verges (Rules/StreetLamps), laid and cleared with their chunk; Controllers/StreetLights
+	lights them. The rest of the furniture and the marks on the asphalt come from the server's
+	Roadside.
 
 	It starts under the car, so it runs before Cars rigs it; the baseplate is replaced by a
 	concrete pad in the same terrain, since a part and terrain at one height flicker.
@@ -16,11 +18,18 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
+local Bridges = require(ReplicatedStorage.Shared.Rules.Bridges)
+local Circuit = require(script.Parent.Parent.Circuit)
+local CircuitConfig = require(ReplicatedStorage.Shared.Config.Circuit)
+local CircuitPath = require(ReplicatedStorage.Shared.Rules.Circuit)
 local Driving = require(ReplicatedStorage.Shared.Config.Driving)
 local Log = require(ReplicatedStorage.Kit.Log)
+local RoadsideConfig = require(ReplicatedStorage.Shared.Config.Roadside)
 local Roadside = require(script.Parent.Parent.Roadside)
-local Track = require(ReplicatedStorage.Shared.Config.Track)
+local RoadsideRules = require(ReplicatedStorage.Shared.Rules.Roadside)
+local Scatter = require(ReplicatedStorage.Shared.Rules.Scatter)
 local StreetLamps = require(ReplicatedStorage.Shared.Rules.StreetLamps)
+local Track = require(ReplicatedStorage.Shared.Config.Track)
 local TrackPath = require(ReplicatedStorage.Shared.Rules.TrackPath)
 local Units = require(ReplicatedStorage.Shared.Units)
 
@@ -40,6 +49,12 @@ local origin = Vector3.zero
 local surfaceLift = 0
 local busy = false
 local warnedLamp = false
+local isCircuit = Track.LAYOUT == "Circuit"
+-- The circuit's bridges, where verge furniture keeps off, and the guardrails leading onto them;
+-- empty on the endless layouts.
+local spans: { Bridges.Span } = {}
+local keepOut: { Scatter.Zone } = {}
+local approaches: { RoadsideRules.Piece } = {}
 
 local function studs(metres: number): number
 	return Units.metresToStuds(metres)
@@ -49,16 +64,14 @@ local function toWorld(point: TrackPath.Point): Vector3
 	return origin + Vector3.new(studs(point.x), 0, studs(point.z))
 end
 
--- A block along the step from a to b, its top at ground level. Longer than the step by what
--- the bend opens at its outer edge, so consecutive blocks leave no gap.
+-- A block along the step from a to b, its top at ground level, as long as TrackPath.blockLength.
 local function stepBlock(
 	a: TrackPath.Point,
 	b: TrackPath.Point,
 	width: number,
 	depth: number
 ): (CFrame, Vector3)
-	local turn = math.abs(math.atan2(a.dirX * b.dirZ - a.dirZ * b.dirX, a.dirX * b.dirX + a.dirZ * b.dirZ))
-	local length = Track.STEP + width * turn + 1
+	local length = TrackPath.blockLength(b.s - a.s, width, TrackPath.turn(a, b))
 	local mid = (toWorld(a) + toWorld(b)) / 2 - Vector3.new(0, studs(depth) / 2, 0)
 	local direction = Vector3.new(b.x - a.x, 0, b.z - a.z).Unit
 	return CFrame.lookAt(mid, mid + direction), Vector3.new(studs(width), studs(depth), studs(length))
@@ -120,7 +133,8 @@ local function placeLamps(chunk: Chunk, parent: Folder)
 	if template == nil then
 		return
 	end
-	local spots = StreetLamps.spots(chunk.from.s, chunk.points[#chunk.points].s, Track.SEED, Track.LAMPS)
+	local spots =
+		StreetLamps.spots(chunk.from.s, chunk.points[#chunk.points].s, Track.SEED, Track.LAMPS, keepOut)
 	for _, spot in spots do
 		local centre, along = frameAt(chunk, spot.s)
 		local right = Vector3.new(-along.Z, 0, along.X)
@@ -139,13 +153,20 @@ local function lay(chunk: Chunk)
 	local previous = chunk.from
 	local verge = Track.ROAD_WIDTH + 2 * Track.VERGE_WIDTH
 	for index, point in chunk.points do
-		local cframe, size = stepBlock(previous, point, verge, Track.GROUND_DEPTH)
-		terrain:FillBlock(cframe, size, Enum.Material.Grass)
-		cframe, size = stepBlock(previous, point, Track.ROAD_WIDTH, Track.GROUND_DEPTH)
-		terrain:FillBlock(cframe, size, Enum.Material.Asphalt)
+		-- The circuit's field is its verges.
+		if not isCircuit then
+			local cframe, size = stepBlock(previous, point, verge, Track.GROUND_DEPTH)
+			terrain:FillBlock(cframe, size, Enum.Material.Grass)
+		end
+		-- Over a river the bridge's deck is the road.
+		if Bridges.fullDepth(spans, previous, point, Track.ROAD_WIDTH, CircuitConfig.BRIDGE) then
+			local cframe, size = stepBlock(previous, point, Track.ROAD_WIDTH, Track.GROUND_DEPTH)
+			terrain:FillBlock(cframe, size, Enum.Material.Asphalt)
+		end
 		local edge = Track.ROAD_WIDTH / 2 - 0.4
-		line(lines, previous, point, -edge, Track.STEP + 0.2)
-		line(lines, previous, point, edge, Track.STEP + 0.2)
+		local length = point.s - previous.s
+		line(lines, previous, point, -edge, length + 0.2)
+		line(lines, previous, point, edge, length + 0.2)
 		if index % Track.DASH_EVERY == 0 then
 			line(lines, previous, point, 0, Track.DASH_LENGTH)
 		end
@@ -158,7 +179,7 @@ local function lay(chunk: Chunk)
 	lines.Parent = Workspace
 	Roadside.lay(function(s: number): (Vector3, Vector3)
 		return frameAt(chunk, s)
-	end, chunk.from.s, chunk.points[#chunk.points].s, Track.SEED, lines)
+	end, chunk.from.s, chunk.points[#chunk.points].s, Track.SEED, lines, keepOut, approaches)
 	chunk.lines = lines
 	chunk.laid = true
 end
@@ -270,13 +291,100 @@ local function layPad(centre: Vector3)
 	)
 end
 
+-- New terrain is not hit by raycasts until the next physics step: call a frame after laying the pad.
+local function measureLift(padCentre: Vector3, ground: number)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = { Workspace.Terrain }
+	local surface = Workspace:Raycast(padCentre + Vector3.new(0, 50, 0), Vector3.new(0, -100, 0), params)
+	if surface then
+		surfaceLift = surface.Position.Y - ground
+	else
+		log.warn("could not find the pad's surface; lane lines may sit off the road")
+	end
+end
+
+local function removeBaseplate()
+	local baseplate = Workspace:FindFirstChild("Baseplate")
+	if baseplate then
+		baseplate:Destroy()
+	end
+end
+
+local function circuitChunks(course: CircuitPath.Course): { Chunk }
+	local length = Track.STEP * Track.CHUNK_STEPS
+	local found = {}
+	local from = 0
+	while from < course.length do
+		local to = if course.length - (from + length) < Track.STEP then course.length else from + length
+		table.insert(found, {
+			from = CircuitPath.pointAt(course, from),
+			points = CircuitPath.points(course, from, to, Track.STEP),
+			laid = false,
+			lines = nil,
+		})
+		from = to
+	end
+	return found
+end
+
+-- Lays the whole circuit: the field and the pad now, so the cars have ground; the river, the
+-- bridges and the road over the next frames. Nothing is cleared afterwards.
+local function startCircuit(start: TrackPath.Point, padCentre: Vector3, ground: number)
+	local began = Workspace:GetServerTimeNow()
+	local course = CircuitPath.build(CircuitConfig.SEGMENTS, start)
+	local problems
+	spans, problems = Bridges.spans(
+		course,
+		CircuitConfig.RIVER,
+		CircuitConfig.BRIDGE,
+		Track.ROAD_WIDTH,
+		RoadsideConfig.GUARDRAILS
+	)
+	for _, problem in problems do
+		log.warn(`{problem}: the road crosses on full ground there`)
+	end
+	keepOut = Bridges.keepOut(spans, CircuitConfig.BRIDGE, RoadsideConfig.GUARDRAILS)
+	approaches =
+		Bridges.guardrailPieces(spans, 0, course.length, CircuitConfig.BRIDGE, RoadsideConfig.GUARDRAILS)
+	chunks = circuitChunks(course)
+	local site: Circuit.Site = { origin = origin, course = course }
+	local bounds = CircuitPath.bounds(course, CircuitConfig.FIELD_MARGIN, Track.STEP)
+	Circuit.layField(site, bounds)
+	layPad(padCentre)
+	log.info(
+		`circuit {math.round(course.length)} m in {#chunks} chunks, {#spans} bridges, start line at {origin}; field and pad in {string.format(
+			"%.2f",
+			Workspace:GetServerTimeNow() - began
+		)} s`
+	)
+	task.spawn(function()
+		task.wait()
+		measureLift(padCentre, ground)
+		Circuit.layRiver(site, bounds)
+		local bridges = Instance.new("Folder")
+		bridges.Name = "Bridges"
+		Circuit.layBridges(site, spans, surfaceLift, bridges)
+		bridges.Parent = Workspace
+		for _, chunk in chunks do
+			lay(chunk)
+		end
+		removeBaseplate()
+		log.info(`circuit laid {string.format("%.2f", Workspace:GetServerTimeNow() - began)} s after start`)
+	end)
+end
+
 local Service = {}
 
 function Service.start()
 	local carAt, direction, ground = startFrame()
-	-- The road starts a little behind the car, so the car stands on it.
+	-- The road starts a little behind the car, so the car stands on it; the circuit's start line
+	-- runs to the right of the parked cars instead.
 	local back = studs(30)
 	origin = Vector3.new(carAt.X, ground, carAt.Z) - direction * back
+	if isCircuit then
+		origin += Vector3.new(-direction.Z, 0, direction.X) * studs(CircuitConfig.OFFSET)
+	end
 	local spawnLocation = Workspace:FindFirstChildOfClass("SpawnLocation")
 	local padCentre = if spawnLocation
 		then (Vector3.new(spawnLocation.Position.X, ground, spawnLocation.Position.Z) + Vector3.new(
@@ -285,8 +393,12 @@ function Service.start()
 			carAt.Z
 		)) / 2
 		else Vector3.new(carAt.X, ground, carAt.Z)
-	layPad(padCentre)
 	local start: TrackPath.Point = { x = 0, z = 0, dirX = direction.X, dirZ = direction.Z, s = 0 }
+	if isCircuit then
+		startCircuit(start, padCentre, ground)
+		return
+	end
+	layPad(padCentre)
 	table.insert(chunks, {
 		from = start,
 		points = TrackPath.generate(start, Track.CHUNK_STEPS, Track.STEP, Track.SEED),
@@ -296,17 +408,8 @@ function Service.start()
 	log.info(`road starts at {origin}, heading {direction}`)
 	-- Laying yields between steps; the pad already holds the spawn and the car meanwhile.
 	task.spawn(function()
-		-- New terrain is not hit by raycasts until the next physics step.
 		task.wait()
-		local params = RaycastParams.new()
-		params.FilterType = Enum.RaycastFilterType.Include
-		params.FilterDescendantsInstances = { Workspace.Terrain }
-		local surface = Workspace:Raycast(padCentre + Vector3.new(0, 50, 0), Vector3.new(0, -100, 0), params)
-		if surface then
-			surfaceLift = surface.Position.Y - ground
-		else
-			log.warn("could not find the pad's surface; lane lines may sit off the road")
-		end
+		measureLift(padCentre, ground)
 		lay(chunks[1])
 		-- Behind the start there is only the pad, then nothing; this stays when chunks are cleared.
 		local roadEnd = Instance.new("Folder")
@@ -314,10 +417,7 @@ function Service.start()
 		local centre, along = frameAt(chunks[1], 0)
 		Roadside.layRoadEnd(centre, along, Track.ROAD_WIDTH + 2 * Track.VERGE_WIDTH, roadEnd)
 		roadEnd.Parent = Workspace
-		local baseplate = Workspace:FindFirstChild("Baseplate")
-		if baseplate then
-			baseplate:Destroy()
-		end
+		removeBaseplate()
 		while true do
 			update()
 			task.wait(Track.UPDATE_INTERVAL)
