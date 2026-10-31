@@ -62,6 +62,9 @@ export type Look = {
 	mode: Face,
 	glyphs: HudDesign.Glyphs?,
 	colours: Colours,
+	-- Its width on screen as a share of the global HUD's, and the frame image's transparency.
+	width: number,
+	frameTransparency: number,
 }
 
 local function globalLook(): Look
@@ -105,6 +108,8 @@ local function globalLook(): Look
 		},
 		mode = label,
 		glyphs = nil,
+		width = 1,
+		frameTransparency = 0,
 		colours = {
 			lit = Config.YELLOW,
 			text = Config.WHITE,
@@ -154,6 +159,8 @@ local function designLook(design: HudDesign.Design): Look
 		digits = digits,
 		mode = digits,
 		glyphs = design.glyphs,
+		width = design.width or 1,
+		frameTransparency = design.frameTransparency or 0,
 		colours = {
 			lit = colour(colours.lit),
 			text = colour(colours.text),

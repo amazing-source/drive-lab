@@ -33,6 +33,18 @@ describe("Hud", function()
 		expect(Hud.shiftFlash(8000, 8500, true, 0.1, 2.5)).toBe(false)
 	end)
 
+	it("gives a frame the height that makes it its width share of a reference frame's width", function()
+		local reference = 2078 / 477
+		expect(Hud.frameHeight(0.17, 1, reference, reference)).toBe(0.17)
+		-- A frame of the reference's own shape keeps its height exactly, whatever the shape: (0.1 * 3) / 3
+		-- is not 0.1 in floating point.
+		expect(Hud.frameHeight(0.1, 1, 3, 3)).toBe(0.1)
+		expect(Hud.frameHeight(0.2, 1, 3, 3)).toBe(0.2)
+		expect(Hud.frameHeight(0.17, 1, 3, reference)).toBeNear(0.17 * reference / 3, 1e-12)
+		expect(Hud.frameHeight(0.17, 1, 3, reference) * 3).toBeNear(0.17 * reference, 1e-12)
+		expect(Hud.frameHeight(0.13, 0.5, reference, reference)).toBe(0.065)
+	end)
+
 	it("shows the launch text in the drive mode's place while launch control is on", function()
 		expect(Hud.modeText("Corsa", true, "LAUNCH")).toBe("LAUNCH")
 		expect(Hud.modeText("Corsa", false, "LAUNCH")).toBe("CORSA")

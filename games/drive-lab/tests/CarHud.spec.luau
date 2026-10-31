@@ -76,8 +76,9 @@ local function same(actual: any, expected: any)
 	expect(show(actual)).toBe(show(expected))
 end
 
--- The SVJ's HUD as Controllers/Hud built and drew it before a car could carry its own (main at
--- c1f0984), through HudHarness.SCENARIO: one dump per frame.
+-- The SVJ's HUD as main's client built and drew it before a car's HUD could be wider than its
+-- frame's shape gives (561bb71), through HudHarness.SCENARIO: one dump per frame, recorded with
+-- tests/record_hud_fixture.luau.
 local function recorded(): { string }
 	local frames: { string } = {}
 	local lines: { string } = {}
@@ -285,6 +286,22 @@ describe("Car HUDs", function()
 		end, "gear 1 is wider than its box")
 	end)
 
+	it(
+		"refuses a width that is not a positive share, or a frame transparency outside 0 to under 1",
+		function()
+			refuses(function(hud)
+				hud.width = 0
+			end, "width is not a positive share")
+			refuses(function(hud)
+				hud.frameTransparency = 1
+			end, "frame transparency is not 0 to under 1")
+			HudDesign.check(hudWith(function(hud)
+				hud.width = nil
+				hud.frameTransparency = nil
+			end))
+		end
+	)
+
 	it("refuses a car whose HUD fails, at load", function()
 		local entry = copy(Catalog.cars.DR458)
 		entry.hud.segments[1][1] = -5
@@ -402,5 +419,81 @@ describe("Car HUDs", function()
 		frame = HudHarness.tree(dr458).children[1]
 		expectRun(glyphImages(frame.children), "0", glyphs.speed, "Right")
 		expectRun(glyphImages(holder(frame).children), "N", glyphs.gear, "Center")
+	end)
+	it("lays the DR458's HUD out as wide as the SVJ's in every view, mode and screen", function()
+		local screens = {
+			roblox.Vector2.new(1920, 1080),
+			roblox.Vector2.new(1366, 768),
+			roblox.Vector2.new(844, 390),
+			roblox.Vector2.new(390, 844),
+		}
+		local function widths(car: string, name: string): { [string]: any }
+			local run = HudHarness.start(car)
+			local frame = HudHarness.frame(run, name)
+			HudHarness.playFrame(run, HudHarness.SCENARIO[1])
+			local found = {}
+			for index, screen in screens do
+				run.setScreen(screen)
+				for _, mode in { "Full", "Minimal" } do
+					for _, view in { "Chase", "Hood", "Cockpit" } do
+						HudHarness.playFrame(run, { view = view, clock = 0, attributes = {} })
+						found[`{index} {mode} {view}`] = HudHarness.absoluteSize(frame)
+					end
+					-- Full to Minimal; Minimal to Off and back to Full.
+					run.pressHudKey()
+					if mode == "Minimal" then
+						run.pressHudKey()
+					end
+				end
+			end
+			return found
+		end
+		local svj, dr458 = widths("SVJ", "DriveHud"), widths("DR458", "DriveHudDR458")
+		local cases = 0
+		for key, size in svj do
+			local own = dr458[key]
+			expect(math.abs(own.X - size.X) < 0.01).toBe(true)
+			expect(math.abs(own.Y - own.X / 3) < 0.01).toBe(true)
+			cases += 1
+		end
+		expect(cases).toBe(24)
+		-- On the 1080p screen in the chase view: the SVJ's 0.17 of the height, the DR458 taller.
+		expect(math.abs(svj["1 Full Chase"].Y - 183.6) < 0.01).toBe(true)
+		expect(math.abs(dr458["1 Full Chase"].Y - 0.17 * 1080 * (2078 / 477) / 3) < 0.01).toBe(true)
+	end)
+
+	it("fits the DR458's text to its frame again whenever the frame's size changes", function()
+		local run = HudHarness.start("DR458")
+		local frame = HudHarness.frame(run, "DriveHudDR458")
+		local function capitals(label: string): number
+			for _, node in HudHarness.tree(HudHarness.gui(run, "DriveHudDR458")).children[1].children do
+				if node.className == "TextLabel" and node.props.Text == label then
+					return node.props.TextSize * node.children[1].props.Scale
+				end
+			end
+			error(`no label {label}`)
+		end
+		HudHarness.playFrame(run, HudHarness.SCENARIO[1])
+		for _, screen in { roblox.Vector2.new(1920, 1080), roblox.Vector2.new(844, 390) } do
+			run.setScreen(screen)
+			HudHarness.playFrame(run, { view = "Chase", clock = 0, attributes = {} })
+			local pixel = HudHarness.absoluteSize(frame).Y / 724
+			local tc, mode = DR458Hud.texts.tc, DR458Hud.texts.mode
+			expect(math.abs(capitals("TC") - (tc[4] - tc[2]) * pixel / DR458Hud.labelFace.capHeight) < 1e-3).toBe(
+				true
+			)
+			expect(
+				math.abs(capitals("1") - (mode[4] - mode[2]) * pixel / DR458Hud.digitFace.capHeight) < 1e-3
+			).toBe(true)
+		end
+	end)
+
+	it("leaves the frame opaque unless the design asks for transparency", function()
+		local run = HudHarness.start("DR458")
+		expect(HudHarness.tree(HudHarness.frame(run, "DriveHudDR458")).props.ImageTransparency).toBe(nil)
+		local entry = copy(Catalog.cars.DR458)
+		entry.hud.frameTransparency = 0.3
+		local gui = run.buildView(entry, "Faded")
+		expect(HudHarness.tree(gui).children[1].props.ImageTransparency).toBe(0.3)
 	end)
 end)

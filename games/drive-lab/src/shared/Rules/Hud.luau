@@ -20,6 +20,13 @@ function Hud.segmentShare(rpm: number, index: number, perSegment: number): numbe
 	return math.clamp(rpm / perSegment - (index - 1), 0, 1)
 end
 
+-- The share of the screen's height a HUD frame of `aspect` (width over height) is given so it is
+-- `width` times as wide as a frame of `referenceAspect` given `height`.
+function Hud.frameHeight(height: number, width: number, aspect: number, referenceAspect: number): number
+	-- The factor first: a frame of the reference's shape at width 1 keeps `height` exactly.
+	return height * (width * referenceAspect / aspect)
+end
+
 -- Whether the lit segments flash for the upshift: only in manual, past the shift point, in the
 -- lit half of a blink (the automatic shifts by itself, so a flash would be noise).
 function Hud.shiftFlash(rpm: number, shiftAt: number, manual: boolean, time: number, hz: number): boolean

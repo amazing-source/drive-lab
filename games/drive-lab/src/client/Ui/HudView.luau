@@ -224,6 +224,9 @@ function HudView.build(parent: Instance, look: HudLook.Look, name: string): View
 	frame.Name = "Frame"
 	frame.BackgroundTransparency = 1
 	frame.Image = look.frameImage
+	if look.frameTransparency > 0 then
+		frame.ImageTransparency = look.frameTransparency
+	end
 	frame.Parent = gui
 	local aspect = Instance.new("UIAspectRatioConstraint")
 	aspect.AspectRatio = look.frameSize.X / look.frameSize.Y
@@ -373,10 +376,17 @@ function HudView.build(parent: Instance, look: HudLook.Look, name: string): View
 end
 
 -- Bottom centre, or bottom right and smaller in the cockpit, where the centre is the wheel and
--- the hands; the minimal mode is the same, smaller.
+-- the hands; the minimal mode is the same, smaller. Every look is sized to its width share of the
+-- global HUD's width in that view, its height following its frame's shape.
 function HudView.place(view: View, cockpit: boolean, minimal: boolean)
-	local height = (if cockpit then Config.COCKPIT_HEIGHT else Config.HEIGHT)
-		* (if minimal then Config.MINIMAL_SCALE else 1)
+	local look = view.look
+	local height = Rules.frameHeight(
+		(if cockpit then Config.COCKPIT_HEIGHT else Config.HEIGHT)
+			* (if minimal then Config.MINIMAL_SCALE else 1),
+		look.width,
+		look.frameSize.X / look.frameSize.Y,
+		Config.FRAME_SIZE.X / Config.FRAME_SIZE.Y
+	)
 	local frame = view.frame
 	frame.Size = UDim2.fromScale(Config.MAX_WIDTH, height)
 	frame.AnchorPoint = if cockpit then Vector2.new(1, 1) else Vector2.new(0.5, 1)

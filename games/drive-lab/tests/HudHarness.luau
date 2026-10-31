@@ -3,7 +3,9 @@
 	Runs the driving HUD's controller in Lune, for the specs: the client modules and the shared
 	ones that touch the engine as they load are run from their files with Lune's engine datatypes
 	and plain stand-ins for the instances and services they use; a stand-in car carries the
-	attributes a spec sets; `dump` writes out every property the HUD set, child by child.
+	attributes a spec sets; `dump` writes out every property the HUD set, child by child. A
+	GuiObject's AbsoluteSize is laid out from its Size on a stand-in screen, an aspect-ratio
+	constraint fitting it within that size, and a script listening to it hears each change.
 ]]
 local fs = require("@lune/fs")
 local luau = require("@lune/luau")
@@ -12,9 +14,11 @@ local roblox = require("@lune/roblox")
 local ROOT = "games/drive-lab/src"
 -- Shared modules that call the engine as they load; every client module does too.
 local ENGINE_MODULES = { "shared/Config/Hud", "shared/Config/Controls", "shared/Car/CarRig" }
--- The frame's size on screen, in pixels: 0.17 of a 1080-pixel screen, as in the chase view.
-local FRAME_PIXELS = roblox.Vector2.new(780, 184)
 local NOW = 1000
+local SCREEN = roblox.Vector2.new(1920, 1080)
+-- A GuiObject's Size until one is set, as the engine's.
+local DEFAULT_SIZE = roblox.UDim2.fromOffset(100, 100)
+local LAYOUT_PROPERTIES = { Size = true, AspectRatio = true, Parent = true }
 
 type State = {
 	className: string,
@@ -22,19 +26,63 @@ type State = {
 	children: { any },
 	parent: any,
 	attributes: { [string]: any },
+	listeners: { [string]: { () -> () } },
+	laidOut: any,
 }
 
 local states: { [any]: State } = setmetatable({}, { __mode = "k" }) :: any
+-- The screen the stand-in GUI is laid out on, and the instances whose AbsoluteSize is listened to.
+local screen = SCREEN
+local watched: { any } = {}
 
-local SIGNAL = table.freeze({
-	Connect = function()
-		return { Disconnect = function() end }
-	end,
-})
+local function absoluteSize(object: any): any
+	local state = states[object]
+	if state.className == "ScreenGui" or state.className == "PlayerGui" then
+		return screen
+	end
+	local within = if state.parent then absoluteSize(state.parent) else screen
+	local size = state.props.Size or DEFAULT_SIZE
+	local width = size.X.Scale * within.X + size.X.Offset
+	local height = size.Y.Scale * within.Y + size.Y.Offset
+	for _, child in state.children do
+		local constraint = states[child]
+		if constraint.className == "UIAspectRatioConstraint" then
+			-- The engine's FitWithinMaxSize: the largest box of its shape inside the size given.
+			local aspect = constraint.props.AspectRatio or 1
+			width = math.min(width, height * aspect)
+			height = width / aspect
+		end
+	end
+	return roblox.Vector2.new(width, height)
+end
+
+local function relayout()
+	for _, object in watched do
+		local state = states[object]
+		local now = absoluteSize(object)
+		if now ~= state.laidOut then
+			state.laidOut = now
+			for _, callback in state.listeners.AbsoluteSize do
+				callback()
+			end
+		end
+	end
+end
 
 local METHODS = {
-	GetPropertyChangedSignal = function(_self: any, _name: string)
-		return SIGNAL
+	GetPropertyChangedSignal = function(self: any, name: string)
+		return {
+			Connect = function(_signal: any, callback: () -> ())
+				local state = states[self]
+				state.listeners[name] = state.listeners[name] or {}
+				table.insert(state.listeners[name], callback)
+				if name == "AbsoluteSize" and not table.find(watched, self) then
+					state.laidOut = absoluteSize(self)
+					table.insert(watched, self)
+				end
+				return { Disconnect = function() end }
+			end,
+		}
 	end,
 	GetAttribute = function(self: any, name: string): any
 		return states[self].attributes[name]
@@ -64,9 +112,17 @@ local METHODS = {
 }
 
 local function new(className: string): any
-	local state: State =
-		{ className = className, props = { Name = className }, children = {}, parent = nil, attributes = {} }
-	local object = setmetatable({}, {
+	local state: State = {
+		className = className,
+		props = { Name = className },
+		children = {},
+		parent = nil,
+		attributes = {},
+		listeners = {},
+		laidOut = nil,
+	}
+	local object
+	object = setmetatable({}, {
 		__index = function(_, key: string): any
 			if key == "ClassName" then
 				return className
@@ -74,24 +130,27 @@ local function new(className: string): any
 				return state.parent
 			elseif (METHODS :: any)[key] then
 				return (METHODS :: any)[key]
-			elseif key == "AbsoluteSize" and state.props[key] == nil then
-				return FRAME_PIXELS
+			elseif key == "AbsoluteSize" then
+				return absoluteSize(object)
 			end
 			return state.props[key]
 		end,
 		__newindex = function(self: any, key: string, value: any)
-			if key ~= "Parent" then
+			if key == "Parent" then
+				local old = state.parent
+				if old then
+					local siblings = states[old].children
+					table.remove(siblings, table.find(siblings, self) :: number)
+				end
+				state.parent = value
+				if value then
+					table.insert(states[value].children, self)
+				end
+			else
 				state.props[key] = value
-				return
 			end
-			local old = state.parent
-			if old then
-				local siblings = states[old].children
-				table.remove(siblings, table.find(siblings, self) :: number)
-			end
-			state.parent = value
-			if value then
-				table.insert(states[value].children, self)
+			if LAYOUT_PROPERTIES[key] then
+				relayout()
 			end
 		end,
 	})
@@ -133,15 +192,22 @@ export type Run = {
 	playerGui: any,
 	setClock: (number) -> (),
 	sit: (boolean) -> (),
+	-- The screen's size in pixels; the GUI is laid out again on it.
+	setScreen: (any) -> (),
+	-- Builds the HUD of the car `entry` under the player's gui as `name`, with the run's modules.
+	buildView: (any, string) -> any,
 	-- One Heartbeat of `dt` seconds.
 	step: (number) -> (),
 	pressHudKey: () -> (),
 }
 
--- Starts the HUD controller (its file at `controllerFile`, Controllers/Hud by default) with a
--- seated driver and a car of `carName` running, as long after its start-up as a drive.
-function Harness.start(carName: string, controllerFile: string?): Run
+-- Starts the HUD controller with a seated driver and a car of `carName` running, as long after its
+-- start-up as a drive. The client modules come from `clientRoot` (a folder holding `client/`, such
+-- as another commit's `src`), the repo's own by default; the shared ones always from the repo.
+function Harness.start(carName: string, clientRoot: string?): Run
 	local clock = 0
+	screen = SCREEN
+	watched = {}
 	local cache: { [string]: any } = {}
 	local refs: { [any]: string } = {}
 	local refByPath: { [string]: any } = {}
@@ -229,7 +295,7 @@ function Harness.start(carName: string, controllerFile: string?): Run
 		end,
 	}, { __index = os })
 
-	local load: (string, string?) -> any
+	local load: (string) -> any
 	local function requirer(modulePath: string): (any) -> any
 		return function(target: any): any
 			if type(target) == "string" then
@@ -244,15 +310,16 @@ function Harness.start(carName: string, controllerFile: string?): Run
 		end
 	end
 
-	load = function(path: string, file: string?): any
+	load = function(path: string): any
 		if cache[path] ~= nil then
 			return cache[path]
 		end
 		local result
 		if string.sub(path, 1, 7) == "client/" or table.find(ENGINE_MODULES, path) then
-			local source = file or `{ROOT}/{path}.luau`
+			local root = if string.sub(path, 1, 7) == "client/" then clientRoot or ROOT else ROOT
+			local source = `{root}/{path}.luau`
 			if not fs.isFile(source) then
-				source = `{ROOT}/{path}/init.luau`
+				source = `{root}/{path}/init.luau`
 			end
 			local chunk = luau.load(fs.readFile(source), {
 				debugName = source,
@@ -293,9 +360,10 @@ function Harness.start(carName: string, controllerFile: string?): Run
 	car:SetAttribute("Engine", "On")
 	car:SetAttribute("EngineAt", 0)
 
-	local controller = load("client/Controllers/Hud", controllerFile)
+	local controller = load("client/Controllers/Hud")
 	controller.start()
-	return {
+	local run: Run
+	run = {
 		car = car,
 		camera = camera,
 		playerGui = playerGui,
@@ -305,6 +373,15 @@ function Harness.start(carName: string, controllerFile: string?): Run
 		sit = function(seated: boolean)
 			humanoid.SeatPart = if seated then seat else nil
 		end,
+		setScreen = function(size: any)
+			screen = size
+			relayout()
+		end,
+		buildView = function(entry: any, name: string): any
+			local look = load("client/Ui/HudLook").of(entry)
+			load("client/Ui/HudView").build(playerGui, look, name)
+			return Harness.gui(run, name)
+		end,
 		step = function(dt: number)
 			(assert(heartbeat, "the controller connected no Heartbeat"))(dt)
 		end,
@@ -312,6 +389,7 @@ function Harness.start(carName: string, controllerFile: string?): Run
 			(assert(input, "the controller connected no input"))({ KeyCode = roblox.Enum.KeyCode.U }, false)
 		end,
 	}
+	return run
 end
 
 export type Frame = {
@@ -402,6 +480,16 @@ function Harness.tree(root: any): Node
 		table.insert(children, Harness.tree(child))
 	end
 	return { className = state.className, props = table.clone(state.props), children = children }
+end
+
+-- Where the engine would lay `object` out, in pixels.
+function Harness.absoluteSize(object: any): any
+	return absoluteSize(object)
+end
+
+-- The frame image of the HUD named `name`.
+function Harness.frame(run: Run, name: string): any
+	return states[Harness.gui(run, name)].children[1]
 end
 
 -- The HUD the controller built under the player's gui by the name `name`.

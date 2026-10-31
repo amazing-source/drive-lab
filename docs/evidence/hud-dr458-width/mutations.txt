@@ -1,0 +1,31 @@
+Deliberate breaks for #185, each applied alone to the committed tree, the Lune suite run
+(lune run tools/test/run), the file restored.
+
+### place ignores the width share (height as before) (games/drive-lab/src/client/Ui/HudView.luau) -> exit 1 ['92 spec files, 949 passed, 1 failed']
+    FAIL Car HUDs > lays the DR458's HUD out as wide as the SVJ's in every view, mode and screen: games/drive-lab/tests/CarHud.spec:455: expected true, got false
+### the DR458 at 0.8 of the SVJ's width (games/drive-lab/src/shared/Config/Cars/DR458/Hud.luau) -> exit 1 ['92 spec files, 949 passed, 1 failed']
+    FAIL Car HUDs > lays the DR458's HUD out as wide as the SVJ's in every view, mode and screen: games/drive-lab/tests/CarHud.spec:455: expected true, got false
+### frameHeight inverted (aspect over reference) (games/drive-lab/src/shared/Rules/Hud.luau) -> exit 1 ['92 spec files, 948 passed, 2 failed']
+    FAIL Car HUDs > lays the DR458's HUD out as wide as the SVJ's in every view, mode and screen: games/drive-lab/tests/CarHud.spec:455: expected true, got false
+    FAIL Hud > gives a frame the height that makes it its width share of a reference frame's width: games/drive-lab/tests/Hud.spec:39: expected 0.24686233403214533 within 1e-12, got 0.11706929740134747
+### frameHeight computed left to right (games/drive-lab/src/shared/Rules/Hud.luau) -> exit 0 ['92 spec files, 950 passed, 0 failed']
+### width not checked (games/drive-lab/src/shared/Config/HudDesign.luau) -> exit 1 ['92 spec files, 949 passed, 1 failed']
+    FAIL Car HUDs > refuses a width that is not a positive share, or a frame transparency outside 0 to under 1: games/drive-lab/tests/CarHud.spec:47: expected false, got true
+### frame transparency not checked (games/drive-lab/src/shared/Config/HudDesign.luau) -> exit 1 ['92 spec files, 949 passed, 1 failed']
+    FAIL Car HUDs > refuses a width that is not a positive share, or a frame transparency outside 0 to under 1: games/drive-lab/tests/CarHud.spec:47: expected false, got true
+### frame transparency never applied (games/drive-lab/src/client/Ui/HudView.luau) -> exit 1 ['92 spec files, 949 passed, 1 failed']
+    FAIL Car HUDs > leaves the frame opaque unless the design asks for transparency: games/drive-lab/tests/CarHud.spec:497: expected 0.3, got nil
+### frame transparency set even at 0 (games/drive-lab/src/client/Ui/HudView.luau) -> exit 1 ['92 spec files, 948 passed, 2 failed']
+    FAIL Car HUDs > builds and draws the SVJ's HUD exactly as before a car could carry its own: games/drive-lab/tests/CarHud.spec:317: expected nil, got line 2: got DriveHud/1 ImageLabel BackgroundTransparency=1 Image="rbxassetid://136575325662647" ImageTransparency=0 Name="Frame", recorded DriveHud/1 I
+    FAIL Car HUDs > leaves the frame opaque unless the design asks for transparency: games/drive-lab/tests/CarHud.spec:493: expected nil, got 0
+### text not refitted when the frame's size changes (games/drive-lab/src/client/Ui/HudView.luau) -> exit 1 ['92 spec files, 948 passed, 2 failed']
+    FAIL Car HUDs > builds and draws the SVJ's HUD exactly as before a car could carry its own: games/drive-lab/tests/CarHud.spec:320: expected nil, got line 26: got DriveHud/1/12/2 TextLabel AnchorPoint=0.5, 0.5 BackgroundTransparency=1 FontFace=rbxasset://fonts/families/Montserrat.json, Heavy, Italic 
+    FAIL Car HUDs > fits the DR458's text to its frame again whenever the frame's size changes: games/drive-lab/tests/CarHud.spec:482: expected true, got false
+### restored -> 0 ['92 spec files, 950 passed, 0 failed']
+
+The one that survived, and the spec that now catches it:
+- frameHeight computed left to right survived: for the SVJ's shape (0.17 * a) / a happens to be 0.17.
+  The spec now also asks a 3 : 1 frame to keep 0.1 and 0.2 exactly; with the same break:
+  FAIL Hud > gives a frame the height that makes it its width share of a reference frame's width: Hud.spec:41: expected 0.1, got 0.10000000000000002
+  92 spec files, 949 passed, 1 failed
+Restored: 92 spec files, 950 passed, 0 failed; after merging main (#187): 91 spec files, 946 passed.

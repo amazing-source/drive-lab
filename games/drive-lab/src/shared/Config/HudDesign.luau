@@ -76,6 +76,11 @@ export type Design = {
 	digitFace: Face,
 	glyphs: Glyphs?,
 	colours: Colours,
+	-- Its width on screen, as a share of the global HUD's in the same view: the height follows
+	-- from the frame's shape. 1 when left out.
+	width: number?,
+	-- How see-through the frame image is, panel and lettering alike, 0 to under 1; 0 when left out.
+	frameTransparency: number?,
 }
 
 local HudDesign = {}
@@ -167,6 +172,12 @@ function HudDesign.check(design: Design)
 	assert(
 		#design.segments == HudDesign.SEGMENTS,
 		`the HUD has {#design.segments} rev segments, not {HudDesign.SEGMENTS}`
+	)
+	assert(design.width == nil or design.width > 0, "the HUD's width is not a positive share")
+	local transparency = design.frameTransparency
+	assert(
+		transparency == nil or (transparency >= 0 and transparency < 1),
+		"the HUD's frame transparency is not 0 to under 1"
 	)
 	local segmentRect = design.segmentRect
 	for index, box in design.segments do

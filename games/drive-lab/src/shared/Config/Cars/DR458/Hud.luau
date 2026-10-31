@@ -88,6 +88,10 @@ local Hud: HudDesign.Design = table.freeze({
 		speed = box(1289, 404, 1740, 609),
 		gear = box(991, 439, 1181, 657),
 	}),
+	-- As wide on screen as the SVJ's HUD in every view; its design's squarer shape makes it taller.
+	width = 1,
+	-- The panel stays opaque; above 0 the whole frame image fades, its lettering too.
+	frameTransparency = 0,
 	colours = table.freeze({
 		lit = rgb(243, 244, 242),
 		text = rgb(243, 244, 242),

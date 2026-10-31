@@ -118,9 +118,28 @@ TextSize and their middle sits below the label's: Michroma 0.542 and 0.052 (meas
 the binnacle); Sarpanch Bold 0.457 and 0.03, predicted from its metrics by the ratio that holds for
 Michroma and Montserrat (within 3%), not yet measured in Studio.
 
+Every HUD is as wide on screen as the global HUD in the same view, times its design's `width`
+(1 when left out): `HudView.place` gives its frame the height that width needs, from the frame's
+shape (`Rules/Hud.frameHeight`), and its aspect-ratio constraint does the rest. The DR458's 3 : 1
+design at the SVJ's height came out at 69% of the SVJ's 4.36 : 1 width; at the SVJ's width it is
+0.247 of the screen's height in the chase view instead of 0.17, its panel fully opaque, so it hides
+about 1.8 times the road the SVJ's does (`docs/evidence/hud-dr458-width/coverage.txt`).
+`frameTransparency` fades the whole frame image, lettering included, and is 0 unless set; a panel
+that fades alone would take a frame exported with a see-through fill and uploaded again.
+
 `tests/HudHarness.luau` runs the controller in Lune with stand-ins for the instances and services
-and writes out every property the HUD sets. `tests/CarHud.spec.luau` compares the SVJ's HUD, frame
-by frame, with a recording of the controller before cars had their own HUD
-(`tests/fixtures/hud_svj_dump.txt`, from dcb2a51), and checks the DR458's glyph runs, red zone,
-masks and fonts. What it cannot see: layout, fonts as Roblox draws them, images loading.
+and writes out every property the HUD sets. It lays a GuiObject out as the engine does for this
+HUD: its Size on a stand-in screen, an aspect-ratio constraint fitting it within that size, and a
+script listening to its AbsoluteSize hears each change, so text refits when the frame grows.
+`tests/CarHud.spec.luau` compares the SVJ's HUD, frame by frame, with a recording of main's client
+(`tests/fixtures/hud_svj_dump.txt`); checks the DR458's glyph runs, red zone, masks and fonts; and
+lays both HUDs out on four screens in every view and mode and finds the DR458's as wide as the
+SVJ's. A change meant to alter the SVJ's HUD re-records the fixture:
+
+    lune run games/drive-lab/tests/record_hud_fixture.luau [<folder holding client/>]
+
+from the repo's own client by default, or from another commit's exported `src` (for example
+`git archive origin/main games/drive-lab/src/client`), and its diff is read before it is committed.
+What the harness cannot see: fonts as Roblox draws them, images loading, anything but this HUD's
+layout.
 
