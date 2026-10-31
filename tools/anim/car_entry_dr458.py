@@ -201,6 +201,8 @@ def entry(car, rest_path):
     handle = car.riding(b, DOOR_HANDLE + np.array([0.035, 0.0, 0.0]))
     yaw_in = car.yaw_facing(-car.outboard)
     yaw_pull = yaw_in + (yaw_seat - yaw_in) * 0.8
+    pull_feet, pull_c = feet_at(car, GRAB, yaw_pull)
+    out_feet, out_c = feet_at(car, OUT, yaw_pull * 0.5)
 
     both(b, 0, 1)
     f = walk(b, 2, IDLE, pull_feet, 0.0, yaw_pull, "left_leg")
