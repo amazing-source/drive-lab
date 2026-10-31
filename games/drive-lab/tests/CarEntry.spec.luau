@@ -692,3 +692,35 @@ describe("Start-up controls", function()
 		expect(Rules.controlOpenness(FLAP, state({ engine = "Off", engineAt = 0 }), FLAP.at)).toBe(0)
 	end)
 end)
+
+-- The SVJ's door and start-up with the direct stand-in set: no entry clips yet.
+local function directCar(): Rules.Car
+	local door = table.clone(SVJ.door)
+	door.direct = true
+	return { door = door, startup = SVJ.startup }
+end
+
+describe("A car whose entry is not animated yet (a direct door)", function()
+	local direct = directCar()
+
+	it("seats the driver at once and stands them out at once, with no clips", function()
+		for _, doorOpen in { false, true } do
+			expect(#Rules.steps(direct, "Enter", doorOpen)).toBe(0)
+			expect(#Rules.steps(direct, "Exit", doorOpen)).toBe(0)
+		end
+		local entering = state({ entry = "Enter", entryAt = 10 })
+		expect(Rules.phase(direct, entering, 10)).toBe("Seated")
+		expect(Rules.phase(SVJ, entering, 10)).toBe("Entering")
+		expect(Rules.canExit(direct, state({ entry = "Enter", entryAt = 10 }), 10, 0)).toBe(true)
+	end)
+
+	it("still moves its door by its clips and starts by its own start-up", function()
+		local opening = state({ door = "OutsideOpen", doorAt = 0 })
+		for _, t in { 1.0, 1.5, 2.0, 2.5 } do
+			expect(Rules.doorOpenness(direct, opening, t)).toBeNear(Rules.doorOpenness(SVJ, opening, t), 1e-9)
+		end
+		local on = state({ entry = "Enter", entryAt = 0, engine = "On", engineAt = 0 })
+		expect(Rules.drivable(direct, on, STARTUP.drivableAt - 0.01)).toBe(false)
+		expect(Rules.drivable(direct, on, STARTUP.drivableAt)).toBe(true)
+	end)
+end)

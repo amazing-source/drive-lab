@@ -24,6 +24,18 @@ describe("Car catalog", function()
 		expect(Catalog.of(modelNamed(1))).toBe(nil)
 	end)
 
+	it("admits a car only once its model binding has nothing pending", function()
+		local fs = require("@lune/fs")
+		for name in Catalog.cars do
+			local path = `games/drive-lab/src/shared/Config/Cars/{name}/ModelPending.luau`
+			if fs.isFile(path) then
+				local pending = (require :: any)(`../src/shared/Config/Cars/{name}/ModelPending`)
+				expect(`{name}: {table.concat(pending, "; ")}`).toBe(`{name}: `)
+			end
+		end
+		expect(Catalog.of(modelNamed("DR458"))).toBe(Catalog.cars.DR458)
+	end)
+
 	it("freezes every entry all the way down", function()
 		for _, entry in Catalog.cars do
 			expect(function()

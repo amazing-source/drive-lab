@@ -4,6 +4,7 @@
 	is a folder beside this module whose init returns its Contract entry, and one line here.
 ]]
 local Contract = require("./Contract")
+local DR458 = require("./DR458")
 local SVJ = require("./SVJ")
 
 export type Entry = Contract.Entry
@@ -12,6 +13,7 @@ local ATTRIBUTE = "Car"
 
 local cars: { [string]: Entry } = table.freeze({
 	SVJ = SVJ,
+	DR458 = DR458,
 })
 
 local Catalog = { cars = cars }

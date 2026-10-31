@@ -83,3 +83,12 @@ describe("TrackPath", function()
 		end
 	end)
 end)
+
+describe("TrackPath: the road's start among several car spawns", function()
+	it("starts at the first spawn by name, whatever order they are found in", function()
+		expect(TrackPath.startIndex({ "Workspace.SVJ", "Workspace.ZCar" })).toBe(1)
+		expect(TrackPath.startIndex({ "Workspace.ZCar", "Workspace.SVJ" })).toBe(2)
+		expect(TrackPath.startIndex({ "Workspace.SVJ" })).toBe(1)
+		expect(TrackPath.startIndex({})).toBe(nil)
+	end)
+end)
