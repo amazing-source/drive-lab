@@ -276,22 +276,39 @@ describe("Car contract: drive modes", function()
 end)
 
 describe("Car contract: switches", function()
-	local PIT = { limitKmh = 60, armGear = 2, armBelowKmh = 60, band = 3 }
-	local WIPER = { wipeSeconds = 1.2, afterWash = 3 }
+	local PIT = { limitKmh = 60, armFromGear = 2, armToGear = 2, armBelowKmh = 60, band = 3, hazards = false }
+	local WIPER = { speeds = { 1.4, 0.9 }, afterWash = 3 }
 
 	it("accepts a pit limiter, a wiper and display pages that make sense", function()
 		local entry = Contract.define(svjWith(function(entry)
 			entry.switches.pitLimiter = table.clone(PIT)
 			entry.switches.wiper = table.clone(WIPER)
 			entry.switches.displayPages = 3
+			entry.switches.radio = true
 		end))
+		expect(Contract.features(entry).radio).toBe(true)
 		expect(Contract.features(entry).pitLimiter).toBe(true)
 		expect(Contract.features(entry).wiper).toBe(true)
 		expect(Contract.features(entry).displayPages).toBe(true)
 	end)
 
-	it("refuses a pit limiter with no band or one that arms above its own limit", function()
-		for _, change in { { band = 0 }, { limitKmh = 0 }, { armBelowKmh = 80 } } do
+	it("accepts a pit limiter that arms in any forward gear at any speed", function()
+		local entry = Contract.define(svjWith(function(entry)
+			entry.switches.pitLimiter = { limitKmh = 60, armFromGear = 1, band = 3, hazards = true }
+		end))
+		expect(Contract.features(entry).pitLimiter).toBe(true)
+	end)
+
+	it("refuses a pit limiter with no band, no forward arming gear, or arming above its limit", function()
+		local changes = {
+			{ band = 0 },
+			{ limitKmh = 0 },
+			{ armBelowKmh = 80 },
+			{ armFromGear = 0 },
+			{ armFromGear = 1.5 },
+			{ armToGear = 1 },
+		}
+		for _, change in changes do
 			expect(function()
 				Contract.define(svjWith(function(entry)
 					local pit = table.clone(PIT) :: any
@@ -304,8 +321,15 @@ describe("Car contract: switches", function()
 		end
 	end)
 
-	it("refuses a wiper with no wipe time or a part of a wipe after a wash", function()
-		for _, change in { { wipeSeconds = 0 }, { afterWash = 1.5 }, { afterWash = -1 } } do
+	it("refuses a wiper with no speed, a zero wipe time, speeds out of order, or a part wipe", function()
+		local changes = {
+			{ speeds = {} },
+			{ speeds = { 1.4, 0 } },
+			{ speeds = { 0.9, 1.4 } },
+			{ afterWash = 1.5 },
+			{ afterWash = -1 },
+		}
+		for _, change in changes do
 			expect(function()
 				Contract.define(svjWith(function(entry)
 					local wiper = table.clone(WIPER) :: any
@@ -332,9 +356,13 @@ describe("Car contract: switches", function()
 		local features = Contract.features(Catalog.cars.SVJ)
 		expect(features.escButton and features.launch).toBe(true)
 		expect(features.cabinLight).toBe(true)
-		expect(features.pitLimiter or features.wiper or features.rainLight or features.displayPages).toBe(
-			false
-		)
+		expect(
+			features.pitLimiter
+				or features.wiper
+				or features.rainLight
+				or features.displayPages
+				or features.radio
+		).toBe(false)
 	end)
 end)
 

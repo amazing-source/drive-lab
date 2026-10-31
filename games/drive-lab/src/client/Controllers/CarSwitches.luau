@@ -1,11 +1,11 @@
 --!strict
 --[[
 	The driven car's switches that not every car has (Config/CarSwitches): the wiper and its
-	washer, the rain light and the display's pages. A key does nothing in a car without its switch.
-	The state is published on the car's model for its lamps, display and effects (WiperOn,
-	WiperSweep, Washing, RainLightOn, DisplayPage); like every readout on the driven car, it is
-	local, and it is cleared when the driver gets out. A car that is got into again starts with them
-	off and on its first page.
+	washer, the rain light, the display's pages and the pit radio. A key does nothing in a car
+	without its switch. The state is published on the car's model for its lamps, display, effects
+	and sounds (WiperOn, WiperSpeed, WiperSweep, Washing, RainLightOn, DisplayPage, RadioTalking);
+	like every readout on the driven car, it is local, and it is cleared when the driver gets out. A
+	car that is got into again starts with them off and on its first page.
 ]]
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,19 +20,24 @@ local Wiper = require(ReplicatedStorage.Shared.Rules.Wiper)
 type Drive = {
 	model: Model,
 	entry: Catalog.Entry,
-	wiper: Wiper.State,
+	-- Nil on a car without a wiper.
+	wiper: Wiper.State?,
 	rainLight: boolean,
 	page: number,
+	radio: boolean,
 }
 
-local ATTRIBUTES = { "WiperOn", "WiperSweep", "Washing", "RainLightOn", "DisplayPage" }
+local ATTRIBUTES =
+	{ "WiperOn", "WiperSpeed", "WiperSweep", "Washing", "RainLightOn", "DisplayPage", "RadioTalking" }
 
 local localPlayer = Players.LocalPlayer
 local drive: Drive? = nil
+-- Keys held since a press the game saw: a key typed into a text box (the chat) holds nothing.
+local down: { [Enum.KeyCode]: true } = {}
 
 local function held(keys: { Enum.KeyCode }): boolean
 	for _, key in keys do
-		if UserInputService:IsKeyDown(key) then
+		if down[key] then
 			return true
 		end
 	end
@@ -48,13 +53,14 @@ local function seatedModel(): Model?
 end
 
 local function publish(current: Drive)
-	local model, switches = current.model, current.entry.switches
-	local tuning = switches.wiper
-	model:SetAttribute("WiperOn", if tuning then current.wiper.on else nil)
-	model:SetAttribute("WiperSweep", if tuning then Wiper.sweep(current.wiper, tuning) else nil)
-	model:SetAttribute("Washing", if tuning then current.wiper.washing else nil)
+	local model, switches, wiper = current.model, current.entry.switches, current.wiper
+	model:SetAttribute("WiperOn", if wiper then wiper.speed > 0 else nil)
+	model:SetAttribute("WiperSpeed", if wiper then wiper.speed else nil)
+	model:SetAttribute("WiperSweep", if wiper then Wiper.sweep(wiper) else nil)
+	model:SetAttribute("Washing", if wiper then wiper.washing else nil)
 	model:SetAttribute("RainLightOn", if switches.rainLight then current.rainLight else nil)
 	model:SetAttribute("DisplayPage", if switches.displayPages then current.page else nil)
+	model:SetAttribute("RadioTalking", if switches.radio then current.radio else nil)
 end
 
 -- Follows the seat: a new drive for each car got into, nothing while on foot.
@@ -75,8 +81,15 @@ local function follow(): Drive?
 		drive = nil
 		return nil
 	end
-	local fresh: Drive =
-		{ model = model, entry = entry, wiper = Wiper.newState(), rainLight = false, page = 1 }
+	local tuning = entry.switches.wiper
+	local fresh: Drive = {
+		model = model,
+		entry = entry,
+		wiper = if tuning then Wiper.newState(tuning) else nil,
+		rainLight = false,
+		page = 1,
+		radio = false,
+	}
 	drive = fresh
 	return fresh
 end
@@ -86,10 +99,11 @@ local function update(dt: number)
 	if current == nil then
 		return
 	end
-	local tuning = current.entry.switches.wiper
-	if tuning then
-		Wiper.step(current.wiper, tuning, held(Controls.WASHER), dt)
+	local tuning, wiper = current.entry.switches.wiper, current.wiper
+	if tuning and wiper then
+		Wiper.step(wiper, tuning, held(Controls.WASHER), dt)
 	end
+	current.radio = held(Controls.RADIO)
 	publish(current)
 end
 
@@ -97,14 +111,18 @@ local Controller = {}
 
 function Controller.start()
 	UserInputService.InputBegan:Connect(function(input, processed)
+		if not processed then
+			down[input.KeyCode] = true
+		end
 		local current = follow()
 		if processed or current == nil then
 			return
 		end
 		local key = input.KeyCode
 		local switches = current.entry.switches
-		if table.find(Controls.WIPER, key) and switches.wiper then
-			Wiper.toggle(current.wiper)
+		local tuning, wiper = switches.wiper, current.wiper
+		if table.find(Controls.WIPER, key) and tuning and wiper then
+			Wiper.cycle(wiper, tuning)
 		elseif table.find(Controls.RAIN_LIGHT, key) and switches.rainLight then
 			current.rainLight = not current.rainLight
 		elseif table.find(Controls.DISPLAY_PAGE, key) then
@@ -113,6 +131,12 @@ function Controller.start()
 				current.page = current.page % pages + 1
 			end
 		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		down[input.KeyCode] = nil
+	end)
+	UserInputService.WindowFocusReleased:Connect(function()
+		table.clear(down)
 	end)
 	RunService.Heartbeat:Connect(update)
 end

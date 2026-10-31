@@ -1,18 +1,23 @@
 --!strict
 --[[
 	The pit-lane speed limiter, after the 458 Challenge's PIT button (docs/research/
-	12_dr458_challenge_evo.md §3.3): pressed in the arming gear below the arming speed, it arms, and
-	the throttle then holds the limit. Pressed again it releases, and so does a shift down past the
-	arming gear (Drive Lab's rule: no source says how the real one releases).
+	12_dr458_challenge_evo.md §3.3). Pressed in one of its arming gears, and below its arming speed
+	where it has one, it arms: the throttle then cannot take the car past the limit, and above the
+	limit it gives none at all, so the car slows by itself; it never brakes. Pressed again it
+	releases, and so does a shift down past its lowest arming gear.
 ]]
 export type Tuning = {
 	-- km/h the car is held at.
 	limitKmh: number,
-	-- It arms only in this gear, and below this speed.
-	armGear: number,
-	armBelowKmh: number,
+	-- It arms in a gear from armFromGear up to armToGear (any forward gear above when nil), and
+	-- only below armBelowKmh when that is set.
+	armFromGear: number,
+	armToGear: number?,
+	armBelowKmh: number?,
 	-- km/h under the limit where the throttle starts to be taken away; at the limit none is left.
 	band: number,
+	-- Whether both indicators flash while it is armed.
+	hazards: boolean,
 }
 
 export type State = { armed: boolean }
@@ -23,21 +28,28 @@ function PitLimiter.newState(): State
 	return { armed = false }
 end
 
--- The PIT button: releases an armed limiter, or arms one when the car is in the arming gear below
--- the arming speed. Returns whether it is armed after the press.
+-- Whether a press in `gear` at `speedKmh` arms the limiter.
+function PitLimiter.canArm(tuning: Tuning, gear: number, speedKmh: number): boolean
+	local below = tuning.armBelowKmh
+	return gear >= tuning.armFromGear
+		and gear <= (tuning.armToGear or math.huge)
+		and (below == nil or speedKmh < below)
+end
+
+-- The PIT button: releases an armed limiter, or arms one when PitLimiter.canArm allows it.
+-- Returns whether it is armed after the press.
 function PitLimiter.press(state: State, tuning: Tuning, gear: number, speedKmh: number): boolean
 	if state.armed then
 		state.armed = false
-	elseif gear == tuning.armGear and speedKmh < tuning.armBelowKmh then
+	elseif PitLimiter.canArm(tuning, gear, speedKmh) then
 		state.armed = true
 	end
 	return state.armed
 end
 
--- Releases the limiter once the car is in a gear below the arming gear (reverse and neutral
--- included).
+-- Releases the limiter once the car is in a gear below its lowest arming gear.
 function PitLimiter.update(state: State, tuning: Tuning, gear: number)
-	if gear < tuning.armGear then
+	if gear < tuning.armFromGear then
 		state.armed = false
 	end
 end

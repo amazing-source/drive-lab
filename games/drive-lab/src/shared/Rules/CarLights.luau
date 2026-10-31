@@ -5,8 +5,8 @@
 	headlights and out on the side whose indicator runs; headlights by mode (automatic at night or
 	in heavy rain), with the high beam on top of them when the driver asks for it, or on its own
 	while a flasher is held; tail lights with the headlights; brake and reversing lights; indicators
-	that flash from the moment they are switched on; a rear rain light, steady or flashing as the
-	car's is; and the cabin light, which works with the ignition off.
+	that flash from the moment they are switched on, both together as hazards; a rear rain light,
+	steady or flashing as the car's is; and the cabin light, which works with the ignition off.
 ]]
 local CarLights = {}
 
@@ -28,6 +28,9 @@ export type State = {
 	indicator: Side?,
 	-- Seconds since the indicator was switched on.
 	indicating: number,
+	-- Both indicators flash, and seconds since they started.
+	hazards: boolean?,
+	hazardsFor: number?,
 	cabin: boolean,
 	-- The rain light's switch, and seconds since it was switched on.
 	rainLight: boolean?,
@@ -101,7 +104,7 @@ local function drl(side: Side, state: State, headlights: boolean, tuning: Tuning
 	if not state.running then
 		return 0
 	end
-	if state.indicator == side then
+	if state.indicator == side or state.hazards == true then
 		return tuning.drlWhileIndicating
 	end
 	return if headlights then tuning.drlWithHeadlights else 1
@@ -120,6 +123,9 @@ function CarLights.decide(state: State, tuning: Tuning, rainPattern: RainPattern
 	local auto = state.night or state.rain >= tuning.rainOn
 	local headlights = running and (state.mode == "On" or (state.mode == "Auto" and auto))
 	local flash = running and CarLights.blinkOn(state.indicating, tuning.blinkHz, tuning.blinkOnShare)
+	local hazard = running
+		and state.hazards == true
+		and CarLights.blinkOn(state.hazardsFor or 0, tuning.blinkHz, tuning.blinkOnShare)
 	return {
 		headlights = headlights,
 		highBeam = running and ((headlights and state.highBeam) or state.flash == true),
@@ -128,8 +134,8 @@ function CarLights.decide(state: State, tuning: Tuning, rainPattern: RainPattern
 		tail = headlights,
 		brake = running and state.brake >= tuning.brakeOn,
 		reverse = running and state.gear < 0,
-		left = state.indicator == "Left" and flash,
-		right = state.indicator == "Right" and flash,
+		left = (state.indicator == "Left" and flash) or hazard,
+		right = (state.indicator == "Right" and flash) or hazard,
 		cabin = state.cabin,
 		rainLightOn = running and state.rainLight == true,
 		rainLight = running

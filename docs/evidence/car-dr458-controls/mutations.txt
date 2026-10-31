@@ -1,0 +1,40 @@
+Deliberate breaks for PR 1 of #163 (agent/car-dr458-controls), each applied alone, the full
+spec suite run (lune run tools/test/run), then the file restored from git; the tree was clean after.
+Baseline before the breaks: 85 spec files, 833 passed, 0 failed.
+
+== 1 open rule arms only in its first gear: 5 failing; 85 spec files, 828 passed, 5 failed
+   FAIL PitLimiter > with the open rule, arms in any forward gear at any speed, never in neutral or reverse: games/drive-lab/tests/PitLimiter.spec:65: expecte
+   FAIL PitLimiter > releases on a second press, or once the car is below its lowest arming gear: games/drive-lab/tests/PitLimiter.spec:78: expected false, go
+   FAIL PitLimiter > leaves the pedal alone unless armed; armed, it takes the throttle away over the band: games/drive-lab/tests/PitLimiter.spec:92: expected 
+   FAIL PitLimiter > holds the DR458 at 60 km/h flat out in 2nd, manual (DriveSim, 60 FPS): games/drive-lab/tests/PitLimiter.spec:121: expected true, got fals
+   FAIL PitLimiter > armed at 140 km/h, gives no throttle until the DR458 is down to 60, then holds it: games/drive-lab/tests/PitLimiter.spec:132: expected tr
+== 2 DR458 back on the strict 2nd-gear rule: 3 failing; 85 spec files, 830 passed, 3 failed
+   FAIL PitLimiter > arms on the DR458 parked in 1st, as the car sits after its start: games/drive-lab/tests/PitLimiter.spec:101: expected true, got false
+   FAIL PitLimiter > holds the DR458 at 60 km/h flat out from a standstill in auto (DriveSim, 60 FPS): games/drive-lab/tests/PitLimiter.spec:109: expected tru
+   FAIL PitLimiter > armed at 140 km/h, gives no throttle until the DR458 is down to 60, then holds it: games/drive-lab/tests/PitLimiter.spec:132: expected tr
+== 3 throttle never fully cut at the limit: 3 failing; 85 spec files, 830 passed, 3 failed
+   FAIL PitLimiter > leaves the pedal alone unless armed; armed, it takes the throttle away over the band: games/drive-lab/tests/PitLimiter.spec:94: expected 
+   FAIL PitLimiter > holds the DR458 at 60 km/h flat out in 2nd, manual (DriveSim, 60 FPS): games/drive-lab/tests/PitLimiter.spec:124: expected true, got fals
+   FAIL PitLimiter > armed at 140 km/h, gives no throttle until the DR458 is down to 60, then holds it: games/drive-lab/tests/PitLimiter.spec:137: expected 0,
+== 4 neutral no longer releases: 1 failing; 85 spec files, 832 passed, 1 failed
+   FAIL PitLimiter > releases on a second press, or once the car is below its lowest arming gear: games/drive-lab/tests/PitLimiter.spec:83: expected false, go
+== 5 armBelowKmh ignored: 1 failing; 85 spec files, 832 passed, 1 failed
+   FAIL PitLimiter > with the strict rule, arms only in 2nd below the limit: games/drive-lab/tests/PitLimiter.spec:56: expected false, got true
+== 6 wiper cycle skips off: 2 failing; 85 spec files, 831 passed, 2 failed
+   FAIL Wiper > steps through its speeds and back to off: games/drive-lab/tests/Wiper.spec:35: expected 1,2,0,1, got 1,2,1,2
+   FAIL Wiper > switched off, finishes the wipe in progress at the speed it had and parks: games/drive-lab/tests/Wiper.spec:76: expected 0, got 1
+== 7 speed change restarts the wipe: 1 failing; 85 spec files, 832 passed, 1 failed
+   FAIL Wiper > keeps the blade where it is on the glass when the speed changes: games/drive-lab/tests/Wiper.spec:67: expected 1 within 1e-09, got 0.499999999
+== 8 washer forces the first speed: 1 failing; 85 spec files, 832 passed, 1 failed
+   FAIL Wiper > washing while on its fastest speed keeps the faster speed: games/drive-lab/tests/Wiper.spec:100: expected 4, got 2
+== 9 switched off finishes at the first speed: 1 failing; 85 spec files, 832 passed, 1 failed
+   FAIL Wiper > switched off, finishes the wipe in progress at the speed it had and parks: games/drive-lab/tests/Wiper.spec:79: expected 1 within 1e-09, got 0
+== 10 hazards light the left only: 1 failing; 85 spec files, 832 passed, 1 failed
+   FAIL CarLights > flashes both indicators together as hazards, from the moment they start, only running: games/drive-lab/tests/CarLights.spec:118: expected 
+== 11 contract drops the slowest-first check: 1 failing; 85 spec files, 832 passed, 1 failed
+   FAIL Car contract: switches > refuses a wiper with no speed, a zero wipe time, speeds out of order, or a part wipe: games/drive-lab/tests/CarContract.spec:
+== 12 DR458 fast speed at 55 wipes a minute: 1 failing; 85 spec files, 832 passed, 1 failed
+   FAIL Wiper > the DR458's two speeds sit inside FMVSS 104: one at 45 wipes a minute or more, 15 apart: games/drive-lab/tests/Wiper.spec:118: expected true, 
+== 13 contract accepts arming from neutral: 1 failing; 85 spec files, 832 passed, 1 failed
+   FAIL Car contract: switches > refuses a pit limiter with no band, no forward arming gear, or arming above its limit: games/drive-lab/tests/CarContract.spec
+clean
