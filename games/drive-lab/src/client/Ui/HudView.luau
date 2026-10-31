@@ -375,9 +375,9 @@ function HudView.build(parent: Instance, look: HudLook.Look, name: string): View
 	return view
 end
 
--- Bottom centre, or bottom right and smaller in the cockpit, where the centre is the wheel and
--- the hands; the minimal mode is the same, smaller. Every look is sized to its width share of the
--- global HUD's width in that view, its height following its frame's shape.
+-- At the view's corner and size (Config/Hud), the cockpit's own; the minimal mode is the same,
+-- smaller. Every look is sized to its width share of the global HUD's width in that view, its
+-- height following its frame's shape.
 function HudView.place(view: View, cockpit: boolean, minimal: boolean)
 	local look = view.look
 	local height = Rules.frameHeight(
@@ -389,10 +389,14 @@ function HudView.place(view: View, cockpit: boolean, minimal: boolean)
 	)
 	local frame = view.frame
 	frame.Size = UDim2.fromScale(Config.MAX_WIDTH, height)
-	frame.AnchorPoint = if cockpit then Vector2.new(1, 1) else Vector2.new(0.5, 1)
-	frame.Position = if cockpit
-		then UDim2.new(1, -Config.MARGIN, 1, -Config.MARGIN)
-		else UDim2.new(0.5, 0, 1, -Config.MARGIN)
+	local anchor = if cockpit then Config.COCKPIT_ANCHOR else Config.ANCHOR
+	frame.AnchorPoint = anchor
+	frame.Position = UDim2.new(
+		anchor.X,
+		Rules.inset(anchor.X, Config.MARGIN),
+		anchor.Y,
+		Rules.inset(anchor.Y, Config.MARGIN)
+	)
 end
 
 function HudView.show(view: View, readouts: Readouts)

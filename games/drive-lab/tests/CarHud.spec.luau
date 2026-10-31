@@ -5,6 +5,7 @@ local roblox = require("@lune/roblox")
 
 local Catalog = require("../src/shared/Config/Cars/Catalog")
 local Contract = require("../src/shared/Config/Cars/Contract")
+local ControlsHelp = require("../src/shared/Config/ControlsHelp")
 local DR458Hud = require("../src/shared/Config/Cars/DR458/Hud")
 local HudDesign = require("../src/shared/Config/HudDesign")
 local HudHarness = require("./HudHarness")
@@ -181,7 +182,8 @@ describe("Car HUDs", function()
 			hud.UPDATE_INTERVAL,
 			hud.GEAR_POP,
 			hud.LAUNCH_TEXT,
-		}, { 0.17, 0.13, 0.9, 14, 0.72, 1000, 2.5, 0.59, 1 / 30, 0.12, "LAUNCH" })
+		}, { 0.13, 0.11, 0.9, 14, 0.72, 1000, 2.5, 0.59, 1 / 30, 0.12, "LAUNCH" })
+		same({ hud.ANCHOR.X, hud.ANCHOR.Y, hud.COCKPIT_ANCHOR.X, hud.COCKPIT_ANCHOR.Y }, { 1, 1, 1, 1 })
 		same({
 			rgb(hud.YELLOW),
 			rgb(hud.RED),
@@ -457,9 +459,11 @@ describe("Car HUDs", function()
 			cases += 1
 		end
 		expect(cases).toBe(24)
-		-- On the 1080p screen in the chase view: the SVJ's 0.17 of the height, the DR458 taller.
-		expect(math.abs(svj["1 Full Chase"].Y - 183.6) < 0.01).toBe(true)
-		expect(math.abs(dr458["1 Full Chase"].Y - 0.17 * 1080 * (2078 / 477) / 3) < 0.01).toBe(true)
+		-- On the 1080p screen: the SVJ's 0.13 of the height in the chase view and 0.11 in the
+		-- cockpit, the DR458 taller.
+		expect(math.abs(svj["1 Full Chase"].Y - 0.13 * 1080) < 0.01).toBe(true)
+		expect(math.abs(svj["1 Full Cockpit"].Y - 0.11 * 1080) < 0.01).toBe(true)
+		expect(math.abs(dr458["1 Full Chase"].Y - 0.13 * 1080 * (2078 / 477) / 3) < 0.01).toBe(true)
 	end)
 
 	it("fits the DR458's text to its frame again whenever the frame's size changes", function()
@@ -495,5 +499,71 @@ describe("Car HUDs", function()
 		entry.hud.frameTransparency = 0.3
 		local gui = run.buildView(entry, "Faded")
 		expect(HudHarness.tree(gui).children[1].props.ImageTransparency).toBe(0.3)
+	end)
+	-- Each car's HUD frame laid out on `screen` in each view and mode: where it sits, in pixels,
+	-- and the anchor and position it was given.
+	local function placements(
+		car: string,
+		name: string,
+		screen: any
+	): { [string]: { rect: { number }, node: any } }
+		local run = HudHarness.start(car)
+		local frame = HudHarness.frame(run, name)
+		run.setScreen(screen)
+		HudHarness.playFrame(run, HudHarness.SCENARIO[1])
+		local found = {}
+		for _, mode in { "Full", "Minimal" } do
+			for _, view in { "Chase", "Hood", "Cockpit" } do
+				HudHarness.playFrame(run, { view = view, clock = 0, attributes = {} })
+				local size = HudHarness.absoluteSize(frame)
+				local props = HudHarness.tree(frame).props
+				local anchor, position = props.AnchorPoint, props.Position
+				local x0 = position.X.Scale * screen.X + position.X.Offset - anchor.X * size.X
+				local y0 = position.Y.Scale * screen.Y + position.Y.Offset - anchor.Y * size.Y
+				found[`{mode} {view}`] = { rect = { x0, y0, x0 + size.X, y0 + size.Y }, node = props }
+			end
+			run.pressHudKey()
+			if mode == "Minimal" then
+				run.pressHudKey()
+			end
+		end
+		return found
+	end
+
+	it("holds every car's HUD to the bottom right, its margin in, in every view and mode", function()
+		local screen = roblox.Vector2.new(1920, 1080)
+		local heights = { Chase = 0.13, Hood = 0.13, Cockpit = 0.11 }
+		for car, name in { SVJ = "DriveHud", DR458 = "DriveHudDR458" } do
+			for key, placed in placements(car, name, screen) do
+				local rect = placed.rect
+				expect(math.abs(rect[3] - (1920 - 14)) < 0.01).toBe(true)
+				expect(math.abs(rect[4] - (1080 - 14)) < 0.01).toBe(true)
+				expect(placed.node.AnchorPoint).toBe(roblox.Vector2.new(1, 1))
+				if car == "SVJ" then
+					local mode, view = string.match(key, "^(%a+) (%a+)$")
+					local share = heights[view :: string] * (if mode == "Minimal" then 0.72 else 1)
+					expect(math.abs(rect[4] - rect[2] - share * 1080) < 0.01).toBe(true)
+				end
+			end
+		end
+	end)
+
+	it("keeps every car's HUD clear of the controls screen's touch button, landscape or portrait", function()
+		for _, screen in
+			{ roblox.Vector2.new(1920, 1080), roblox.Vector2.new(844, 390), roblox.Vector2.new(390, 844) }
+		do
+			local margin, side = ControlsHelp.MARGIN, ControlsHelp.TOUCH_SIZE
+			local button = { screen.X - margin - side, margin, screen.X - margin, margin + side }
+			for car, name in { SVJ = "DriveHud", DR458 = "DriveHudDR458" } do
+				for _, placed in placements(car, name, screen) do
+					local rect = placed.rect
+					local apart = rect[3] <= button[1]
+						or rect[1] >= button[3]
+						or rect[4] <= button[2]
+						or rect[2] >= button[4]
+					expect(apart).toBe(true)
+				end
+			end
+		end
 	end)
 end)
