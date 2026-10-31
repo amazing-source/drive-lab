@@ -37,6 +37,8 @@ local STUDS_PER_METRE = 1 / Units.METRES_PER_STUD
 
 local held: { [string]: number } = {}
 local pressed: { string } = {}
+-- Drivers with gestures this client is drawing (its own car, at most): presses are kept only then.
+local active = 0
 -- The controls each key works (a key can work several, as E shifts up and gets out).
 local byKey: { [Enum.KeyCode]: { string } }? = nil
 
@@ -60,7 +62,9 @@ local function listen()
 		local controls: { string } = if processed then {} else map[input.KeyCode] or {}
 		for _, control in controls do
 			held[control] = (held[control] or 0) + 1
-			table.insert(pressed, control)
+			if active > 0 then
+				table.insert(pressed, control)
+			end
 		end
 	end)
 	UserInputService.InputEnded:Connect(function(input)
@@ -105,6 +109,7 @@ function WheelGestures.new(entry: Catalog.Entry, model: Model, chassis: BasePart
 		return nil
 	end
 	listen()
+	active += 1
 	local state: State
 	local inputs: HandGestures.Inputs = {
 		held = function(control: string): boolean
@@ -233,6 +238,8 @@ end
 
 -- The driver has gone: the turned controls back to rest.
 function WheelGestures.release(state: State)
+	active = math.max(0, active - 1)
+	table.clear(pressed)
 	for _, found in state.turned do
 		if found.weld.Parent then
 			found.weld.C0 = found.rest
