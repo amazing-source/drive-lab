@@ -108,8 +108,12 @@ local function askStart(car: Model)
 		return
 	end
 	local interlock = Config.CLUTCH_INTERLOCK
-	local refusal =
-		Rules.startRefusal(entry, car:GetAttribute("GearboxMode"), car:GetAttribute(interlock.pedalAttribute))
+	local refusal = Rules.startRefusal(
+		entry,
+		CarState.read(car),
+		car:GetAttribute("GearboxMode"),
+		car:GetAttribute(interlock.pedalAttribute)
+	)
 	if refusal then
 		car:SetAttribute(interlock.hintAttribute, refusal)
 		task.delay(interlock.hintSeconds, function()

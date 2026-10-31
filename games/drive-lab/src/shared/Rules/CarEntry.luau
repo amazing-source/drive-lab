@@ -312,11 +312,12 @@ function CarEntry.parseKey(car: Car, value: unknown): string
 	return Config.STANDARD_KEY
 end
 
--- Why the starter refuses, if it does: "Clutch" on a car with a clutch interlock whose driver works
--- the clutch (`gearboxMode`) and has not pressed it far enough (`clutchPedal`, 0 to 1).
-function CarEntry.startRefusal(car: Car, gearboxMode: unknown, clutchPedal: unknown): "Clutch"?
+-- Why the starter refuses, if it does: "Clutch" on a car with a clutch interlock, its engine off,
+-- whose driver works the clutch (`gearboxMode`) and has not pressed it far enough (`clutchPedal`,
+-- 0 to 1).
+function CarEntry.startRefusal(car: Car, state: State, gearboxMode: unknown, clutchPedal: unknown): "Clutch"?
 	local interlock = Config.CLUTCH_INTERLOCK
-	if car.startup.interlock ~= "Clutch" or gearboxMode ~= interlock.gearboxMode then
+	if car.startup.interlock ~= "Clutch" or state.engine ~= "Off" or gearboxMode ~= interlock.gearboxMode then
 		return nil
 	end
 	local pedal = if typeof(clutchPedal) == "number" then clutchPedal else 0
