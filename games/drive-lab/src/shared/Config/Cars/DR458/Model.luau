@@ -61,6 +61,13 @@ local Model: Binding.CarModel = {
 			rest = 0.35,
 			travel = -0.7,
 		},
+		PanelSwitch_RainLight = {
+			part = "PanelSwitch_RainLight",
+			pivot = { forward = 0.82338, right = 0.0158, up = -0.0116 },
+			axis = { forward = 0, right = 1, up = 0 },
+			rest = 0.35,
+			travel = -0.7,
+		},
 		TunnelKey_Master = {
 			part = "TunnelKey_Master",
 			pivot = { forward = 0.50625, right = 0, up = -0.04352 },
