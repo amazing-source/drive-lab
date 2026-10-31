@@ -17,6 +17,18 @@ local RED_LENS = rgb(214, 36, 30)
 local AMBER_LENS = rgb(236, 138, 40)
 
 local Lights: CarLights.Lights = table.freeze({
+	required = table.freeze({
+		"Light_FrontLeft_Projector",
+		"Light_FrontRight_Projector",
+		"Light_FrontLeft_Modules",
+		"Light_FrontRight_Modules",
+		"Light_RearLeft_Tail",
+		"Light_RearRight_Tail",
+		"Light_RearLeft_Indicator",
+		"Light_RearRight_Indicator",
+		"Light_RearLeft_Reverse",
+		"Light_RearRight_Reverse",
+	}),
 	glow = table.freeze({
 		drl = table.freeze({ tint = rgb(235, 242, 255), day = 9, night = 3.2 }),
 		projector = table.freeze({ tint = rgb(240, 244, 255), day = 6, night = 2.4 }),
