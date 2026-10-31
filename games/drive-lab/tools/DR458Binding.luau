@@ -23,8 +23,9 @@ local Settings: ManifestBinding.Settings = {
 	assemblies = { Door_L = "Door_L_Skin", Door_R = ManifestBinding.BODY },
 	door = { group = "Door_L", hinge = "Door_L_Skin" },
 	-- The start-up's controls (Config/Cars/DR458/Startup): the master key, the ignition's guard and
-	-- its switch. ENGINE START is pressed by the hand, not turned.
-	controls = { "TunnelKey_Master", "PanelGuard_Ignition", "PanelSwitch_Ignition" },
+	-- its switch. ENGINE START is pressed by the hand, not turned. The RAIN LIGHT toggle is the
+	-- panel switch the driver flicks with the rain light (Config/Cars/DR458/Switches).
+	controls = { "TunnelKey_Master", "PanelGuard_Ignition", "PanelSwitch_Ignition", "PanelSwitch_RainLight" },
 	pedals = { "Pedal_Throttle", "Pedal_Brake" },
 	-- The knob's positions in the order the manifest gives them, from its modelled pointer.
 	modeKnob = { part = "WheelRotary_Manettino", modes = { "OFF", "1", "2" } },
@@ -63,6 +64,8 @@ local Settings: ManifestBinding.Settings = {
 		TunnelKey_Master = { rest = 0, other = math.pi / 2 },
 		PanelGuard_Ignition = { rest = 0, other = 1.75 },
 		PanelSwitch_Ignition = { rest = 0.35, other = -0.35 },
+		-- EST: modelled like the ignition toggle beside it, off tipped down and on up.
+		PanelSwitch_RainLight = { rest = 0.35, other = -0.35 },
 	},
 }
 
