@@ -4,7 +4,8 @@
 	so the physics runs here every frame against the player's own input, with no round trip.
 	The car's live readings go out as attributes on its model for the camera and the HUD. The
 	drive-mode knob and the pit limiter act when the driver's hand works them, on a car whose hand
-	gestures play them (Rig/ControlPresses), and at their key otherwise.
+	gestures play them (Rig/ControlPresses), and at their key otherwise. T steps the gearbox modes
+	(Rules/GearboxModes); a stall goes to the server and back (Rules/Stall).
 ]]
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,20 +21,28 @@ local ControlPresses = require(script.Parent.Parent.Rig.ControlPresses)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local DriveModes = require(ReplicatedStorage.Shared.Rules.DriveModes)
 local DriverAssists = require(ReplicatedStorage.Shared.Rules.DriverAssists)
+local Gearbox = require(ReplicatedStorage.Shared.Vehicle.Gearbox)
+local GearboxModes = require(ReplicatedStorage.Shared.Rules.GearboxModes)
 local InputHelp = require(ReplicatedStorage.Shared.Config.InputHelp)
 local Interface = require(ReplicatedStorage.Shared.Vehicle.Interface)
+local Net = require(ReplicatedStorage.Kit.Net)
 local PitLimiter = require(ReplicatedStorage.Shared.Rules.PitLimiter)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local ShiftSync = require(ReplicatedStorage.Shared.Rules.ShiftSync)
+local Stall = require(ReplicatedStorage.Shared.Rules.Stall)
 local TyreSmoke = require(ReplicatedStorage.Shared.Rules.TyreSmoke)
 local TyreSmokeConfig = require(ReplicatedStorage.Shared.Config.TyreSmoke)
 local Types = require(ReplicatedStorage.Shared.Config.Cars.Types)
+local VehicleModel = require(ReplicatedStorage.Shared.Vehicle.Model)
 local VehicleRunner = require(ReplicatedStorage.Shared.Car.VehicleRunner)
 
 local localPlayer = Players.LocalPlayer
 local runner: VehicleRunner.Runner? = nil
 local connection: RBXScriptConnection? = nil
 local pressed = { shiftUp = false, shiftDown = false }
-local gearboxMode: "auto" | "manual" = "auto"
+local gearboxMode: Gearbox.GearboxMode = "auto"
+-- The driver uses the keyboard (InputHelp's preset), where the clutch mode is offered.
+local keyboard = true
 -- The entry and model of the car being driven.
 local driven: Catalog.Entry? = nil
 local drivenModel: Model? = nil
@@ -42,6 +51,9 @@ local chosenMode: { [string]: Types.DrivingMode } = {}
 local escSwitch = DriverAssists.newSwitch()
 local pitLimiter = PitLimiter.newState()
 local tyreReadings: { TyreSmoke.Wheel } = {}
+local stall = Stall.newTracker()
+-- Shifts refused with the player's clutch up, counted for the car's grind (Rules/GearboxModes).
+local grinds = 0
 -- The gear of the frame before, on a car with an H-pattern manual, for the instant a shift engages.
 local lastGear: number? = nil
 
@@ -101,6 +113,7 @@ local function readInput(entry: Catalog.Entry, mode: Types.DrivingMode): Interfa
 		drift = held(Controls.HANDBRAKE),
 		shiftUp = pressed.shiftUp,
 		shiftDown = pressed.shiftDown,
+		clutchPedal = if held(Controls.CLUTCH) then 1 else 0,
 		gearboxMode = gearboxMode,
 		drivingMode = mode,
 		assists = DriverAssists.assists(escSwitch.off, mode, tuning),
@@ -111,8 +124,15 @@ end
 
 -- Until the car is started, shut and its driver settled in (Rules/CarEntry), it stays parked:
 -- the runner still holds it on its suspension, and a tap meant for a pedal or a paddle is dropped.
-local function gated(entry: Catalog.Entry, model: Model, input: Interface.DriverInput): Interface.DriverInput
-	if CarEntry.drivable(entry, CarState.read(model), Workspace:GetServerTimeNow()) then
+-- A car that stalled rolls on with the driver's input (Rules/Stall).
+local function gated(
+	entry: Catalog.Entry,
+	model: Model,
+	current: VehicleRunner.Runner,
+	input: Interface.DriverInput
+): Interface.DriverInput
+	local drivable = CarEntry.drivable(entry, CarState.read(model), Workspace:GetServerTimeNow())
+	if Stall.drives(drivable, Gearbox.stalled(current.state.gearbox)) then
 		return input
 	end
 	input.throttle, input.brake, input.steer, input.handbrake = 0, 0, 0, 1
@@ -169,6 +189,8 @@ local function publish(
 	model:SetAttribute("Drift", telemetry.drift)
 	model:SetAttribute("DriftTarget", math.deg(telemetry.driftTarget))
 	model:SetAttribute("PitLimiter", pitLimiter.armed)
+	grinds = GearboxModes.grinds(grinds, telemetry.shiftRefusal)
+	model:SetAttribute("ShiftGrinds", grinds)
 	local entry = driven
 	local manual = if entry then entry.physics.gearbox.manual else nil
 	if entry and manual and entry.physics.gearbox.kind == "manual" then
@@ -198,6 +220,8 @@ local function stop()
 	-- ESC is back on for the next drive, as at a new ignition cycle (the car's assists).
 	escSwitch = DriverAssists.newSwitch()
 	pitLimiter = PitLimiter.newState()
+	stall = Stall.newTracker()
+	grinds = 0
 	lastGear = nil
 	driven = nil
 	drivenModel = nil
@@ -225,12 +249,21 @@ local function start(seat: Seat)
 	runner = current
 	driven = entry
 	drivenModel = model
+	keyboard = help == InputHelp.keyboard
+	gearboxMode = GearboxModes.valid(entry.physics.gearbox, gearboxMode, keyboard)
 	connection = RunService.PreSimulation:Connect(function(dt: number)
 		local mode = modeOf(entry)
 		local input = limitPit(entry, model, readInput(entry, mode))
-		local result = VehicleRunner.step(current, gated(entry, model, input), dt)
+		local result = VehicleRunner.step(current, gated(entry, model, current, input), dt)
 		VehicleRunner.animate(current, dt)
 		publish(model, result, current, mode)
+		local action = Stall.step(stall, result.telemetry.stalled, CarState.read(model).engine == "On")
+		if action == "Report" then
+			Net.send(Remotes.CAR_ACTION, { car = model, action = "Stall" })
+		elseif action == "Restart" then
+			-- The key start already asked for the clutch down (Rules/CarEntry.startRefusal).
+			VehicleModel.restart(current.state, 1)
+		end
 	end)
 end
 
@@ -296,8 +329,8 @@ function Controller.start()
 			pressed.shiftUp = true
 		elseif contains(Controls.SHIFT_DOWN, key) then
 			pressed.shiftDown = true
-		elseif contains(Controls.GEARBOX_MODE, key) then
-			gearboxMode = if gearboxMode == "auto" then "manual" else "auto"
+		elseif contains(Controls.GEARBOX_MODE, key) and driven then
+			gearboxMode = GearboxModes.after(driven.physics.gearbox, gearboxMode, keyboard)
 		elseif contains(Controls.DRIVING_MODE, key) then
 			pressSwitch("DRIVING_MODE")
 		elseif contains(Controls.PIT_LIMITER, key) then

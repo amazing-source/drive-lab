@@ -218,6 +218,11 @@ local HELP: Rules.Help = {
 					controls = { "GEARBOX_MODE" },
 				},
 				{
+					label = "Clutch (clutch mode)",
+					text = "On the keyboard, the gearbox key's third press gives you the clutch, held to press the pedal: a gear change needs it down, letting it up in gear without throttle stalls the engine, and the key starts it again with the clutch down.",
+					controls = { "CLUTCH" },
+				},
+				{
 					label = "Strada / Sport / Corsa",
 					text = "Steps through the drive modes: Strada for the road (smooth shifts, soft suspension, assists that step in early), Sport (quicker shifts, power mostly to the rear, assists that let the tail slide) and Corsa for the track (the fastest shifts, the firmest suspension, kept on its line).",
 					controls = { "DRIVING_MODE" },

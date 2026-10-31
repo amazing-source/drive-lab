@@ -39,6 +39,12 @@ function Hud.shiftFlash(rpm: number, shiftAt: number, manual: boolean, time: num
 	return manual and rpm >= shiftAt and (time * hz) % 1 < 0.5
 end
 
+-- Whether the gearbox mode (the car's "GearboxMode") changes gear by hand: manual, with or without
+-- the player's clutch.
+function Hud.manualGearbox(mode: unknown): boolean
+	return mode == "manual" or mode == "manualClutch"
+end
+
 -- The drive mode's label, or `launchText` while launch control is armed or launching.
 function Hud.modeText(modeName: unknown, launching: boolean, launchText: string): string
 	if launching then

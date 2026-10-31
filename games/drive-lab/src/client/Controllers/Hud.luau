@@ -55,7 +55,7 @@ end
 local function readouts(model: Model, entry: Catalog.Entry): HudView.Readouts
 	local rpm =
 		CarEntry.shownRpm(entry, CarState.read(model), Workspace:GetServerTimeNow(), number(model, "Rpm"))
-	local manual = model:GetAttribute("GearboxMode") == "manual"
+	local manual = Rules.manualGearbox(model:GetAttribute("GearboxMode"))
 	local redline = Contract.redline(entry)
 	local launch = model:GetAttribute("Launch")
 	local mode = DriveModes.current(entry.physics.modeOrder, model:GetAttribute("DrivingMode"))

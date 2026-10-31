@@ -85,7 +85,7 @@ function Selector.pedals(
 	out: InputFilter.RawControls
 ): InputFilter.RawControls
 	local swap = Selector.swapped(help, gearbox, input.gearboxMode)
-	out.steer, out.handbrake = input.steer, input.handbrake
+	out.steer, out.handbrake, out.clutch = input.steer, input.handbrake, input.clutchPedal or 0
 	out.throttle = if swap then input.brake else input.throttle
 	out.brake = if swap then input.throttle else input.brake
 	return out

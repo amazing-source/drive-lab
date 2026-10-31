@@ -13,7 +13,7 @@ export type EntryKind = "None" | "Enter" | "Exit"
 export type Phase = "Outside" | "Entering" | "Seated" | "Exiting"
 export type EngineState = "Off" | "On"
 export type Stage = "Off" | "Reaching" | "Cranking" | "Running"
-export type Action = "Enter" | "Exit" | "Door" | "Start" | "Cancel"
+export type Action = "Enter" | "Exit" | "Door" | "Start" | "Cancel" | "Stall"
 export type ApproachPlan = "Settle" | "Straight" | "LineUp"
 -- The KeyCode names of the seated controls (Config/Controls DOOR, START_ENGINE, EXIT).
 export type SeatedKeys = { door: { string }, start: { string }, exit: { string } }
@@ -46,7 +46,7 @@ export type Startup = {
 }
 
 local ACTIONS: { [string]: Action } =
-	{ Enter = "Enter", Exit = "Exit", Door = "Door", Start = "Start", Cancel = "Cancel" }
+	{ Enter = "Enter", Exit = "Exit", Door = "Door", Start = "Start", Cancel = "Cancel", Stall = "Stall" }
 local OUTSIDE_CLIPS: { [string]: Config.ClipName } =
 	{ OutsideOpen = "OutsideOpen", OutsideClose = "OutsideClose" }
 
@@ -360,6 +360,11 @@ function CarEntry.canStart(car: Car, state: State, now: number): boolean
 	return CarEntry.phase(car, state, now) == "Seated"
 		and state.engine == "Off"
 		and CarEntry.doorClosed(car, state, now)
+end
+
+-- The driving client reports a stall (Rules/Stall): the engine stops only while it runs.
+function CarEntry.canStall(state: State): boolean
+	return state.engine == "On"
 end
 
 -- From inside the seated driver may move the door; from outside, anyone at the mark while

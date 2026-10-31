@@ -116,6 +116,27 @@ describe("ControlsHelp", function()
 		end
 	end)
 
+	it(
+		"explains the clutch key on a car that offers the player's clutch, which no car in the catalog does yet",
+		function()
+			local features = Contract.features(Catalog.cars.SVJ)
+			features.playerClutch = true
+			local help, bindings = ControlsHelp.forCar(
+				Config.HELP,
+				realBindings(),
+				"SVJ",
+				features,
+				CarSwitches.NEEDS,
+				Config.carValues(Catalog.cars.SVJ)
+			)
+			local problems = ControlsHelp.problems(help, bindings)
+			if #problems > 0 then
+				error(`the clutch row is not ready: {report(problems)}`)
+			end
+			expect(firstRow(help, "CLUTCH").label).toBe("Clutch (clutch mode)")
+		end
+	)
+
 	it("reads the keys from Config/Controls, keyboard and gamepad apart", function()
 		local bindings = realBindings()
 		local keyboard, gamepad =

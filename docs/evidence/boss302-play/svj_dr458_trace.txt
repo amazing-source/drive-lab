@@ -1,0 +1,6 @@
+SVJ and DR458 driven frame by frame on tools/DriveSim on the base (main 832e862) and this branch, at 30 and 60
+FPS: the same scenario and script as docs/evidence/boss302-manual-gearbox/svj_dr458_trace.txt.
+
+Result: 4,862 frames each, byte-identical (cmp); the same hash as at #218's base.
+  base:        sha256 7f2eee0ae147a56dc8f9a47d65239bc0f147c884711a02b6c6b1de7be1896bb0
+  this branch: sha256 7f2eee0ae147a56dc8f9a47d65239bc0f147c884711a02b6c6b1de7be1896bb0

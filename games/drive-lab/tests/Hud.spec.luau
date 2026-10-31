@@ -5,6 +5,13 @@ local T = require("../../../tools/test/T")
 local describe, it, expect = T.describe, T.it, T.expect
 
 describe("Hud", function()
+	it("counts both manual gearbox modes as changing gear by hand", function()
+		expect(Hud.manualGearbox("manual")).toBe(true)
+		expect(Hud.manualGearbox("manualClutch")).toBe(true)
+		expect(Hud.manualGearbox("auto")).toBe(false)
+		expect(Hud.manualGearbox(nil)).toBe(false)
+	end)
+
 	it("cycles Full, Minimal, Off", function()
 		expect(Hud.nextMode("Full")).toBe("Minimal")
 		expect(Hud.nextMode("Minimal")).toBe("Off")
