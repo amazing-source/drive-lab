@@ -15,8 +15,12 @@ local EVENTS = "rbxassetid://79771227703971"
 
 local corsa = SVJ.popTriggers
 
--- dB under the SVJ's own pop level: its off-throttle loops play 3.5 to 6.5 dB under its on ones,
--- so the same pops stood further out of its overrun than out of the SVJ's.
+-- dB over its loops' matched level that the car plays at: its engine, and everything that follows its
+-- level (Config/CarAudio carGain).
+local LEVEL_DB = 8
+
+-- dB under the SVJ's pop level against its engine: the DR458's off-throttle loops play 3.5 to 6.5 dB
+-- under its on ones, so the same pops stood further out of its overrun than out of the SVJ's.
 local POPS_GAIN_DB = -4.5
 local popsGain = 10 ^ (POPS_GAIN_DB / 20)
 
@@ -208,7 +212,7 @@ local Audio: CarAudio.Pack = {
 		volumeHalfLife = 0.03,
 		speedHalfLife = 0.012,
 	},
-	engineVolume = 1,
+	engineVolume = 10 ^ (LEVEL_DB / 20),
 	-- The top on loop raised to 9,000 rpm and gated at 15 Hz.
 	limiter = {
 		soundId = BANK,
@@ -233,7 +237,7 @@ local Audio: CarAudio.Pack = {
 	-- last 0.8 s fade out while the idle loop fades in.
 	startup = {
 		region = { from = 0, to = 5.87125 },
-		boostDb = 0,
+		boostDb = 6,
 		handOver = 5.0713,
 		abortRpm = 1400,
 		abortHalfLife = 0.08,

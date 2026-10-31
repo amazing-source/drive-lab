@@ -1,0 +1,39 @@
+Issue #190: the DR458 plays about 8 dB louder; the road and tyre sounds follow each car's level.
+
+Gates at the branch head: stylua, selene (0/0/0), luau-lsp (src), lune run tools/test/run (92 spec
+files, 952 passed), lune run tools/test/tools (20 tools, 20 run, 0 failed), rojo build.
+
+SVJ byte-identical to main 561bb71: lune run games/drive-lab/tools/audio_timeline.luau SVJ <mode> and
+lune run games/drive-lab/tools/road_timeline.luau <mode>, for Strada, Sport and Corsa, compared with
+cmp. The DR458's control sounds list (tools/control_sounds.luau) is unchanged too.
+
+DR458 offline timeline (audio_timeline DR458 1), main against this branch:
+  engine loops and limiter, every frame: x2.5119 (+8.00 dB)
+  pops (31 shots) +8.00 dB; gear clicks (10 shots) +8.00 dB; start-up +14.00 dB (+8 level, +6 boost)
+  loudest Sound volume set: 2.43 (loops), 2.69 (one-shots), under Roblox's 10
+The controls follow CarAudio.idleLevel, x2.5119 (their levels against the idle are unchanged). The wind,
+roar and tyres heard in the DR458 play x2.5119 (Rules/RoadAudio and Rules/TyreAudio carGain).
+
+Deliberate breaks, each restored with `git checkout -- games` (952 passed after; the first six ran before
+the range specs were added):
+M1  CarAudio.carGain returns 1
+    FAIL DR458: plays them 4.5 dB under the SVJ's balance with its engine, in the SVJ's spread
+    FAIL makes a car's controls, start-up, one-shots, road and tyres follow its level
+    FAIL RoadAudio config > makes the wind heard from everyday speeds in both views, for every car
+M2  Rules/RoadAudio drops the car gain from the wind
+    FAIL RoadAudio > plays the wind and the roar at the driven car's level, 1 when it has none
+M3  Rules/TyreAudio drops the car gain
+    FAIL Tyre audio mix > plays the tyres at the driven car's level, under a ceiling that follows its engine
+M4  the DR458's LEVEL_DB 0
+    FAIL plays the SVJ at its loops' level and the DR458 8 dB over it
+M5  the DR458's start-up boostDb 0
+    FAIL DR458: plays its start-up 6 dB over its idle, about as the SVJ's (5.4)
+M6  CarAudio.idleLevel leaves out the engine volume
+    FAIL makes a car's controls, start-up, one-shots, road and tyres follow its level
+    FAIL Control sounds > takes the idle level from the pack's lowest layer, wherever it is listed
+B7  the DR458's LEVEL_DB 20
+    FAIL plays the SVJ at its loops' level and the DR458 8 dB over it
+    FAIL keeps every Sound volume each car sets within Roblox's 0 to 10
+B8  the DR458's LEVEL_DB 30
+    FAIL the two above and RoadAudio config > keeps the wind and the roar within AudioPlayer's 0 to 10
+    in every car, view and surface

@@ -8,7 +8,7 @@
 	Built on the audio API rather than Sound objects, because only its AudioFilter has a cutoff
 	that can move: each loop is an AudioPlayer wired through its effects to one
 	AudioDeviceOutput, so they play flat, as the weather's rain does. Both loops are regions of
-	one uploaded file. Nothing here touches the engine's sound.
+	one uploaded file. Nothing here touches the engine's sound; both follow the driven car's level.
 ]]
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -16,7 +16,9 @@ local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 local Workspace = game:GetService("Workspace")
 
+local CarAudio = require(ReplicatedStorage.Shared.Config.CarAudio)
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
+local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local Config = require(ReplicatedStorage.Shared.Config.RoadAudio)
 local Rules = require(ReplicatedStorage.Shared.Rules.RoadAudio)
 local Units = require(ReplicatedStorage.Shared.Units)
@@ -32,7 +34,8 @@ type Audio = {
 	surfaceIn: number,
 }
 
-type Car = { model: Model, chassis: BasePart, ray: RaycastParams }
+-- `gain`: the car's level (Config/CarAudio carGain), which the wind and the roar follow.
+type Car = { model: Model, chassis: BasePart, ray: RaycastParams, gain: number? }
 
 local localPlayer = Players.LocalPlayer
 local car: Car? = nil
@@ -104,6 +107,7 @@ local function update(audio: Audio, dt: number)
 	input.speedKmh = if current and driving then readNumber(current.model, Config.SPEED_ATTRIBUTE) else 0
 	input.cockpit = camera ~= nil and camera:GetAttribute(Config.VIEW_ATTRIBUTE) == Config.COCKPIT_VIEW
 	input.driving = driving
+	input.carGain = if current then current.gain else nil
 	audio.surfaceIn -= dt
 	if current and driving and audio.surfaceIn <= 0 then
 		audio.surfaceIn = Config.SURFACE_INTERVAL
@@ -133,7 +137,13 @@ local function onSeat(humanoid: Humanoid)
 		ray.FilterType = Enum.RaycastFilterType.Exclude
 		ray.FilterDescendantsInstances = { model, humanoid.Parent :: Instance }
 		ray.IgnoreWater = true
-		car = { model = model, chassis = chassis, ray = ray }
+		local entry = Catalog.of(model)
+		car = {
+			model = model,
+			chassis = chassis,
+			ray = ray,
+			gain = if entry then CarAudio.carGain(entry.audio) else nil,
+		}
 	else
 		car = nil
 	end
