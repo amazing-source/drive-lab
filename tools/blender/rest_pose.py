@@ -4,11 +4,16 @@ way from the hip to the knee, in the driver's seat frame. Plain Python (no Blend
 Rules/DriverLegs for the thighs and Controllers/DriverArms for the shoulders.
 
     python -I tools/blender/rest_pose.py <SEAT_WELD.json> <poses.json> <out REST_POSE.json>
+    python -I tools/blender/rest_pose.py --car <car.json> <poses.json> <out REST_POSE.json>
 
 Inputs: the seated R6 measured in Studio (SEAT_WELD.json: the torso's centre and the joints in
 the DriverSeat part's frame at Driving.DRIVER_SCALE) and the posed hands of hand_poses.py
 (poses.json: the Rest hand's palm and fingertips in its wrist frame). The footwell numbers below
 are Config/DriverLegs' (rest: right foot on the throttle, unpressed; left on the footrest).
+
+With --car, another car's driver: car.json gives its scale, each thigh's hip and knee (metres,
+seat frame, as its legs are drawn), the arm controller's shoulders and the R6 shoulder joints
+(studs), the arms' lengths at scale 1, and the "about" and "frame" lines to record.
 
 Output: per side, the wrist frame (the frame the game moves the hand by: z up the forearm, y out
 of the back of the hand) as a position and a quaternion, the palm's centre, the fingers' and the
@@ -109,12 +114,38 @@ def quaternion(axes):
     return ((m10 - m01) / s, (m02 + m20) / s, (m12 + m21) / s, 0.25 * s)
 
 
-def rest_side(seat_weld, shape, sign):
+def svj_side(seat_weld, sign):
+    """The SVJ's thigh and shoulders, from the measured sit and the constants above."""
     torso = seat_weld["robloxSit"]["pointsInSeat"]["torsoCentre"]
     hip_studs = add(torso, mul((sign * HIP[0], HIP[1], HIP[2]), DRIVER_SCALE))
     hip = mul(hip_studs, 1 / STUDS_PER_METRE)
     feet = THROTTLE if sign > 0 else FOOTREST
     knee, _ = leg(hip, feet["heel"], feet["ball"], KNEE_TOWARD[sign])
+    return {
+        "hip": hip,
+        "knee": knee,
+        "shoulder": (sign * (1 - SHOULDER_INSET) * DRIVER_SCALE, seat_weld["robloxSit"]["pointsInSeat"]["rightShoulder"][1], 0),
+        "reach": (UPPER + LOWER) * DRIVER_SCALE,
+        "joint": seat_weld["robloxSit"]["pointsInSeat"]["rightShoulder" if sign > 0 else "leftShoulder"],
+        "blocky": 1.5 * DRIVER_SCALE,
+    }
+
+
+def car_side(car, sign):
+    """Another car's thigh (hip and knee, metres) and shoulders (studs) from its car file."""
+    side = "right" if sign > 0 else "left"
+    return {
+        "hip": tuple(car["thighs"][side]["hip"]),
+        "knee": tuple(car["thighs"][side]["knee"]),
+        "shoulder": tuple(car["shoulders"][side]),
+        "reach": (car["arms"][0] + car["arms"][1]) * car["scale"],
+        "joint": car["joints"][side],
+        "blocky": 1.5 * car["scale"],
+    }
+
+
+def rest_side(body, shape, sign):
+    hip, knee = body["hip"], body["knee"]
     thigh_dir = unit(sub(knee, hip))
     centre = add(hip, mul(sub(knee, hip), ALONG_THIGH))
     up = unit(sub((0, 1, 0), mul(thigh_dir, dot((0, 1, 0), thigh_dir))))
@@ -136,15 +167,15 @@ def rest_side(seat_weld, shape, sign):
     axes = (x0, y1, z1)
     palm_seat = apply(axes, palm)
     wrist = sub(surface, palm_seat)
-    shoulder_studs = (sign * (1 - SHOULDER_INSET) * DRIVER_SCALE, seat_weld["robloxSit"]["pointsInSeat"]["rightShoulder"][1], 0)
-    reach = (UPPER + LOWER) * DRIVER_SCALE
+    shoulder_studs = body["shoulder"]
+    reach = body["reach"]
     wrist_studs = mul(wrist, STUDS_PER_METRE)
     distance = math.sqrt(dot(sub(wrist_studs, shoulder_studs), sub(wrist_studs, shoulder_studs)))
     tip_seat = add(wrist, apply(axes, tip))
     tip_height = dot(sub(tip_seat, centre), up) - radius
-    joint = seat_weld["robloxSit"]["pointsInSeat"]["rightShoulder" if sign > 0 else "leftShoulder"]
+    joint = body["joint"]
     hand_studs = mul(surface, STUDS_PER_METRE)
-    blocky_length = 1.5 * DRIVER_SCALE
+    blocky_length = body["blocky"]
     blocky_end = add(joint, mul(unit(sub(hand_studs, joint)), blocky_length))
     w, qx, qy, qz = quaternion(axes)
     return {
@@ -165,6 +196,20 @@ def rest_side(seat_weld, shape, sign):
 
 
 def main(args):
+    if args[0] == "--car":
+        car = json.load(open(args[1]))
+        poses = json.load(open(args[2]))
+        result = {
+            "about": car["about"],
+            "frame": car["frame"],
+            "wristFrame": "wrist + rotation (w, x, y, z) is the frame the game places the hand by: z from the wrist up the forearm, y out of the back of the hand.",
+            "forBlockyArms": "palmCentre is the middle of the palm on the thigh; blockyArmEnd is where an R6 arm's end lands aimed from its shoulder joint at palmCentre (its 1.5-stud reach at scale 1, times the driver's scale).",
+            "right": rest_side(car_side(car, 1), poses["shapes"]["Rest"]["R"], 1),
+            "left": rest_side(car_side(car, -1), poses["shapes"]["Rest"]["L"], -1),
+        }
+        json.dump(result, open(args[3], "w"), indent=1)
+        print(json.dumps(result, indent=1))
+        return
     seat_weld = json.load(open(args[0]))
     poses = json.load(open(args[1]))
     result = {
@@ -172,8 +217,8 @@ def main(args):
         "frame": "The DriverSeat part's frame (x right, y up, -z forward), studs of the 1.5x world, for a driver at Driving.DRIVER_SCALE seated by Roblox's SeatWeld with the upright sit torso.",
         "wristFrame": "wrist + rotation (w, x, y, z) is the frame the game places the hand by: z from the wrist up the forearm, y out of the back of the hand.",
         "forBlockyArms": "palmCentre is the middle of the palm on the thigh; blockyArmEnd is where an R6 arm's end lands aimed from its shoulder joint at palmCentre (its 1.5-stud reach at scale 1).",
-        "right": rest_side(seat_weld, poses["shapes"]["Rest"]["R"], 1),
-        "left": rest_side(seat_weld, poses["shapes"]["Rest"]["L"], -1),
+        "right": rest_side(svj_side(seat_weld, 1), poses["shapes"]["Rest"]["R"], 1),
+        "left": rest_side(svj_side(seat_weld, -1), poses["shapes"]["Rest"]["L"], -1),
     }
     json.dump(result, open(args[2], "w"), indent=1)
     print(json.dumps(result, indent=1))

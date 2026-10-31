@@ -1,11 +1,11 @@
 --!strict
 --[[
-	The driver in the DR458, until the animators' own module lands (#108, #118): the grip and the
-	footwell are theirs for this cabin; the hand meshes and the start-up paths are the SVJ's
-	stand-ins, posed for the SVJ's rim and cabin.
+	The driver in the DR458, until the animators' own module lands (#108): the grip and the
+	footwell are theirs for this cabin, the start-up paths are keyed against its controls; the
+	hand meshes are the SVJ's.
 ]]
 local Contract = require("../Contract")
-local SVJStartupPaths = require("../SVJ/StartupPaths")
+local StartupPaths = require("./StartupPaths")
 
 local Driver: Contract.Driver = {
 	-- The right hand, from hand_grip.py (grip v9_a10: 10 degrees above 3 o'clock, the thumb over the
@@ -44,7 +44,7 @@ local Driver: Contract.Driver = {
 			left = table.freeze({ x = -0.3, y = 0.9, z = -0.3 }),
 		}),
 	}),
-	startupPaths = SVJStartupPaths,
+	startupPaths = StartupPaths,
 }
 
 return table.freeze(Driver)
