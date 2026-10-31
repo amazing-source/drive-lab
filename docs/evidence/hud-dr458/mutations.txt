@@ -1,0 +1,63 @@
+Deliberate breaks for #167, each applied alone to the committed tree, the Lune suite run
+(lune run tools/test/run), the file restored. Batch run before the merges of origin/main; the
+three reruns and the two post-merge breaks follow it.
+
+### DR458 has no hud entry (games/drive-lab/src/shared/Config/Cars/DR458/init.luau) -> exit 1 ['86 spec files, 835 passed, 4 failed']
+    FAIL Car HUDs > gives the DR458 its own HUD and leaves the SVJ on the global one: games/drive-lab/tests/CarHud.spec:131: expected table: 0x0000027ad3a8b7e0, got nil
+    FAIL Car HUDs > refuses a car whose HUD fails, at load: games/drive-lab/tests/CarHud.spec:290: attempt to index nil with 'segments'
+    FAIL Car HUDs > builds and draws the SVJ's HUD exactly as before a car could carry its own: games/drive-lab/tests/HudHarness:401: attempt to index nil with 'children'
+    FAIL Car HUDs > draws the DR458's own HUD: slanted digits, its red zone, its pictograms; the SVJ's hidden: games/drive-lab/tests/HudHarness:401: attempt to index nil with 'children'
+### SVJ fallback value changed (COCKPIT_HEIGHT) (games/drive-lab/src/shared/Config/Hud.luau) -> exit 1 ['86 spec files, 837 passed, 2 failed']
+    FAIL Car HUDs > keeps the global HUD the SVJ falls back to, value for value: games/drive-lab/tests/CarHud.spec:76: expected {1=0.17,10=0.12,11=LAUNCH,2=0.13,3=0.9,4=14,5=0.72,6=1000,7=2.5,8=0.59,9=0.03333333333}, got {1=0.17,10=0.12,11=LAUNCH,2
+    FAIL Car HUDs > builds and draws the SVJ's HUD exactly as before a car could carry its own: games/drive-lab/tests/CarHud.spec:303: expected nil, got line 2: got DriveHud/1 ImageLabel AnchorPoint=1, 1 BackgroundTransparency=1 Image="rbxassetid:/
+### SVJ view: gear tinted lit instead of text (games/drive-lab/src/client/Ui/HudView.luau) -> exit 1 ['86 spec files, 838 passed, 1 failed']
+    FAIL Car HUDs > builds and draws the SVJ's HUD exactly as before a car could carry its own: games/drive-lab/tests/CarHud.spec:303: expected nil, got line 26: got DriveHud/1/12/2 TextLabel AnchorPoint=0.5, 0.5 BackgroundTransparency=1 FontFace=r
+### SVJ view: light built after the mode text (games/drive-lab/src/client/Ui/HudView.luau) -> exit 1 ['86 spec files, 837 passed, 2 failed']
+    FAIL Car HUDs > builds and draws the SVJ's HUD exactly as before a car could carry its own: games/drive-lab/tests/CarHud.spec:300: expected nil, got line 28: got DriveHud/1/13 TextLabel AnchorPoint=0, 0.5 BackgroundTransparency=1 FontFace=rbxas
+    FAIL Car HUDs > draws the DR458's own HUD: slanted digits, its red zone, its pictograms; the SVJ's hidden: [string "games/drive-lab/src/client/Ui/HudView.luau"]:424: attempt to index nil with 'ImageColor3'
+### segment count not checked (games/drive-lab/src/shared/Config/HudDesign.luau) -> exit 1 ['86 spec files, 838 passed, 1 failed']
+    FAIL Car HUDs > has the rev bar's ten segments on both HUDs: games/drive-lab/tests/CarHud.spec:47: expected false, got true
+### box inside frame always true (games/drive-lab/src/shared/Config/HudDesign.luau) -> exit 1 ['86 spec files, 838 passed, 1 failed']
+    FAIL Car HUDs > refuses a box outside the frame: games/drive-lab/tests/CarHud.spec:48: expected true, got false
+### mask inside atlas always true (games/drive-lab/src/shared/Config/HudDesign.luau) -> exit 1 ['86 spec files, 838 passed, 1 failed']
+    FAIL Car HUDs > refuses a mask outside the atlas, or a part drawn at another size than its mask: games/drive-lab/tests/CarHud.spec:47: expected false, got true
+### part size not checked (games/drive-lab/src/shared/Config/HudDesign.luau) -> exit 1 ['86 spec files, 838 passed, 1 failed']
+    FAIL Car HUDs > refuses a mask outside the atlas, or a part drawn at another size than its mask: games/drive-lab/tests/CarHud.spec:47: expected false, got true
+### images not checked as uploaded (games/drive-lab/src/shared/Config/HudDesign.luau) -> exit 1 ['86 spec files, 838 passed, 1 failed']
+    FAIL Car HUDs > refuses images that are not uploaded assets: games/drive-lab/tests/CarHud.spec:47: expected false, got true
+### digits not checked tabular (games/drive-lab/src/shared/Config/HudDesign.luau) -> exit 1 ['86 spec files, 838 passed, 1 failed']
+    FAIL Car HUDs > refuses a missing glyph, digits of different widths, or a box too narrow for them: games/drive-lab/tests/CarHud.spec:47: expected false, got true
+### speed fit not checked (games/drive-lab/src/shared/Config/HudDesign.luau) -> exit 1 ['86 spec files, 838 passed, 1 failed']
+    FAIL Car HUDs > refuses a missing glyph, digits of different widths, or a box too narrow for them: games/drive-lab/tests/CarHud.spec:47: expected false, got true
+### gear fit not checked: ANCHOR NOT FOUND in games/drive-lab/src/shared/Config/HudDesign.luau
+### redline not the car's own (games/drive-lab/src/shared/Config/Cars/Contract.luau) -> exit 1 ['86 spec files, 836 passed, 3 failed']
+    FAIL Car contract: a binnacle display > accepts a binnacle in place of the dial, and reads its redline: games/drive-lab/tests/CarContract.spec:362: expected 9000, got 8500
+    FAIL Car HUDs > starts each car's red zone at its own redline: the DR458's last segment, half of the SVJ's ninth: games/drive-lab/tests/CarHud.spec:219: expected 9000, got 8500
+    FAIL Car HUDs > draws the DR458's own HUD: slanted digits, its red zone, its pictograms; the SVJ's hidden: games/drive-lab/tests/CarHud.spec:370: expected 0 > 0.9529412, 0.95686275, 0.9490196, 1 > 0.9529412, 0.95686275, 0.9490196, got 0 > 0.952
+### glyph run drops its padding (games/drive-lab/src/shared/Rules/Hud.luau) -> exit 1 []
+### glyphs required (games/drive-lab/src/shared/Config/HudDesign.luau) -> exit 1 ['86 spec files, 838 passed, 1 failed']
+    FAIL Car HUDs > accepts the DR458's HUD as it is, and without glyphs, its gear and speed then upright text: games/drive-lab/src/shared/Config/HudDesign:218: the HUD needs glyphs
+### define skips the HUD check (games/drive-lab/src/shared/Config/Cars/Contract.luau) -> exit 1 ['86 spec files, 838 passed, 1 failed']
+    FAIL Car HUDs > refuses a car whose HUD fails, at load: games/drive-lab/tests/CarHud.spec:293: expected the function to throw
+### view: indicator masks lit the wrong way (games/drive-lab/src/client/Ui/HudView.luau) -> exit 1 ['86 spec files, 838 passed, 1 failed']
+    FAIL Car HUDs > draws the DR458's own HUD: slanted digits, its red zone, its pictograms; the SVJ's hidden: games/drive-lab/tests/CarHud.spec:376: expected 0, 0.84705883, 0.21568628, got 0.20784314, 0.22745098, 0.2509804
+### restored -> 0 ['86 spec files, 839 passed, 0 failed']
+
+Reruns:
+- gear fit not checked: the batch's anchor missed (stylua had wrapped the assert). Applied by hand:
+  FAIL Car HUDs > refuses a missing glyph, digits of different widths, or a box too narrow for them: CarHud.spec:47: expected false, got true
+  86 spec files, 838 passed, 1 failed
+- glyph run drops its padding: in the full suite the DR458 refuses to load (HudDesign:145: the HUD's
+  speed box does not hold 3 digits), a runtime error rather than a named spec. Hud.spec run alone:
+  FAIL Hud > lays a right-aligned run of glyphs out from the box's right edge, a digit's advance apart: Hud.spec:54: expected 204, got 200
+- "SVJ view: light built after the mode text" in the batch removed the headlight image's two lines
+  rather than moving them: the SVJ dump shifts at line 28 and the DR458 spec errors on the missing image.
+
+After merging origin/main (fixture re-recorded from main's controller, c1f0984):
+- Ui/HudView DisplayOrder 5 -> 6:
+  FAIL Car HUDs > builds and draws the SVJ's HUD exactly as before a car could carry its own: CarHud.spec:300: expected nil, got line 1: got DriveHud ScreenGui DisplayOrder=6 ...
+  90 spec files, 921 passed, 1 failed
+- Controllers/Hud without the game-feel notch flash (mode = Rules.modeText(...) only):
+  FAIL Car HUDs > builds and draws the SVJ's HUD exactly as before a car could carry its own: CarHud.spec:303: expected nil, got line 29: got DriveHud/1/14 TextLabel ... (the frame where the notch flashes)
+  90 spec files, 921 passed, 1 failed
+Restored: 90 spec files, 922 passed, 0 failed.
