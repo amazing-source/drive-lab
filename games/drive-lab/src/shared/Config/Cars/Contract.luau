@@ -20,6 +20,7 @@ local DriverGestures = require("../DriverGestures")
 local DriverStartup = require("../DriverStartup")
 local Driving = require("../Driving")
 local ExhaustFlames = require("../../Rules/ExhaustFlames")
+local HudDesign = require("../HudDesign")
 local RimBlur = require("../RimBlur")
 local StartupArms = require("../../Rules/StartupArms")
 local Types = require("./Types")
@@ -60,6 +61,8 @@ export type Entry = {
 	-- The car's display: a dial face, or a binnacle screen with pages and shift lights. One of them.
 	cluster: Cluster.Face?,
 	binnacle: Binnacle.Screen?,
+	-- The car's own driving HUD; without it, Config/Hud's.
+	hud: HudDesign.Design?,
 	assists: DriverAssists.Tuning,
 	switches: CarSwitches.Switches,
 }
@@ -424,6 +427,9 @@ function Contract.define(entry: Entry): Entry
 	checkDriverSize(entry)
 	checkModes(entry)
 	checkDisplay(entry)
+	if entry.hud then
+		HudDesign.check(entry.hud)
+	end
 	checkSwitches(entry)
 	checkGestures(entry)
 	checkFlames(entry)
