@@ -1,0 +1,21 @@
+Deliberate breaks of commit 40af3c0 (the hung heel on a sloped floor; the contract's hangs check), each
+patched alone into the committed file, the two affected spec files run (DriverLegs.spec, CarContract.spec)
+through a temporary runner (removed after), the file restored from HEAD after each. Restored: 67 passed.
+S2's real effect is small (the sole 3 micrometres long at a 0.15 slope); the spec's 1e-9 tolerance catches it.
+
+== S1 the floor's slope ignored (the heel slides level)
+FAIL Driver legs: pedals hung from above > slides a hung heel along a floor that rises toward the nose, the sole's length kept: games/drive-lab/tests/DriverLegs.spec:341: expected -0.0013670135412900519 within 1e-09, got 0
+2 spec files, 66 passed, 1 failed
+== S2 the slide solved as if level, then lifted along the slope
+FAIL Driver legs: pedals hung from above > slides a hung heel along a floor that rises toward the nose, the sole's length kept: games/drive-lab/tests/DriverLegs.spec:340: expected 0.20000822483088038 within 1e-09, got 0.20001143917970984
+2 spec files, 66 passed, 1 failed
+== C1 the hangs check removed
+FAIL Car contract: the driver > asks a throttle or a clutch hung from above to be marked hangs: games/drive-lab/tests/CarContract.spec:281: expected true, got false
+2 spec files, 66 passed, 1 failed
+== C2 the clutch left out of the check
+FAIL Car contract: the driver > asks a throttle or a clutch hung from above to be marked hangs: games/drive-lab/tests/CarContract.spec:287: expected true, got false
+2 spec files, 66 passed, 1 failed
+== C3 the hangs flag ignored (every high hinge flagged)
+FAIL Car contract: the driver > checks a footwell's clutch as it checks the throttle and the brake: games/drive-lab/src/shared/Config/Cars/Contract:134: the footwell's Pedal_Clutch hangs from above but is not marked hangs
+FAIL Car contract: the driver > asks a throttle or a clutch hung from above to be marked hangs: games/drive-lab/tests/CarContract.spec:283: expected false, got true
+2 spec files, 65 passed, 2 failed
