@@ -1,0 +1,63 @@
+Boss 302 sound pack (#213): checks run 2026-10-31, 20:40 to 21:15 by the clock.
+
+Files (drive-lab-assets/boss302/audio/pack_boss302_final/, outside the repo)
+  bank.ogg    615,448 bytes, 26.350 s, Vorbis q6, 44.1 kHz stereo, peak -1.0 dBFS
+              sha256 a1b1b0edff2d7d61ebbdc8a4a2dc3a87178d341c390f56506cf88ccf8adee6b1
+  events.ogg  296,706 bytes, 16.292 s, Vorbis q6, 44.1 kHz stereo
+              sha256 346822ddfe693a8433a5dc12c7a1d1af1521a96a98b0945fdc745a54e648a548
+  Made by:
+    python -I tools/audio/cut_boss302.py <iRacer5 650 bank> <iracer5_autopitch.txt> pack_iracer5_hpe650 iracer5
+    python -I tools/audio/pack_boss302.py pack_iracer5_hpe650 pack_a3dr fs_455925.mp3 <Z28 t8 take> pack_boss302_final
+
+1. The short decode, and the check that catches it (deliberate break: the old file)
+   pack_boss302.py --check on the iRacer5 cut's standalone loops:
+     on_1636.ogg  {"decoded_reaches_samples": -128}
+                  check failed: on_1636.ogg: the decode ends 128 samples before the region does   (exit 1)
+     on_2451.ogg  {"decoded_reaches_samples": 3, "lag_samples": 0, "snr_db": 32.3, "seam_after_ogg": {"jump_vs_p999": 0.048, ...}}   (exit 0)
+   Fix: in the pack, every loop sits in a region followed by 0.25 s of silence (0.5 s in the events
+   file), so trimming at the file's end only trims silence. The bank's last region ends 11,025 samples
+   (the gap) before the decode does.
+
+2. Every region on the decoded OGG (pack_boss302.py, which exits 1 on any failure; problems: [])
+   name         load    region (s)              decode past end  lag  SNR dB  seam jump / p99.9
+   Idle         Both     0.000000- 2.345986       +1058565          0   34.2    0.730
+   On1505       On       2.595987- 3.472993       +1008864          0   40.6    0.325
+   On2250       On       3.722994- 4.576258        +960210          0   32.4    0.099
+   On3019       On       4.826259- 5.223718        +931657          0   31.9    0.154
+   On3540       On       5.473719- 6.321201        +883258          0   31.9    0.299
+   On4050       On       6.571202- 7.429455        +834384          0   30.8    0.214
+   On5069       On       7.679456- 8.508049        +786818          0   28.3    0.249
+   On6083       On       8.758050- 9.547074        +740997          0   24.8    0.113
+   On7113       On       9.797075-10.842517        +683868          0   23.1    0.099
+   Off2849      Off     11.092518-15.506394        +478191          0   31.0    0.470
+   Off3786      Off     15.756395-18.189115        +359883          0   28.7    0.498
+   Off6056      Off     18.439116-20.620022        +252680          0   27.0    0.219
+   Limiter              20.870023-21.861519        +197930          0   25.5    0.022
+   Far                  22.111520-22.900544        +152109          0   22.3    0.004
+   TracKeyIdle  Both    23.150545-26.099727         +11025          0   19.0    0.395
+   events: startup 0.000000-5.299977, gearUp 5.799978-6.096077, gearDown 6.596078-6.789886,
+   grind 7.289887-9.815873, pop1..pop8 10.315874-15.792290; every one lag 0, SNR 18.2 to 30.1 dB.
+   Start-up: gain +1.4 dB (peak-limited at -1 dBFS), its settled end 7.9 dB under the loops' level
+   (boost_vs_idle_db), hand-over from 4.5 s, loudest sample at 0.666 s.
+   TracKey idle candidate (Z28 1971 cold idle, 15-18 s of its take): line 1238 rpm, firing-peak
+   spread 0.542 (the iRacer5 idle: 0.134).
+
+3. The cutter's new sample-set option leaves the A3DR cut unchanged
+   cut_boss302.py re-run on the A3DR bank with the default set: manifest.json equal to pack_a3dr's
+   (bar the OGG encode's byte counts) and all 16 WAVs byte-identical.
+
+4. Confirmation strip against the owner's pick (strip 7), same scripted run and same pop seed
+   render_strip.py pack_boss302_final .../boss_final_confirmation_iracer5_engine_ford_start_a3dr_pops.mp3 1140 7_iracer5_hpe650_bank
+   loudness per 0.5 s window, final minus strip 7: median -0.02 dB, max |diff| 0.51 dB (at 17.5 s),
+   95th percentile 0.27 dB; pull loudness -18.75 LUFS in both; alignment lag 2 samples.
+   The same measure discriminates: against strip 7b (the same engine plus the supercharger whine)
+   max 2.36 dB, 95th pct 1.95 dB; against strip 6a (another engine) max 18.99 dB, 95th pct 5.08 dB.
+   Re-rendered after moving render_strip's working directory: byte-identical MP3 (md5 b5592b76...).
+
+5. Gates (worktree .worktrees/audio-boss302-pack, on origin/main dcc65b0)
+   stylua --check games kit tools          pass (after formatting audio_sweep.luau)
+   selene games/drive-lab/src kit/src tools 0 errors, 0 warnings
+   luau-lsp analyze (CI's command)          exit 0
+   lune run tools/test/run                  93 spec files, 982 passed, 0 failed
+   lune run tools/test/tools                20 tools, 20 run, 0 failed (audio_sweep.luau runs its fixture)
+   rojo build                               built
