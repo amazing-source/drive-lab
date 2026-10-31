@@ -69,7 +69,7 @@ round trips drop custom split normals (separate in Edit Mode instead).
   - merges glow colour into the colour map and keeps its brightness as the emissive mask;
   - turns gloss into roughness (`1 − G^0.8`) and R into metalness;
   - makes small uniform maps for parts with no source texture.
-- Real-ESRGAN x4 (`C:\Users\bfhdh\tools\realesrgan`) upscales a low-res colour source before
+- Real-ESRGAN x4 (`%USERPROFILE%\tools\realesrgan`) upscales a low-res colour source before
   baking.
 
 **Measured: Studio downloads 2048 maps at 2048** (Roblox's local cache). Do not try to measure

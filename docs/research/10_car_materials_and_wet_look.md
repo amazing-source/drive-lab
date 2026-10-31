@@ -805,4 +805,4 @@ All read 2026-10-27 unless marked [SNIP] (seen only in a search result).
   `07_visual_references.md`, `00_PLAN.md`; reference frames in
   `reference_pack/Roblox_Driving_Reference_Pack/frames/` (`00_23_tunnel_materials.jpg`,
   `01_33_wet_reflections.jpg` measured above); the model's textures in
-  `C:\Users\bfhdh\Downloads\drive-lab-assets\svj_ddiaz\clean\`.
+  `%USERPROFILE%\Downloads\drive-lab-assets\svj_ddiaz\clean\`.
