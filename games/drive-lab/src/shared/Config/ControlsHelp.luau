@@ -185,7 +185,7 @@ local HELP: Rules.Help = {
 				},
 				{
 					label = "Handbrake",
-					text = "Locks the rear wheels to hold the car still; held through a bend above {DRIFT_KMH} km/h with the wheel turned, it drifts the car instead, steered toward the bend for more angle and away to straighten.",
+					text = "Locks the rear wheels to hold the car still; held through a bend above {DRIFT_KMH} km/h with the wheel turned, it drifts the car instead, the steering swinging it round, and on release the car carries on where it points.",
 					controls = { "HANDBRAKE" },
 				},
 			},

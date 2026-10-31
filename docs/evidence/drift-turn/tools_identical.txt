@@ -1,0 +1,14 @@
+Every game tool run on main 2f81def and on this branch, without the drift button:
+identical  assists
+identical  audio_timeline
+differs    calibrate: < Model.step cost: 298 us per frame at 60 FPS, 574 us at 30 FPS > Model.step cost: 273 us per frame at 60 FPS, 564 us at 30 FPS 
+identical  chase_camera
+identical  control_sounds
+identical  dr458_binding
+identical  dr458_review
+identical  drift_baseline
+identical  drift_candidate
+identical  gesture_config
+identical  road_timeline
+identical  startup_config
+identical  weather_timeline

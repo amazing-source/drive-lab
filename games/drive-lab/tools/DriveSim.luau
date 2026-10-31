@@ -198,6 +198,10 @@ local function netForces(sim: Sim, result: Model.StepResult): (number, number, n
 		fx -= result.aeroDrag * forward / speed
 		fy -= result.aeroDrag * right / speed
 	end
+	local drift = result.driftForce
+	fx += drift.forward
+	fy += drift.right
+	yaw += drift.yaw
 	local frontAxle = sim.positions[1].forward
 	local rearAxle = sim.positions[3].forward
 	fz -= result.downforceFront + result.downforceRear

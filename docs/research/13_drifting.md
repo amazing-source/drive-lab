@@ -1,5 +1,11 @@
 # 13 · Drifting on Space: research, Drive Lab today, and a balancing plan
 
+> **Superseded (#195).** The angle-holding drift of §5 (built in #139 and #144) was replaced by an
+> arcade drift at the owner's request after playing it: steering rotates the car, the travel follows
+> the heading, and on release the car carries on where it points. The research below stays; the
+> law, its values and its measurements are in `Vehicle/Drift`, `Config/Drift` and
+> `docs/evidence/drift-turn/`.
+
 Systems agent, 2026-10-31, issue #124. **Plan only: nothing is implemented until the owner's go.**
 Web research by a researcher agent (web search and fetch only), then offline measurements on
 `tools/DriveSim` by me. No Studio, no Play, no uploads.

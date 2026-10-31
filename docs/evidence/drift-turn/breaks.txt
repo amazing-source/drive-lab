@@ -1,0 +1,28 @@
+Deliberate breaks of the arcade drift (tools/test one-spec runner on Drift.spec, each file restored from git after its run), on d3cccf6.
+
+== B1 travel no longer follows the heading (Drift.luau): 12 passed, 5 failed
+   FAIL Drift law > turns the velocity onto the heading without changing its length, and scrubs speed apart: games/drive-lab/tests/Drift.spec:108: expected 7743.748964085181 within 0.000001, got -4886.018705028436
+   FAIL Drift on both cars, on the keys > turns heading and travel 90° within 35 m at 80 km/h, throttle off or on, and 30 m at 60: games/drive-lab/tests/Drift.spec:147: expected true, got false
+   FAIL Drift on both cars, on the keys > keeps going where it points: the heading holds within 4° for 2 s after release: games/drive-lab/tests/Drift.spec:157: expected true, got false
+== B2 the tyres' yaw moment no longer cancelled (Drift.luau): 15 passed, 2 failed
+   FAIL Drift law > brings the yaw rate to its target whatever the tyres' own moment: games/drive-lab/tests/Drift.spec:125: expected 17760 within 0.000001, got 21760
+   FAIL Drift on both cars, on the keys > turns heading and travel 90° within 35 m at 80 km/h, throttle off or on, and 30 m at 60: games/drive-lab/tests/Drift.spec:147: expected true, got false
+== B3 the exit stops the rotation at the drift's own pace (Drift.luau): 15 passed, 2 failed
+   FAIL Drift on both cars, on the keys > keeps going where it points: the heading holds within 4° for 2 s after release: games/drive-lab/tests/Drift.spec:157: expected true, got false
+   FAIL Drift on both cars, on the keys > turns the same within 3 m and holds within 4° at 30, 60 and 120 FPS: games/drive-lab/tests/Drift.spec:169: expected true, got false
+== B4 no exit phase: the drift's forces stop with the engagement (Drift.luau): 13 passed, 4 failed
+   FAIL Drift law > follows the player's own steering once released, and ends when the slip has closed: games/drive-lab/tests/Drift.spec:77: expected true, got false
+   FAIL Drift on both cars, on the keys > keeps going where it points: the heading holds within 4° for 2 s after release: games/drive-lab/tests/Drift.spec:157: expected true, got false
+   FAIL Drift on both cars, on the keys > turns the same within 3 m and holds within 4° at 30, 60 and 120 FPS: games/drive-lab/tests/Drift.spec:169: expected true, got false
+== B5 the handbrake bites as soon as the gate drops (Model.luau): 17 passed, 0 failed  <- no spec failed: the rule changed nothing the issue asks for (A/B in the PR), so it was removed (fbc4167)
+== B6 the drift pull applied at the tyres' height (DriveSim) (DriveSim.luau): 13 passed, 4 failed
+   FAIL Drift on both cars, on the keys > turns heading and travel 90° within 35 m at 80 km/h, throttle off or on, and 30 m at 60: games/drive-lab/tests/Drift.spec:147: expected true, got false
+   FAIL Drift on both cars, on the keys > keeps going where it points: the heading holds within 4° for 2 s after release: games/drive-lab/tests/Drift.spec:158: expected true, got false
+   FAIL Drift on both cars, on the keys > turns the same within 3 m and holds within 4° at 30, 60 and 120 FPS: games/drive-lab/tests/Drift.spec:169: expected true, got false
+== B7 no scrub (Drift.luau): 15 passed, 2 failed
+   FAIL Drift law > turns the velocity onto the heading without changing its length, and scrubs speed apart: games/drive-lab/tests/Drift.spec:108: expected 7743.748964085181 within 0.000001, got 12629.767669113617
+   FAIL Drift on both cars, on the keys > turns heading and travel 90° within 35 m at 80 km/h, throttle off or on, and 30 m at 60: games/drive-lab/tests/Drift.spec:147: expected true, got false
+== B8 the gate lets a reversing car drift (Drift.luau): 16 passed, 1 failed
+   FAIL Drift gate and engagement > engages only held, moving forward above 30 km/h, and steered past the gate: games/drive-lab/tests/Drift.spec:44: expected false, got true
+== B9 the yaw target ignores the turn's acceleration cap (Drift.luau): 16 passed, 1 failed
+   FAIL Drift law > asks the steering's share of the turn rate, capped by the turn's sideways acceleration: games/drive-lab/tests/Drift.spec:65: expected 0.9 within 1e-12, got 1.6
