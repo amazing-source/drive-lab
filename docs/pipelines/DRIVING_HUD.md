@@ -122,8 +122,16 @@ Every HUD is as wide on screen as the global HUD in the same view, times its des
 (1 when left out): `HudView.place` gives its frame the height that width needs, from the frame's
 shape (`Rules/Hud.frameHeight`), and its aspect-ratio constraint does the rest. The DR458's 3 : 1
 design at the SVJ's height came out at 69% of the SVJ's 4.36 : 1 width; at the SVJ's width it is
-0.247 of the screen's height in the chase view instead of 0.17, its panel fully opaque, so it hides
-about 1.8 times the road the SVJ's does (`docs/evidence/hud-dr458-width/coverage.txt`).
+1.45 times as tall, its panel fully opaque, so it hides about 1.8 times the road the SVJ's does
+(`docs/evidence/hud-dr458-width/coverage.txt`).
+
+Where it sits is `Config/Hud`'s, for every car: `ANCHOR` in the chase and hood views and
+`COCKPIT_ANCHOR` in the cockpit (both bottom right since #194), held `MARGIN` pixels in from the
+edges it is anchored to (`Rules/Hud.inset`); `HEIGHT` 0.13 and `COCKPIT_HEIGHT` 0.11 of the
+screen for the global HUD. Bottom right leaves the car and the road ahead clear in the chase view
+(`docs/evidence/hud-bottom-right/coverage.txt`). The controls screen's touch button is at the top
+right; Roblox's touch jump button, at the bottom right, shows only while the Jumping state is
+enabled (its `TouchJump` module), which `Controllers/CarEntry` turns off in the car.
 `frameTransparency` fades the whole frame image, lettering included, and is 0 unless set; a panel
 that fades alone would take a frame exported with a see-through fill and uploaded again.
 
