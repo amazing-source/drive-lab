@@ -4,8 +4,9 @@
 	own (the strongest blur in Lighting wins, so the rain's lighter one is never weakened). While
 	driving, the turn is measured inside the car: the car stays still on screen in every driving
 	view and the cabin moves with the eye, so only looking around blurs, never the car's own
-	yaw. On foot it is the camera's turn in the world. The speed's blur is the depth of field's
-	near blur, in Atmosphere/Optics, which owns the one DepthOfFieldEffect.
+	yaw. On foot it is the camera's turn in the world. The speed's and the pull's blur are on the
+	depth of field, in Atmosphere/Optics, which owns the one DepthOfFieldEffect; only when the
+	pull's blur is set to the full-screen style does it come here, on the same BlurEffect.
 ]]
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
@@ -24,6 +25,8 @@ local OFF_BELOW = 0.05
 local localPlayer = Players.LocalPlayer
 local blur: BlurEffect? = nil
 local size = 0
+-- The driven car's pull as a share of the acceleration blur, eased.
+local pull = 0
 local last: CFrame? = nil
 local lastCar: BasePart? = nil
 
@@ -61,12 +64,22 @@ local function update(dt: number)
 		else nil
 	local target = if rate then Rules.rotationSize(rate, Config.ROTATION) else 0
 	size = Rules.follow(size, target, dt, Config.ROTATION)
-	local on = size >= OFF_BELOW
+	local acceleration = Config.ACCELERATION
+	local car = chassis and chassis.Parent
+	local g = if car and acceleration.style == "FullScreen" then car:GetAttribute("LongitudinalG") else 0
+	pull = Rules.follow(
+		pull,
+		Rules.pullShare(if typeof(g) == "number" then g else 0, acceleration),
+		dt,
+		acceleration
+	)
+	local shown = math.max(size, Rules.pulseSize(pull, acceleration))
+	local on = shown >= OFF_BELOW
 	if effect.Enabled ~= on then
 		effect.Enabled = on
 	end
 	if on then
-		effect.Size = size
+		effect.Size = shown
 	end
 end
 
