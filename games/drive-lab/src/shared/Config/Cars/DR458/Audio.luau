@@ -11,6 +11,11 @@ local SVJ = require("../SVJ/Audio")
 
 local corsa = SVJ.popTriggers
 
+-- dB under the SVJ's own pop level: its off-throttle loops play 3.5 to 6.5 dB under its on ones,
+-- so the same pops stood further out of its overrun than out of the SVJ's.
+local POPS_GAIN_DB = -4.5
+local popsGain = 10 ^ (POPS_GAIN_DB / 20)
+
 local function everyPosition(chances: { [string]: number }): { [string]: number }
 	return { ["1"] = chances.Corsa, ["2"] = chances.Corsa, OFF = chances.Corsa }
 end
@@ -129,7 +134,7 @@ local Audio: CarAudio.Pack = {
 	pops = {
 		soundId = SVJ.eventsSoundId,
 		regions = SVJ.pops.regions,
-		volume = SVJ.pops.volume,
+		volume = { from = SVJ.pops.volume.from * popsGain, to = SVJ.pops.volume.to * popsGain },
 		speed = SVJ.pops.speed,
 	},
 	-- The SVJ's Corsa timing in every manettino position: a race exhaust has no valve to close.
