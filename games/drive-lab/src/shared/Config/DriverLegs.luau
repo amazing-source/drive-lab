@@ -15,7 +15,8 @@ export type Point = { x: number, y: number, z: number }
 -- or the floor, at rest.
 -- `hangs`: hung from above, so only the ball rides the pad and the heel slides along the floor,
 -- keeping the sole's length; otherwise the throttle's heel turns with its plate (an organ pedal)
--- and the brake's and clutch's heel stays put.
+-- and the brake's and clutch's heel stays put. `heelSlope`: how far the floor under a hung pedal's
+-- heel rises per metre toward the nose (0 when absent).
 export type Pedal = {
 	part: string,
 	hinge: Point,
@@ -23,6 +24,7 @@ export type Pedal = {
 	heel: Point,
 	ball: Point,
 	hangs: boolean?,
+	heelSlope: number?,
 }
 
 -- One car's footwell: the pedals the right foot works, the footrest the left foot rests on, the

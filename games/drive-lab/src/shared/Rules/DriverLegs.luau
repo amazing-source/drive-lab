@@ -92,13 +92,18 @@ function DriverLegs.turned(pedal: Config.Pedal, point: Vector, angle: number): V
 	})
 end
 
--- The heel under a sole whose ball rides a hung pedal: where it rested on the floor, slid along
--- the car (z) until heel to ball is the sole's length at rest again.
+-- The heel under a sole whose ball rides a hung pedal: slid from where it rested along the floor
+-- (toward the nose by `slide`, rising by heelSlope per metre) until heel to ball is the sole's
+-- length at rest again. `slide` is the root of a quadratic that is 0 at rest.
 local function heelOnFloor(pedal: Config.Pedal, ball: Vector): Vector
-	local rest = sub(pedal.ball, pedal.heel)
-	local across, up = ball.x - pedal.heel.x, ball.y - pedal.heel.y
-	local along = math.sqrt(math.max(dot(rest, rest) - across * across - up * up, 0))
-	return { x = pedal.heel.x, y = pedal.heel.y, z = ball.z + along }
+	local heel, slope = pedal.heel, pedal.heelSlope or 0
+	local rest = sub(pedal.ball, heel)
+	local across, up, along = ball.x - heel.x, ball.y - heel.y, ball.z - heel.z
+	local half = along - slope * up
+	local surplus = across * across + up * up + along * along - dot(rest, rest)
+	local square = 1 + slope * slope
+	local slide = (-half - math.sqrt(math.max(half * half - square * surplus, 0))) / square
+	return { x = heel.x, y = heel.y + slope * slide, z = heel.z - slide }
 end
 
 -- Where the right sole meets its pedal: lying on the throttle's plate and turning with it, or the

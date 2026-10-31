@@ -486,6 +486,8 @@ end
 
 -- Metres a footwell hinge may sit off the binding's pivot for the same pedal.
 local HINGE_TOLERANCE = 0.01
+-- Metres a throttle's or clutch's hinge sits above its ball when the pedal hangs from above.
+local HUNG_HINGE_RISE = 0.1
 
 -- Where the footwell disagrees with the binding: Rules/DriverLegs turns each pedal's sole points
 -- about the seat's x (the car's right) by the footwell's travel, while the rig turns the pedal's
@@ -493,6 +495,17 @@ local HINGE_TOLERANCE = 0.01
 -- travel have to be the same or the foot and the pedal move apart.
 function Contract.footwellMismatches(model: Binding.CarModel, footwell: DriverLegs.Footwell): { string }
 	local problems = {}
+	-- Unmarked, a hung throttle's heel would swing round its hinge, and a hung clutch's would stay
+	-- put while the ball rides its long travel.
+	local mustHang = { footwell.throttle }
+	if footwell.clutch then
+		table.insert(mustHang, footwell.clutch)
+	end
+	for _, pedal in mustHang do
+		if not pedal.hangs and pedal.hinge.y > pedal.ball.y + HUNG_HINGE_RISE then
+			table.insert(problems, `the footwell's {pedal.part} hangs from above but is not marked hangs`)
+		end
+	end
 	local seat = model.seat
 	local byPart: { [string]: Binding.Hinge } = {}
 	local pedals = model.pedals

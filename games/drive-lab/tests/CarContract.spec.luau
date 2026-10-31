@@ -234,6 +234,7 @@ describe("Car contract: the driver", function()
 		local function withClutch(entry: any, bound: boolean)
 			local clutch = table.clone(entry.driver.footwell.brake)
 			clutch.part = "Pedal_Clutch"
+			clutch.hangs = true
 			entry.driver.footwell.clutch = clutch
 			if bound then
 				local pedal = table.clone(entry.model.pedals[2])
@@ -260,6 +261,32 @@ describe("Car contract: the driver", function()
 			end))
 		end).toThrow()
 		expect(#Contract.footwellPedals(Catalog.cars.SVJ.driver.footwell)).toBe(2)
+	end)
+
+	it("asks a throttle or a clutch hung from above to be marked hangs", function()
+		local function flagged(footwell: any, part: string): boolean
+			for _, problem in Contract.footwellMismatches(Catalog.cars.SVJ.model, footwell) do
+				if string.find(problem, `{part} hangs from above`, 1, true) then
+					return true
+				end
+			end
+			return false
+		end
+		local svj = Catalog.cars.SVJ.driver.footwell
+		expect(flagged(svj, "Pedal_Throttle")).toBe(false)
+		local footwell = table.clone(svj)
+		local hungThrottle = table.clone(svj.brake)
+		hungThrottle.part = "Pedal_Throttle"
+		footwell.throttle = hungThrottle
+		expect(flagged(footwell, "Pedal_Throttle")).toBe(true)
+		hungThrottle.hangs = true
+		expect(flagged(footwell, "Pedal_Throttle")).toBe(false)
+		local clutch = table.clone(svj.brake)
+		clutch.part = "Pedal_Clutch"
+		footwell.clutch = clutch
+		expect(flagged(footwell, "Pedal_Clutch")).toBe(true)
+		clutch.hangs = true
+		expect(flagged(footwell, "Pedal_Clutch")).toBe(false)
 	end)
 end)
 

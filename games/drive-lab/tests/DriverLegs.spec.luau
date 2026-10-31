@@ -330,6 +330,18 @@ describe("Driver legs: pedals hung from above", function()
 		expect(math.abs(swung.y - organ.throttle.heel.y) > 0.01).toBe(true)
 	end)
 
+	it("slides a hung heel along a floor that rises toward the nose, the sole's length kept", function()
+		local footwell = hung(withClutch())
+		local pedal = footwell.clutch
+		pedal.heelSlope = 0.15
+		local rest = Legs.leftSole(footwell, 1, 0)
+		expect(distance(rest, pedal.heel)).toBeNear(0, 1e-9)
+		local heel, ball = Legs.leftSole(footwell, 1, pedal.travel)
+		expect(distance(heel, ball)).toBeNear(distance(pedal.heel, pedal.ball), 1e-9)
+		expect(heel.y - pedal.heel.y).toBeNear(0.15 * (pedal.heel.z - heel.z), 1e-9)
+		expect(math.abs(heel.z - pedal.heel.z) > 0.002).toBe(true)
+	end)
+
 	it("reaches the hung clutch's full press from the seated hips with the knee bent", function()
 		local footwell = hung(withClutch())
 		local leg = Legs.left(footwell, LEFT_HIP, 1, footwell.clutch.travel)
