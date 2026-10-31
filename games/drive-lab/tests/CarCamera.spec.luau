@@ -216,7 +216,10 @@ describe("CarCamera", function()
 			local at = fov[view]
 			expect(Rules.fieldOfView(view, 8, 0)).toBeNear(at.base + 8 * at.kickShare, 1e-12)
 			expect(Rules.fieldOfView(view, 0, 6)).toBeNear(at.base + 6 * at.speedShare, 1e-12)
-			expect(Rules.fieldOfView(view, 8, 6)).toBeNear(at.base + 8 * at.kickShare + 6 * at.speedShare, 1e-12)
+			expect(Rules.fieldOfView(view, 8, 6)).toBeNear(
+				at.base + 8 * at.kickShare + 6 * at.speedShare,
+				1e-12
+			)
 		end
 		expect(Rules.fieldOfView("Cockpit", 0 / 0, 0 / 0)).toBe(fov.Cockpit.base)
 	end)

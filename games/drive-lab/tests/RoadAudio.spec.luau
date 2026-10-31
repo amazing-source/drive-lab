@@ -244,7 +244,8 @@ end
 -- loops' matched loudness; the equalisers' band gains are left out.
 local function engineLufs(entry: Car, kmh: number, onShare: number): number
 	local pack = entry.pack
-	local mix = EngineSound.target(pack.engineLayers, pack.engineTuning, topGearRpm(entry.physics, kmh), onShare)
+	local mix =
+		EngineSound.target(pack.engineLayers, pack.engineTuning, topGearRpm(entry.physics, kmh), onShare)
 	return ENGINE_LUFS + db(pack.engineVolume * EngineSound.level(mix))
 end
 
