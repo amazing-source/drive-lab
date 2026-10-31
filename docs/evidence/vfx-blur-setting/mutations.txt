@@ -1,0 +1,32 @@
+Deliberate breaks for #184. Each break was made on the committed tree (bcb170a), the specs
+MotionBlur, Settings and CarEntry run with a single-spec runner (the T harness of tools/test/run),
+then the file restored with git checkout: 82 passed when restored. Line numbers are the failing
+expect at the time of the run.
+
+LEVELS (tests/MotionBlur.spec.luau)
+- rotationSize without the level: FAIL "scales every blur by the level" (line 220: expected 0.707,
+  got 2.121) and FAIL "draws nothing at Off" (line 237: expected 0, got 6).
+- depth without the level in the chase view: FAIL "scales every blur" (line 228), FAIL "draws
+  nothing at Off" (line 242: expected 0, got 0.95), FAIL "keeps the rain's own blur at Off"
+  (line 252: expected 0.12, got 0.4).
+- depth without the level in the cockpit and hood: FAIL "scales every blur" (line 229) and FAIL
+  "draws nothing at Off" (line 243: expected 0, got 0.35).
+- pulseSize without the level: FAIL "scales every blur" (line 233) and FAIL "draws nothing at
+  Off" (line 239: expected 0, got 3).
+- blurOn always true: FAIL "draws nothing at Off" (line 238) and FAIL "switches the turn blur's
+  effect off under its floor" (line 257).
+- LEVELS.Light = 1: FAIL "makes Light a third of Full" (line 281).
+- LEVELS without Off: FAIL "gives every option of the motion-blur setting a level" (line 274)
+  and FAIL "makes Light a third of Full ... Off none" (line 282).
+- Config/Settings default "Full": FAIL "... Light by default" (line 276).
+
+SETTINGS STORE (tests/Settings.spec.luau)
+- set accepting any option: FAIL "refuses an option a setting does not offer" (line 76).
+- set telling listeners without a change: FAIL "tells its listeners once, only on a change"
+  (line 66: expected 1, got 2).
+
+SEATED PRESSES (tests/CarEntry.spec.luau)
+- seatedPress starting the engine on a processed press: FAIL "leaves the door and the engine
+  alone when a screen took the press" (line 744: expected nil, got Start).
+- seatedPress dropping the exit hold on a processed B: FAIL "still starts the exit hold when a
+  screen took B" (line 750: expected Exit, got nil).
