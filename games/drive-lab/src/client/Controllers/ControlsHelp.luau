@@ -6,7 +6,8 @@
 	prints it (UserInputService:GetStringForKeyCode). Its key or a
 	tap of its pad button opens and closes it, a button does on touch screens, and a hint names the
 	key for a few seconds after the first spawn and the first time the player is seated. Closed,
-	its screen is disabled and nothing of it takes input; it never sinks a key.
+	its screen is disabled and nothing of it takes input; it never sinks a key. It also holds the
+	player's settings (src/client/Settings), chosen there and applied at once.
 ]]
 local CollectionService = game:GetService("CollectionService")
 local GuiService = game:GetService("GuiService")
@@ -30,6 +31,7 @@ local Movement = require(ReplicatedStorage.Shared.Config.Movement)
 local Rules = require(ReplicatedStorage.Shared.Rules.ControlsHelp)
 
 local ControlsPanel = require(script.Parent.Parent.Ui.ControlsPanel)
+local Settings = require(script.Parent.Parent.Settings)
 
 local SEAT_POLL_SECONDS = 0.2
 
@@ -47,6 +49,12 @@ local hintLabel: TextLabel? = nil
 local touchButton: TextButton? = nil
 local hintToken = 0
 local hinted = { spawn = false, seat = false }
+local settingsView: ControlsPanel.SettingsView = {
+	title = Settings.TITLE,
+	list = Settings.LIST,
+	get = Settings.get,
+	set = Settings.set,
+}
 
 local function keyNames(keys: { Enum.KeyCode }): { string }
 	local names = table.create(#keys)
@@ -211,7 +219,8 @@ local function setOpen(value: boolean)
 				},
 				function()
 					setOpen(false)
-				end
+				end,
+				settingsView
 			)
 			panel = current
 			panelCar = name
