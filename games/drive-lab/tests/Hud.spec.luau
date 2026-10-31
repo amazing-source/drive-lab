@@ -45,6 +45,12 @@ describe("Hud", function()
 		expect(Hud.frameHeight(0.13, 0.5, reference, reference)).toBe(0.065)
 	end)
 
+	it("insets a frame its margin from the edge it is anchored to, and none at the centre", function()
+		expect(Hud.inset(1, 14)).toBe(-14)
+		expect(Hud.inset(0, 14)).toBe(14)
+		expect(Hud.inset(0.5, 14)).toBe(0)
+	end)
+
 	it("shows the launch text in the drive mode's place while launch control is on", function()
 		expect(Hud.modeText("Corsa", true, "LAUNCH")).toBe("LAUNCH")
 		expect(Hud.modeText("Corsa", false, "LAUNCH")).toBe("CORSA")

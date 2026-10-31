@@ -34,6 +34,8 @@ export type HudConfig = {
 	},
 	HEIGHT: number,
 	COCKPIT_HEIGHT: number,
+	ANCHOR: Vector2,
+	COCKPIT_ANCHOR: Vector2,
 	MAX_WIDTH: number,
 	MARGIN: number,
 	MINIMAL_SCALE: number,
@@ -94,11 +96,15 @@ local Hud: HudConfig = table.freeze({
 		indicatorLeft = { 1708, 376, 1743, 428 },
 		indicatorRight = { 1843, 376, 1878, 428 },
 	}),
-	-- Share of the screen's height, the width following the frame's shape but kept within
-	-- MAX_WIDTH of the screen. Bottom centre in the chase and hood views; bottom right, smaller,
-	-- in the cockpit, where the centre is the steering wheel and the hands.
-	HEIGHT = 0.17,
-	COCKPIT_HEIGHT = 0.13,
+	-- Share of the screen's height in the chase and hood views and in the cockpit, the width
+	-- following the frame's shape but kept within MAX_WIDTH of the screen; and the corner it is
+	-- held to, MARGIN pixels in (x, y: 0 left or top, 0.5 centre, 1 right or bottom). Bottom right
+	-- in every view, so the road ahead and the car stay clear; smaller in the cockpit, where the
+	-- dashboard is in view.
+	HEIGHT = 0.13,
+	COCKPIT_HEIGHT = 0.11,
+	ANCHOR = Vector2.new(1, 1),
+	COCKPIT_ANCHOR = Vector2.new(1, 1),
 	MAX_WIDTH = 0.9,
 	MARGIN = 14,
 	-- The minimal mode is the same HUD this much smaller.
