@@ -10,10 +10,15 @@ frames; this takes out the ones the contacts do not force.
 
 --repair N: after each smoothing pass, N random small joint moves on every frame still past an
 allowance, kept only when the total excess drops and no group goes deeper.
+--polish F0-F1: after the passes, a pattern search of the body and the free limbs on each frame of
+the span still past an allowance (deepest excess first, then the total, then the distance to the
+neighbours' average), kept on the same terms. --margin keeps every part that far under its
+allowances: the house check samples its own cloud, so a pose exactly on a limit can fail there.
 """
 import argparse
 import importlib
 import json
+import math
 import os
 import sys
 
@@ -23,7 +28,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import r6_fk  # noqa: E402
 from car_entry_check import HALF  # noqa: E402
 from car_entry_clear import LIMB_PART, POINT, Scene, allowed  # noqa: E402
-from car_entry_track import held_aim, part_depth, rank  # noqa: E402
+from car_entry_track import held_aim, part_depth, pattern, rank  # noqa: E402
 
 # The largest repair move: pelvis (studs), torso and neck angles, then each limb's swing and spread.
 REPAIR_STEP = np.r_[[0.04] * 3, [3.0] * 3, [5.0] * 2, [6.0] * 8]
@@ -45,6 +50,8 @@ def main(argv):
     ap.add_argument("--passes", type=int, default=6)
     ap.add_argument("--spacing", type=float, default=0.05)
     ap.add_argument("--repair", type=int, default=0, help="random trials per pass on each frame still past an allowance")
+    ap.add_argument("--polish", default="", help="F0-F1: pattern search on each frame of the span still past an allowance")
+    ap.add_argument("--margin", type=float, default=0.0, help="studs kept under every allowance")
     a, rest = ap.parse_known_args(argv)
     mod = importlib.import_module(a.module)
     body, allow, holds = mod.build([a.scene] + rest)
@@ -78,7 +85,7 @@ def main(argv):
         parts = r6_fk.pose_parts(pose)
         for part in HALF:
             for g, d in part_depth(scene, doors[key], part, parts[part]).items():
-                excess[(part, g)] = rank(d - allowed(allow, f, part, g, 0.04))
+                excess[(part, g)] = rank(d - allowed(allow, f, part, g, 0.04) + a.margin)
         excess["miss"] = rank(misses - 0.02)
         return excess, parts
 
@@ -128,6 +135,32 @@ def main(argv):
                     xs[f], base[f] = trial, r
                     repaired += 1
         print(f"pass {p + 1}: {accepted} of {len(frames) - 2} frames smoothed, {repaired} repair moves", flush=True)
+    if a.polish:
+        f0, f1 = (int(v) for v in a.polish.split("-"))
+        for f in frames[1:-1]:
+            if not f0 <= f <= f1 or f - 1 not in xs or f + 1 not in xs or max(base[f].values()) <= 0:
+                continue
+            x0, mid, was = xs[f].copy(), (xs[f - 1] + xs[f + 1]) / 2, base[f]
+            free = np.ones(len(x0), dtype=bool)
+            if f in planted:
+                free[0:8] = False
+            for k in locked[f]:
+                free[8 + 2 * k: 10 + 2 * k] = False
+
+            def key(v):
+                x = np.where(free, v, x0)
+                r, _ = evaluate(f, x.copy(), turn[f])
+                if any(e > max(was.get(k, 0), 0) for k, e in r.items()):
+                    return (math.inf, math.inf, math.inf)
+                over = [max(e, 0) for e in r.values()]
+                return (max(over), sum(over), float(np.sum(((x - mid) / REPAIR_STEP) ** 2)))
+
+            _, v = pattern(key, x0, [REPAIR_STEP, REPAIR_STEP / 2, REPAIR_STEP / 4], rng)
+            x = np.where(free, v, x0)
+            r, _ = evaluate(f, x, turn[f])
+            if sum(max(e, 0) for e in r.values()) < sum(max(e, 0) for e in was.values()) and all(e <= max(was.get(k, 0), 0) for k, e in r.items()):
+                xs[f], base[f] = x, r
+            print(f"polish f{f}: deepest {max(was.values())} -> {max(base[f].values())} (steps of 0.002 past an allowance)", flush=True)
     out = {}
     for f in frames:
         x = xs[f]
