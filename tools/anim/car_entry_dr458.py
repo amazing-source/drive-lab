@@ -299,7 +299,7 @@ LEAN0, HOP0 = WALK0 + 36, WALK0 + 52
 SIT, T1, T2, OVER = HOP0 + 10, HOP0 + 15, HOP0 + 20, HOP0 + 26
 DROP, D1, D2, SEATED = OVER + 12, OVER + 8, OVER + 16, OVER + 26
 CLOSE_FROM, ON_HAND_OVER, END = SEATED - 4, SEATED + 34, SEATED + 40
-HOLD_FROM = SEATED + 6  # the limbs on their hand-over pose from here
+HOLD_FROM = SEATED - 2  # the limbs on their hand-over pose from here, as the body lands
 # The SVJ's InsideClose door curve (Config/Cars/SVJ/Door.luau), seconds from its start: the door
 # swings shut at the speed the game's other door does.
 SVJ_CLOSE = ((0.0, 1.0), (0.033, 0.995), (0.1, 0.961), (0.2, 0.88), (0.233, 0.847), (0.3, 0.756), (0.433, 0.55), (0.566, 0.369), (0.7, 0.228), (0.8, 0.143), (0.966, 0.031), (1.033, 0.004), (1.066, 0.0))
@@ -409,7 +409,7 @@ def getin(b, car, s, start, ends):
     #    1.15 R6 reaches nothing on this door that pulls, and any reach lays its arm on the card).
     for t, v in SVJ_CLOSE:
         b.door.at(CLOSE_FROM + round(t * FPS), (v,))
-    # The limbs settle into their hand-over pose just after the body sits and hold it while the
+    # The limbs settle into their hand-over pose as the body lands and hold it while the
     # door shuts: between sitting and the hand-over no pose of the blocky arms in reach clears the
     # bars, the net and the bucket.
     for track, value in ((b.pelvis, s["pelvis"]), (b.torso, s["torso"]), (b.neck, s["neck"]), (b.neck_loc, s["neck_loc"])):
@@ -577,6 +577,25 @@ def left_arm_hand_over(start, end):
     ]
 
 
+SETTLE = (HOLD_FROM - 4, HOLD_FROM - 1)
+
+
+def settle_contacts():
+    """The four frames before the hand-over pose holds, as the body lands: the legs slide under the
+    wheel's rim and the left arm comes down past the bolster onto the bars. No continuous clear path
+    reaches the held pose in time (limb planner on a 3-degree grid); the one place the entry goes
+    past its other allowances, named at the depths measured, rounded up at the fourth decimal (coordinator's decision, option a)."""
+    why = "DECIDED (coordinator, option a): the settle as the body lands, "
+    return [
+        {"why": why + "the right leg sliding under the wheel's rim", "from": SETTLE[0], "to": SETTLE[1], "parts": ["Right Leg"], "groups": ["wheel"], "depth": 0.1379},
+        {"why": why + "the left leg sliding under the wheel's rim", "from": SETTLE[0], "to": SETTLE[1], "parts": ["Left Leg"], "groups": ["wheel"], "depth": 0.0918},
+        {"why": why + "the right leg into the cushion", "from": SETTLE[0], "to": SETTLE[1], "parts": ["Right Leg"], "groups": ["seat"], "depth": 0.2447},
+        {"why": why + "the left leg into the cushion", "from": SETTLE[0], "to": SETTLE[1], "parts": ["Left Leg"], "groups": ["seat"], "depth": 0.2175},
+        {"why": why + "the left arm past the bolster", "from": SETTLE[0], "to": SETTLE[1], "parts": ["Left Arm"], "groups": ["seat"], "depth": 0.2735},
+        {"why": why + "the left arm onto the door bars", "from": SETTLE[0], "to": SETTLE[1], "parts": ["Left Arm"], "groups": ["cage"], "depth": 0.1166},
+    ]
+
+
 def entry_contacts():
     """Named contacts (depth, studs at scale 1) and held limbs, for car_entry_clear.py; the check's
     allow file is written from the same list at the measured depths."""
@@ -590,8 +609,8 @@ def entry_contacts():
         {"why": "DECIDED (seated pose): head on the headrest pad: 0.0589 on the house checker's 0.05-stud cloud, 0.060 on a 0.04-stud one (its 0.62-stud head box; the seated check's smaller box measured 0.89 cm)", "from": SEATED, "to": END, "parts": ["Head"], "groups": ["seat"], "depth": 0.061},
         {"why": "DECIDED (coordinator, B): the blocky arms at their hand-over pose beside the torso, into the bucket's bolsters as the torso's sides are", "from": SEATED - 8, "to": END, "parts": ARMS, "groups": ["seat"], "depth": 0.22},
         {"why": "DECIDED (coordinator): the blocky legs at their least-deep pose in the bucket, under the wheel", "from": SEATED - 10, "to": END, "parts": LEGS, "groups": ["seat"], "depth": 0.17},
-    ] + left_arm_hand_over(ON_HAND_OVER, END) + [
-        {**e, "why": "DEVIATION, approved by the coordinator: the left arm on its hand-over pose from just after sitting, at the hand-over depths, while the door shuts (the limb planner found no pose of it in reach clear of the bars, the net and the bucket from f212 to f225)", "from": HOLD_FROM, "to": ON_HAND_OVER - 1}
+    ] + settle_contacts() + left_arm_hand_over(ON_HAND_OVER, END) + [
+        {**e, "why": "DEVIATION, approved by the coordinator: the left arm on its hand-over pose from the landing in the bucket, at the hand-over depths, while the door shuts (the limb planner found no pose of it in reach clear of the bars, the net and the bucket from f190 on)", "from": HOLD_FROM, "to": ON_HAND_OVER - 1}
         for e in left_arm_hand_over(0, 0)
     ]
     holds = [

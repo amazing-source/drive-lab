@@ -116,6 +116,7 @@ def main(argv):
     ap.add_argument("--turn", type=int, default=2, help="cells a frame moves off the last, each axis, before it pays")
     ap.add_argument("--spacing", type=float, default=0.08)
     ap.add_argument("--window", type=float, default=60.0)
+    ap.add_argument("--anchor", action="store_true", help="keep the span's first and last frames on the table's angles (re-planning a stretch inside a planned table)")
     ap.add_argument("--limbs", default=",".join(LIMB_PART))
     a, rest = ap.parse_known_args(argv)
     mod = importlib.import_module(a.module)
@@ -161,6 +162,8 @@ def main(argv):
                     pose_root = body.poses[f]["RootJoint"]
                 ang, _ = held_aim(pose_root, limb, targets[limb][i], guess)
                 fixed = np.array([ang[0], ang[2]])
+            elif a.anchor and i in (0, len(frames) - 1) and limb in table.get(str(f), {}).get("angles", {}):
+                fixed = np.asarray(table[str(f)]["angles"][limb], float)
             elif (i == 0 and str(f - 1) not in table) or (i == len(frames) - 1 and str(f + 1) not in table):
                 # A span's end next to frames the table leaves as authored meets them there.
                 fixed = np.array(body.poses[f][r6_fk.LIMB_JOINT[limb]][0])[[0, 2]]

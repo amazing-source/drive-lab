@@ -248,7 +248,10 @@ def main(argv):
     tor_t, nek_t = body.torso.sample(at), body.neck.sample(at)
     # The authored body is the solved one: planted stances at their solved height.
     pel_t = np.array([body._frames_cache[f][:3, 3] + body._frames_cache[f][:3, :3] @ np.asarray(r6_fk.PELVIS, float) for f in frames])
+    # Planted: a stance the bake solves, or a leg held on its authored target (a foot leaving the
+    # ground straight up must not be dragged by a searched hip).
     supported = {f for s0, s1, _ in body.support for f in range(s0, s1 + 1)}
+    supported |= {f for h in holds if h["limb"].endswith("leg") for f in range(h["from"], h["to"] + 1)}
     loc_t = body.neck_loc.sample(at) if body.neck_loc.beats else np.zeros((len(frames), 3))
     door_t = body.door.sample(at)[:, 0]
     targets = {k: t.sample(at) for k, t in body.targets.items()}

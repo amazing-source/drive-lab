@@ -6,7 +6,10 @@ limbs with fixed angles are left alone). A per-frame search can leave small pops
 frames; this takes out the ones the contacts do not force.
 
   python car_entry_smooth.py <keys module> <scene.npz> <keys args...> --table in.json --out out.json
-      [--passes 6] [--spacing 0.05]
+      [--passes 6] [--repair 40] [--spacing 0.05]
+
+--repair N: after each smoothing pass, N random small joint moves on every frame still past an
+allowance, kept only when the total excess drops and no group goes deeper.
 """
 import argparse
 import importlib
@@ -21,6 +24,9 @@ import r6_fk  # noqa: E402
 from car_entry_check import HALF  # noqa: E402
 from car_entry_clear import LIMB_PART, POINT, Scene, allowed  # noqa: E402
 from car_entry_track import held_aim, part_depth, rank  # noqa: E402
+
+# The largest repair move: pelvis (studs), torso and neck angles, then each limb's swing and spread.
+REPAIR_STEP = np.r_[[0.04] * 3, [3.0] * 3, [5.0] * 2, [6.0] * 8]
 
 
 def vector(row, previous):
@@ -38,6 +44,7 @@ def main(argv):
     ap.add_argument("--out", required=True)
     ap.add_argument("--passes", type=int, default=6)
     ap.add_argument("--spacing", type=float, default=0.05)
+    ap.add_argument("--repair", type=int, default=0, help="random trials per pass on each frame still past an allowance")
     a, rest = ap.parse_known_args(argv)
     mod = importlib.import_module(a.module)
     body, allow, holds = mod.build([a.scene] + rest)
@@ -78,9 +85,14 @@ def main(argv):
     xs, previous = {}, None
     for f in frames:
         xs[f] = previous = vector(table[str(f)], previous)
+        # A limb the choreography holds is at its held angles, whatever the table says there.
+        for k, limb in enumerate(LIMB_PART):
+            if f in body.fixed.get(limb, {}):
+                xs[f][8 + 2 * k: 10 + 2 * k] = body.fixed[limb][f]
     turn = {f: table[str(f)]["neck"][1] for f in frames}
     base = {f: evaluate(f, xs[f], turn[f])[0] for f in frames}
     locked = {f: [k for k, limb in enumerate(LIMB_PART) if f in body.fixed.get(limb, {})] for f in frames}
+    rng = np.random.default_rng(458)
     planted = {f for s0, s1, _ in body.support for f in range(s0, s1 + 1)}
     for p in range(a.passes):
         accepted = 0
@@ -98,7 +110,24 @@ def main(argv):
             if all(v <= max(base[f].get(k, 0), 0) for k, v in r.items()):
                 xs[f], base[f] = trial, r
                 accepted += 1
-        print(f"pass {p + 1}: {accepted} of {len(frames) - 2} frames smoothed", flush=True)
+        repaired = 0
+        for f in frames[1:-1] if a.repair else []:
+            if max(base[f].values()) <= 0:
+                continue
+            # Small joint moves of the body and every free limb around this frame, kept when the
+            # total excess drops and no group goes deeper than before (a group that was clear
+            # stays clear).
+            for _ in range(a.repair):
+                trial = xs[f] + rng.uniform(-1.0, 1.0, len(xs[f])) * REPAIR_STEP
+                if f in planted:
+                    trial[0:8] = xs[f][0:8]
+                for k in locked[f]:
+                    trial[8 + 2 * k: 10 + 2 * k] = xs[f][8 + 2 * k: 10 + 2 * k]
+                r, _ = evaluate(f, trial, turn[f])
+                if sum(max(v, 0) for v in r.values()) < sum(max(v, 0) for v in base[f].values()) and all(v <= max(base[f].get(k, 0), 0) for k, v in r.items()):
+                    xs[f], base[f] = trial, r
+                    repaired += 1
+        print(f"pass {p + 1}: {accepted} of {len(frames) - 2} frames smoothed, {repaired} repair moves", flush=True)
     out = {}
     for f in frames:
         x = xs[f]
