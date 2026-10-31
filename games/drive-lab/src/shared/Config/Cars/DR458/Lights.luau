@@ -12,7 +12,6 @@
 
 	The model has pieces for the projectors, the tail rings, the reversing discs and the fog lamps;
 	the running lights, indicators, markers and stop bar glow once pieces with their names exist.
-	Glow strengths follow the SVJ's until the edit-mode captures.
 ]]
 local CarLights = require("../../CarLights")
 
@@ -42,12 +41,14 @@ local Lights: CarLights.Lights = table.freeze({
 		projector = table.freeze({ tint = rgb(240, 244, 255), day = 6, night = 2.4 }),
 		frontIndicator = table.freeze({ tint = AMBER, day = 14, night = 6 }),
 		frontMarker = table.freeze({ tint = AMBER, day = 3, night = 1.4 }),
-		tail = table.freeze({ tint = RED, day = 7, night = 10, filter = RED_LENS }),
+		-- Roblox multiplies a glow by the colour map, and the atlas under the ring is darker than the
+		-- SVJ's, so by day it needs more strength to show as brightly.
+		tail = table.freeze({ tint = RED, day = 20, night = 10, filter = RED_LENS }),
 		rearIndicator = table.freeze({ tint = AMBER, day = 14, night = 6 }),
 		reverse = table.freeze({ tint = WHITE, day = 8, night = 3 }),
 		-- The rain light. A rear fog lamp is the brightest red lamp on a car (UN R38: up to 300 cd,
 		-- against a stop lamp's 185 under R7), so it outshines the tail ring on the brakes.
-		fog = table.freeze({ tint = RED, day = 12, night = 12 }),
+		fog = table.freeze({ tint = RED, day = 20, night = 12 }),
 		stop = table.freeze({ tint = RED, day = 6, night = 6 }),
 		plate = table.freeze({ tint = WHITE, day = 1.5, night = 0.8 }),
 		rearMarker = table.freeze({ tint = RED, day = 3, night = 1.4 }),
