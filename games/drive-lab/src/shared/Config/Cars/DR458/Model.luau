@@ -29,7 +29,12 @@ local Model: Binding.CarModel = {
 		"Door_L_Glass",
 		"Door_R_Glass",
 	},
-	windshield = {},
+	windshield = {
+		{ forward = 0.6802, right = -0.5353, up = 0.6385 },
+		{ forward = 0.6807, right = 0.5346, up = 0.6385 },
+		{ forward = 1.3177, right = 0.5732, up = 0.3308 },
+		{ forward = 1.3171, right = -0.5746, up = 0.3308 },
+	},
 	door = {
 		pivot = { forward = 1.1001, right = -0.9205, up = -0.028 },
 		axis = { forward = -0.0853, right = 0.0035, up = -0.99635 },

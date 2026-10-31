@@ -166,21 +166,51 @@ describe("DR458 binding", function()
 		expect(table.concat(ModelPending, "; ")).toBe(table.concat(pending, "; "))
 	end)
 
-	it(
-		"lists what it still lacks: the windscreen's corners, the lamps, a pedal with no turning sense",
-		function()
-			local pending = table.concat(ModelPending, "\n")
-			expect(#Model.windshield == 0 and string.find(pending, "windshield", 1, true) ~= nil).toBe(true)
-			expect(string.find(pending, "lamps", 1, true) ~= nil).toBe(true)
-			local pedals = Model.pedals
-			assert(pedals, "the DR458 has pedals")
-			for _, hinge in pedals do
-				if part(hinge.part).positive == nil then
-					expect(string.find(pending, hinge.part, 1, true) ~= nil).toBe(true)
-				end
+	it("lists a pedal with no turning sense as pending", function()
+		local pending = table.concat(ModelPending, "\n")
+		local pedals = Model.pedals
+		assert(pedals, "the DR458 has pedals")
+		for _, hinge in pedals do
+			if part(hinge.part).positive == nil then
+				expect(string.find(pending, hinge.part, 1, true) ~= nil).toBe(true)
 			end
 		end
-	)
+	end)
+
+	it("takes the windscreen's corners from the manifest's points, driver's left first", function()
+		local centre = ManifestBinding.centreOfMass(DR458)
+		local points = MANIFEST.points
+		assert(points, "the fixture has points")
+		expect(#Model.windshield).toBe(4)
+		for index, name in Settings.windshield do
+			local point, corner = vector(points[name]), Model.windshield[index]
+			expect(corner.forward + centre.forward).toBeNear(point.forward, 1e-5)
+			expect(corner.right + centre.right).toBeNear(point.right, 1e-5)
+			expect(corner.up + centre.up).toBeNear(point.up, 1e-5)
+		end
+		local topLeft, topRight, bottomRight, bottomLeft = table.unpack(Model.windshield)
+		expect(topLeft.right < 0 and topRight.right > 0).toBe(true)
+		expect(bottomLeft.right < 0 and bottomRight.right > 0).toBe(true)
+		expect(topLeft.up > bottomLeft.up and topRight.up > bottomRight.up).toBe(true)
+	end)
+
+	it("lists the windscreen and the exterior lamps as pending when the manifest lacks them", function()
+		local points = table.clone(MANIFEST.points :: { [string]: ManifestBinding.Point })
+		points.Windshield_BottomLeft = nil
+		local parts = {}
+		for _, entry in MANIFEST.parts do
+			if string.sub(entry.name, 1, 6) ~= "Light_" then
+				table.insert(parts, entry)
+			end
+		end
+		local written, pending = ManifestBinding.binding({ parts = parts, points = points }, DR458, Settings)
+		local listed = table.concat(pending, "\n")
+		expect(#written.windshield).toBe(0)
+		expect(string.find(listed, "windshield", 1, true) ~= nil).toBe(true)
+		expect(string.find(listed, "lamps", 1, true) ~= nil).toBe(true)
+		local _, complete = ManifestBinding.binding(MANIFEST, DR458, Settings)
+		expect(table.concat(complete, "; ")).toBe("")
+	end)
 
 	it("moves every point from the rear axle on the ground to the centre of mass", function()
 		local centre = ManifestBinding.centreOfMass(DR458)

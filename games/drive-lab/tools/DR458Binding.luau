@@ -48,6 +48,14 @@ local Settings: ManifestBinding.Settings = {
 	-- EST: the collision shell above kerb height; the race car rides 65 to 118 mm off the ground.
 	hullClearance = 0.25,
 	hipPoint = "Driver_HPoint",
+	-- The 3D lead's corners of the clear pane (windscreen_points.py, the SVJ's method). The pane
+	-- wraps, so the quad stops 0.14 to 0.18 m short of the glass's side edges.
+	windshield = {
+		"Windshield_TopLeft",
+		"Windshield_TopRight",
+		"Windshield_BottomRight",
+		"Windshield_BottomLeft",
+	},
 	-- From the cockpit modeller (cockpit_points.json; photos 013 and 015, every control off): the
 	-- key and the guard are modelled off and closed; the ignition toggle is modelled straight out,
 	-- off when tipped down (+0.35) and on when up (-0.35).
