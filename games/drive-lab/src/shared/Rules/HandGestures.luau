@@ -107,12 +107,15 @@ function HandGestures.step(hand: Hand, inputs: Inputs, holdMin: number, now: num
 	local reachedAt = playing.reachedAt
 	local wanted = inputs.held(playing.gesture.control) or reachedAt == nil or now - reachedAt < holdMin
 	if wanted then
-		playing.progress = math.min(playing.finish, playing.progress + dt)
+		-- Frame times summed in floating point land a hair short of the end: that is the end.
+		local next = playing.progress + dt
+		playing.progress = if next >= playing.finish - 1e-9 then playing.finish else next
 		if playing.progress >= playing.finish and playing.reachedAt == nil then
 			playing.reachedAt = now
 		end
 	else
-		playing.progress = math.max(0, playing.progress - dt)
+		local next = playing.progress - dt
+		playing.progress = if next <= 1e-9 then 0 else next
 	end
 	local turn = playing.track.turn
 	if turn and not playing.turned and playing.progress >= turn.finish then
@@ -142,6 +145,42 @@ end
 
 local function smooth(share: number): number
 	return share * share * (3 - 2 * share)
+end
+
+local function compose(a: StartupArms.Pose, b: StartupArms.Pose): StartupArms.Pose
+	return {
+		position = StartupArms.apply(a, b.position),
+		rotation = StartupArms.multiply(a.rotation, b.rotation),
+	}
+end
+
+-- The wrist's pose in the seat frame (metres) and the shape to draw, or nil when the hand grips.
+-- `wheel` is the steering wheel's frame in the seat frame as the arms follow it, so a "Wheel"
+-- gesture turns with it; a "Seat" gesture's keys are moved onto `grip` (the hand's live grip in
+-- the seat frame) near their ends, wherever the wheel is.
+function HandGestures.inSeat(
+	hand: Hand,
+	wheel: StartupArms.Pose,
+	grip: StartupArms.Pose
+): (StartupArms.Pose?, string)
+	local pose, shape = HandGestures.pose(hand)
+	local playing = hand.playing
+	if pose == nil or playing == nil then
+		return nil, "Grip"
+	end
+	if playing.gesture.frame == "Wheel" then
+		return compose(wheel, pose), shape
+	end
+	local share = HandGestures.gripShare(hand)
+	if share <= 0 then
+		return pose, shape
+	end
+	local first = playing.track.keys[1]
+	local keyed = {
+		position = { x = first[2], y = first[3], z = first[4] },
+		rotation = { w = first[5], x = first[6], y = first[7], z = first[8] },
+	}
+	return StartupArms.retarget(pose, keyed, grip, share), shape
 end
 
 -- The control the playing gesture turns, its states before and after the press, and how far it

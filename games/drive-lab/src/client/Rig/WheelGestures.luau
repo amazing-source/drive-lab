@@ -71,11 +71,6 @@ local function listen()
 	end)
 end
 
-local function toCFrame(key: { number }): CFrame
-	local k = STUDS_PER_METRE
-	return CFrame.new(key[2] * k, key[3] * k, key[4] * k, key[6], key[7], key[8], key[5])
-end
-
 local function poseFrame(pose: StartupArms.Pose): CFrame
 	local p, q = pose.position, pose.rotation
 	local k = STUDS_PER_METRE
@@ -188,19 +183,16 @@ function WheelGestures.wrist(
 	grip: CFrame
 ): (CFrame?, string)
 	local hand = state.hands[side]
-	local pose, shape = HandGestures.pose(hand)
-	local playing = hand.playing
-	if pose == nil or playing == nil then
+	if hand.playing == nil then
 		return nil, "Grip"
 	end
-	if playing.gesture.frame == "Wheel" then
-		return wheel * poseFrame(pose), shape
-	end
-	local share = HandGestures.gripShare(hand)
-	if share > 0 then
-		local keyed = framePose(toCFrame(playing.track.keys[1]))
-		local live = framePose(seat:ToObjectSpace(wheel * grip))
-		pose = StartupArms.retarget(pose, keyed, live, share)
+	local pose, shape = HandGestures.inSeat(
+		hand,
+		framePose(seat:ToObjectSpace(wheel)),
+		framePose(seat:ToObjectSpace(wheel * grip))
+	)
+	if pose == nil then
+		return nil, "Grip"
 	end
 	return seat * poseFrame(pose), shape
 end

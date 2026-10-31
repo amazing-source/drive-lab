@@ -107,6 +107,18 @@ local function template(group: string, name: string): BasePart?
 	return nil
 end
 
+-- A car's hand mesh from the folder its grip names, or the shared Hands folder's in a place that
+-- lacks that car's own set.
+local function handTemplate(meshes: string, name: string): BasePart?
+	local assets = ReplicatedStorage:FindFirstChild("DriveLabAssets")
+	local own = assets and assets:FindFirstChild(meshes)
+	local found = own and own:FindFirstChild(name)
+	if found and found:IsA("BasePart") then
+		return found
+	end
+	return template("Hands", name)
+end
+
 local function sleeve(from: BasePart): BasePart
 	local part = from:Clone()
 	part.Color = SLEEVE
@@ -188,7 +200,7 @@ local function build(model: Model, character: Model): Driver?
 		local arm = character:FindFirstChild(limb.arm)
 		local letter = if limb.sign > 0 then "R" else "L"
 		local meshes = entry.driver.grip.meshes
-		local hand, cuff = template(meshes, "Hand_" .. letter), template(meshes, "Cuff_" .. letter)
+		local hand, cuff = handTemplate(meshes, "Hand_" .. letter), handTemplate(meshes, "Cuff_" .. letter)
 		if
 			joint == nil
 			or not joint:IsA("Motor6D")
