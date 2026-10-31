@@ -13,7 +13,6 @@ return {
 	"exhaust: the manifest has no Exhaust_Outlet_L",
 	"exhaust: the manifest has no Exhaust_Outlet_R",
 	"gauges: the six Needle_* dials are not bound yet (the cluster's needles are a later field)",
-	"gear lever: the manifest has no push_m on Shifter_Lever (reverse's push-down)",
 	"glazing: the manifest has no Door_L_Glass",
 	"glazing: the manifest has no Door_R_Glass",
 	"glazing: the manifest has no Glass_Quarter_L",

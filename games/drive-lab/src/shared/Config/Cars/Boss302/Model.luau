@@ -67,7 +67,7 @@ local Model: Binding.CarModel = {
 			R = { side = -0.31416, fore = 0.21817 },
 		},
 		knob = { forward = -0.0652, right = 0.0076, up = 0.175 },
-		push = 0,
+		push = 0.008,
 	},
 }
 
