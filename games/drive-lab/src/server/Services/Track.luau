@@ -4,11 +4,12 @@
 	any player is within LOOKAHEAD of it and cleared once every player is beyond KEEP_BEHIND, so
 	the road reaches ahead of the fastest driver and also comes back, identical, under anyone who
 	turns round. The circuit is laid whole at start, on a grass field with its river and bridges
-	(the server's Circuit), and stays. Asphalt on the road and grass beside it: the tyres feel the
-	difference through Config/Surfaces. Lane lines are thin parts on top, and street lamps stand on
-	both verges (Rules/StreetLamps), laid and cleared with their chunk; Controllers/StreetLights
-	lights them. The rest of the furniture and the marks on the asphalt come from the server's
-	Roadside.
+	(the server's Circuit), and stays. The Pad layout hands over to the server's Pad, which paves
+	one asphalt square round the cars and nothing else. Asphalt on the road and grass beside it:
+	the tyres feel the difference through Config/Surfaces. Lane lines are thin parts on top, and
+	street lamps stand on both verges (Rules/StreetLamps), laid and cleared with their chunk;
+	Controllers/StreetLights lights them. The rest of the furniture and the marks on the asphalt
+	come from the server's Roadside.
 
 	It starts under the car, so it runs before Cars rigs it; the baseplate is replaced by a
 	concrete pad in the same terrain, since a part and terrain at one height flicker.
@@ -24,6 +25,7 @@ local CircuitConfig = require(ReplicatedStorage.Shared.Config.Circuit)
 local CircuitPath = require(ReplicatedStorage.Shared.Rules.Circuit)
 local Driving = require(ReplicatedStorage.Shared.Config.Driving)
 local Log = require(ReplicatedStorage.Kit.Log)
+local Pad = require(script.Parent.Parent.Pad)
 local RoadsideConfig = require(ReplicatedStorage.Shared.Config.Roadside)
 local Roadside = require(script.Parent.Parent.Roadside)
 local RoadsideRules = require(ReplicatedStorage.Shared.Rules.Roadside)
@@ -378,6 +380,10 @@ local Service = {}
 
 function Service.start()
 	local carAt, direction, ground = startFrame()
+	if Track.LAYOUT == "Pad" then
+		Pad.start(Vector3.new(carAt.X, ground, carAt.Z), direction)
+		return
+	end
 	-- The road starts a little behind the car, so the car stands on it; the circuit's start line
 	-- runs to the right of the parked cars instead.
 	local back = studs(30)

@@ -1,0 +1,81 @@
+Deliberate breaks for #183, each applied to the committed branch, run through `lune run tools/test/run`,
+then restored with `git checkout -- games/drive-lab/src`. Up to three FAIL lines are kept per break.
+
+## Paving: tiles that only meet (overlap 0)
+file: games/drive-lab/src/shared/Config/Pad.luau
+exit 1: 93 spec files, 952 passed, 1 failed
+  FAIL Pad > covers every metre of the square with asphalt fills that overlap by more than a voxel: <worktree>\games\drive-lab\tests\Pad.spec:40: expected true, got false
+
+## Paving: the last across tile left out
+file: games/drive-lab/src/shared/Rules/Pad.luau
+exit 1: 93 spec files, 952 passed, 1 failed
+  FAIL Pad > covers every metre of the square with asphalt fills that overlap by more than a voxel: <worktree>\games\drive-lab\tests\Pad.spec:66: expected true, got false
+
+## Area: 600 m across instead of 800
+file: games/drive-lab/src/shared/Config/Pad.luau
+exit 1: 93 spec files, 951 passed, 2 failed
+  FAIL Pad > paves about 800 m square round the parked cars, with room on every side of them: <worktree>\games\drive-lab\tests\Pad.spec:35: expected 800 within 1e-09, got 600
+  FAIL Pad > keeps every painted line inside the run-off's edge line: <worktree>\games\drive-lab\tests\Pad.spec:77: expected true, got false
+
+## Markings: the 60 m circle moved into the run-off
+file: games/drive-lab/src/shared/Config/Pad.luau
+exit 1: 93 spec files, 952 passed, 1 failed
+  FAIL Pad > keeps every painted line inside the run-off's edge line: <worktree>\games\drive-lab\tests\Pad.spec:77: expected true, got false
+
+## Circles: drawn with 30 m chords
+file: games/drive-lab/src/shared/Config/Pad.luau
+exit 1: 93 spec files, 952 passed, 1 failed
+  FAIL Pad > draws each circle true and closed at its diameter: <worktree>\games\drive-lab\tests\Pad.spec:96: expected true, got false
+
+## Circles: one chord short of closing
+file: games/drive-lab/src/shared/Rules/Pad.luau
+exit 1: 93 spec files, 952 passed, 1 failed
+  FAIL Pad > draws each circle true and closed at its diameter: <worktree>\games\drive-lab\tests\Pad.spec:95: expected 29.962684429037065 within 1e-09, got 422.77848353427885
+
+## Circles: chords turned along the radius
+file: games/drive-lab/src/shared/Rules/Pad.luau
+exit 1: 93 spec files, 952 passed, 1 failed
+  FAIL Pad > draws each circle true and closed at its diameter: <worktree>\games\drive-lab\tests\Pad.spec:99: expected 0 within 1e-09, got 1
+
+## Circles: the 120 m circle drawn at 100 m
+file: games/drive-lab/src/shared/Config/Pad.luau
+exit 1: 93 spec files, 952 passed, 1 failed
+  FAIL Pad > draws each circle true and closed at its diameter: <worktree>\games\drive-lab\tests\Pad.spec:106: expected 120, got 100
+
+## Circles and straight: the 60 m circle moved onto the straight
+file: games/drive-lab/src/shared/Config/Pad.luau
+exit 1: 93 spec files, 952 passed, 1 failed
+  FAIL Pad > keeps the circles and the straight apart: <worktree>\games\drive-lab\tests\Pad.spec:118: expected true, got false
+
+## Straight: a cross mark every 200 m
+file: games/drive-lab/src/shared/Rules/Pad.luau
+exit 1: 93 spec files, 952 passed, 1 failed
+  FAIL Pad > runs a long straight with a cross mark every 100 m from end to end: <worktree>\games\drive-lab\tests\Pad.spec:133: expected 7, got 4
+
+## Parts: the straight laid as one 600 m part
+file: games/drive-lab/src/shared/Rules/Pad.luau
+exit 1: 93 spec files, 952 passed, 1 failed
+  FAIL Pad > makes no part longer than Roblox allows: <worktree>\games\drive-lab\tests\Pad.spec:143: expected true, got false
+
+## Paint: queryable by the wheels' rays
+file: games/drive-lab/src/shared/Config/Pad.luau
+exit 1: 93 spec files, 952 passed, 1 failed
+  FAIL Pad > paints lines the car's wheels and body pass through, just clear of the asphalt: <worktree>\games\drive-lab\tests\Pad.spec:151: expected false, got true
+
+## Paint: collides with the car
+file: games/drive-lab/src/shared/Config/Pad.luau
+exit 1: 93 spec files, 952 passed, 1 failed
+  FAIL Pad > paints lines the car's wheels and body pass through, just clear of the asphalt: <worktree>\games\drive-lab\tests\Pad.spec:152: expected false, got true
+
+## Paint: lying on the asphalt (no lift)
+file: games/drive-lab/src/shared/Config/Pad.luau
+exit 1: 93 spec files, 952 passed, 1 failed
+  FAIL Pad > paints lines the car's wheels and body pass through, just clear of the asphalt: <worktree>\games\drive-lab\tests\Pad.spec:154: expected true, got false
+
+## Paint: 5 cm thick
+file: games/drive-lab/src/shared/Config/Pad.luau
+exit 1: 93 spec files, 952 passed, 1 failed
+  FAIL Pad > paints lines the car's wheels and body pass through, just clear of the asphalt: <worktree>\games\drive-lab\tests\Pad.spec:155: expected true, got false
+
+## Restored
+93 spec files, 953 passed, 0 failed
