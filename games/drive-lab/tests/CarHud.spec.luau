@@ -391,16 +391,14 @@ describe("Car HUDs", function()
 		expect(byText.A.props.FontFace.Family).toBe("rbxasset://fonts/families/Michroma.json")
 
 		HudHarness.playFrame(run, HudHarness.SCENARIO[2])
-		HudHarness.playFrame(run, HudHarness.SCENARIO[3])
-		HudHarness.playFrame(run, HudHarness.SCENARIO[4])
 		frame = HudHarness.tree(dr458).children[1]
 		expect(frame.props.AnchorPoint).toBe(roblox.Vector2.new(1, 1))
 		expectRun(glyphImages(frame.children), "213", glyphs.speed, "Right")
 		expect(mask(frame, indicators.right.rect).props.ImageColor3).toBe(green)
 		expect(mask(frame, DR458Hud.light.rect).props.ImageColor3).toBe(roblox.Color3.fromRGB(61, 123, 255))
 
-		HudHarness.playFrame(run, HudHarness.SCENARIO[5])
-		HudHarness.playFrame(run, HudHarness.SCENARIO[6])
+		HudHarness.playFrame(run, HudHarness.SCENARIO[3])
+		HudHarness.playFrame(run, HudHarness.SCENARIO[4])
 		frame = HudHarness.tree(dr458).children[1]
 		expectRun(glyphImages(frame.children), "0", glyphs.speed, "Right")
 		expectRun(glyphImages(holder(frame).children), "N", glyphs.gear, "Center")
