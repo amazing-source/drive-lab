@@ -1,10 +1,11 @@
 --!strict
 --[[
 	The driver's hands off the wheel: resting on the thighs while the engine is off, then the
-	start-up's keyed reach (Rules/StartupArms) to the START flap and the button, and on to the
-	wheel. Each side has the grip hand Controllers/DriverArms already draws plus two more posed
-	meshes, Rest and Point, and a sleeve cuff for them, kept in the place at
-	ReplicatedStorage.DriveLabAssets.Hands; one shows at a time, dressed as Rig/Gloves says.
+	start-up's keyed reach (Rules/StartupArms) to the car's controls, and on to the wheel. Each
+	side has the grip hand Controllers/DriverArms already draws plus the posed meshes, Rest, Point
+	and Pinch (a key held between thumb and index), and a sleeve cuff for them, kept in the place
+	at ReplicatedStorage.DriveLabAssets.Hands; one shows at a time, dressed as Rig/Gloves says. A
+	place without the Pinch mesh draws the Point hand for it.
 	Everything is placed from a wrist frame (z up the forearm, y out of the back of the hand), the
 	frame the arm reaches.
 ]]
@@ -33,10 +34,12 @@ export type Hands = {
 	gripCuffOffset: CFrame,
 	restOffset: CFrame,
 	pointOffset: CFrame,
+	pinchOffset: CFrame,
 	cuffOffset: CFrame,
 }
 
 local STUDS_PER_METRE = 1 / Units.METRES_PER_STUD
+local REST: DriverStartup.Shape, POINT: DriverStartup.Shape, PINCH: DriverStartup.Shape = "Rest", "Point", "Pinch"
 
 local StartupHands = {}
 
@@ -91,6 +94,7 @@ function StartupHands.build(
 	local letter = if sign > 0 then "R" else "L"
 	local rest, point, cuff =
 		asset("HandRest_" .. letter), asset("HandPoint_" .. letter), asset("WristCuff_" .. letter)
+	local pinch = asset("HandPinch_" .. letter)
 	local paths = driver.startupPaths
 	local gripWrist = StartupHands.gripWrist(driver.grip, sign)
 	local fromWrist = gripWrist:Inverse()
@@ -111,13 +115,17 @@ function StartupHands.build(
 		gripCuffOffset = fromWrist * CFrame.new(sign * cuffCentre.x, cuffCentre.y, cuffCentre.z),
 		restOffset = offset(paths.MESHES.Rest),
 		pointOffset = offset(paths.MESHES.Point),
+		pinchOffset = offset(paths.MESHES.Pinch or paths.MESHES.Point),
 		cuffOffset = offset(paths.CUFF),
 	}
 	if rest and point and cuff then
-		hands.shapes = {
-			Rest = hidden(Gloves.hand(rest, color), folder),
-			Point = hidden(Gloves.hand(point, color), folder),
-		}
+		local shapes: { [DriverStartup.Shape]: BasePart } = {}
+		shapes[REST] = hidden(Gloves.hand(rest, color), folder)
+		shapes[POINT] = hidden(Gloves.hand(point, color), folder)
+		if pinch and paths.MESHES.Pinch then
+			shapes[PINCH] = hidden(Gloves.hand(pinch, color), folder)
+		end
+		hands.shapes = shapes
 		hands.cuff = hidden(Gloves.cuff(cuff), folder)
 	end
 	return hands
@@ -132,6 +140,16 @@ function StartupHands.release(hands: Hands)
 	if hands.cuff then
 		hands.cuff:Destroy()
 	end
+end
+
+-- The shape a hand is drawn with: the Point hand stands in for a Pinch the place lacks.
+local function drawn(hands: Hands, shape: DriverStartup.Shape): DriverStartup.Shape
+	if shape ~= PINCH then
+		return shape
+	end
+	local shapes = hands.shapes
+	local mesh: BasePart? = if shapes then shapes[PINCH] else nil
+	return if mesh then shape else POINT
 end
 
 local function show(hands: Hands, shape: DriverStartup.Shape)
@@ -172,12 +190,16 @@ function StartupHands.place(
 		wrist = seat * toCFrame(pose)
 		shape = hand.shape
 	end
+	shape = drawn(hands, shape)
 	show(hands, shape)
 	local shapes, cuff = hands.shapes, hands.cuff
 	if shape == "Grip" or shapes == nil or cuff == nil then
 		return wrist, hands.grip, wrist * hands.gripOffset, hands.gripCuff, wrist * hands.gripCuffOffset
 	end
-	local offset = if shape == "Rest" then hands.restOffset else hands.pointOffset
+	local offset = if shape == "Rest"
+		then hands.restOffset
+		elseif shape == "Pinch" then hands.pinchOffset
+		else hands.pointOffset
 	return wrist, shapes[shape], wrist * offset, cuff, wrist * hands.cuffOffset
 end
 

@@ -8,7 +8,7 @@
 	driver's seat frame (the DriverSeat part: x right, y up, z back; metres), whose z axis runs up
 	the forearm and y out of the back of the hand. The left hand's keys are its own (not mirrored).
 ]]
-export type Shape = "Rest" | "Point" | "Grip"
+export type Shape = "Rest" | "Point" | "Pinch" | "Grip"
 export type Point = { x: number, y: number, z: number }
 export type Key = { number }
 export type ShapeChange = { at: number, shape: Shape }
@@ -19,19 +19,27 @@ export type Track = {
 	gripFrom: number,
 }
 
+-- A control the start-up turns (its move in the car's Startup) that a hand works: the hand's
+-- shape, its contact point in its wrist frame (the index's end, or the pinch between thumb and
+-- index) and the point of the control it touches with the control at rest (seat frame, metres).
+export type Touch = { control: string, shape: Shape, tip: Point, point: Point }
+
 export type Paths = {
 	RIGHT: Track,
 	LEFT: Track,
 	-- The right hand's posed meshes' centres in the wrist frame, metres (hand_poses.py); the left
 	-- hand mirrors x.
-	MESHES: { Rest: Point, Point: Point },
+	MESHES: { Rest: Point, Point: Point, Pinch: Point? },
 	CUFF: Point,
 	-- What the keys were made against, for the specs: the Point hand's index tip in its wrist
-	-- frame; START's top face, the console's normal there and the push; the flap's hinge line
-	-- (along x) and the point under its free edge the index rides (seat frame, metres).
+	-- frame; START's top face, the console's normal there and the push (seat frame, metres).
 	FINGERTIP: Point,
 	BUTTON: { top: Point, normal: Point, depth: number },
-	FLAP: { hinge: Point, edge: Point },
+	-- The SVJ's START flap: its hinge line (along x) and the point under its free edge the index
+	-- rides.
+	FLAP: { hinge: Point, edge: Point }?,
+	-- Every other car: the controls its start-up turns, each with the hand that works it.
+	TOUCHES: { Touch }?,
 }
 
 return table.freeze({})
