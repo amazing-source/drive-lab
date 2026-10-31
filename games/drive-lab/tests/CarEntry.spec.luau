@@ -750,3 +750,85 @@ describe("CarEntry seated presses", function()
 		expect(Rules.seatedPress("ButtonB", true, KEYS)).toBe("Exit")
 	end)
 end)
+
+-- The SVJ with a manual's key start: a key turned to ON, then on to START and sprung back, the
+-- clutch held down, a clutch interlock and a track key for its Corsa mode.
+local KEY_ON, KEY_START = 0.6, 0.35
+local function keyCar(): any
+	local car = table.clone(SVJ) :: any
+	local startup = table.clone(STARTUP) :: any
+	startup.moves = {
+		{ control = "Key", angle = KEY_ON, move = 0.2, at = 1 },
+		{
+			control = "Key",
+			angle = KEY_START,
+			move = 0.1,
+			at = STARTUP.pressAt,
+			back = STARTUP.pressAt + 0.3,
+		},
+	}
+	startup.clutch = 1
+	startup.interlock = "Clutch"
+	startup.keys = { Corsa = "TracKey" }
+	car.startup = startup
+	return car
+end
+
+describe("CarEntry: a manual's key start", function()
+	it("adds up the moves of one control: the key to ON, on to START, back to ON on its spring", function()
+		local car = keyCar()
+		local on = state({ engine = "On", engineAt = 0 })
+		expect(Rules.controlAngle(car, "Key", on, 0.5)).toBe(0)
+		expect(Rules.controlAngle(car, "Key", on, 1)).toBeNear(KEY_ON, 1e-9)
+		expect(Rules.controlAngle(car, "Key", on, STARTUP.pressAt)).toBeNear(KEY_ON + KEY_START, 1e-9)
+		expect(Rules.controlAngle(car, "Key", on, STARTUP.pressAt + 0.5)).toBeNear(KEY_ON, 1e-9)
+		expect(Rules.controlAngle(car, "Key", state({}), 2)).toBe(0)
+	end)
+
+	it("turns a control moved once exactly as its one move does (the SVJ's flap)", function()
+		local on = state({ engine = "On", engineAt = 0 })
+		for _, t in { 0, FLAP.at - FLAP.move / 2, STARTUP.pressAt, FLAP_BACK + FLAP.move / 2, 20 } do
+			local one = Hinge.angle(Rules.controlOpenness(FLAP, on, t), FLAP.angle)
+			expect(Rules.controlAngle(SVJ, FLAP.control, on, t)).toBe(one)
+		end
+	end)
+
+	it("holds the clutch down from the key until driving unlocks, on a car that has one", function()
+		local car = keyCar()
+		local on = state({ engine = "On", engineAt = 0 })
+		expect(Rules.startupClutch(car, state({}), 1)).toBe(nil)
+		expect(Rules.startupClutch(car, on, 0.1)).toBe(1)
+		expect(Rules.startupClutch(car, on, STARTUP.drivableAt - 0.01)).toBe(1)
+		expect(Rules.startupClutch(car, on, STARTUP.drivableAt + 0.01)).toBe(nil)
+		expect(Rules.startupClutch(SVJ, on, 0.1)).toBe(nil)
+	end)
+
+	it("turns the drive mode's own key, else the standard one, and the server takes only those", function()
+		local car = keyCar()
+		expect(Rules.startKey(car, "Corsa")).toBe("TracKey")
+		expect(Rules.startKey(car, "Strada")).toBe(Config.STANDARD_KEY)
+		expect(Rules.startKey(car, nil)).toBe(Config.STANDARD_KEY)
+		expect(Rules.startKey(SVJ, "Corsa")).toBe(Config.STANDARD_KEY)
+		expect(Rules.parseKey(car, "TracKey")).toBe("TracKey")
+		for _, value in { Config.STANDARD_KEY, "GoldKey", 3, nil, { "TracKey" } } do
+			expect(Rules.parseKey(car, value)).toBe(Config.STANDARD_KEY)
+		end
+		expect(Rules.parseKey(SVJ, "TracKey")).toBe(Config.STANDARD_KEY)
+	end)
+
+	it("refuses to crank in the clutch-key mode until the clutch is down, and never otherwise", function()
+		local car = keyCar()
+		local interlock = Config.CLUTCH_INTERLOCK
+		local manual = interlock.gearboxMode
+		local off = state({})
+		expect(Rules.startRefusal(car, off, manual, 0)).toBe("Clutch")
+		expect(Rules.startRefusal(car, off, manual, interlock.pressed - 0.01)).toBe("Clutch")
+		expect(Rules.startRefusal(car, off, manual, nil)).toBe("Clutch")
+		expect(Rules.startRefusal(car, off, manual, interlock.pressed)).toBe(nil)
+		expect(Rules.startRefusal(car, off, "auto", 0)).toBe(nil)
+		expect(Rules.startRefusal(car, off, "manual", 0)).toBe(nil)
+		expect(Rules.startRefusal(SVJ, off, manual, 0)).toBe(nil)
+		-- Running already: there is nothing to start, so nothing to refuse.
+		expect(Rules.startRefusal(car, state({ engine = "On", engineAt = 0 }), manual, 0)).toBe(nil)
+	end)
+end)

@@ -91,17 +91,30 @@ end
 local function checkStartup(entry: Entry)
 	local startup = entry.startup
 	local controls = entry.model.controls or {}
-	local moved: { [string]: boolean } = {}
 	for _, move in startup.moves do
 		local name = move.control
 		assert(controls[name], `the start-up moves "{name}", which the model binding does not hinge`)
-		assert(not moved[name], `the start-up moves "{name}" twice`)
-		moved[name] = true
 		assert(move.move > 0, `"{name}" needs a move time above 0`)
 		assert(move.back == nil or move.back >= move.at, `"{name}" turns back before it has arrived`)
 	end
 	assert(startup.pressAt < startup.drivableAt, "driving unlocks before START is pressed")
 	assert(startup.wheelAt <= startup.drivableAt, "driving unlocks before the hands are on the wheel")
+	local clutch = startup.clutch
+	assert(clutch == nil or (clutch > 0 and clutch <= 1), "the start-up's clutch is a share above 0, up to 1")
+	assert(
+		startup.interlock ~= "Clutch" or clutch ~= nil,
+		"a clutch interlock needs the start-up to press the clutch"
+	)
+	local keys = startup.keys
+	if keys then
+		for mode, key in keys do
+			assert(
+				table.find(entry.physics.modeOrder, mode),
+				`the start-up's key for "{mode}" names no drive mode`
+			)
+			assert(key ~= "" and key ~= CarEntry.STANDARD_KEY, `the key for "{mode}" is not a key of its own`)
+		end
+	end
 end
 
 -- The legs press the pedals the rig turns: each footwell pedal is one the binding hinges.

@@ -1,0 +1,25 @@
+Deliberate breaks for the key-start PR (car 3), each applied alone, the full spec suite run
+(lune run tools/test/run), then the file restored from git; the tree was clean after.
+Baseline: 93 spec files, 982 passed, 0 failed.
+
+== 1 moves of one control: only the last counts: 1 failing; 93 spec files, 981 passed, 1 failed
+   FAIL CarEntry: a manual's key start > adds up the moves of one control: the key to ON, on to START, back to ON on its spring: games/drive-lab/tests/CarEntry.spec:782: exp
+== 2 the clutch held after driving unlocks: 1 failing; 93 spec files, 981 passed, 1 failed
+   FAIL CarEntry: a manual's key start > holds the clutch down from the key until driving unlocks, on a car that has one: games/drive-lab/tests/CarEntry.spec:802: expected n
+== 3 the drive mode's key ignored: 1 failing; 93 spec files, 981 passed, 1 failed
+   FAIL CarEntry: a manual's key start > turns the drive mode's own key, else the standard one, and the server takes only those: games/drive-lab/tests/CarEntry.spec:808: exp
+== 4 the server takes any key: 1 failing; 93 spec files, 981 passed, 1 failed
+   FAIL CarEntry: a manual's key start > turns the drive mode's own key, else the standard one, and the server takes only those: games/drive-lab/tests/CarEntry.spec:814: exp
+== 5 the interlock met by a half-pressed clutch: 1 failing; 93 spec files, 981 passed, 1 failed
+   FAIL CarEntry: a manual's key start > refuses to crank in the clutch-key mode until the clutch is down, and never otherwise: games/drive-lab/tests/CarEntry.spec:824: expe
+== 6 the interlock in every gearbox mode: 1 failing; 93 spec files, 981 passed, 1 failed
+   FAIL CarEntry: a manual's key start > refuses to crank in the clutch-key mode until the clutch is down, and never otherwise: games/drive-lab/tests/CarEntry.spec:827: expe
+== 7 the contract accepts an interlock nothing presses: 1 failing; 93 spec files, 981 passed, 1 failed
+   FAIL Car contract > refuses a start-up clutch outside 0 to 1, an interlock it does not press, or a key for no mode: games/drive-lab/tests/CarContract.spec:120: expected t
+== 8 the contract accepts a key for no drive mode: 1 failing; 93 spec files, 981 passed, 1 failed
+   FAIL Car contract > refuses a start-up clutch outside 0 to 1, an interlock it does not press, or a key for no mode: games/drive-lab/tests/CarContract.spec:120: expected t
+clean
+
+-- Added with "Start interlock: refuse only with the engine off":
+== 9 the interlock refuses a running engine: 1 failing; 93 spec files, 981 passed, 1 failed
+   FAIL CarEntry: a manual's key start > refuses to crank in the clutch-key mode until the clutch is down, and never otherwise

@@ -18,6 +18,18 @@ real geometry (interior, calipers, separate wheels), sensible UVs and a full tex
 committing to a model: `blender_inspect_fbx.py` and `inspect_gltf.py`
 (`research_notes/Drive lab/video_analysis/`).
 
+**An Assetto Corsa `.kn5`** opens with `tools/blender/kn5_import.py` (our own reader, from the public
+format). It builds the node tree, meshes, materials and embedded textures, written to a folder outside
+the repo. It can pose a door from the mod's `.ksanim`, read the driver's `.knh` pose, and take a skin's
+textures with `--skin`. Things to know:
+- **Axes:** AC models face +Z with +X on the car's left. The importer's front-left-wheel check catches a
+  wrong axis assumption.
+- **Damage shaders** keep their dent map in `txNormal`; it is not wired.
+- **The paint colour** is the tiled detail texture over a white shading map.
+- **Run-time alternates** (the low-detail cockpit and wheel, blurred rims, damage glass, belts on and off)
+  are all in the file. Hide them by exact name before judging the model.
+- **An LOD file embeds no textures:** pass `--shared-textures`.
+
 The SVJ came from a racing game's assets, whose maps are named by purpose: `DiffuseAOSO` (colour
 with baked occlusion; its alpha is **not** opacity), `Normal`, `Material`/`MaterialOpacity`
 (R = metalness, G = gloss), `Emissive`.

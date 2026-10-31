@@ -50,6 +50,8 @@ type Car = {
 	doorAngle: number,
 	-- The angle last written to each control, by name.
 	controlAngles: { [string]: number },
+	-- The controls the start-up moves, each once.
+	moved: { string },
 	-- The door's openness its sounds' lead ahead at the last frame; nil before the first.
 	ahead: number?,
 	strap: Strap?,
@@ -96,6 +98,17 @@ local function strapOf(rig: CarRig.Rig, binding: Binding.CarModel): Strap?
 	}
 end
 
+-- The controls a car's start-up moves, each once however many of its moves turn it.
+local function movedControls(entry: Catalog.Entry): { string }
+	local names: { string } = {}
+	for _, move in entry.startup.moves do
+		if not table.find(names, move.control) then
+			table.insert(names, move.control)
+		end
+	end
+	return names
+end
+
 local function track(model: Instance)
 	if not model:IsA("Model") or cars[model] then
 		return
@@ -140,6 +153,7 @@ local function track(model: Instance)
 		panel = if panel and panel:IsA("BasePart") then panel else nil,
 		doorAngle = 0,
 		controlAngles = controlAngles,
+		moved = movedControls(entry),
 		ahead = nil,
 		strap = strapOf(rig, binding),
 	}
@@ -233,12 +247,12 @@ local function poseStrap(car: Car, strap: Strap, state: Entry.State, now: number
 end
 
 local function poseControls(car: Car, state: Entry.State, now: number)
-	for _, move in car.entry.startup.moves do
-		local control = car.rig.controls[move.control]
-		local angle = Hinge.angle(Entry.controlOpenness(move, state, now), move.angle)
-		if control and angle ~= car.controlAngles[move.control] then
+	for _, name in car.moved do
+		local control = car.rig.controls[name]
+		local angle = Entry.controlAngle(car.entry, name, state, now)
+		if control and angle ~= car.controlAngles[name] then
 			control.weld.C0 = control.rest * CFrame.Angles(angle, 0, 0)
-			car.controlAngles[move.control] = angle
+			car.controlAngles[name] = angle
 		end
 	end
 end
