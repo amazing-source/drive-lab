@@ -1,6 +1,7 @@
 --!strict
 local Binding = require("../src/shared/Config/Cars/Binding")
 local Config = require("../src/shared/Config/DriverGestures")
+local Contract = require("../src/shared/Config/Cars/Contract")
 local DR458 = require("../src/shared/Config/Cars/DR458")
 local HandGestures = require("../src/shared/Rules/HandGestures")
 local Hinge = require("../src/shared/Rules/Hinge")
@@ -351,5 +352,23 @@ describe("DR458 hand gestures: the buttons, the knob and the RAIN LIGHT toggle",
 				error(`the reach leaves from the keyed grip, not the live one, at {math.deg(steer)} degrees`)
 			end
 		end
+	end)
+	it("refuses a car whose knob gesture has no track for one of its drive modes", function()
+		local knob = gestureOf("DRIVING_MODE")
+		local tracks = table.clone(knob.tracks)
+		tracks["2"] = nil
+		local broken = table.clone(knob)
+		broken.tracks = tracks
+		local list = {}
+		for _, gesture in GESTURES.list do
+			table.insert(list, if gesture == knob then broken else gesture)
+		end
+		local driver = table.clone(DR458.driver)
+		driver.gestures = { list = list, MESHES = GESTURES.MESHES, HOLD_MIN = GESTURES.HOLD_MIN }
+		local entry = table.clone(DR458)
+		entry.driver = driver
+		local ok, problem = pcall(Contract.define, entry)
+		expect(ok).toBe(false)
+		expect(string.find(tostring(problem), 'no track for "2"', 1, true) ~= nil).toBe(true)
 	end)
 end)
