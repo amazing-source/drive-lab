@@ -205,6 +205,34 @@ describe("Drift through the model", function()
 		end
 	end)
 
+	it("carries a held drift through an S-bend: right, straight, then left", function()
+		for _, car in CARS do
+			local sim = DriveSim.new(car)
+			DriveSim.setSpeed(sim, 80 * KMH, 3)
+			local mode = car.modeOrder[1]
+			local right, left, peak = 0, 0, 0
+			while sim.time < 6 do
+				local steer = if sim.time < 3 then 1 else -1
+				local input = DriveSim.input({
+					throttle = 1,
+					steer = steer,
+					drift = true,
+					drivingMode = mode,
+					gearboxMode = "manual",
+				})
+				DriveSim.frame(sim, input, DT)
+				local forward, side = DriveSim.localVelocity(sim.body)
+				local slip = math.atan2(side, math.abs(forward))
+				peak = math.max(peak, math.abs(slip))
+				right = math.min(right, slip)
+				left = math.max(left, slip)
+			end
+			expect(right < -math.rad(15)).toBe(true)
+			expect(left > math.rad(15)).toBe(true)
+			expect(peak <= profileOf(car).maxAngle + math.rad(8)).toBe(true)
+		end
+	end)
+
 	it("drifts the same way to the left, and on a keyboard", function()
 		for _, car in CARS do
 			local right = DriftScenario.run(car, { kmh = 80, steer = 1, throttle = 1 })

@@ -91,7 +91,10 @@ function Drift.update(
 	state.wants = held
 		and speed >= Config.MIN_SPEED
 		and (math.abs(steer) >= Config.STEER_GATE or slip > Config.SLIDE_GATE)
-	if state.wants and state.engagement == 0 then
+	-- A new drift takes the side it is steered to; so does a held one steered the other way once
+	-- the car is near straight, which carries the drift through an S-bend.
+	local switching = steer * state.direction <= -Config.STEER_GATE and slip < Config.SLIDE_GATE
+	if state.wants and (state.engagement == 0 or switching) then
 		state.direction = if steer < 0 then -1 elseif steer > 0 then 1 elseif rightSpeed > 0 then -1 else 1
 	end
 	if state.engagement <= 0 then
