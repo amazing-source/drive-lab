@@ -12,5 +12,9 @@ Challenge Evo in Dream Racing livery: its specifications with a confidence for e
 controls, display and start-up, and the gaps. Its photo names are relative to the reference folder
 of the DR458 modelling pipeline, which stays outside this repository.
 
+`13_drifting.md` (2026-10-31, the systems agent, issue #124) researches how games implement drifting,
+maps it onto Drive Lab's model with offline measurements, and proposes a balancing plan for a drift
+on Space, waiting for the owner's go.
+
 These are research notes, dated where they say so: the code and `games/drive-lab/README.md` are
 the current truth when they disagree.
