@@ -91,8 +91,10 @@ local function start(hand: Hand, inputs: Inputs, now: number): Play?
 	return nil
 end
 
--- Moves the hand on by `dt` seconds, ending at `now`.
-function HandGestures.step(hand: Hand, inputs: Inputs, holdMin: number, now: number, dt: number)
+-- Moves the hand on by `dt` seconds, ending at `now`. Returns the control the hand worked in this
+-- step, if it did: a button as the thumb reaches it (again on each press while it is held), a
+-- knob or a toggle as its turn completes.
+function HandGestures.step(hand: Hand, inputs: Inputs, holdMin: number, now: number, dt: number): string?
 	local current = hand.playing
 	if current == nil then
 		current = start(hand, inputs, now)
@@ -101,30 +103,37 @@ function HandGestures.step(hand: Hand, inputs: Inputs, holdMin: number, now: num
 		dt = 0
 	end
 	if current == nil then
-		return
+		return nil
 	end
 	local playing: Play = current
+	local control = playing.gesture.control
+	local turn = playing.track.turn
+	local worked: string? = nil
 	local reachedAt = playing.reachedAt
-	local wanted = inputs.held(playing.gesture.control) or reachedAt == nil or now - reachedAt < holdMin
+	local wanted = inputs.held(control) or reachedAt == nil or now - reachedAt < holdMin
 	if wanted then
 		-- Frame times summed in floating point land a hair short of the end: that is the end.
 		local next = playing.progress + dt
 		playing.progress = if next >= playing.finish - 1e-9 then playing.finish else next
 		if playing.progress >= playing.finish and playing.reachedAt == nil then
 			playing.reachedAt = now
+			if turn == nil then
+				worked = control
+			end
 		end
 	else
 		local next = playing.progress - dt
 		playing.progress = if next <= 1e-9 then 0 else next
 	end
-	local turn = playing.track.turn
 	if turn and not playing.turned and playing.progress >= turn.finish then
 		playing.turned = true
-		inputs.shown[playing.gesture.control] = playing.to
+		inputs.shown[control] = playing.to
+		worked = control
 	end
 	if playing.progress <= 0 and not wanted then
 		hand.playing = nil
 	end
+	return worked
 end
 
 -- The wrist's pose in the gesture's frame and the shape to draw, or nil when the hand grips.

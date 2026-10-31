@@ -1,0 +1,30 @@
+Deliberate breaks for PR 2 of #163 (agent/car-dr458-control-sounds), each applied alone, the full
+spec suite run (lune run tools/test/run), then the file restored from git; the tree was clean after.
+Baseline before the breaks: 86 spec files, 845 passed, 0 failed.
+
+== 1 no ENGINE_START: 4 failing; 86 spec files, 841 passed, 4 failed
+   FAIL Control sounds > presses the DR458's start-up controls as the hand reaches each, then START: games/drive-lab/tests/ControlSounds.spec:71: expect
+   FAIL Control sounds > hears a start watched from the car's engine off once each, in order, START at its press: games/drive-lab/tests/ControlSounds.sp
+   FAIL Control sounds > never replays a start already under way when the car is first seen (a late join): games/drive-lab/tests/ControlSounds.spec:92: 
+   FAIL Control sounds > hears a fresh start from its beginning when the engine is started again while watched: games/drive-lab/tests/ControlSounds.spec
+== 2 first sight replays the start: 1 failing; 86 spec files, 844 passed, 1 failed
+   FAIL Control sounds > never replays a start already under way when the car is first seen (a late join): games/drive-lab/tests/ControlSounds.spec:88: 
+== 3 a restart is not heard from its beginning: 0 failing; 86 spec files, 845 passed, 0 failed
+== 4 radio edges swapped: 1 failing; 86 spec files, 844 passed, 1 failed
+   FAIL Control sounds > opens and closes the radio on the edges of the push-to-talk only: games/drive-lab/tests/ControlSounds.spec:103: expected Press,
+== 5 motor ignores a moving blade: 1 failing; 86 spec files, 844 passed, 1 failed
+   FAIL Control sounds > runs the wiper motor while the blade moves or the switch is on, at its step's speed: games/drive-lab/tests/ControlSounds.spec:1
+== 6 volume in power dB: 1 failing; 86 spec files, 844 passed, 1 failed
+   FAIL Control sounds > levels a sound against the idle loop: 0 dB is the idle level, -20 dB a tenth of it: games/drive-lab/tests/ControlSounds.spec:44
+== 7 idle level from the first layer: 1 failing; 86 spec files, 844 passed, 1 failed
+   FAIL Control sounds > takes the idle level from the pack's lowest layer, wherever it is listed: games/drive-lab/tests/ControlSounds.spec:65: expected
+== 8 a knob reported when the hand reaches its end too: 1 failing; 86 spec files, 844 passed, 1 failed
+   FAIL Hand gestures: the instant the hand works its control > reports a knob as its turn completes, not when the hand reaches its end: games/drive-lab
+== 9 a toggle's turn not reported: 1 failing; 86 spec files, 844 passed, 1 failed
+   FAIL Hand gestures: the instant the hand works its control > reports a knob as its turn completes, not when the hand reaches its end: games/drive-lab
+clean
+-- Break 3 SURVIVED the first run: the restart spec began watching at the restart's exact
+-- instant, so "from the beginning" and "from now" heard the same presses. Spec fixed to see the
+-- restart 0.1 s after its first move (a late-arriving start), then break 3 re-run:
+== 3 (re-run with the fixed spec) a restart is not heard from its beginning: 1 failing; 86 spec files, 844 passed, 1 failed
+   FAIL Control sounds > hears a fresh start from its beginning when the engine is started again while watched
