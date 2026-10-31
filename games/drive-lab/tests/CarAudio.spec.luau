@@ -1,29 +1,30 @@
 --!strict
 local CarAudio = require("../src/shared/Config/CarAudio")
 local Catalog = require("../src/shared/Config/Cars/Catalog")
-local Contract = require("../src/shared/Config/Cars/Contract")
 local DR458 = require("../src/shared/Config/Cars/DR458/Audio")
 local DR458Physics = require("../src/shared/Config/Cars/DR458/Physics")
 local DR458Startup = require("../src/shared/Config/Cars/DR458/Startup")
+local DR458Switches = require("../src/shared/Config/Cars/DR458/Switches")
 local EngineSound = require("../src/shared/Rules/EngineSound")
 local SVJ = require("../src/shared/Config/Cars/SVJ/Audio")
 local T = require("../../../tools/test/T")
+local fs = require("@lune/fs")
+local serde = require("@lune/serde")
 
 local describe, it, expect = T.describe, T.it, T.expect
 
--- The length of each uploaded events file, seconds, by asset (manifest.json beside the files).
+-- The length of each uploaded events file and packed bank, seconds, by asset (manifest.json
+-- beside the files).
 local FILE_LENGTHS: { [string]: number } = {
 	[SVJ.eventsSoundId] = 18.6001,
 	[DR458.eventsSoundId] = 14.6917,
+	[DR458.limiter.soundId] = 108.333,
 }
 
 local PACKS: { { name: string, pack: CarAudio.Pack } } = {
 	{ name = "SVJ", pack = SVJ },
 	{ name = "DR458", pack = DR458 },
 }
-
--- The DR458's own start-up sound's length, seconds (its Sound.TimeLength, read in Studio).
-local DR458_STARTUP_LENGTH = 3.9231
 
 local function uploaded(soundId: string): boolean
 	return string.match(soundId, "^rbxassetid://%d+$") ~= nil
@@ -164,19 +165,126 @@ describe("CarAudio config", function()
 		expect(mine.upshiftMinRpm).toBe(4000)
 	end)
 
-	it("DR458: keeps its start-up timing to its own start-up sound", function()
-		Contract.checkStartupSound(DR458Startup, DR458)
+	it("DR458: plays its start-up from its own events file, with no outside recording", function()
+		expect(DR458.startup.sound).toBe(nil)
+		expect(DR458.startup.region.from).toBe(0)
 	end)
 
-	it("DR458: hands its own start-up sound over before the recording ends", function()
-		local own = DR458.startup.sound
-		expect(own ~= nil).toBeTruthy()
-		expect((own :: CarAudio.StartupSound).to <= DR458_STARTUP_LENGTH).toBeTruthy()
+	it(
+		"DR458: holds the starter's revs until its start-up catches, and shows the idle by the hand-over",
+		function()
+			local times, values = DR458Startup.rpm.times, DR458Startup.rpm.values
+			local cranking = 1
+			while values[cranking + 1] == values[1] do
+				cranking += 1
+			end
+			expect(times[cranking] <= DR458Startup.catchAfter).toBeTruthy()
+			expect(times[cranking + 1] >= DR458Startup.catchAfter).toBeTruthy()
+			expect(times[#times] <= DR458.startup.handOver).toBeTruthy()
+		end
+	)
+
+	it("DR458: loops every engine layer and its limiter inside its packed bank", function()
+		local length = FILE_LENGTHS[DR458.limiter.soundId]
+		local regions = { DR458.limiter.region }
+		for _, layer in DR458.engineLayers do
+			expect(layer.soundId).toBe(DR458.limiter.soundId)
+			table.insert(regions, layer.region)
+		end
+		for _, region in regions do
+			assert(region, "every loop of the packed bank has its region")
+			expect(region.from >= 0 and region.to <= length).toBeTruthy()
+		end
 	end)
 
 	it("DR458: settles the start-up's revs at the car's idle", function()
 		local values = DR458Startup.rpm.values
 		expect(values[#values]).toBe(DR458Physics.engine.idleRpm)
+	end)
+
+	it("SVJ: has no cockpit control sounds", function()
+		expect(SVJ.controls).toBe(nil)
+	end)
+
+	-- The DR458's control sounds, each with its name, for the checks below.
+	local function controlSounds(): { { name: string, sound: CarAudio.ControlSound } }
+		local controls = DR458.controls
+		assert(controls, "the DR458 has its control sounds")
+		local list = {}
+		for name, sound in controls.press do
+			table.insert(list, { name = name, sound = sound })
+		end
+		local radio = controls.radio
+		if radio then
+			table.insert(list, { name = "radio.press", sound = radio.press })
+			table.insert(list, { name = "radio.hiss", sound = radio.hiss })
+			table.insert(list, { name = "radio.release", sound = radio.release })
+		end
+		if controls.wiperMotor then
+			table.insert(list, { name = "wiperMotor", sound = controls.wiperMotor })
+		end
+		if controls.washerPump then
+			table.insert(list, { name = "washerPump", sound = controls.washerPump })
+		end
+		return list
+	end
+
+	it("DR458: has a sound for each cockpit control the owner listed, and no other", function()
+		local controls = DR458.controls
+		assert(controls, "the DR458 has its control sounds")
+		local listed = {
+			"DISPLAY_PAGE",
+			"DRIVING_MODE",
+			"ENGINE_START",
+			"HEADLIGHTS",
+			"HIGH_BEAM",
+			"PIT_LIMITER",
+			"PanelGuard_Ignition",
+			"PanelSwitch_Ignition",
+			"RAIN_LIGHT",
+			"TunnelKey_Master",
+			"WASHER",
+			"WIPER",
+		}
+		local names = {}
+		for name in controls.press do
+			table.insert(names, name)
+		end
+		table.sort(names)
+		expect(table.concat(names, ",")).toBe(table.concat(listed, ","))
+		expect(controls.radio ~= nil and controls.wiperMotor ~= nil and controls.washerPump ~= nil).toBeTruthy()
+		for _, entry in controlSounds() do
+			expect(uploaded(entry.sound.soundId)).toBeTruthy()
+		end
+	end)
+
+	it("DR458: plays every control sound under the idle engine, by its measured loudness", function()
+		-- The bank's loops, its idle among them, are matched to this loudness.
+		local LOOP_LUFS = -18
+		local measured =
+			serde.decode("json", fs.readFile("games/drive-lab/tests/fixtures/dr458_control_sounds.json"))
+		for _, entry in controlSounds() do
+			local sound = entry.sound
+			local region = sound.region
+			assert(region, `{entry.name} plays a measured region`)
+			local key = string.format("%s@%g-%g", sound.soundId, region.from, region.to)
+			local lufs = measured[key]
+			assert(lufs, `{entry.name}'s sound has been measured ({key})`)
+			expect(lufs + sound.db - LOOP_LUFS < 0).toBeTruthy()
+		end
+	end)
+
+	it("DR458: plays its wiper motor at the rate that fits its recorded wipe to each wiper speed", function()
+		-- Seconds one wipe of the recording lasts (tools/audio/cut_dr458_gdc.py's manifest).
+		local RECORDED_WIPE = 1.42
+		local controls = DR458.controls
+		local motor = controls and controls.wiperMotor
+		local wiper = DR458Switches.wiper
+		assert(motor and wiper, "the DR458 has a wiper and its motor's sound")
+		expect(#motor.rates).toBe(#wiper.speeds)
+		for index, seconds in wiper.speeds do
+			expect(motor.rates[index]).toBeNear(RECORDED_WIPE / seconds, 0.005)
+		end
 	end)
 
 	it("SVJ: keeps Strada the most restrained mode for every pop", function()

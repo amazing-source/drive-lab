@@ -9,6 +9,7 @@ local Camera = require("@self/Camera")
 local Contract = require("./Contract")
 local Door = require("@self/Door")
 local Driver = require("@self/Driver")
+local Hud = require("@self/Hud")
 local Lights = require("@self/Lights")
 local Model = require("@self/Model")
 local Physics = require("@self/Physics")
@@ -28,6 +29,7 @@ return Contract.define({
 	audio = Audio,
 	lights = Lights,
 	binnacle = Binnacle,
+	hud = Hud,
 	assists = Assists,
 	switches = Switches,
 })
