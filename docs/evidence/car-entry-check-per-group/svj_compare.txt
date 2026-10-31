@@ -1,0 +1,26 @@
+== entry: bake c87d988c6d6c, scene 7710cfda47eb, allow 82af43d3f05a, 229 frames
+  DEEP reproduces OLD: failures and rows identical; other fields differing: none
+  modes recorded: DEEP per_group=False, PG per_group=True
+  failures: DEEP 2, PG 2; only in PG 0; only in DEEP 0
+  secondary contacts past tol 0.04 (part-frames): 14
+    Left Arm   paint     max 0.0453 at f151  limit 0.1500  margin +0.1047  (deepest there: sill 0.0528); frames 151
+    Right Arm  sill      max 0.0656 at f161  limit 0.1500  margin +0.0844  (deepest there: paint 0.0775); frames 153 154 161
+    Torso      sill      max 0.0723 at f160  limit 0.1000  margin +0.0277  (deepest there: paint 0.0740); frames 155 156 157 158 159 160
+    Right Leg  sill      max 0.0732 at f167  limit 0.1421  margin +0.0689  (deepest there: paint 0.1290); frames 163 166 167
+    Left Leg   sill      max 0.0486 at f182  limit 0.1421  margin +0.0935  (deepest there: paint 0.0717); frames 182
+== exit: bake b49f73d623fd, scene 7710cfda47eb, allow 7e722a018a9c, 307 frames
+  DEEP reproduces OLD: failures and rows identical; other fields differing: none
+  modes recorded: DEEP per_group=False, PG per_group=True
+  failures: DEEP 16, PG 16; only in PG 0; only in DEEP 0
+  secondary contacts past tol 0.04 (part-frames): 2
+    Right Arm  interior  max 0.0735 at f85  limit 0.1500  margin +0.0765  (deepest there: trim 0.0797); frames 85 86
+== close: bake a0a07820ae09, scene 7710cfda47eb, allow 75fd66f50897, 55 frames
+  DEEP reproduces OLD: failures and rows identical; other fields differing: none
+  modes recorded: DEEP per_group=False, PG per_group=True
+  failures: DEEP 0, PG 0; only in PG 0; only in DEEP 0
+  secondary contacts past tol 0.04 (part-frames): 0
+== seated: bake 6ff702707f1e, scene 7710cfda47eb, allow none, 31 frames
+  DEEP reproduces OLD: failures and rows identical; other fields differing: none
+  modes recorded: DEEP per_group=False, PG per_group=True
+  failures: DEEP 0, PG 0; only in PG 0; only in DEEP 0
+  secondary contacts past tol 0.04 (part-frames): 0

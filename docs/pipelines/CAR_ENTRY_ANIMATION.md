@@ -225,6 +225,14 @@ In game the angle is openness times the open angle, linear (agent B's `Rules/Hin
   (part, surface, frames, depth): hands on the release, the bar, the sill, the wall, the lip, the
   door's edge and the strap; the bottom on the lip. Hand contacts are 0.15 deep at most, the door's
   edge and the strap 0.12; every allowance is listed in the PR, and none is widened to pass;
+- **every group a part cuts into is tested** against that group's own allowance (`--per-group`):
+  each car group, the door and the ground, so an allowed contact cannot hide a shallower one with
+  another surface (a thigh allowed into the seat and also in the cage fails on the cage). The rule
+  before it kept only the part's deepest point and tested that point's group. With neither
+  `--per-group` nor `--no-per-group`, a scene listed in `DEEPEST_ONLY_SCENES` keeps the old rule:
+  that is the SVJ's, whose clips were accepted under it. Per group, the SVJ's shipped bakes add no
+  failure (`docs/evidence/car-entry-check-per-group/`); moving it to per group waits for the
+  coordinator's decision (#153). The record's `per_group` says which rule ran;
 - **contacts that must touch:** an `allow.json` entry with `"touch": 0.1` fails ("float") on any
   frame where the end of the part (the hand: the quarter of the arm toward its end) is farther
   than 0.1 from those surfaces. A penetration check alone passes a hand pushing on air; this is
@@ -243,9 +251,12 @@ In game the angle is openness times the open angle, linear (agent B's `Rules/Hin
 | Upper arm resting on the door card while reaching the release bar | InsideOpen f6-11 | 0.094 (measured) | leaning in to the bar puts the upper arm on the card | lead |
 
 It exits 1 on any failure, and with `--json` records what it checked (SHA-256 of the bake, the
-scene and the allow list, the frame range, any mutation, pass or fail). **Shown failing on
-purpose:** the bake with the body lowered by 10 cm while it sits on the sill turns it red on the
-sill and the ground, and green again without the mutation.
+scene and the allow list, the frame range, any mutation, the rule, pass or fail), and prints the
+failures merged into spans of frames per part and group with the limit each was held to. **Shown
+failing on purpose:** the bake with the body lowered by 10 cm while it sits on the sill turns it
+red on the sill and the ground, and green again without the mutation. The per-group rule has its
+own spec on synthetic scenes, `python -I tools/anim/car_entry_check_spec.py` (a contact hidden
+under a deeper allowed one, with the cage, the door and the ground; and controls).
 
 `tools/anim/car_entry_preview.py` draws orthographic previews of a bake against the car without
 Blender, for quick iterations; the review renders come from Blender (section 6).

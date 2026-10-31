@@ -2,7 +2,7 @@
 sequence mode writes the paths.json it reads), against the cabin dump the paths were made in.
 
   python tools/anim/startup_check.py <paths.json> [--allow <allow.json>] [--json <out.json>]
-      [--break <seat axis>=<metres>]
+      [--break <seat axis>=<metres>] [--cabin <newer cabin dump.npz>]
 
 Every baked sample, and a point half way to the next, sampled as the game samples the keys
 (Rules/StartupArms.sample: positions on a cubic through every key, rotations turned evenly), places each hand's shown mesh (the posed hands in their wrist frame, the grip hand in the wheel's)
@@ -213,7 +213,8 @@ def main(argv):
     if "--break" in argv:
         axis, amount = argv[argv.index("--break") + 1].split("=")
         mutation = ("xyz".index(axis), float(amount))
-    cabin_path = inputs["cabin"]
+    # A newer dump of the same cabin, when the cockpit changed after the bake.
+    cabin_path = argv[argv.index("--cabin") + 1] if "--cabin" in argv else inputs["cabin"]
     data = np.load(cabin_path)
     origin = np.array(inputs["seat"])
     rel = data["vertices"].astype(float) - origin
