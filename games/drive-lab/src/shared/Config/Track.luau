@@ -5,9 +5,9 @@
 ]]
 local StreetLamps = require("../Rules/StreetLamps")
 
--- Straight: one endless straight. Bends: an endless road of seeded straights and bends.
--- Circuit: the closed lap of Config/Circuit, laid once.
-export type Layout = "Straight" | "Bends" | "Circuit"
+-- Pad: the all-asphalt square of Config/Pad, laid once. Straight: one endless straight. Bends: an
+-- endless road of seeded straights and bends. Circuit: the closed lap of Config/Circuit, laid once.
+export type Layout = "Pad" | "Straight" | "Bends" | "Circuit"
 
 export type Track = {
 	LAYOUT: Layout,
@@ -35,7 +35,7 @@ export type Track = {
 }
 
 local Track: Track = table.freeze({
-	LAYOUT = "Circuit" :: Layout,
+	LAYOUT = "Pad" :: Layout,
 	-- Same seed, same road, so a run can be repeated.
 	SEED = 2026,
 	-- Two 3.5 m lanes and 2 m shoulders; grass beyond (lower grip, as off a real road).
