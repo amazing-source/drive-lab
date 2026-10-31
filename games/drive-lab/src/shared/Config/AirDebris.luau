@@ -161,22 +161,23 @@ local AirDebris: AirDebris = table.freeze({
 		spread = 25,
 	}),
 	-- The rain pack's fine streak (Config/Atmosphere STREAK_FINE), already uploaded. A streak is
-	-- the car's travel over a 1/30 s exposure, 2 m at 216 km/h; faint, lit by the scene so it
-	-- never glows at night, and only from 150 km/h, where the wind is loud.
+	-- the car's travel over a 1/30 s exposure, 2 m at 216 km/h; wider than a real speck's smear so
+	-- it shows (7 mm at 0.8 transparency drew nothing in a capture), lit by the scene so it never
+	-- glows at night, and only from 150 km/h, where the wind is loud.
 	STREAKS = table.freeze({
 		texture = "rbxassetid://132075823485064",
 		shape = table.freeze({
 			along = 0.631,
 			across = 0.0266,
 			maxLength = 2.5,
-			width = 0.006,
+			width = 0.025,
 			exposure = 1 / 30,
 		}),
 		speeds = table.freeze({ from = 150, to = 300, exponent = 1.5 }),
-		density = 0.01,
+		density = 0.02,
 		maxRate = 30,
 		color = table.freeze({ r = 236, g = 238, b = 242 }),
-		transparency = 0.8,
+		transparency = 0.55,
 		drift = 0.5,
 		resize = 0.05,
 	}),

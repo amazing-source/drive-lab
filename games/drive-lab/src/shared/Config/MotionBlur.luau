@@ -26,9 +26,10 @@ local Config: MotionBlurConfig = table.freeze({
 		fall = 0.08,
 		cut = 45,
 	}),
-	-- km/h: the depth of field's intensity, 0 under `from`, full from `to`. The cockpit's far blur
-	-- stays lighter than the chase view's near one: past the windscreen is where the driver looks.
-	SPEED = table.freeze({ from = 80, to = 300, near = 0.45, far = 0.15, exponent = 1.2 }),
+	-- km/h: the depth of field's intensity, 0 under `from`, full from `to`. In the cockpit and hood
+	-- views a far blur over about 0.2 smears the bright sky over the road and reads as fog, not
+	-- speed (edit-mode captures), so their speed and pull blurs together stay under it.
+	SPEED = table.freeze({ from = 80, to = 300, near = 0.45, far = 0.05, exponent = 1.2 }),
 	-- Strong blur reads slower, not faster (Holm, Skovhus and Kraus 2017), so the pull's blur is
 	-- sized to be plain at a full-throttle start and gone by cruising: full from 0.8 g, which the
 	-- cars pull only in the first gears, rising in a tenth of a second and fading over a third.
@@ -42,7 +43,8 @@ local Config: MotionBlurConfig = table.freeze({
 		rise = 0.08,
 		fall = 0.35,
 		near = 0.5,
-		far = 0.4,
+		far = 0.3,
+		cabin = 0.15,
 		fullScreen = 3,
 	}),
 })

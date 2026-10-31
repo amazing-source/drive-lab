@@ -18,6 +18,7 @@ local ACCELERATION: MotionBlur.Acceleration = {
 	fall = 0.4,
 	near = 0.5,
 	far = 0.4,
+	cabin = 0.2,
 	fullScreen = 3,
 }
 
@@ -106,7 +107,7 @@ describe("MotionBlur", function()
 		for _, view in { "Cockpit", "Hood" } do
 			local near, far = MotionBlur.depth(view, 50, 1, SPEED, ACCELERATION)
 			expect(near).toBe(0)
-			expect(far).toBeNear(0.4, 1e-12)
+			expect(far).toBeNear(0.2, 1e-12)
 			near, far = MotionBlur.depth(view, 400, 0, SPEED, ACCELERATION)
 			expect(near).toBe(0)
 			expect(far).toBeNear(0.15, 1e-12)
@@ -126,6 +127,8 @@ describe("MotionBlur", function()
 		near, far = MotionBlur.depth("Chase", 400, 1, SPEED, with({ intensity = 5 }))
 		expect(near).toBe(1)
 		expect(far).toBe(1)
+		near, far = MotionBlur.depth("Cockpit", 50, 0.5, SPEED, with({ intensity = 2 }))
+		expect(far).toBeNear(0.2, 1e-12)
 		near, far = MotionBlur.depth("Cockpit", 50, 0 / 0, SPEED, ACCELERATION)
 		expect(far).toBe(0)
 	end)
@@ -145,20 +148,33 @@ end)
 describe("MotionBlur config", function()
 	local acceleration = Config.ACCELERATION
 
-	it("blurs plainly at a full-throttle start, in every driving view", function()
+	-- Measured on edit-mode captures: a far blur of 0.25 already turned the outside to fog from
+	-- the cockpit; 0.15 kept the horizon (68 to 80 % of its sharpness, the cabin untouched); in the
+	-- chase view 0.3 softened the world plainly with the car sharp.
+	local COCKPIT_FOG = 0.2
+
+	it("blurs plainly at a full-throttle start: the chase view's world, the cockpit's outside", function()
 		local pull = MotionBlur.pullShare(1, acceleration)
 		expect(pull).toBe(1)
-		local near, far = MotionBlur.depth("Chase", 40, pull, Config.SPEED, acceleration)
-		expect(near >= 0.4).toBe(true)
+		local _, far = MotionBlur.depth("Chase", 40, pull, Config.SPEED, acceleration)
 		expect(far >= 0.25).toBe(true)
 		local _, cabin = MotionBlur.depth("Cockpit", 40, pull, Config.SPEED, acceleration)
-		expect(cabin >= 0.25).toBe(true)
+		expect(cabin >= 0.12).toBe(true)
+	end)
+
+	it("never fogs the cockpit or the hood view, at any speed and pull", function()
+		for _, view in { "Cockpit", "Hood" } do
+			for kmh = 0, 400, 20 do
+				local _, far = MotionBlur.depth(view, kmh, 1, Config.SPEED, acceleration)
+				expect(far <= COCKPIT_FOG).toBe(true)
+			end
+		end
 	end)
 
 	it("leaves a steady cruise to the speed's lighter blur", function()
 		expect(MotionBlur.pullShare(0.1, acceleration)).toBe(0)
-		local _, far = MotionBlur.depth("Cockpit", 400, 0, Config.SPEED, acceleration)
-		expect(far < 0.25).toBe(true)
+		local _, far = MotionBlur.depth("Chase", 400, 0, Config.SPEED, acceleration)
+		expect(far).toBe(0)
 	end)
 
 	it("starts in the depth of field style, the full screen kept for comparison", function()

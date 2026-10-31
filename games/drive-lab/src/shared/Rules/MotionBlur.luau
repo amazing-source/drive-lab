@@ -43,9 +43,11 @@ export type Acceleration = {
 	rise: number,
 	fall: number,
 	-- Depth of field at a full pull: `near` on the road between the chase camera and the car,
-	-- `far` on the world past the car, or past the cabin in the cockpit and hood views.
+	-- `far` on the world past the car, `cabin` on the world past the cabin in the cockpit and
+	-- hood views.
 	near: number,
 	far: number,
+	cabin: number,
 	-- The full-screen style's blur at a full pull, pixels.
 	fullScreen: number,
 }
@@ -117,7 +119,7 @@ function MotionBlur.depth(
 		local near = MotionBlur.speedNear(speedKmh, speed) + acceleration.near * strength
 		return math.min(near, 1), math.min(acceleration.far * strength, 1)
 	elseif view == "Cockpit" or view == "Hood" then
-		return 0, math.min(MotionBlur.speedFar(speedKmh, speed) + acceleration.far * strength, 1)
+		return 0, math.min(MotionBlur.speedFar(speedKmh, speed) + acceleration.cabin * strength, 1)
 	end
 	return 0, 0
 end

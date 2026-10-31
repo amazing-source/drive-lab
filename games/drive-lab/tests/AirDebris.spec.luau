@@ -108,13 +108,19 @@ describe("AirDebris settings", function()
 		expect(limit * window * window / 8 < Config.REGION.margin).toBe(true)
 	end)
 
-	it("draws its streaks only at speed, all of them by the cars' top speeds, and faint", function()
+	it("draws its streaks only at speed, all of them by the cars' top speeds, never opaque", function()
 		local streaks = Config.STREAKS
 		expect(streaks.speeds.from >= 120).toBe(true)
 		expect(AirDebris.speedShare(streaks.speeds.from, streaks.speeds)).toBe(0)
 		expect(streaks.speeds.to <= 300).toBe(true)
-		expect(streaks.transparency >= 0.7).toBe(true)
+		expect(streaks.transparency >= 0.5).toBe(true)
 		expect(streaks.speeds.from >= Config.SPEEDS.from).toBe(true)
+	end)
+
+	it("keeps its longest streak within the Squash range Studio offers (-3 to 3)", function()
+		local shape = Config.STREAKS.shape
+		local longest = AirDebris.streak(shape.maxLength / shape.exposure * 2, shape)
+		expect(longest.squash <= 3).toBe(true)
 	end)
 
 	it("lives until the chase camera has passed it, at the slowest speed it shows", function()
