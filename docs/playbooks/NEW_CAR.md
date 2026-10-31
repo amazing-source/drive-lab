@@ -265,7 +265,8 @@ the same misreading (notes:systems, 23:23-23:50). [M]
   lengths first, from section views of the cabin with the R6 boxes drawn and on the real grip: on
   the DR458 the first arm lengths were sent from an estimated wrist and came out 6% short of the
   real grip, so the arms were set three times (1.17 + 1.05, then 1.34 + 1.21, then the shipped
-  1.25 + 1.13 studs; notes:animation step 1, `Driver.luau`). The entry and exit come last; they took longest.
+  1.25 + 1.13 studs; notes:animation step 1, `Driver.luau`). The entry and exit come last; they
+  took longest.
 - **Gate:** every clip passes the per-group contact check on its Blender bake
   (`tools/anim/car_entry_check.py`, per group by default for a new car, #155); a Play check by the
   coordinator after the upload.
