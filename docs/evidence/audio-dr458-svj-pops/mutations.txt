@@ -1,0 +1,48 @@
+Issue #159: the DR458 plays the SVJ's pops on the SVJ's Corsa timing and throws the SVJ's flames.
+
+Gates, at the branch head: stylua --check, selene (0 errors, 0 warnings), luau-lsp analyze (src),
+lune run tools/test/run (85 spec files, 824 passed, 0 failed), lune run tools/test/tools
+(17 tools, 17 run, 0 failed), rojo build.
+
+Deliberate breaks, one at a time, each restored with `git checkout -- games` (824 passed after):
+
+M1  Config/CarAudio popsSoundId returns pack.eventsSoundId (ignores pops.soundId)
+    FAIL CarAudio config > DR458: keeps each one-shot inside the file it is cut from (CarAudio.spec:66)
+    FAIL CarAudio config > DR458: plays the SVJ's pops, out of the SVJ's events file (CarAudio.spec:125,
+         expected rbxassetid://104848480098013, got rbxassetid://94561113743905)
+M2  DR458 upshiftMinRpm = 5000 (the old value)
+    FAIL CarAudio config > DR458: pops on the SVJ's Corsa timing in every manettino position
+         (CarAudio.spec:146, expected 4000, got 5000)
+M3  DR458 lift chance 0.7 in position 2
+    FAIL the same spec (CarAudio.spec:139, expected 1, got 0.7)
+M4  DR458 pops.soundId removed (the SVJ's regions played from the DR458's own events file)
+    FAIL keeps each one-shot inside the file it is cut from (:66) and plays the SVJ's pops (:125)
+M5  DR458 pops.soundId = "" (not an uploaded asset)
+    FAIL points every loop and the events file of every car the catalog rigs at an uploaded asset (:42),
+         keeps each one-shot inside the file (:72), plays the SVJ's pops (:125)
+M6  the DR458's own Flames.luau and its `flames = Flames` entry restored from main
+    FAIL ExhaustFlames on the DR458 > throws them as the SVJ does: a jet and a fireball with every pop
+
+The SVJ is unchanged: no file under Config/Cars/SVJ is touched, and its offline audio timeline
+(lune run games/drive-lab/tools/audio_timeline.luau SVJ <mode> [fallback]) is byte-identical before
+(main 5a8853e) and after this branch, md5:
+  svj_Strada     before 8ff409a0d1b36206c28b6036d25add84  after 8ff409a0d1b36206c28b6036d25add84
+  svj_Sport      before 89413d7fc06713cfd94bb61e9e7b60e2  after 89413d7fc06713cfd94bb61e9e7b60e2
+  svj_Corsa      before 6d6c4631649abb9920d3d281393595b1  after 6d6c4631649abb9920d3d281393595b1
+  svj_Corsa_fb   before 6d6c4631649abb9920d3d281393595b1  after 6d6c4631649abb9920d3d281393595b1
+
+The DR458's offline timeline (position 1, the same seeded DriveSim run): 18 pops before, 31 after,
+every one of them now named against svj_events.ogg; 10 gear changes in both.
+
+Play check in Studio (muted: every SoundGroup at volume 0 on the client; edit peer only before, lock
+taken and released). The branch synced (4 written, 1 removed, then 0), then main restored (5 written,
+then 0). Client probe: every Sound added to Workspace, and the rising edges of the ExhaustOutlet flashes.
+- DR458, position 1: E seats, R starts (14 loops playing), W to 254 km/h in 6th, lift, brake to a stop.
+  39 pops, every one from rbxassetid://104848480098013 (the SVJ's events file), using all six of its
+  regions, played on DR458.Chassis.DriveLabExhaustAudio. 13 gear clicks from the DR458's own events
+  file (5.35-5.5705), none of its old pop regions. 74 flash edges on the DR458's two ExhaustOutlet
+  attachments (one per outlet per burst; overlapping pops merge). Both attachments face
+  (0, 0.172, 0.985) in the world with the chassis facing -Z: back and up by the shared 0.175 rise.
+- SVJ (Strada): 7 pops and 12 gear clicks from its own events file, its two outlets built on its first
+  flame. Its flash edges were not counted (the probe looked for a model named SVJ; it is CarImport).
+- Output: no script errors; the only warnings predate the sync (asset 203785492, a plugin's HTTP 404).

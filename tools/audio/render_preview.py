@@ -8,7 +8,8 @@ without Studio; Roblox's own resampling and 3D panning are not reproduced.
 
 <loops dir> holds the car's set (tools/audio/cut_loops.py for the SVJ, cut_dr458.py for the
 DR458); the timeline names each layer's file in the pack's order, and the limiter and events
-files. [from s] [to s] keep a stretch of the run. Every file is matched to -16 LUFS (K-weighted,
+files, and a one-shot's own file when it is cut from another (the DR458's pops come from the
+SVJ's events.ogg, copied in as svj_events.ogg). [from s] [to s] keep a stretch of the run. Every file is matched to -16 LUFS (K-weighted,
 ungated), lower only if a peak would pass -1 dBFS, so two renders compare at the same loudness.
 Decoding and the MP3 go through ffmpeg.
 """
@@ -79,9 +80,12 @@ def main(timeline_path, loops, out, start=None, stop=None):
     limiter = decode(os.path.join(loops, files["limiter"]))
     mix += loop_play(limiter, track([f["limiterSpeed"] for f in frames]), track([f["limiter"] for f in frames]))
 
-    events = decode(os.path.join(loops, files["events"]))
+    sources = {files["events"]: decode(os.path.join(loops, files["events"]))}
     for shot in timeline["shots"]:
-        piece = one_shot(events, shot["from"], shot["to"], shot["speed"]) * shot["volume"]
+        name = shot.get("file", files["events"])
+        if name not in sources:
+            sources[name] = decode(os.path.join(loops, name))
+        piece = one_shot(sources[name], shot["from"], shot["to"], shot["speed"]) * shot["volume"]
         at = int(shot["t"] * RATE)
         end = min(total, at + len(piece))
         mix[at:end] += piece[: end - at]
