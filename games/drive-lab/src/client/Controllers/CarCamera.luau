@@ -29,6 +29,7 @@ local Rules = require(ReplicatedStorage.Shared.Rules.CarCamera)
 local Units = require(ReplicatedStorage.Shared.Units)
 
 local EntryView = require(script.Parent.EntryView)
+local StartupLean = require(script.Parent.Parent.Rig.StartupLean)
 
 type Drive = {
 	model: Model,
@@ -145,7 +146,12 @@ local function cockpit(drive: Drive): CFrame
 	local frame = drive.chassis.CFrame
 	local character = localPlayer.Character
 	local headPart = character and character:FindFirstChild("Head")
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local base = if headPart and headPart:IsA("BasePart") then headPart.Position else frame.Position
+	-- The start-up's torso lean moves the head, not the eye.
+	if humanoid then
+		base = StartupLean.unlean(humanoid, base)
+	end
 	local at = drive.views.eye
 	local eye = base
 		+ frame.LookVector * studs(at.forward + eyeForward)
