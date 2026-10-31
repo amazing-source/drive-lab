@@ -562,10 +562,11 @@ Symptom, cause, fix, source. The modelling and animation pitfalls are in their p
   checked. The spec checks both. *notes:driving_feel, "Wind".* [M]
 - **The DR458's HUD read too small.** Every HUD shared one height; its 3:1 frame came out at 69% of
   the SVJ's width. The width rule (#193). *notes:hud_dr458, width round.* [M]
-- **The interior mirror read blue.** Roblox's reflectance shows the sky. A dark glass colour map
-  (master v17). Its roughness map then came out all 0 (likely a colour-space slip); `car_mirror.py`
-  now writes the roughness it asks for and reads both maps back. *handoff, "For the owner";
-  notes:import third import 15:29; 79ff193, #181.* [M]
+- **The interior mirror read blue.** Roblox's Reflectance shows the sky. The mirror's view, baked
+  from the eye's reflection on the assembled car, became the glass's colour map (master v17,
+  `docs/pipelines/HERO_CAR.md` §14). Its roughness map then came out all 0 (likely a colour-space
+  slip); `car_mirror.py` now writes the roughness it asks for and reads both maps back. *handoff,
+  "For the owner"; notes:import third import 15:29; 79ff193, #181.* [M]
 
 ### Process
 
