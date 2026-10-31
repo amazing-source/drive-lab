@@ -231,6 +231,65 @@ describe("Car contract: the driver", function()
 		end))
 		expect(#Contract.footwellMismatches(same.model, same.driver.footwell)).toBe(0)
 	end)
+	it("checks a footwell's clutch as it checks the throttle and the brake", function()
+		-- A clutch on the brake's hinge, which the binding also has to hinge.
+		local function withClutch(entry: any, bound: boolean)
+			local clutch = table.clone(entry.driver.footwell.brake)
+			clutch.part = "Pedal_Clutch"
+			clutch.hangs = true
+			entry.driver.footwell.clutch = clutch
+			if bound then
+				local pedal = table.clone(entry.model.pedals[2])
+				pedal.part = "Pedal_Clutch"
+				table.insert(entry.model.pedals, pedal)
+			end
+			return clutch
+		end
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				withClutch(entry, false)
+			end))
+		end).toThrow()
+		local accepted = Contract.define(svjWith(function(entry)
+			withClutch(entry, true)
+		end))
+		expect(accepted.driver.footwell.clutch ~= nil).toBe(true)
+		expect(#Contract.footwellMismatches(accepted.model, accepted.driver.footwell)).toBe(0)
+		expect(#Contract.footwellPedals(accepted.driver.footwell)).toBe(3)
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				local clutch = withClutch(entry, true)
+				clutch.hinge = { x = clutch.hinge.x, y = clutch.hinge.y, z = clutch.hinge.z + 0.03 }
+			end))
+		end).toThrow()
+		expect(#Contract.footwellPedals(Catalog.cars.SVJ.driver.footwell)).toBe(2)
+	end)
+
+	it("asks a throttle or a clutch hung from above to be marked hangs", function()
+		local function flagged(footwell: any, part: string): boolean
+			for _, problem in Contract.footwellMismatches(Catalog.cars.SVJ.model, footwell) do
+				if string.find(problem, `{part} hangs from above`, 1, true) then
+					return true
+				end
+			end
+			return false
+		end
+		local svj = Catalog.cars.SVJ.driver.footwell
+		expect(flagged(svj, "Pedal_Throttle")).toBe(false)
+		local footwell = table.clone(svj)
+		local hungThrottle = table.clone(svj.brake)
+		hungThrottle.part = "Pedal_Throttle"
+		footwell.throttle = hungThrottle
+		expect(flagged(footwell, "Pedal_Throttle")).toBe(true)
+		hungThrottle.hangs = true
+		expect(flagged(footwell, "Pedal_Throttle")).toBe(false)
+		local clutch = table.clone(svj.brake)
+		clutch.part = "Pedal_Clutch"
+		footwell.clutch = clutch
+		expect(flagged(footwell, "Pedal_Clutch")).toBe(true)
+		clutch.hangs = true
+		expect(flagged(footwell, "Pedal_Clutch")).toBe(false)
+	end)
 end)
 
 describe("Car contract: the display", function()

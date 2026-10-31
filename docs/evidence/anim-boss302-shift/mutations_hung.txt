@@ -1,0 +1,25 @@
+Deliberate breaks of Rules/DriverLegs' hung pedals (commit 5f74561), each patched alone into the
+committed file, the two affected spec files run (DriverLegs.spec, CarContract.spec), the file restored
+from HEAD after each. Restored: 65 passed, 0 failed; full suite after: see the PR.
+
+== H1 no slide: the hung heel stays where it rested
+FAIL Driver legs: pedals hung from above > keeps the sole's length on a hung clutch, the heel sliding along the floor: games/drive-lab/tests/DriverLegs.spec:308: expected 0.20000822483088038 within 1e-09, got 0.1947515437249104
+FAIL Driver legs: pedals hung from above > keeps the right heel on the floor under hung pedals, the sole's length kept: games/drive-lab/tests/DriverLegs.spec:323: expected 0.20000822483088038 within 1e-09, got 0.19475154372491044
+2 spec files, 63 passed, 2 failed
+== H2 the heel lifts 1 cm off the floor instead of keeping its floor line
+FAIL Driver legs: pedals hung from above > keeps the sole's length on a hung clutch, the heel sliding along the floor: games/drive-lab/tests/DriverLegs.spec:305: expected 0 within 1e-09, got 0.010000000000000009
+FAIL Driver legs: pedals hung from above > keeps the right heel on the floor under hung pedals, the sole's length kept: games/drive-lab/tests/DriverLegs.spec:323: expected 0.20000822483088038 within 1e-09, got 0.19204018426538028
+2 spec files, 63 passed, 2 failed
+== H3 the throttle's hangs flag ignored (heel turns with the pedal)
+FAIL Driver legs: pedals hung from above > keeps the right heel on the floor under hung pedals, the sole's length kept: games/drive-lab/tests/DriverLegs.spec:324: expected -0.2334 within 1e-12, got -0.2688740395972263
+2 spec files, 64 passed, 1 failed
+== H4 the brake's hangs flag ignored (heel stays put)
+FAIL Driver legs: pedals hung from above > keeps the right heel on the floor under hung pedals, the sole's length kept: games/drive-lab/tests/DriverLegs.spec:323: expected 0.20000822483088038 within 1e-09, got 0.19475154372491044
+2 spec files, 64 passed, 1 failed
+== H5 the clutch's hangs flag ignored (heel stays put)
+FAIL Driver legs: pedals hung from above > keeps the sole's length on a hung clutch, the heel sliding along the floor: games/drive-lab/tests/DriverLegs.spec:308: expected 0.20000822483088038 within 1e-09, got 0.1947515437249104
+2 spec files, 64 passed, 1 failed
+== H6 every throttle treated as hung (the SVJ organ throttle changes)
+FAIL Driver legs: pedals hung from above > keeps the organ throttle's heel turning with its plate and the brake's heel put: games/drive-lab/tests/DriverLegs.spec:295: expected 0 within 1e-12, got 0.0005116005991592507
+FAIL Driver legs: pedals hung from above > keeps the right heel on the floor under hung pedals, the sole's length kept: games/drive-lab/tests/DriverLegs.spec:330: expected true, got false
+2 spec files, 63 passed, 2 failed

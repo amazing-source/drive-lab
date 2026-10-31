@@ -1,0 +1,28 @@
+== B1 pedal presses without the foot
+93 spec files, 979 passed, 1 failed
+FAIL Driver legs: the left foot on a clutch > presses the clutch only under the foot, by its value: games/drive-lab/tests/DriverLegs.spec:240: expected 0, got 0.20943951023931956
+93 spec files, 979 passed, 1 failed
+== B2 sole never leaves the footrest
+93 spec files, 978 passed, 2 failed
+FAIL Driver legs: the left foot on a clutch > moves the sole from the footrest onto the clutch, rocking on its heel: games/drive-lab/tests/DriverLegs.spec:229: expected 0 within 1e-09, got 0.14362520670133086
+FAIL Driver legs: the left foot on a clutch > carries the ball down with the clutch, about the clutch's hinge: games/drive-lab/tests/DriverLegs.spec:254: expected true, got false
+93 spec files, 978 passed, 2 failed
+B3 no lift between the pedals: PATCH FAILED
+== B4 ball not turned with the clutch
+93 spec files, 979 passed, 1 failed
+FAIL Driver legs: the left foot on a clutch > carries the ball down with the clutch, about the clutch's hinge: games/drive-lab/tests/DriverLegs.spec:254: expected true, got false
+93 spec files, 979 passed, 1 failed
+== B5 a car without a clutch presses one
+93 spec files, 979 passed, 1 failed
+FAIL Driver legs: the left foot on a clutch > keeps the left foot on its footrest in a car without a clutch, whatever the inputs: games/drive-lab/tests/DriverLegs.spec:220: expected 0, got 1
+93 spec files, 979 passed, 1 failed
+== B6 heel lifts instead of sliding
+93 spec files, 979 passed, 1 failed
+FAIL Driver legs: the left foot on a clutch > moves the sole from the footrest onto the clutch, rocking on its heel: games/drive-lab/tests/DriverLegs.spec:234: expected -0.2343 within 1e-09, got -0.2063
+93 spec files, 979 passed, 1 failed
+== B3 no lift between the pedals (left foot only)
+FAIL Driver legs: the left foot on a clutch > moves the sole from the footrest onto the clutch, rocking on its heel: games/drive-lab/tests/DriverLegs.spec:233: expected true, got false
+93 spec files, 979 passed, 1 failed
+== B7 the contract ignores a footwell's clutch
+FAIL Car contract: the driver > checks a footwell's clutch as it checks the throttle and the brake: games/drive-lab/tests/CarContract.spec:211: expected the function to throw
+93 spec files, 980 passed, 1 failed
