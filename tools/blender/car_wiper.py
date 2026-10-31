@@ -449,8 +449,6 @@ bpy.context.view_layer.update()
 # ---------------------------------------------------------------------------------------------- checks
 new = {arm.name, boss.name}
 cv, ct = world_tris([arm])
-bound_lo = Vector([min(p[i] for p in cv) for i in range(3)])
-bound_hi = Vector([max(p[i] for p in cv) for i in range(3)])
 reach = max((p - PIVOT).length for p in cv) + 0.05
 others = []
 for o in sc.objects:
