@@ -1,13 +1,17 @@
 --!strict
 --[[
-	Motion blur with Roblox's post-processing (the owner asked for "le blur type motion blur",
-	2026-10-28). A blur that grows with how fast the camera turns, and in the chase view the road
-	between the camera and the car blurred the faster the car goes (Rules/MotionBlur). Seeds, for
-	the owner's eye in a playtest.
+	Motion blur with Roblox's post-processing (Rules/MotionBlur): a blur that grows with how fast
+	the camera turns, and a depth of field that softens the world moving past the car with its
+	speed and, more, while it pulls. Seeds, for the owner's eye in a playtest; ACCELERATION's
+	intensity turns the pull's blur up or down in one place.
 ]]
 local MotionBlur = require("../Rules/MotionBlur")
 
-export type MotionBlurConfig = { ROTATION: MotionBlur.Rotation, SPEED: MotionBlur.Speed }
+export type MotionBlurConfig = {
+	ROTATION: MotionBlur.Rotation,
+	SPEED: MotionBlur.Speed,
+	ACCELERATION: MotionBlur.Acceleration,
+}
 
 local Config: MotionBlurConfig = table.freeze({
 	-- Degrees a second: no blur under `from`, `max` pixels from `to`. Ordinary turns stay sharp;
@@ -22,8 +26,25 @@ local Config: MotionBlurConfig = table.freeze({
 		fall = 0.08,
 		cut = 45,
 	}),
-	-- km/h: the near depth of field's intensity, 0 under `from`, `near` from `to`.
-	SPEED = table.freeze({ from = 80, to = 300, near = 0.45, exponent = 1.2 }),
+	-- km/h: the depth of field's intensity, 0 under `from`, full from `to`. The cockpit's far blur
+	-- stays lighter than the chase view's near one: past the windscreen is where the driver looks.
+	SPEED = table.freeze({ from = 80, to = 300, near = 0.45, far = 0.15, exponent = 1.2 }),
+	-- Strong blur reads slower, not faster (Holm, Skovhus and Kraus 2017), so the pull's blur is
+	-- sized to be plain at a full-throttle start and gone by cruising: full from 0.8 g, which the
+	-- cars pull only in the first gears, rising in a tenth of a second and fading over a third.
+	ACCELERATION = table.freeze({
+		intensity = 1,
+		-- "FullScreen" draws it as one blur over the whole view instead, to compare in a playtest.
+		style = "DepthOfField" :: MotionBlur.PullStyle,
+		fromG = 0.15,
+		toG = 0.8,
+		exponent = 1,
+		rise = 0.08,
+		fall = 0.35,
+		near = 0.5,
+		far = 0.4,
+		fullScreen = 3,
+	}),
 })
 
 return Config
