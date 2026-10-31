@@ -1,8 +1,10 @@
 --!strict
 local CarAudio = require("../src/shared/Config/CarAudio")
 local Catalog = require("../src/shared/Config/Cars/Catalog")
+local Contract = require("../src/shared/Config/Cars/Contract")
 local DR458 = require("../src/shared/Config/Cars/DR458/Audio")
 local DR458Physics = require("../src/shared/Config/Cars/DR458/Physics")
+local DR458Startup = require("../src/shared/Config/Cars/DR458/Startup")
 local EngineSound = require("../src/shared/Rules/EngineSound")
 local SVJ = require("../src/shared/Config/Cars/SVJ/Audio")
 local T = require("../../../tools/test/T")
@@ -14,6 +16,9 @@ local PACKS: { { name: string, pack: CarAudio.Pack, eventsLength: number } } = {
 	{ name = "SVJ", pack = SVJ, eventsLength = 18.6001 },
 	{ name = "DR458", pack = DR458, eventsLength = 14.6917 },
 }
+
+-- The DR458's own start-up sound's length, seconds (its Sound.TimeLength, read in Studio).
+local DR458_STARTUP_LENGTH = 3.9231
 
 local function uploaded(soundId: string): boolean
 	return string.match(soundId, "^rbxassetid://%d+$") ~= nil
@@ -98,6 +103,21 @@ describe("CarAudio config", function()
 			end
 			expect(count).toBe(#DR458Physics.modeOrder)
 		end
+	end)
+
+	it("DR458: keeps its start-up timing to its own start-up sound", function()
+		Contract.checkStartupSound(DR458Startup, DR458)
+	end)
+
+	it("DR458: hands its own start-up sound over before the recording ends", function()
+		local own = DR458.startup.sound
+		expect(own ~= nil).toBeTruthy()
+		expect((own :: CarAudio.StartupSound).to <= DR458_STARTUP_LENGTH).toBeTruthy()
+	end)
+
+	it("DR458: settles the start-up's revs at the car's idle", function()
+		local values = DR458Startup.rpm.values
+		expect(values[#values]).toBe(DR458Physics.engine.idleRpm)
 	end)
 
 	it("SVJ: keeps Strada the most restrained mode for every pop", function()
