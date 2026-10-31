@@ -23,26 +23,6 @@ local function scale(a: Vector, k: number): Vector
 	return { x = a.x * k, y = a.y * k, z = a.z * k }
 end
 
--- The rotation whose matrix has columns `x`, `y`, `z` (orthonormal).
-local function fromAxes(x: Vector, y: Vector, z: Vector): Rotation
-	local trace = x.x + y.y + z.z
-	local w, qx, qy, qz
-	if trace > 0 then
-		local s = math.sqrt(trace + 1) * 2
-		w, qx, qy, qz = s / 4, (y.z - z.y) / s, (z.x - x.z) / s, (x.y - y.x) / s
-	elseif x.x > y.y and x.x > z.z then
-		local s = math.sqrt(1 + x.x - y.y - z.z) * 2
-		w, qx, qy, qz = (y.z - z.y) / s, s / 4, (y.x + x.y) / s, (z.x + x.z) / s
-	elseif y.y > z.z then
-		local s = math.sqrt(1 + y.y - x.x - z.z) * 2
-		w, qx, qy, qz = (z.x - x.z) / s, (y.x + x.y) / s, s / 4, (z.y + y.z) / s
-	else
-		local s = math.sqrt(1 + z.z - x.x - y.y) * 2
-		w, qx, qy, qz = (x.y - y.x) / s, (z.x + x.z) / s, (z.y + y.z) / s, s / 4
-	end
-	return { w = w, x = qx, y = qy, z = qz }
-end
-
 local function rotate(q: Rotation, v: Vector): Vector
 	local u = { x = q.x, y = q.y, z = q.z }
 	local function cross(a: Vector, b: Vector): Vector
@@ -75,21 +55,28 @@ function ShiftHand.columnAngle(shifter: Config.Shifter, column: number): number
 	return columns[#columns].degrees
 end
 
+local function axisAngle(axis: Vector, degrees: number): Rotation
+	local half = math.rad(degrees) / 2
+	local s = math.sin(half)
+	return { w = math.cos(half), x = axis.x * s, y = axis.y * s, z = axis.z * s }
+end
+
 -- The knob's frame with the lever at (`column`, `row`) and the knob pushed down by `knob` (0 to 1):
--- origin at the knob's centre, axes the lever's (across, up it, toward the driver). The lever leans
--- sideways for the column, then fore and aft for the row, about its pivot.
+-- origin at the knob's centre, axes the seat's turned with the lever. As the manifest's gate motion
+-- turns it: sideways about the forward axis for the column (positive to the car's right), then fore
+-- and aft about the car's right for the row (positive forward), both about the pivot.
 function ShiftHand.lever(shifter: Config.Shifter, column: number, row: number, knob: number): Pose
-	local side = math.rad(ShiftHand.columnAngle(shifter, column))
-	local tilt = math.rad(if row >= 0 then shifter.forward * row else shifter.backward * row)
-	local right0, up0, back = shifter.right, shifter.up, shifter.back
-	local up1 = add(scale(up0, math.cos(side)), scale(right0, math.sin(side)))
-	local right = add(scale(right0, math.cos(side)), scale(up0, -math.sin(side)))
-	local up = add(scale(up1, math.cos(tilt)), scale(back, -math.sin(tilt)))
-	local towardDriver = add(scale(back, math.cos(tilt)), scale(up1, math.sin(tilt)))
-	local reach = shifter.length - shifter.push * math.clamp(knob, 0, 1)
+	local right, back = shifter.right, shifter.back
+	local side = axisAngle(scale(back, -1), ShiftHand.columnAngle(shifter, column))
+	local fore =
+		axisAngle(scale(right, -1), if row >= 0 then shifter.forward * row else shifter.backward * row)
+	local turn = StartupArms.multiply(fore, side)
+	local offset = rotate(turn, add(shifter.knob, scale(shifter.pivot, -1)))
+	local length = math.sqrt(offset.x ^ 2 + offset.y ^ 2 + offset.z ^ 2)
+	local pushed = shifter.push * math.clamp(knob, 0, 1) / length
 	return {
-		position = add(shifter.pivot, scale(up, reach)),
-		rotation = fromAxes(right, up, towardDriver),
+		position = add(shifter.pivot, scale(offset, 1 - pushed)),
+		rotation = turn,
 	}
 end
 

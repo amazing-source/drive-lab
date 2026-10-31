@@ -18,12 +18,12 @@ export type Column = { column: number, degrees: number }
 
 export type Shifter = {
 	pivot: Point,
-	-- The lever's axes in its neutral place: across the car, up the lever, toward the driver.
+	-- The knob's centre with the lever in neutral.
+	knob: Point,
+	-- The car's right and back, the axes the lever turns about (the manifest's gate motion): first
+	-- sideways about the forward axis for its column, then fore and aft about the right axis.
 	right: Point,
-	up: Point,
 	back: Point,
-	-- Pivot to the knob's centre, and the knob's radius.
-	length: number,
 	knobRadius: number,
 	-- Columns in order; a column between two is turned between their angles.
 	columns: { Column },
@@ -36,7 +36,8 @@ export type Shifter = {
 
 export type Shift = {
 	shifter: Shifter,
-	-- The wrist frame holding the knob, in the knob's frame (origin at its centre, the lever's axes).
+	-- The wrist frame holding the knob, in the knob's frame: origin at its centre, axes the seat's with
+	-- the lever in neutral, turned with the lever.
 	grip: Key,
 	-- From the steering grip (the first key, the wheel straight) to the knob grip with the lever in
 	-- neutral (the last key): played forward by the hand's share reaching, back releasing.

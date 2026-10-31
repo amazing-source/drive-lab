@@ -12,10 +12,9 @@ type Pose = ShiftHand.Pose
 -- reverse beyond first, 12.5 degrees fore and aft (a car's real one comes from shift_paths.py).
 local SHIFTER: Config.Shifter = {
 	pivot = { x = 0.35, y = -0.2, z = -0.3 },
+	knob = { x = 0.35, y = 0.05, z = -0.3 },
 	right = { x = 1, y = 0, z = 0 },
-	up = { x = 0, y = 1, z = 0 },
 	back = { x = 0, y = 0, z = 1 },
-	length = 0.25,
 	knobRadius = 0.025,
 	columns = {
 		{ column = -1, degrees = -18 },
@@ -60,13 +59,15 @@ end
 
 describe("Shift hand: the lever", function()
 	it("stands the knob a lever's length above the pivot in neutral and leans it into the gates", function()
-		local pivot, length = SHIFTER.pivot, SHIFTER.length
+		local pivot, length = SHIFTER.pivot, 0.25
 		local neutral = ShiftHand.lever(SHIFTER, 1, 0, 0).position
 		expect(distance(neutral, { x = pivot.x, y = pivot.y + length, z = pivot.z })).toBeNear(0, 1e-12)
 		local first = ShiftHand.lever(SHIFTER, 0, 1, 0).position
-		-- Sideways for the column first, then fore and aft about the leaned lever's own cross axis.
-		expect(first.z).toBeNear(pivot.z - length * math.sin(math.rad(12.5)), 1e-12)
-		expect(first.x).toBeNear(pivot.x + length * math.sin(math.rad(-9)) * math.cos(math.rad(12.5)), 1e-12)
+		-- Sideways about the forward axis for the column, then fore and aft about the car's right.
+		local s, f = math.rad(9), math.rad(12.5)
+		expect(first.x).toBeNear(pivot.x - length * math.sin(s), 1e-12)
+		expect(first.y).toBeNear(pivot.y + length * math.cos(s) * math.cos(f), 1e-12)
+		expect(first.z).toBeNear(pivot.z - length * math.cos(s) * math.sin(f), 1e-12)
 		local sixth = ShiftHand.lever(SHIFTER, 2, -1, 0).position
 		expect(sixth.z > pivot.z).toBe(true)
 		expect(sixth.x > neutral.x).toBe(true)
@@ -103,7 +104,7 @@ describe("Shift hand: the lever", function()
 			}
 			local p = SHIFTER.pivot
 			local axis = { x = knob.position.x - p.x, y = knob.position.y - p.y, z = knob.position.z - p.z }
-			local along = (offset.x * axis.x + offset.y * axis.y + offset.z * axis.z) / SHIFTER.length
+			local along = (offset.x * axis.x + offset.y * axis.y + offset.z * axis.z) / 0.25
 			expect(along).toBeNear(0.07, 1e-9)
 		end
 		local upright = ShiftHand.lever(SHIFTER, 1, 0, 0)
