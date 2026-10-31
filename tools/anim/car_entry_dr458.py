@@ -37,9 +37,9 @@ TO_SEAT = np.array([[-1.0, 0, 0], [0, 0, 1.0], [0, 1.0, 0]])
 # assembled car).
 DOOR_HANDLE = np.array([0.95, -1.08, 0.60])  # the teardrop pull on the skin ahead of the rear shut line (photo 025)
 CARD_TOP = np.array([0.75, -1.40, 0.80])  # the door card's top edge level with the seat
-# The palm a hand's end-face distance over the door card's top edge, forward of the bucket's
-# shoulder wing (the card's top at y -1.75, door shut, measured on asm_v14).
-CARD_HOOK = np.array([0.8009, -1.7515, 0.7948])
+# The palm a hand's end-face distance off the door card's inner face, ahead of the bucket's shoulder
+# wing (the card's face at x 0.7323 there, door shut).
+CARD_FACE = np.array([0.7323 - 0.035, -1.80, 0.66])
 
 
 class Car:
@@ -288,7 +288,10 @@ WALK0 = OPEN_END
 LEAN0, HOP0 = WALK0 + 36, WALK0 + 52
 SIT, T1, T2, OVER = HOP0 + 10, HOP0 + 15, HOP0 + 20, HOP0 + 26
 DROP, D1, D2, SEATED = OVER + 12, OVER + 8, OVER + 16, OVER + 26
-MEET, HOOK_OFF, SHUT, END = SEATED + 18, SEATED + 26, SEATED + 30, SEATED + 44
+CLOSE_FROM, END = SEATED - 4, SEATED + 40
+# The SVJ's InsideClose door curve (Config/Cars/SVJ/Door.luau), seconds from its start: the door
+# swings shut at the speed the game's other door does.
+SVJ_CLOSE = ((0.0, 1.0), (0.033, 0.995), (0.1, 0.961), (0.2, 0.88), (0.233, 0.847), (0.3, 0.756), (0.433, 0.55), (0.566, 0.369), (0.7, 0.228), (0.8, 0.143), (0.966, 0.031), (1.033, 0.004), (1.066, 0.0))
 KEY_FRAMES = {"B": SIT, "T1": T1, "T2": T2, "C": OVER, "D1": D1, "D2": D2}
 # Key poses found by grid search on scene_v14 (the torso and head first, then each limb):
 # B sitting across the bars facing in, head inside; T1, T2 turning on them; C facing the nose,
@@ -389,30 +392,26 @@ def getin(b, car, s, start, ends):
     b.neck.at(SEATED, s["neck"])
     for limb in ("right_leg", "left_leg", "right_arm"):
         b.targets[limb].at(SEATED, ends[limb])
-    # 5. The door comes most of the way in on its own; the driver leans forward out of the bucket's
-    #    shoulder wing, hooks the door card's top edge at about 12 % open, draws it to about 4 % and
-    #    lets go, and it shuts (the coordinator's decision E2: a seated R6 at 1.15 cannot work this
-    #    door with the hand clear of it); then sits back, hands to their hand-over pose.
-    b.door.at(SEATED - 4, (1.0,)).at(MEET, (0.12,)).at(HOOK_OFF, (0.04,)).at(SHUT, (0.0,))
-    lean = (s["torso"][0] - 34.5, s["torso"][1], 4.0)
-    b.torso.at(MEET - 6, lean).at(HOOK_OFF + 2, lean)
-    b.neck.at(MEET - 6, (-10, 8, 0)).at(HOOK_OFF + 2, (-10, 8, 0))
-    b.targets["left_arm"].at(MEET - 6, car.p(car_point_at_door(car, CARD_HOOK, 0.2) + np.array([-0.04, 0.0, 0.08])))
-    b.targets["left_arm"].attach(MEET, HOOK_OFF, car.riding(b, CARD_HOOK))
-    b.contact.append((MEET, HOOK_OFF))
+    # 5. The door swings shut on its own as the driver settles, on the SVJ's own close curve, while
+    #    the hands settle into their hand-over pose (the coordinator's decision E1': from the seat a
+    #    1.15 R6 reaches nothing on this door that pulls, and any reach lays its arm on the card).
+    for t, v in SVJ_CLOSE:
+        b.door.at(CLOSE_FROM + round(t * FPS), (v,))
+    # Into the hand-over pose from its own side: an R6 arm reaches a palm point two ways, and the
+    # solve keeps whichever way the arm arrives from.
+    for limb in ("right_arm", "left_arm"):
+        b.targets[limb].at(SEATED + 8, ends[limb] + np.array([0.15 if limb == "left_arm" else -0.15, 0.35, -0.25]))
     for track, value in ((b.pelvis, s["pelvis"]), (b.torso, s["torso"]), (b.neck, s["neck"]), (b.neck_loc, s["neck_loc"])):
         track.at(END, value)
     for limb, t in ends.items():
         b.targets[limb].at(END, t)
-    # Back to the hand-over pose through a point on its own side, so the aim keeps that arm pose
-    # (an R6 arm reaches a palm point two ways).
-    b.targets["left_arm"].at(HOOK_OFF + 8, ends["left_arm"] + np.array([0.15, 0.35, -0.25]))
 
 # The exit's beats: InsideOpen, then GetOut ending at the mark's idle stance (the root jumps there
 # between clips), then OutsideClose from the mark.
-IO_END = 44
-GO_D2, GO_D1, GO_C, GO_T2, GO_T1, GO_B = 58, 66, 76, 82, 87, 93
-GO_STAND, GO_UP, GO_WALK = 103, 115, 116
+HAND_OVER = 18  # frames the drawn hands take to ease onto the blocky ones (Driver handOver, 0.6 s)
+IO_END = HAND_OVER + 44
+GO_D2, GO_D1, GO_C, GO_T2, GO_T1, GO_B = IO_END + 14, IO_END + 22, IO_END + 32, IO_END + 38, IO_END + 43, IO_END + 49
+GO_STAND, GO_UP, GO_WALK = IO_END + 59, IO_END + 71, IO_END + 72
 GO_END = GO_WALK + 40
 CLOSE_AT = np.array([2.08, -1.38])  # behind the open door, outside its sweep, facing the nose
 CARD_REAR = np.array([0.725, -1.20, 0.70])  # the door card's inner face near its rear upper corner, door shut
@@ -430,22 +429,31 @@ def exit_timeline(car, rest_path):
     yaw_in = car.yaw_facing(-car.outboard)
     yaw_seat = s["yaw"]
     b = Body(OC_END + 1, FPS)
+    # The arms start on their hand-over pose, solved from its own joint angles.
+    for limb, angles in SEATED_ARMS.items():
+        b.guess[limb] = (angles[0], angles[2])
     for track, value in ((b.pelvis, s["pelvis"]), (b.torso, s["torso"]), (b.neck, s["neck"]), (b.neck_loc, s["neck_loc"])):
         track.at(0, value)
     for limb, t in ends.items():
         b.targets[limb].at(0, t)
         b.twist[limb].at(0, (0,))
     b.door.at(0, (0.0,))
-    # -- InsideOpen.
-    b.targets["left_arm"].at(6, ends["left_arm"] + np.array([0.0, 0.5, -0.2]))
-    b.targets["left_arm"].at(10, car.p(CARD_TOP + np.array([-0.06, 0.02, 0.06])))
-    b.targets["left_arm"].attach(14, 24, car.riding(b, CARD_TOP))
-    b.contact.append((14, 24))
-    b.torso.at(14, (s["torso"][0] - 3, yaw_seat, 1.5)).at(24, (s["torso"][0] - 4, yaw_seat, 2)).at(IO_END, s["torso"])
-    b.neck.at(12, (s["neck"][0], 8, 0)).at(30, (s["neck"][0], 10, 0)).at(IO_END, s["neck"])
-    for fr, v in ((14, 0.0), (24, 0.12), (32, 0.45), (40, 0.9), (IO_END, 1.0)):
+    # -- InsideOpen: the blocky arms hold their hand-over pose while the drawn ones ease onto it
+    # (HAND_OVER); the driver leans forward out of the bucket's shoulder wing, the left palm on the
+    # door card pushes the door from shut to about 12 % (the coordinator's decision: from the seat
+    # this is the one door surface a 1.15 R6 reaches), and it swings open; back into the seat.
+    lean = (s["torso"][0] - 34.5, yaw_seat, 4.0)
+    push, push_end = HAND_OVER + 8, HAND_OVER + 18
+    b.torso.at(HAND_OVER, s["torso"]).at(push - 2, lean).at(push_end, lean).at(IO_END, s["torso"])
+    b.neck.at(HAND_OVER, s["neck"]).at(push - 2, (-10, 8, 0)).at(push_end, (-10, 8, 0)).at(IO_END, s["neck"])
+    for limb, t in ends.items():
+        b.targets[limb].at(HAND_OVER, t)
+    b.targets["left_arm"].at(push - 3, car.p(CARD_FACE + np.array([-0.06, 0.03, 0.02])))
+    b.targets["left_arm"].attach(push, push_end, car.riding(b, CARD_FACE))
+    b.contact.append((push, push_end))
+    for fr, v in ((push + 1, 0.0), (push_end, 0.12), (push_end + 8, 0.45), (push_end + 16, 0.9), (push_end + 20, 1.0)):
         b.door.at(fr, (v,))
-    b.targets["left_arm"].at(34, ends["left_arm"])
+    b.targets["left_arm"].at(push_end + 6, ends["left_arm"] + np.array([0.15, 0.35, -0.25]))
     for track, value in ((b.pelvis, s["pelvis"]), (b.neck_loc, s["neck_loc"])):
         track.at(IO_END, value)
     for limb, t in ends.items():
@@ -547,7 +555,6 @@ def entry_contacts():
         {"why": "PROPOSED: the bottom across the door bars while sitting and turning on them", "from": HOP0 + 4, "to": DROP, "parts": ["Torso"], "groups": ["cage"], "depth": 0.15},
         {"why": "DECIDED (owner, option D): torso sides into the bucket's bolsters, 5.5 cm seated", "from": OVER + 4, "to": END, "parts": ["Torso"], "groups": ["seat"], "depth": 0.261},
         {"why": "DECIDED (seated pose): head on the headrest pad, at the house checker's depth (its 0.62-stud head box; the seated check's smaller box measured 0.89 cm)", "from": SEATED, "to": END, "parts": ["Head"], "groups": ["seat"], "depth": 0.059},
-        {"why": "DECIDED (coordinator, E2, owner's overnight mandate): hand over the door card's top edge, drawing the door in from 12 % to 4 % (a seated R6 at 1.15 cannot work the door clear of it)", "from": MEET, "to": HOOK_OFF, "parts": ["Left Arm"], "groups": ["door"], "depth": 0.3},
         {"why": "DECIDED (coordinator, B): the blocky arms at their hand-over pose beside the torso, into the bucket's bolsters as the torso's sides are", "from": SEATED, "to": END, "parts": ARMS, "groups": ["seat"], "depth": 0.22},
         {"why": "DECIDED (coordinator): the blocky legs at their least-deep pose in the bucket, under the wheel", "from": SEATED - 6, "to": END, "parts": LEGS, "groups": ["seat"], "depth": 0.17},
     ]
@@ -556,7 +563,6 @@ def entry_contacts():
         {"from": WALK0, "to": HOP0 + 2, "limb": "left_leg"},
         {"from": HOP0 - 2, "to": HOP0 + 2, "limb": "right_arm"},
         {"from": HOP0 - 2, "to": HOP0 + 2, "limb": "left_arm"},
-        {"from": MEET, "to": HOOK_OFF, "limb": "left_arm"},
         {"from": END, "to": END, "limb": "right_arm"},
         {"from": END, "to": END, "limb": "left_arm"},
     ]
@@ -577,16 +583,18 @@ def apply_table(b, path):
 def exit_contacts():
     """The exit's named contacts and held limbs (as entry_contacts)."""
     allow = [
-        {"why": "left hand on the door card's top edge, pushing the door open", "from": 12, "to": 26, "parts": ["Left Arm"], "groups": ["door"], "depth": 0.12},
+        {"why": "DECIDED (coordinator, owner's overnight mandate): the left palm on the door card pushing the door from shut to 12 %, the arm's side along the card (a seated R6 at 1.15 reaches the card only this way)", "from": HAND_OVER + 8, "to": HAND_OVER + 18, "parts": ["Left Arm"], "groups": ["door"], "depth": 0.3},
         {"why": "hands on the bucket and the door bars, climbing out and standing up", "from": GO_D2 - 2, "to": GO_STAND + 4, "parts": ARMS, "groups": ["cage", "seat"], "depth": 0.15},
         {"why": "PROPOSED (rigid-thigh class): thighs over the door bars and the sill while the legs swing out", "from": GO_D1 - 4, "to": GO_STAND, "parts": LEGS, "groups": ["cage", "sill"], "depth": 0.25},
         {"why": "PROPOSED: the bottom across the door bars while turning on them", "from": GO_D1, "to": GO_STAND - 4, "parts": ["Torso"], "groups": ["cage"], "depth": 0.15},
         {"why": "DECIDED (owner, option D): torso sides into the bucket's bolsters, 5.5 cm seated", "from": 0, "to": GO_C - 4, "parts": ["Torso"], "groups": ["seat"], "depth": 0.261},
-        {"why": "DECIDED (seated pose): head on the headrest pad", "from": 0, "to": GO_D2, "parts": ["Head"], "groups": ["seat"], "depth": 0.059},
+        {"why": "DECIDED (seated pose): head on the headrest pad, at the house checker's depth", "from": 0, "to": GO_D2, "parts": ["Head"], "groups": ["seat"], "depth": 0.059},
+        {"why": "DECIDED (coordinator, B): the blocky arms at their hand-over pose beside the torso, into the bucket's bolsters as the torso's sides are", "from": 0, "to": IO_END + 4, "parts": ARMS, "groups": ["seat"], "depth": 0.22},
+        {"why": "DECIDED (coordinator): the blocky legs at their least-deep pose in the bucket, under the wheel", "from": 0, "to": GO_D2, "parts": LEGS, "groups": ["seat"], "depth": 0.17},
         {"why": "right hand flat on the door card, tugging the door in", "from": GO_END + 30, "to": GO_END + 52, "parts": ["Right Arm"], "groups": ["door"], "depth": 0.12},
     ]
     holds = [
-        {"from": 14, "to": 24, "limb": "left_arm"},
+        {"from": HAND_OVER + 8, "to": HAND_OVER + 18, "limb": "left_arm"},
         {"from": GO_STAND, "to": OC_END, "limb": "right_leg"},
         {"from": GO_STAND, "to": OC_END, "limb": "left_leg"},
         {"from": 0, "to": 6, "limb": "right_arm"},
