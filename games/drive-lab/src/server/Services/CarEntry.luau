@@ -233,7 +233,8 @@ local function enter(car: Car, player: Player, request: Request)
 	if not claim(car, player, "Enter") then
 		return
 	end
-	local arrived = awaitArrival(car, player, "Enter")
+	-- A direct door seats the body from where it pressed: no walk to the mark to wait for.
+	local arrived = car.entry.door.direct or awaitArrival(car, player, "Enter")
 	local _, humanoid = body(player)
 	local state, at = CarState.read(car.model), now()
 	if not arrived or humanoid == nil or not reservedFor(car, player, "Enter") then

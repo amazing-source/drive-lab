@@ -1,11 +1,11 @@
 ## ends not clear: 59 spec files, 449 passed, 2 failed
-    FAIL LampGlints > tapers a glint to nothing at both ends and shows it whole in the middle: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\lights-night-lamps\games\drive-lab\tests\LampGlints.spec:138: e
-    FAIL LampGlints > draws a glint's transparency fully clear at its ends, at its opacity in the middle: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\lights-night-lamps\games\drive-lab\tests\LampGlints.
+    FAIL LampGlints > tapers a glint to nothing at both ends and shows it whole in the middle: %USERPROFILE%\Downloads\drive-lab\.worktrees\lights-night-lamps\games\drive-lab\tests\LampGlints.spec:138: e
+    FAIL LampGlints > draws a glint's transparency fully clear at its ends, at its opacity in the middle: %USERPROFILE%\Downloads\drive-lab\.worktrees\lights-night-lamps\games\drive-lab\tests\LampGlints.
 ## opacity ignored: 59 spec files, 450 passed, 1 failed
-    FAIL LampGlints > draws a glint's transparency fully clear at its ends, at its opacity in the middle: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\lights-night-lamps\games\drive-lab\tests\LampGlints.
+    FAIL LampGlints > draws a glint's transparency fully clear at its ends, at its opacity in the middle: %USERPROFILE%\Downloads\drive-lab\.worktrees\lights-night-lamps\games\drive-lab\tests\LampGlints.
 ## fewer than three keypoints allowed: 59 spec files, 450 passed, 1 failed
-    FAIL LampGlints > draws a glint's transparency fully clear at its ends, at its opacity in the middle: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\lights-night-lamps\games\drive-lab\tests\LampGlints.
+    FAIL LampGlints > draws a glint's transparency fully clear at its ends, at its opacity in the middle: %USERPROFILE%\Downloads\drive-lab\.worktrees\lights-night-lamps\games\drive-lab\tests\LampGlints.
 ## window skewed: 59 spec files, 449 passed, 2 failed
-    FAIL LampGlints > tapers a glint to nothing at both ends and shows it whole in the middle: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\lights-night-lamps\games\drive-lab\tests\LampGlints.spec:140: e
-    FAIL LampGlints > draws a glint's transparency fully clear at its ends, at its opacity in the middle: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\lights-night-lamps\games\drive-lab\tests\LampGlints.
+    FAIL LampGlints > tapers a glint to nothing at both ends and shows it whole in the middle: %USERPROFILE%\Downloads\drive-lab\.worktrees\lights-night-lamps\games\drive-lab\tests\LampGlints.spec:140: e
+    FAIL LampGlints > draws a glint's transparency fully clear at its ends, at its opacity in the middle: %USERPROFILE%\Downloads\drive-lab\.worktrees\lights-night-lamps\games\drive-lab\tests\LampGlints.
 restored: 59 spec files, 451 passed, 0 failed

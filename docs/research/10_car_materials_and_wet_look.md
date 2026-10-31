@@ -303,7 +303,12 @@ absence.
 - **The model already ships** `common_carbon05_black_diff.png` + `_norm.png` (a CSR2 tiling
   carbon). Check its UV scale. Roblox has one UV set (`09`), so a tiled weave works only if the
   carbon parts' UVs already tile it.
-  - Whether UVs outside 0–1 repeat in Roblox: [TEST].
+  - UVs outside 0–1 repeat: **measured** in Studio edit mode on 2026-10-30. EditableMesh quads
+    with the SVJ's existing SurfaceAppearances: the interior atlas on a 0–8 quad showed 64 whole
+    copies and the carbon an 8× finer weave with no edge streaks, each beside a 0–1 control
+    (`drive-lab-assets/dr458/work/audit/studio_uv_repeat_test.png`, script `uv_repeat_test.luau`).
+    Not yet measured on an uploaded mesh asset in a live client; the SVJ's uploaded carbon parts
+    (UVs −90 to +40) render tiled in an older capture, which supports it.
   - Fallback: a carbon MaterialVariant at about 0.35 studs per tile (8×8 tows), if a MeshPart
     takes it cleanly [TEST, like the paint variant in 1.3 E].
 - Weave scale [INF]: a 3 mm tow gives a 12 mm twill repeat, about 0.043 studs at 0.28 m per
@@ -800,4 +805,4 @@ All read 2026-10-27 unless marked [SNIP] (seen only in a search result).
   `07_visual_references.md`, `00_PLAN.md`; reference frames in
   `reference_pack/Roblox_Driving_Reference_Pack/frames/` (`00_23_tunnel_materials.jpg`,
   `01_33_wet_reflections.jpg` measured above); the model's textures in
-  `C:\Users\bfhdh\Downloads\drive-lab-assets\svj_ddiaz\clean\`.
+  `%USERPROFILE%\Downloads\drive-lab-assets\svj_ddiaz\clean\`.

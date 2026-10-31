@@ -83,4 +83,16 @@ function TrackPath.generate(start: Point, count: number, ds: number, seed: numbe
 	return points
 end
 
+-- Which of the place's car spawns the road starts at, by their names: the first by name, so every
+-- server lays the same road whatever order it finds them in. Nil with no spawn.
+function TrackPath.startIndex(names: { string }): number?
+	local best: number? = nil
+	for index, name in names do
+		if best == nil or name < names[best] then
+			best = index
+		end
+	end
+	return best
+end
+
 return table.freeze(TrackPath)

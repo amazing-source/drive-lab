@@ -95,14 +95,26 @@ local Audio: CarAudio.Pack = {
 		toDistance = 250,
 	},
 	eventsSoundId = "rbxassetid://94561113743905",
-	-- A real Ferrari 360's start (flat-plane V8): starter, catch, flare and settle; its last 0.8 s
-	-- fade out while the idle loop fades in.
 	startup = {
+		-- The fallback: a real Ferrari 360's start (flat-plane V8), starter, catch, flare and
+		-- settle; its last 0.8 s fade out while the idle loop fades in.
 		region = { from = 0.5, to = 4.85 },
 		boostDb = 0.95,
 		handOver = 3.55,
 		abortRpm = 1400,
 		abortHalfLife = 0.08,
+		-- "FERRARI 458 STARTUP", a Creator Store upload by another creator: moderation or its
+		-- uploader can take it down at any time, and then the region above plays. It ends at a
+		-- settling idle, so it hands over where it passes the car's 1,000 rpm idle.
+		sound = {
+			id = "rbxassetid://126032464409866",
+			volume = 3.98,
+			from = 0.47,
+			starterEnds = 1.17,
+			catchAt = 1.18,
+			handOver = 3.0,
+			to = 3.45,
+		},
 	},
 	gear = { region = { from = 5.35, to = 5.5705 }, volume = 0.38, upSpeed = 1, downSpeed = 0.92 },
 	shiftDip = { gain = 0.5, downHalfLife = 0.012, upHalfLife = 0.05 },

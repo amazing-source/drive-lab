@@ -110,7 +110,7 @@ agents. They share politely and talk to each other directly.
 | Resource | Rule |
 |---|---|
 | **Studio** | Before every action call `get_studio_mode` **and** `get_connected_instances`, and act only when there are no server or client peers: `get_studio_mode` alone has answered `stop` while the owner was playtesting. Never start or stop a playtest the owner is running. Edit-mode work only, and everything restored after (two syncs in a row write 0). |
-| **Studio lock** | Anything that moves the camera, captures or adds temporary objects takes `C:/Users/bfhdh/Downloads/drive-lab-assets/.studio-lock` with `if mkdir ...; then echo "<role> <HH:MM>" > .../owner; ...; rm owner; rmdir; fi`. Minutes, not hours. Never remove a lock you did not create. |
+| **Studio lock** | Anything that moves the camera, captures or adds temporary objects takes `~/Downloads/drive-lab-assets/.studio-lock` with `if mkdir ...; then echo "<role> <HH:MM>" > .../owner; ...; rm owner; rmdir; fi`. Minutes, not hours. Never remove a lock you did not create. |
 | **Blender lock** | Same pattern with `.blender-lock`: one Blender process at a time on this machine. |
 | **Place changes** | Anything stored in the place (ApplyMesh, new assets under `ReplicatedStorage.DriveLabAssets`) is listed in the PR: only the owner saves the place. |
 | **Uploads** | `tools/assets/upload_images.py`; the Open Cloud key is read from the environment and never printed. Audio uploads are rationed (100 per 30 days). |
@@ -149,4 +149,4 @@ agents. They share politely and talk to each other directly.
 | Systems map | `games/drive-lab/README.md` |
 | Asset pipelines (how to rebuild every asset) | `docs/pipelines/` |
 | Where this repo came from | `docs/history/IMPORT.md` |
-| Working files, captures, sources | `C:\Users\bfhdh\Downloads\drive-lab-assets\` (outside the repo) |
+| Working files, captures, sources | `%USERPROFILE%\Downloads\drive-lab-assets\` (outside the repo) |

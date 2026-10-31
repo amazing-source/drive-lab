@@ -309,6 +309,15 @@ return Types.define({
 	-- No launch control: none is documented for the Challenge, whose races start rolling.
 	launch = nil,
 
+	-- The shared drift (Vehicle/Drift). The lock caps the angle: 31.3° at the wheels. Rear drive, so
+	-- the front share never acts.
+	drift = {
+		maxAngle = math.rad(28),
+		holdShare = 0.85,
+		tcSlip = 0.3,
+		frontShare = 0,
+	},
+
 	simulation = {
 		maxSubstep = 0.001,
 		solverIterations = 4,
