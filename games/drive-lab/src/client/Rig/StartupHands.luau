@@ -5,7 +5,10 @@
 	side has the grip hand Controllers/DriverArms already draws plus the posed meshes, Rest, Point
 	and Pinch (a key held between thumb and index), and a sleeve cuff for them, kept in the place
 	at ReplicatedStorage.DriveLabAssets.Hands; one shows at a time, dressed as Rig/Gloves says. A
-	place without the Pinch mesh draws the Point hand for it.
+	place without the Pinch mesh draws the Point hand for it. The same set draws the car's gesture
+	meshes on the wheel (Config/DriverGestures), each with the grip's cuff or the posed hands'; a
+	gesture mesh the place lacks is drawn as the grip (a thumb or finger moved from it) or the
+	Point hand.
 	Everything is placed from a wrist frame (z up the forearm, y out of the back of the hand), the
 	frame the arm reaches.
 ]]
@@ -13,8 +16,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Contract = require(ReplicatedStorage.Shared.Config.Cars.Contract)
 local DriverArms = require(ReplicatedStorage.Shared.Config.DriverArms)
+local DriverGestures = require(ReplicatedStorage.Shared.Config.DriverGestures)
 local DriverStartup = require(ReplicatedStorage.Shared.Config.DriverStartup)
 local Gloves = require(script.Parent.Gloves)
+local HandShapes = require(ReplicatedStorage.Shared.Rules.HandShapes)
 local StartupArms = require(ReplicatedStorage.Shared.Rules.StartupArms)
 local Units = require(ReplicatedStorage.Shared.Units)
 
@@ -26,7 +31,11 @@ export type Hands = {
 	-- nil when the place lacks the posed meshes: the grip hand then stands in for them.
 	shapes: { [DriverStartup.Shape]: BasePart }?,
 	cuff: BasePart?,
-	shown: DriverStartup.Shape,
+	-- The car's gesture meshes for this side, by name, each with its frame in its wrist frame.
+	posed: { [string]: { part: BasePart, offset: CFrame, cuff: "Grip" | "Wrist" } },
+	-- What the place has of all these, for Rules/HandShapes; fixed once built.
+	have: HandShapes.Have,
+	shown: string,
 	-- Fixed per side, worked out once: the grip's wrist frame in the wheel's frame, and each
 	-- mesh's frame from its wrist frame.
 	gripWrist: CFrame,
@@ -84,6 +93,46 @@ local function toPose(frame: CFrame): StartupArms.Pose
 	}
 end
 
+-- A mesh frame from a gesture's { x, y, z, qw, qx, qy, qz } in metres.
+local function meshFrame(key: { number }): CFrame
+	local k = STUDS_PER_METRE
+	return CFrame.new(key[1] * k, key[2] * k, key[3] * k, key[5], key[6], key[7], key[4])
+end
+
+-- The gesture meshes of one side the place has (their names end in _R or _L).
+local function posedMeshes(
+	gestures: DriverGestures.Gestures?,
+	letter: string,
+	color: Color3,
+	folder: Instance
+): { [string]: { part: BasePart, offset: CFrame, cuff: "Grip" | "Wrist" } }
+	local found = {}
+	if gestures == nil then
+		return found
+	end
+	for name, mesh in gestures.MESHES do
+		local template = if string.sub(name, -2) == "_" .. letter then asset(name) else nil
+		if template then
+			found[name] = {
+				part = hidden(Gloves.hand(template, color), folder),
+				offset = meshFrame(mesh.frame),
+				cuff = mesh.cuff,
+			}
+		end
+	end
+	return found
+end
+
+local function have(hands: Hands): HandShapes.Have
+	local shapes = hands.shapes
+	local gestures: { [string]: HandShapes.Cuff } = {}
+	for name, mesh in hands.posed do
+		gestures[name] = mesh.cuff
+	end
+	local pinch: BasePart? = if shapes then shapes[PINCH] else nil
+	return { startupShapes = shapes ~= nil, pinch = pinch ~= nil, gestures = gestures }
+end
+
 function StartupHands.build(
 	driver: Contract.Driver,
 	sign: number,
@@ -110,6 +159,8 @@ function StartupHands.build(
 		gripCuff = gripCuff,
 		shapes = nil,
 		cuff = nil,
+		posed = posedMeshes(driver.gestures, letter, color, folder),
+		have = { startupShapes = false, pinch = false, gestures = {} },
 		shown = "Grip",
 		gripWrist = gripWrist,
 		gripOffset = fromWrist * CFrame.new(sign * centre.x, centre.y, centre.z),
@@ -129,6 +180,7 @@ function StartupHands.build(
 		hands.shapes = shapes
 		hands.cuff = hidden(Gloves.cuff(cuff), folder)
 	end
+	hands.have = have(hands)
 	return hands
 end
 
@@ -141,33 +193,57 @@ function StartupHands.release(hands: Hands)
 	if hands.cuff then
 		hands.cuff:Destroy()
 	end
-end
-
--- The shape a hand is drawn with: the Point hand stands in for a Pinch the place lacks.
-local function drawn(hands: Hands, shape: DriverStartup.Shape): DriverStartup.Shape
-	if shape ~= PINCH then
-		return shape
+	for _, mesh in hands.posed do
+		mesh.part:Destroy()
 	end
-	local shapes = hands.shapes
-	local mesh: BasePart? = if shapes then shapes[PINCH] else nil
-	return if mesh then shape else POINT
 end
 
-local function show(hands: Hands, shape: DriverStartup.Shape)
-	if hands.shown == shape then
+local function show(hands: Hands, shown: HandShapes.Shown)
+	if hands.shown == shown.shape then
 		return
 	end
-	hands.shown = shape
+	hands.shown = shown.shape
+	hands.grip.Transparency = if shown.grip then 0 else 1
+	hands.gripCuff.Transparency = if shown.gripCuff then 0 else 1
 	local shapes, cuff = hands.shapes, hands.cuff
-	local posed = shapes ~= nil and shape ~= "Grip"
-	hands.grip.Transparency = if posed then 1 else 0
-	hands.gripCuff.Transparency = if posed then 1 else 0
-	if shapes and cuff then
+	if shapes then
 		for name, part in shapes do
-			part.Transparency = if name == shape then 0 else 1
+			part.Transparency = if name == shown.mesh then 0 else 1
 		end
-		cuff.Transparency = if posed then 0 else 1
 	end
+	if cuff then
+		cuff.Transparency = if shown.wristCuff then 0 else 1
+	end
+	for name, mesh in hands.posed do
+		mesh.part.Transparency = if name == shown.mesh then 0 else 1
+	end
+end
+
+-- Shows `shape` at the wrist frame `wrist` and returns the hand and cuff to draw with their frames.
+function StartupHands.draw(
+	hands: Hands,
+	wrist: CFrame,
+	shape: string
+): (CFrame, BasePart, CFrame, BasePart, CFrame)
+	local shown = HandShapes.shown(shape, hands.have)
+	show(hands, shown)
+	local hand, handFrame = hands.grip, wrist * hands.gripOffset
+	local gesture = hands.posed[shown.shape]
+	local shapes = hands.shapes
+	if gesture then
+		hand, handFrame = gesture.part, wrist * gesture.offset
+	elseif shown.mesh and shapes then
+		local offset = if shown.shape == REST
+			then hands.restOffset
+			elseif shown.shape == PINCH then hands.pinchOffset
+			else hands.pointOffset
+		hand, handFrame = shapes[shown.shape :: DriverStartup.Shape], wrist * offset
+	end
+	local cuff = hands.cuff
+	if shown.wristCuff and cuff then
+		return wrist, hand, handFrame, cuff, wrist * hands.cuffOffset
+	end
+	return wrist, hand, handFrame, hands.gripCuff, wrist * hands.gripCuffOffset
 end
 
 -- The wrist frame for one side, and the hand and cuff to draw with their frames. `wheel` is the
@@ -191,17 +267,7 @@ function StartupHands.place(
 		wrist = seat * toCFrame(pose)
 		shape = hand.shape
 	end
-	shape = drawn(hands, shape)
-	show(hands, shape)
-	local shapes, cuff = hands.shapes, hands.cuff
-	if shape == "Grip" or shapes == nil or cuff == nil then
-		return wrist, hands.grip, wrist * hands.gripOffset, hands.gripCuff, wrist * hands.gripCuffOffset
-	end
-	local offset = if shape == "Rest"
-		then hands.restOffset
-		elseif shape == "Pinch" then hands.pinchOffset
-		else hands.pointOffset
-	return wrist, shapes[shape], wrist * offset, cuff, wrist * hands.cuffOffset
+	return StartupHands.draw(hands, wrist, shape)
 end
 
 return StartupHands

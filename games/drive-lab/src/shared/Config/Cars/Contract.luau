@@ -16,6 +16,7 @@ local Cluster = require("../Cluster")
 local DriverArms = require("../DriverArms")
 local DriverLegs = require("../DriverLegs")
 local DriverAssists = require("../../Rules/DriverAssists")
+local DriverGestures = require("../DriverGestures")
 local DriverStartup = require("../DriverStartup")
 local Driving = require("../Driving")
 local ExhaustFlames = require("../../Rules/ExhaustFlames")
@@ -33,6 +34,8 @@ export type Driver = {
 	-- The drawn arms' lengths (studs at character scale 1), when this car's wheel needs other
 	-- than Config/DriverArms'.
 	arms: { upper: number, lower: number }?,
+	-- What the hands do on the wheel's buttons and the panel's switches; none on a car without.
+	gestures: DriverGestures.Gestures?,
 }
 
 export type Entry = {
@@ -114,6 +117,70 @@ local function checkDriverSize(entry: Entry)
 	assert(driver.scale == nil or driver.scale > 0, "the driver's scale must be positive")
 	local arms = driver.arms
 	assert(arms == nil or (arms.upper > 0 and arms.lower > 0), "the driver's arms need positive lengths")
+end
+
+local DRAWN_SHAPES = table.freeze({ Grip = true, Rest = true, Point = true, Pinch = true })
+
+local function checkTrack(
+	entry: Entry,
+	gesture: DriverGestures.Gesture,
+	name: string,
+	track: DriverGestures.Track
+)
+	local what = `the {gesture.control} gesture's "{name}" track`
+	local keys = track.keys
+	assert(#keys >= 2 and keys[1][1] == 0, `{what} needs keys from 0`)
+	for index = 2, #keys do
+		assert(keys[index][1] > keys[index - 1][1], `{what} has keys out of order`)
+	end
+	assert(#track.shapes > 0 and track.shapes[1].at == 0, `{what} needs a shape from 0`)
+	local meshes = (entry.driver.gestures :: DriverGestures.Gestures).MESHES
+	for _, change in track.shapes do
+		assert(
+			DRAWN_SHAPES[change.shape] or meshes[change.shape],
+			`{what} draws "{change.shape}", which has no mesh`
+		)
+	end
+	assert(gesture.frame == "Wheel" or track.gripBlend, `{what} leaves the wheel's frame with no grip blend`)
+	local turn = track.turn
+	if turn then
+		assert(gesture.latch, `{what} turns a control but tracks no state`)
+		assert(turn.start < turn.finish and turn.finish <= keys[#keys][1], `{what} turns outside its keys`)
+		local knob = entry.model.modeKnob
+		local controls = entry.model.controls or {}
+		local bound = if gesture.latch == "Mode"
+			then knob and knob.hinge.part == turn.control
+			else controls[turn.control] and controls[turn.control].travel ~= nil
+		assert(bound, `{what} turns "{turn.control}", which the binding does not hinge for it`)
+	end
+end
+
+-- Each gesture plays on a control the car has, with a track for every state it can be pressed in.
+local function checkGestures(entry: Entry)
+	local gestures = entry.driver.gestures
+	if gestures == nil then
+		return
+	end
+	local features = Contract.features(entry)
+	local seen: { [string]: boolean } = {}
+	for _, gesture in gestures.list do
+		local control = gesture.control
+		assert(not seen[control], `two gestures play on {control}`)
+		seen[control] = true
+		local need = CarSwitches.NEEDS[control]
+		assert(need == nil or features[need], `a gesture plays on {control}, which the car does not have`)
+		assert(gesture.side == 1 or gesture.side == -1, `the {control} gesture needs a side`)
+		local states: { string } = if gesture.latch == "Mode"
+			then entry.physics.modeOrder
+			elseif gesture.latch == "Toggle" then { "Off", "On" }
+			else { "Press" }
+		for _, state in states do
+			local track = gesture.tracks[state]
+			assert(track, `the {control} gesture has no track for "{state}"`)
+			checkTrack(entry, gesture, state, track)
+		end
+	end
+	assert(gestures.HOLD_MIN >= 0, "a gesture's hold cannot be negative")
 end
 
 -- Every key of a table keyed by drive mode is one of the car's modes.
@@ -293,6 +360,7 @@ function Contract.define(entry: Entry): Entry
 	checkModes(entry)
 	checkDisplay(entry)
 	checkSwitches(entry)
+	checkGestures(entry)
 	checkFlames(entry)
 	Contract.checkStartupSound(entry.startup, entry.audio)
 	return deepFreeze(entry)

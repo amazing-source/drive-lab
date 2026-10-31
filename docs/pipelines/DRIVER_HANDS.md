@@ -313,8 +313,69 @@ DR458, v9_a10 grip, measured on the exported meshes (all pass, also at ±90 degr
 | WIPER | left | below the spoke (-50 degrees), rolled 20 | 0.48 mm | 2.44 mm |
 
 For WATER and WIPER the hand leaves the rim to pass the spoke (the coordinator's decision). The
-manettino is turned by a finger (also decided); that pose and the RAIN LIGHT reach on the panel
-are still to make.
+manettino is turned by a finger (also decided). Section 12 plays them.
+
+The meshes keep the hand's UVs and smooth normals: `posed_mesh` copies the evaluated mesh. The
+first export rebuilt the faces from their points, which dropped both (no glove map, faceted);
+`--export-from <thumbs.json>` re-exports picked poses without a new search, and the re-export of
+the DR458's matched the first to 0.0 mm.
+
+## 12. Gestures: the hand works the wheel's buttons and the panel's switches
+
+While the player holds a control's input, the hand on that side leaves its grip along keyed wrist
+frames, shows a posed mesh, and comes back the same way when the input is let go (or HOLD_MIN
+after a tap). The data is the car's `driver.gestures` (`Config/DriverGestures`), written by:
+
+    lune run games/drive-lab/tools/gesture_config DR458 <gesture_config.json>
+    blender -b --factory-startup --python-exit-code 1 -P tools/blender/gesture_poses.py -- <inputs.json> <poses dir>
+    python tools/anim/gesture_paths.py <inputs.json> <out dir> --write games/drive-lab/src/shared/Config/Cars/DR458/Gestures.luau
+    stylua games/drive-lab/src/shared/Config/Cars/DR458/Gestures.luau
+    python tools/anim/gesture_check.py <out dir>/paths.json --track <CONTROL/state> --allow <allow.json> --json <check.json>
+
+- `gesture_config.luau` prints what the gestures are keyed against: the hub, the knob's hinge and
+  positions, every bound control with its rest and travel, the drive modes in order, the grip.
+- Kinds of path (`gesture_paths.py`):
+  - **thumb** (FLASH, PIT, SCROLL): the grip slides and rolls on the rim to the button's thumb pose
+    (section 11), loosening 1 mm off the rim half way, then the thumb mesh shows;
+  - **regrip** (WATER, WIPER): Grip to Rest, off the rim, round past the spoke, back onto it below
+    and closing on the thumb mesh in the last frames. On the DR458 the way off peels the hand 40
+    degrees up the rim first (away from the button): every way that turned toward the button met
+    the spoke junction or the cage (5.7 mm and more), so the hand arcs up and round;
+  - **toggle** (RAIN LIGHT, seat frame): off the rim, the Point hand's index end behind the
+    lever's end while the game flicks it through the binding's travel, one track per state;
+  - **knob** (the manettino): the index on the lever, the thumb resting on the rim. Per moment the
+    hand turns about the thumb's pad, moves across the rim's face by what the finger's length
+    leaves (6 mm at most), then tips about the index's end until the pad rests on the rim again.
+    `gesture_poses.py` makes its mesh: the Point fingers with the thumb solved onto the rim.
+- No key after a track's last: the game's cubic would carry the hand past it and back.
+- A track runs from the grip (its first key, exactly) to the held pose (its last key). "Wheel"
+  keys are in the steering wheel's frame, so a gesture follows the wheel; the RAIN LIGHT keys are
+  in the seat frame and blend onto the live grip over `gripBlend` seconds from either end.
+- `gesture_check.py`: every key and half way between, sampled as the game samples, each shown mesh
+  against the wheel (rim 3 mm while gripping, the pressed button 3 mm, else 2), turned to 0 and
+  +-90 degrees against what does not turn, the toggle and the knob turned as the runtime turns
+  them (both their angles before a turn: on the way back they stay turned), the arms as capsules;
+  contacts that must touch: the thumb's skin on its button (1 mm), the index on a lever (2 mm), the
+  thumb resting on the rim (3 mm). `--break 0.01` pushes every hand 1 cm and fails. One track per
+  pass keeps it under 1 GB; only the region the wrists reach is sampled.
+
+At run time `Rig/WheelGestures` reads the local driver's input (every key of the control, gamepads
+too) and turns the knob's weld (CarRig hinges the knob on the steering wheel) and the toggle's with
+the finger; otherwise they show the car's state. `Rules/HandGestures` holds the timing and the
+composition, `Rules/HandShapes` which mesh and cuff show. The switch states are local to the
+driving client, so other players see the grip, as with the steering. Meshes live in
+`ReplicatedStorage.DriveLabAssets.Hands` (`HandThumb*_L/R`, `HandManettino_R`), the car's grip set
+in its own folder (`HandsDR458`: `Hand_R`, `Hand_L`, `Cuff_R`, `Cuff_L`); a missing gesture mesh is
+drawn as the grip (thumbs) or the Point hand, a missing car set as the shared `Hands`.
+
+**Named contacts for the DR458 gestures, decided 2026-10-31** (allow list next to the paths;
+measured on the polished cockpit dump, v9_a10 grip):
+
+| Contact | When | Depth (limit) | Why it is not avoided | Decided by |
+|---|---|---|---|---|
+| The open left hand leaving the rim, WATER and WIPER | first 0.12 s (and the same frames back) | 3.83 / 3.55 mm (6) | no half-open hand mesh; a longer way off enters the A-pillar cage (60+ ways searched) | coordinator |
+| The index pressing the manettino's body | while it turns it | 4.63 (1 to 2), 5.01 (2 to OFF), 1.5 mm (6) | a rigid finger on a 1.5 cm lever; from 2 back to OFF it pushes past the round base | coordinator, after the cockpit-eye renders |
+| The curled knuckles in the rim, manettino | end of each turn | 5.2 / 5.1 / 4.2 mm (6) | the hand pivots about the thumb resting on the rim | coordinator, same |
 
 ## Owner decisions
 

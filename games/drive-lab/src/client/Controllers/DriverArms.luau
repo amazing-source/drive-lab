@@ -6,7 +6,9 @@
 	for the START flap and onto the wheel after the start key (Rig/StartupHands), then on the
 	steering wheel's rim at a quarter to three, turning with the wheel up to FOLLOW_LIMIT either
 	way (past that the wheel slides through them), and an upper arm and a forearm reaching each
-	wrist from the shoulder, the elbow bending down and out (Rules/ArmIK).
+	wrist from the shoulder, the elbow bending down and out (Rules/ArmIK). In a car with hand
+	gestures, the local driver's hand works the wheel's buttons and the panel's switches as the
+	player presses them (Rig/WheelGestures).
 
 	The hands are meshes posed around each car's rim (tools/blender/hand_grip.py), gloved or in
 	the avatar's skin colour (Rig/Gloves). The sleeves are modelled tubes
@@ -36,7 +38,9 @@ local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local Contract = require(ReplicatedStorage.Shared.Config.Cars.Contract)
 local DriverArms = require(ReplicatedStorage.Shared.Config.DriverArms)
 local Gloves = require(script.Parent.Parent.Rig.Gloves)
+local StartupArms = require(ReplicatedStorage.Shared.Rules.StartupArms)
 local StartupHands = require(script.Parent.Parent.Rig.StartupHands)
+local WheelGestures = require(script.Parent.Parent.Rig.WheelGestures)
 local Steering = require(ReplicatedStorage.Shared.Vehicle.Steering)
 
 type Side = {
@@ -69,6 +73,10 @@ type Driver = {
 	sides: { Side },
 	-- Whether the upper arms, elbows and forearms are drawn (Rules/ArmPieces).
 	sleevesShown: boolean,
+	-- The local driver's gestures in a car that has them, and by side whether that hand is on
+	-- the wheel to make them.
+	gestures: WheelGestures.State?,
+	onWheel: { [number]: boolean },
 }
 
 local LIMBS: { { sign: number, joint: string, arm: string } } = {
@@ -97,6 +105,18 @@ local function template(group: string, name: string): BasePart?
 		log.warn(`ReplicatedStorage.DriveLabAssets.{group}.{name} is missing; the arms stay blocky`)
 	end
 	return nil
+end
+
+-- A car's hand mesh from the folder its grip names, or the shared Hands folder's in a place that
+-- lacks that car's own set.
+local function handTemplate(meshes: string, name: string): BasePart?
+	local assets = ReplicatedStorage:FindFirstChild("DriveLabAssets")
+	local own = assets and assets:FindFirstChild(meshes)
+	local found = own and own:FindFirstChild(name)
+	if found and found:IsA("BasePart") then
+		return found
+	end
+	return template("Hands", name)
 end
 
 local function sleeve(from: BasePart): BasePart
@@ -140,6 +160,9 @@ local function release(driver: Driver)
 			side.arm.Transparency = side.armTransparency
 		end
 	end
+	if driver.gestures then
+		WheelGestures.release(driver.gestures)
+	end
 end
 
 local function build(model: Model, character: Model): Driver?
@@ -177,7 +200,7 @@ local function build(model: Model, character: Model): Driver?
 		local arm = character:FindFirstChild(limb.arm)
 		local letter = if limb.sign > 0 then "R" else "L"
 		local meshes = entry.driver.grip.meshes
-		local hand, cuff = template(meshes, "Hand_" .. letter), template(meshes, "Cuff_" .. letter)
+		local hand, cuff = handTemplate(meshes, "Hand_" .. letter), handTemplate(meshes, "Cuff_" .. letter)
 		if
 			joint == nil
 			or not joint:IsA("Motor6D")
@@ -232,6 +255,10 @@ local function build(model: Model, character: Model): Driver?
 		lowerLength = lowerLength * scale,
 		sides = sides,
 		sleevesShown = true,
+		gestures = if Players.LocalPlayer and character == Players.LocalPlayer.Character
+			then WheelGestures.new(entry, model, chassis)
+			else nil,
+		onWheel = {},
 	}
 end
 
@@ -271,7 +298,7 @@ local function reach(
 	return CFrame.lookAt(shoulder, elbow, normal), CFrame.lookAt(elbow, reached, handBack)
 end
 
-local function pose(driver: Driver, state: CarEntry.State, now: number)
+local function pose(driver: Driver, state: CarEntry.State, now: number, dt: number)
 	local steer = driver.model:GetAttribute("Steer")
 	local turn = math.clamp(
 		(if typeof(steer) == "number" then steer else 0) * driver.maxTurn,
@@ -286,12 +313,31 @@ local function pose(driver: Driver, state: CarEntry.State, now: number)
 	local bias, overhang = DriverArms.ELBOW_BIAS, DriverArms.CUFF_OVERHANG
 	-- The hands rest while the engine is off and reach through the start-up after the key.
 	local sinceKey = if state.engine == "On" then now - state.engineAt else nil
+	local gestures = driver.gestures
+	local onWheel = driver.onWheel
+	if gestures then
+		for _, side in driver.sides do
+			onWheel[side.sign] = sinceKey ~= nil and StartupArms.hand(side.hands.track, sinceKey) == nil
+		end
+		WheelGestures.step(gestures, onWheel, now, dt)
+		WheelGestures.turnControls(gestures)
+	end
 	for _, side in driver.sides do
 		local sign = side.sign
 		local inset = Vector3.new(sign * DriverArms.SHOULDER_INSET * scale, 0, 0)
 		local shoulder = torso:PointToWorldSpace(side.joint.C0.Position - inset)
-		local wrist, hand, handFrame, cuff, cuffFrame =
-			StartupHands.place(side.hands, wheel, driver.seat.CFrame, sinceKey)
+		local gestureWrist, shape = nil, "Grip"
+		if gestures and onWheel[sign] then
+			gestureWrist, shape =
+				WheelGestures.wrist(gestures, sign, wheel, driver.seat.CFrame, side.hands.gripWrist)
+		end
+		local wrist, hand, handFrame, cuff, cuffFrame
+		if gestureWrist then
+			wrist, hand, handFrame, cuff, cuffFrame = StartupHands.draw(side.hands, gestureWrist, shape)
+		else
+			wrist, hand, handFrame, cuff, cuffFrame =
+				StartupHands.place(side.hands, wheel, driver.seat.CFrame, sinceKey)
+		end
 		local wristAt = wrist.Position
 		-- Toward where the elbow would be with the forearm straight down the hand's axis.
 		local along = wrist.ZVector
@@ -318,7 +364,7 @@ local function seated(model: Model, now: number): boolean
 	return entry ~= nil and CarEntry.phase(entry, CarState.read(model), now) == "Seated"
 end
 
-local function update()
+local function update(dt: number)
 	local now = Workspace:GetServerTimeNow()
 	for _, model in CollectionService:GetTagged(CarRig.TAG) do
 		if model:IsA("Model") and drivers[model] == nil then
@@ -351,7 +397,7 @@ local function update()
 				driver,
 				ArmPieces.sleevesShown(view, driver.character == own, DriverArms.COCKPIT_GLOVES_ONLY)
 			)
-			pose(driver, state, now)
+			pose(driver, state, now, dt)
 		end
 	end
 	if #parts > 0 then

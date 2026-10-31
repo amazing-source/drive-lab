@@ -280,6 +280,40 @@ def solve(skin, obstacles, face, normal, start):
     return pose, c[1], c[2], clear
 
 
+def export_recorded(recorded_path, out, posed_mesh, place, rim_roll, report):
+    """Re-exports each button's recorded pose (a thumbs.json checked by thumb_check.py --pick)
+    without searching again, and measures every vertex of the new mesh against the recorded mesh
+    of the same name beside that thumbs.json: the same pose within 0.01 mm."""
+    recorded = json.load(open(recorded_path))
+    folder = os.path.dirname(os.path.abspath(recorded_path))
+    for name, entry in recorded["buttons"].items():
+        sign = 1 if entry["side"] == "R" else -1
+        slid = Matrix.Rotation(math.radians(entry["slideDeg"]), 4, "Z") @ rim_roll(math.radians(entry["rollDeg"])) @ place
+        pose = (*entry["metacarpalDeg"], entry["curlDeg"])
+        mesh = posed_mesh(pose, slid)
+        obj = bpy.data.objects.new(f"Thumb_{name}", mesh)
+        bpy.context.collection.objects.link(obj)
+        if sign < 0:
+            obj.data.transform(Matrix.Scale(-1, 4, (1, 0, 0)))
+            obj.data.flip_normals()
+        file_name = f"hand_{entry['side']}_{name}.glb"
+        export_studs(obj, os.path.join(out, file_name))
+        new = read_glb_studs(os.path.join(out, file_name))
+        old = read_glb_studs(os.path.join(folder, file_name))
+        tree = kd([tuple(p) for p in new])
+        far = max(tree.find(Vector(p))[2] for p in old)
+        back = max(kd([tuple(p) for p in old]).find(Vector(p))[2] for p in new)
+        assert max(far, back) < 0.00001, (name, far, back)
+        entry = dict(entry)
+        entry["file"] = file_name
+        entry["centre"] = studs(bounds_centre(obj))
+        entry["matchesRecordedMm"] = round(max(far, back) * 1000, 4)
+        report.setdefault("buttons", {})[name] = entry
+        print(name, "re-exported:", file_name, "vertices", len(obj.data.vertices), "off the recorded mesh", entry["matchesRecordedMm"], "mm")
+        bpy.data.objects.remove(obj)
+    json.dump(report, open(os.path.join(out, "thumbs.json"), "w"), indent=1, default=lambda o: o.item())
+
+
 def main(args):
     inputs = json.load(open(args[0]))
     out = args[1]
@@ -305,18 +339,16 @@ def main(args):
     to_rest = place.inverted()
 
     def posed_mesh(pose, place=place):
+        # The deformed hand as a mesh of its own, keeping its UVs and smooth normals (the glove's
+        # detail map needs the UVs), moved into the wheel's frame.
         mz, mx, my, curl = pose
         pose_world(arm, THUMB[0], metacarpal(mz, mx, my))
         pose_about_world_z(arm, THUMB[1], math.radians(curl * 0.4))
         pose_about_world_z(arm, THUMB[2], math.radians(curl * 0.6))
         bpy.context.view_layer.update()
-        mesh = hand.evaluated_get(bpy.context.evaluated_depsgraph_get()).to_mesh()
-        world = arm.matrix_world
-        points = [place @ (hand.matrix_world @ v.co) for v in mesh.vertices]
-        copy = bpy.data.meshes.new("Posed")
-        copy.from_pydata([tuple(p) for p in points], [], [tuple(p.vertices) for p in mesh.polygons])
-        hand.evaluated_get(bpy.context.evaluated_depsgraph_get()).to_mesh_clear()
-        del world
+        evaluated = hand.evaluated_get(bpy.context.evaluated_depsgraph_get())
+        copy = bpy.data.meshes.new_from_object(evaluated, preserve_all_data_layers=True, depsgraph=bpy.context.evaluated_depsgraph_get())
+        copy.transform(place @ hand.matrix_world)
         return copy
 
     # The rebuild against the exported grip, before anything is trusted.
@@ -338,6 +370,10 @@ def main(args):
 
     def rim_roll(turn):
         return Matrix.Translation(tube) @ Matrix.Rotation(turn, 4, tangent) @ Matrix.Translation(-tube)
+
+    if "--export-from" in args:
+        export_recorded(args[args.index("--export-from") + 1], out, posed_mesh, place, rim_roll, report)
+        return
 
     results = {}
     for button in inputs["buttons"]:
