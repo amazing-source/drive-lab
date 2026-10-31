@@ -132,7 +132,7 @@ local function limitPit(
 ): Interface.DriverInput
 	local tuning = entry.switches.pitLimiter
 	if tuning then
-		PitLimiter.update(pitLimiter, tuning, published(model, "Gear"))
+		PitLimiter.update(pitLimiter, tuning, published(model, "Gear"), modeOf(entry))
 		input.throttle = PitLimiter.throttle(pitLimiter, tuning, input.throttle, published(model, "SpeedKmh"))
 	end
 	return input
@@ -242,7 +242,13 @@ local function apply(control: string)
 	elseif control == "PIT_LIMITER" then
 		local tuning = entry.switches.pitLimiter
 		if tuning then
-			PitLimiter.press(pitLimiter, tuning, published(model, "Gear"), published(model, "SpeedKmh"))
+			PitLimiter.press(
+				pitLimiter,
+				tuning,
+				published(model, "Gear"),
+				published(model, "SpeedKmh"),
+				modeOf(entry)
+			)
 		end
 	end
 end

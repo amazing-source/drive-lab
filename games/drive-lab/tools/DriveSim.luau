@@ -59,7 +59,8 @@ export type InputOptions = {
 	handbrake: number?,
 	shiftUp: boolean?,
 	shiftDown: boolean?,
-	gearboxMode: ("auto" | "manual")?,
+	gearboxMode: ("auto" | "manual" | "manualClutch")?,
+	clutchPedal: number?,
 	drivingMode: Types.DrivingMode?,
 	abs: boolean?,
 	tc: boolean?,
@@ -124,6 +125,7 @@ function DriveSim.input(options: InputOptions?): Model.DriverInput
 			esc = if o.esc == nil then true else o.esc,
 		},
 		drift = o.drift,
+		clutchPedal = o.clutchPedal,
 	}
 end
 

@@ -1,0 +1,106 @@
+Every new rule broken on purpose, one at a time, on agent/car-manual-gearbox (2026-10-31), then restored
+byte-exact. Each line: the rule, what the run printed, and the spec line(s) that failed. The specs run were
+ShiftPlan.spec, HBox.spec, Boss302.spec and PitLimiter.spec; each run had a 180 s timeout so a hang
+would show as a timeout (none did).
+
+BREAK ShiftPlan: the hand already on the knob shortens the reach -> 44 passed, 3 failed
+    Shift plan > orders its moments, and the hand and foot already there skip the reach  [ShiftPlan.spec:41: expected 0, got 0.3]
+    Shift plan > retargets from where the lever is, with the clutch already down  [ShiftPlan.spec:148: expected 0, got 0.3]
+    Boss 302's H box in the car > launches and brakes within 2 % of 240 FPS at 30, 60 and 120 FPS, as the SVJ must  [Boss302.spec:258: expected 1 within 0.02, got 0.9053812371740386]
+BREAK ShiftPlan: crossing costs more per column -> 46 passed, 1 failed
+    Shift plan > takes longer across the rail: 2-3 crosses a column, 3-4 does not, 2-5 crosses two  [ShiftPlan.spec:53: expected 0.06 within 1e-09, got 0]
+BREAK ShiftPlan: the lever waits for the clutch -> 43 passed, 4 failed
+    Shift plan > keeps the lever in its gate until the clutch is down, and puts it in the target gate at gateIn  [ShiftPlan.spec:63: expected -1, got -0.027794444402776786]
+    Shift plan > moves the lever without a jump, starting and stopping at rest, never stopping between  [ShiftPlan.spec:98: expected true, got false]
+    Shift plan > pushes the knob down only on a path into reverse, before crossing to it  [ShiftPlan.spec:122: expected true, got false]
+    Shift plan > retargets from where the lever is, with the clutch already down  [ShiftPlan.spec:149: expected 0, got 0.05714160398518486]
+BREAK ShiftPlan: the lever is exactly in the target gate at gateIn -> 46 passed, 1 failed
+    Shift plan > retargets from where the lever is, with the clutch already down  [ShiftPlan.spec:155: expected 1, got 0.9999999999999998]
+BREAK ShiftPlan: the lever starts and stops at rest -> 46 passed, 1 failed
+    Shift plan > moves the lever without a jump, starting and stopping at rest, never stopping between  [ShiftPlan.spec:98: expected true, got false]
+BREAK ShiftPlan: the clutch comes up only after the gate -> 45 passed, 2 failed
+    Shift plan > presses the clutch before the lever moves and lets it up only after the gear engages  [ShiftPlan.spec:109: expected 0.5 within 1e-09, got 0.25]
+    H box shifts > keeps the driver on the throttle through the reach, off it until the gate, then feeds it in  [HBox.spec:126: expected true, got false]
+BREAK ShiftPlan: the knob is pushed before crossing -> 46 passed, 1 failed
+    Shift plan > pushes the knob down only on a path into reverse, before crossing to it  [ShiftPlan.spec:137: expected false, got true]
+BREAK ShiftPlan: a retarget starts from the lever's place -> 45 passed, 2 failed
+    Shift plan > retargets from where the lever is, with the clutch already down  [ShiftPlan.spec:151: expected 0.4932210740198424, got 0]
+    H box retargets and queues > retargets a shift still short of its gate from the lever's place  [HBox.spec:249: expected 0.49589685185185617 within 1e-09, got 0]
+BREAK Gearbox: the gear engages at the gate -> 46 passed, 1 failed
+    H box shifts > engages the new gear on the substep the lever reaches its gate, through the ISR's phases  [HBox.spec:92: expected true, got false]
+BREAK Gearbox: the lever out of gear reads as the ISR's neutral -> 46 passed, 1 failed
+    H box shifts > engages the new gear on the substep the lever reaches its gate, through the ISR's phases  [HBox.spec:91: expected true, got false]
+BREAK Gearbox: off the throttle while the clutch goes down -> 46 passed, 1 failed
+    H box shifts > keeps the driver on the throttle through the reach, off it until the gate, then feeds it in  [HBox.spec:124: expected true, got false]
+BREAK Gearbox: the throttle fed back in as the clutch comes up -> 46 passed, 1 failed
+    H box shifts > keeps the driver on the throttle through the reach, off it until the gate, then feeds it in  [HBox.spec:126: expected true, got false]
+BREAK Gearbox: the player's clutch leaves the throttle alone -> 46 passed, 1 failed
+    H box shifts > leaves the throttle to the player when the clutch is theirs  [HBox.spec:144: expected true, got false]
+BREAK Gearbox: the automatic heel-and-toes its downshifts -> 45 passed, 2 failed
+    H box shifts > blips the automatic's own downshifts toward the lower gear, never E and Q's without rev-matching  [HBox.spec:166: expected true, got false]
+    Boss 302's H box in the car > never locks the rear wheels on the automatic's downshifts braking from 100 km/h  [Boss302.spec:175: expected true, got false]
+BREAK Gearbox: an over-revving downshift is refused -> 46 passed, 1 failed
+    H box shifts > refuses a downshift that would over-rev, and says so  [HBox.spec:181: expected nil, got table: 0x0000027ac79382d0]
+BREAK Gearbox: the player's clutch must be down to move the lever -> 46 passed, 1 failed
+    H box shifts > with the player's clutch, moves the lever only with the pedal past the bite point  [HBox.spec:206: expected nil, got table: 0x000001c41e297040]
+BREAK Gearbox: R, N and 1 only near a standstill -> 46 passed, 1 failed
+    H box shifts > goes 1, N, R only near a standstill, each move through a plan  [HBox.spec:218: expected nil, got table: 0x0000018f8fd9f9f0]
+BREAK Gearbox: the selector moves the H box through a plan -> 46 passed, 1 failed
+    H box shifts > goes 1, N, R only near a standstill, each move through a plan  [HBox.spec:229: expected -1, got 1]
+BREAK Gearbox: the automatic shifts through a plan -> 42 passed, 5 failed
+    H box made easy > in manual, drops in one shift to the gear that keeps the engine at idle once the car slows under it  [HBox.spec:413: attempt to index nil with 'to']
+    Boss 302 against the data > traps the quarter mile at 112.9 mph ± 3 (Edmunds' LS, likely)  [Boss302.spec:104: expected 112.9 within 3, got 116.29123304489595]
+    Boss 302's H box in the car > shifts itself in auto through the plan: clutch down, hand on the knob, then the gear  [Boss302.spec:141: expected true, got false]
+    Boss 302's H box in the car > never locks the rear wheels on the automatic's downshifts braking from 100 km/h  [Boss302.spec:175: expected true, got false]
+    Boss 302's H box in the car > launches and brakes within 2 % of 240 FPS at 30, 60 and 120 FPS, as the SVJ must  [Boss302.spec:258: expected 1 within 0.02, got 1.0243998339013076]
+BREAK Gearbox: stalls only while the clutch bites -> 46 passed, 1 failed
+    H box clutch and stall > stalls under its stall speed only with the player's clutch biting in gear  [HBox.spec:299: expected false, got true]
+BREAK Gearbox: never stalls with the automatic clutch -> 44 passed, 3 failed
+    H box clutch and stall > stalls under its stall speed only with the player's clutch biting in gear  [HBox.spec:320: expected false, got true]
+    H box clutch and stall > restarts only in neutral or with the pedal down, and clears a stall when the clutch is not the player's  [HBox.spec:353: expected false, got true]
+    H box made easy > drives the clutch mode as manual on a car that does not offer the player's clutch  [HBox.spec:447: expected false, got true]
+BREAK Gearbox: a restart needs neutral or the pedal down -> 45 passed, 2 failed
+    H box clutch and stall > restarts only in neutral or with the pedal down, and clears a stall when the clutch is not the player's  [HBox.spec:335: expected false, got true]
+    Boss 302's H box in the car > stalls with the player's clutch let up in gear at a standstill, and restarts with it down  [Boss302.spec:211: expected false, got true]
+BREAK Gearbox: the revs held while the automatic clutch slips -> 45 passed, 2 failed
+    Boss 302's H box in the car > holds the revs at the top of the clutch's slip band while the automatic clutch gets it moving  [Boss302.spec:159: expected true, got false]
+    Boss 302's H box in the car > launches and brakes within 2 % of 240 FPS at 30, 60 and 120 FPS, as the SVJ must  [Boss302.spec:258: expected 1 within 0.02, got 1.0737675285627832]
+BREAK Gearbox: the player's clutch only on a car that offers it -> 46 passed, 1 failed
+    H box made easy > drives the clutch mode as manual on a car that does not offer the player's clutch  [HBox.spec:439: expected false, got true]
+BREAK Gearbox: manual drops to the right gear in one shift -> 46 passed, 1 failed
+    H box made easy > in manual, drops in one shift to the gear that keeps the engine at idle once the car slows under it  [HBox.spec:413: expected 2, got 4]
+BREAK Gearbox: manual drops a gear rather than lug -> 46 passed, 1 failed
+    H box made easy > in manual, drops in one shift to the gear that keeps the engine at idle once the car slows under it  [HBox.spec:413: attempt to index nil with 'to']
+BREAK Gearbox: manual drops only under idle -> 46 passed, 1 failed
+    H box made easy > in manual, drops in one shift to the gear that keeps the engine at idle once the car slows under it  [HBox.spec:423: expected nil, got table: 0x00000248235090a0]
+BREAK HBox: the clutch bites between the bite point and a width higher -> 46 passed, 1 failed
+    H box clutch and stall > bites from the bite point up and holds fully a bite width higher  [HBox.spec:279: expected 0, got 0.4]
+BREAK HBox: a retarget starts from the lever's place -> 46 passed, 1 failed
+    H box retargets and queues > retargets a shift still short of its gate from the lever's place  [HBox.spec:249: expected 0.49589685185185617 within 1e-09, got 0]
+BREAK HBox: a shift after the gate waits for the plan's end -> 46 passed, 1 failed
+    H box retargets and queues > queues a shift asked for once the gear has engaged, and runs it after  [HBox.spec:265: expected table: 0x00000195a9257440, got table: 0x00000195a9257410]
+BREAK HBox: the hand reaches the knob at the reach's pace -> 46 passed, 1 failed
+    H box limbs > brings the hand to the knob by the end of the reach, holds it for the linger, then lets go  [HBox.spec:369: expected 1 within 0.006666666666666667, got 0.85714285714286]
+BREAK HBox: the hand lingers on the knob -> 46 passed, 1 failed
+    H box limbs > brings the hand to the knob by the end of the reach, holds it for the linger, then lets go  [HBox.spec:376: expected 1.5 within 0.002, got 0]
+BREAK Gearbox: the hand readies below top gear only -> 46 passed, 1 failed
+    H box limbs > readies the hand at full throttle near the upshift point below top gear, never in top  [HBox.spec:399: expected false, got true]
+BREAK Model: the governor holds 155 mph -> 46 passed, 1 failed
+    Boss 302 against the data > holds its 155 mph limit in 6th and never passes it (documented)  [Boss302.spec:83: expected true, got false]
+BREAK Model: the drive mode's own idle -> 46 passed, 1 failed
+    Boss 302's H box in the car > idles TracKey's lopey idle higher than Normal's  [Boss302.spec:249: expected 1000 within 60, got 694.2419354838718]
+BREAK Model: no fuel once stalled -> 46 passed, 1 failed
+    Boss 302's H box in the car > stalls with the player's clutch let up in gear at a standstill, and restarts with it down  [Boss302.spec:210: expected true, got false]
+BREAK Model: a restart cranks the engine to idle -> 46 passed, 1 failed
+    Boss 302's H box in the car > stalls with the player's clutch let up in gear at a standstill, and restarts with it down  [Boss302.spec:219: expected 700 within 60, got 0.00012071388865145617]
+BREAK Model: the player's clutch pedal reaches the gearbox -> 45 passed, 2 failed
+    Boss 302's H box in the car > stalls with the player's clutch let up in gear at a standstill, and restarts with it down  [Boss302.spec:218: expected false, got true]
+    Boss 302's H box in the car > pulls away on the player's clutch let up over 1.5 s at 40 % throttle, without stalling  [Boss302.spec:233: expected false, got true]
+BREAK Launch: TracKey's launch control arms with ESC on -> 45 passed, 2 failed
+    Boss 302 against the data > arms TracKey's launch control with ESC on, as Ford asks for nothing to be switched off  [Boss302.spec:123: expected Armed, got Off]
+    Boss 302's H box in the car > launches and brakes within 2 % of 240 FPS at 30, 60 and 120 FPS, as the SVJ must  [Boss302.spec:258: expected 1 within 0.02, got 0.9534669462835399]
+BREAK PitLimiter: arms only in its drive modes -> 46 passed, 1 failed
+    PitLimiter > on the Boss 302, arms only in TracKey and releases when the drive mode leaves it  [PitLimiter.spec:92: expected false, got true]
+BREAK PitLimiter: releases when the drive mode leaves them -> 46 passed, 1 failed
+    PitLimiter > on the Boss 302, arms only in TracKey and releases when the drive mode leaves it  [PitLimiter.spec:100: expected false, got true]
+every file restored byte-exact

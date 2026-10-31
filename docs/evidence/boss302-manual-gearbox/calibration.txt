@@ -1,0 +1,28 @@
+lune run games/drive-lab/tools/boss302_calibrate on agent/car-manual-gearbox, 2026-10-31, run alone (no other tool
+running in this session). DriveSim at 60 FPS unless the table says otherwise.
+
+Model.step cost: 156 us per frame at 60 FPS, 282 us at 30 FPS
+
+Target | Source | Result
+0-60 mph 4.0-4.6 s | MT, Edmunds | 4.88 s (TracKey, launch control)
+1/4 mile 12.3-12.7 s @ 112.9-115.8 mph | MT, Edmunds | 13.52 s @ 112.1 mph
+  shifts: 2 at 3.08 s, 62 km/h; 3 at 5.35 s, 97 km/h; 4 at 9.10 s, 141 km/h
+0-60 mph 4.0-4.6 s | MT, Edmunds | 5.02 s (Normal, from rest)
+1/4 mile 12.3-12.7 s @ 112.9-115.8 mph | MT, Edmunds | 13.65 s @ 112.1 mph
+  shifts: 2 at 3.22 s, 62 km/h; 3 at 5.48 s, 97 km/h; 4 at 9.25 s, 141 km/h
+Top speed 155 mph (249.4 km/h), a limit | Ford | 247.6 km/h in 6th
+Gear 1 at 7,500 rpm 68.3 km/h | ratios | 67.7 km/h (-1.00 %)
+Gear 2 at 7,500 rpm 102.9 km/h | ratios | 101.6 km/h (-1.27 %)
+Gear 3 at 7,500 rpm 148.0 km/h | ratios | 145.8 km/h (-1.47 %)
+Gear 4 at 7,500 rpm 189.5 km/h | ratios | 186.4 km/h (-1.62 %)
+Gear 5 at 7,500 rpm 250.1 km/h | ratios | 246.4 km/h (-1.48 %)
+Skidpad 200 ft 0.98 g | Edmunds | 1.004 g
+60-0 mph 32.0 m (105 ft) | Edmunds | 31.4 m (peak 1.34 g)
+100-0 km/h 33.3 m | Sport Auto | 33.9 m
+Parked 30 s | 01 §3.3 | drift 0.37 mm, speed 2.6e-17 m/s
+
+FPS | 0-100 km/h s (launch) | 0-200 km/h s | 100-0 km/h m
+30 | 5.749 | 17.677 | 33.17
+60 | 5.693 | 17.623 | 33.02
+120 | 5.704 | 17.635 | 32.88
+240 | 5.641 | 17.572 | 32.56

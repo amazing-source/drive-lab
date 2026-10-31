@@ -1,0 +1,11 @@
+Model.step per frame on DriveSim, the calibrate tool's method (2nd gear at 25 m/s, full throttle, a little steer),
+the three cars interleaved so a busy machine slows each alike. Lune on the agent machine, 2026-10-31.
+
+SVJ Model.step at 60 FPS: median 145 us, p10 139 us, min 133 us over 11 interleaved rounds of 1000 steps
+DR458 Model.step at 60 FPS: median 146 us, p10 140 us, min 138 us over 11 interleaved rounds of 1000 steps
+Boss302 Model.step at 60 FPS: median 150 us, p10 143 us, min 141 us over 11 interleaved rounds of 1000 steps
+
+The SVJ on the base (61f6d7a) and on this branch, 3,000 steps per run, runs alternated base/branch seven times:
+  base:        137.0 141.6 145.7 134.9 134.2 154.6 153.0 us (median 141.6)
+  this branch: 150.3 142.6 144.4 136.8 142.5 158.2 142.1 us (median 142.6)
+The ISR path's added nil checks are inside the run-to-run spread.
