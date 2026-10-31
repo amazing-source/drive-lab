@@ -16,10 +16,12 @@ local Cluster = require("../Cluster")
 local DriverArms = require("../DriverArms")
 local DriverLegs = require("../DriverLegs")
 local DriverAssists = require("../../Rules/DriverAssists")
-local StartupArms = require("../../Rules/StartupArms")
+local DriverGestures = require("../DriverGestures")
 local DriverStartup = require("../DriverStartup")
 local Driving = require("../Driving")
+local ExhaustFlames = require("../../Rules/ExhaustFlames")
 local RimBlur = require("../RimBlur")
+local StartupArms = require("../../Rules/StartupArms")
 local Types = require("./Types")
 
 export type Driver = {
@@ -37,6 +39,8 @@ export type Driver = {
 	-- frame, as the start-up's keys), and the seconds they take to ease to their resting pose:
 	-- for a car whose body arms cannot end on the drawn ones' rest without entering the car.
 	handOver: { seconds: number, right: StartupArms.Pose, left: StartupArms.Pose }?,
+	-- What the hands do on the wheel's buttons and the panel's switches; none on a car without.
+	gestures: DriverGestures.Gestures?,
 }
 
 export type Entry = {
@@ -50,6 +54,8 @@ export type Entry = {
 	camera: CarCamera.CarViews,
 	rimBlur: RimBlur.Rims,
 	audio: CarAudio.Pack,
+	-- Which of its pops throw flame; without it, every pop does.
+	flames: ExhaustFlames.CarFlames?,
 	lights: CarLights.Lights,
 	-- The car's display: a dial face, or a binnacle screen with pages and shift lights. One of them.
 	cluster: Cluster.Face?,
@@ -120,6 +126,70 @@ local function checkDriverSize(entry: Entry)
 	assert(handOver == nil or handOver.seconds > 0, "the driver's hand-over needs a positive duration")
 end
 
+local DRAWN_SHAPES = table.freeze({ Grip = true, Rest = true, Point = true, Pinch = true })
+
+local function checkTrack(
+	entry: Entry,
+	gesture: DriverGestures.Gesture,
+	name: string,
+	track: DriverGestures.Track
+)
+	local what = `the {gesture.control} gesture's "{name}" track`
+	local keys = track.keys
+	assert(#keys >= 2 and keys[1][1] == 0, `{what} needs keys from 0`)
+	for index = 2, #keys do
+		assert(keys[index][1] > keys[index - 1][1], `{what} has keys out of order`)
+	end
+	assert(#track.shapes > 0 and track.shapes[1].at == 0, `{what} needs a shape from 0`)
+	local meshes = (entry.driver.gestures :: DriverGestures.Gestures).MESHES
+	for _, change in track.shapes do
+		assert(
+			DRAWN_SHAPES[change.shape] or meshes[change.shape],
+			`{what} draws "{change.shape}", which has no mesh`
+		)
+	end
+	assert(gesture.frame == "Wheel" or track.gripBlend, `{what} leaves the wheel's frame with no grip blend`)
+	local turn = track.turn
+	if turn then
+		assert(gesture.latch, `{what} turns a control but tracks no state`)
+		assert(turn.start < turn.finish and turn.finish <= keys[#keys][1], `{what} turns outside its keys`)
+		local knob = entry.model.modeKnob
+		local controls = entry.model.controls or {}
+		local bound = if gesture.latch == "Mode"
+			then knob and knob.hinge.part == turn.control
+			else controls[turn.control] and controls[turn.control].travel ~= nil
+		assert(bound, `{what} turns "{turn.control}", which the binding does not hinge for it`)
+	end
+end
+
+-- Each gesture plays on a control the car has, with a track for every state it can be pressed in.
+local function checkGestures(entry: Entry)
+	local gestures = entry.driver.gestures
+	if gestures == nil then
+		return
+	end
+	local features = Contract.features(entry)
+	local seen: { [string]: boolean } = {}
+	for _, gesture in gestures.list do
+		local control = gesture.control
+		assert(not seen[control], `two gestures play on {control}`)
+		seen[control] = true
+		local need = CarSwitches.NEEDS[control]
+		assert(need == nil or features[need], `a gesture plays on {control}, which the car does not have`)
+		assert(gesture.side == 1 or gesture.side == -1, `the {control} gesture needs a side`)
+		local states: { string } = if gesture.latch == "Mode"
+			then entry.physics.modeOrder
+			elseif gesture.latch == "Toggle" then { "Off", "On" }
+			else { "Press" }
+		for _, state in states do
+			local track = gesture.tracks[state]
+			assert(track, `the {control} gesture has no track for "{state}"`)
+			checkTrack(entry, gesture, state, track)
+		end
+	end
+	assert(gestures.HOLD_MIN >= 0, "a gesture's hold cannot be negative")
+end
+
 -- Every key of a table keyed by drive mode is one of the car's modes.
 local function checkNames<V>(entry: Entry, values: { [string]: V }, what: string)
 	for name in values do
@@ -147,6 +217,31 @@ local function checkModes(entry: Entry)
 	if modes then
 		checkNames(entry, modes, "the assists")
 	end
+	local flames = entry.flames
+	if flames then
+		checkCovers(entry, flames.chance, "the flames")
+	end
+end
+
+local function share(value: number): boolean
+	return value >= 0 and value <= 1
+end
+
+-- The flames' chances and shares are shares, 0 to 1.
+local function checkFlames(entry: Entry)
+	local flames = entry.flames
+	if flames == nil then
+		return
+	end
+	for mode, chances in flames.chance do
+		assert(
+			share(chances.Lift) and share(chances.Downshift) and share(chances.Upshift),
+			`the flames' chances in the {mode} mode are not shares`
+		)
+	end
+	assert(share(flames.minStrength), "the flames' quietest pop is not a share")
+	assert(share(flames.fireballFrom), "the flames' fireball threshold is not a share")
+	assert(share(flames.dayShare), "the flames' daylight brightness is not a share")
 end
 
 -- A dial face draws every drive mode the car has in that mode's colours, and its red zone on its
@@ -272,6 +367,8 @@ function Contract.define(entry: Entry): Entry
 	checkModes(entry)
 	checkDisplay(entry)
 	checkSwitches(entry)
+	checkGestures(entry)
+	checkFlames(entry)
 	Contract.checkStartupSound(entry.startup, entry.audio)
 	return deepFreeze(entry)
 end
@@ -357,6 +454,7 @@ function Contract.features(entry: Entry): Features
 		displayPages = switches.displayPages ~= nil,
 		escButton = entry.assists.escButton ~= nil,
 		launch = entry.physics.launch ~= nil,
+		cabinLight = entry.model.cabinLight ~= nil,
 	}
 end
 

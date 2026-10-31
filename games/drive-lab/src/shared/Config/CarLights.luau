@@ -33,8 +33,14 @@ export type Rgb = { r: number, g: number, b: number }
 -- behind it rather than filtering it, so a red lens over a white lamp face showed it pink.
 export type Glow = { tint: Rgb, day: number, night: number, filter: Rgb? }
 
+-- A rear rain light: how it shows while switched on, and the red light it throws at night.
+export type RainLight = { pattern: CarLights.RainPattern, range: number, brightness: number, color: Rgb }
+
 -- One car's lamps (its entry's lights): each lamp's glow, and the Roblox lights its lamps throw.
 export type Lights = {
+	-- The light pieces (Light_<Corner>_<Lamp>) the lamps cannot work without; the car lights nothing
+	-- until all of them have streamed in. Every other piece glows when the model has it.
+	required: { string },
 	glow: {
 		drl: Glow,
 		projector: Glow,
@@ -54,6 +60,11 @@ export type Lights = {
 	indicator: { range: number, brightness: number, color: Rgb },
 	reverse: { range: number, angle: number, brightness: number, color: Rgb },
 	cabin: { range: number, angle: number, brightness: number, color: Rgb },
+	-- A car with a rain light switch lights its rear fog lamp pieces as the rain light (their
+	-- glow is `glow.fog`); without one they never glow.
+	rain: RainLight?,
+	-- The cockpit's tell-tales, by the switch they show (the model binding's panelLamps).
+	tellTales: { [string]: Glow }?,
 }
 
 export type CarLightsConfig = {

@@ -321,8 +321,8 @@ inference** from the switch layout, one driver report and road-458 practice.
 | Item | Value | Source | Confidence |
 |---|---|---|---|
 | Switch | RAIN LIGHT toggle with a green LED on the centre panel | photo `interior/013` | documented |
-| Where it is on the car | Not identified in the photos or any source. The lettered plates on the wing endplates are the wing adjuster, not lights. | - | unknown |
-| Flash pattern | Not found | - | unknown |
+| Where it is on the car | Not identified in the photos or any source. The lettered plates on the wing endplates are the wing adjuster, not lights. Inferred later: the road car's rear fog lamps (§3.5) | - | unknown |
+| Flash pattern | Not found (§3.5 for what was searched) | - | unknown |
 
 ### 3.3 Pit limiter
 
@@ -344,6 +344,22 @@ inference** from the switch layout, one driver report and road-458 practice.
 | Downshifts | Many recordings are titled "loud downshifts". That the gearbox blips the throttle on downshifts is road-458 behaviour; not documented here. | video titles (not listened to) | likely |
 | Pops and bangs | No written source on when it pops or bangs | - | unknown: listen to the recordings in section 4 |
 | Brakes glowing | Several recordings are titled "glowing brakes" (Monza, hard braking) | video titles (not watched) | likely |
+
+### 3.5 Lamps, rain light, interior light and flames (VFX agent, 2026-10-31, #126)
+
+Read with web search, the Ferrari parts catalogue in a browser tab, an image search and the local photos.
+No video was watched through.
+
+| Item | Value | Source | Confidence |
+|---|---|---|---|
+| Headlamps | One bi-xenon unit per side does both beams (road 458; the Challenge keeps the road lamp units, photos `exterior/002`, `011`) | Ferrari parts catalogue, 458 Italia (Europe), diagram 0127 "Headlights and taillights" (eurospares.co.uk) | documented (road car); likely (Challenge) |
+| Rear lamp set | Per side: a tail light unit; separate RH and LH rear fog lights; a third stop light; a lateral turn indicator | same diagram, refs 004-011 | documented (road car) |
+| Rear fog lamps | The two red units low in the rear bumper's corners, present on the Challenge photo car (`exterior/036`) | diagram 0127; Novitec's listing for black covers of "the factory rear fog lights ... bright red housings" in the rear fascia | likely |
+| Rain light lamp | Inferred: the RAIN LIGHT toggle lights the rear fog lamps. No source names the Challenge's rain-light lamp | - | inferred |
+| Rain light pattern | Not found for the series. The Ferrari Challenge Europe 2020 sporting and technical regulations have no lighting article; the 2014 regulation mirror answered 403. FIA 8874-2019 §4.3, which postdates the car: if flashing, 4 Hz ± 0.5 at a 50 % ± 10 % duty cycle; non-flashing units or other rates may be specified per championship | regulations as named | unknown (series); documented (FIA standard) |
+| Interior light | None on the photo car: the roof is a bare black panel with the cage, a sticker, blanking plugs and the mirror stalk, and the dash has no lamp | photos `interior/021`, `022`, `023`, `002` | documented (photo car) |
+| Night cockpit | The binnacle screen, the eight shift lights and the green LEDs beside the panel's toggles (LIGHT, RAIN LIGHT, AC ON) | photos `interior/011`, `013` | documented (objects) |
+| Visible flames | Not found for a 458 Challenge: four YouTube searches gave one clip titled for a Challenge Evo's flames (`youtube.com/watch?v=-PFdWNQeaZ0`, a street event, not watched through). Road 458s on straight-pipe or "F1" exhausts show short blue jets out of each outlet, mostly at night or in tunnels, and an orange fireball only on a twin-turbo conversion (Bing image search "458 challenge exhaust flames", first two rows) | as named | unknown (Challenge); likely (look of a free-flowing 458 exhaust) |
 
 ### Implications for Drive Lab
 
@@ -482,7 +498,7 @@ Every item below is visible in the named local photo unless the row says otherwi
 - Neutral selection on the Challenge (the road car uses both paddles).
 - Shift-light colours per LED and their rpm thresholds; the end-LED meanings (only a 488 analogy).
 - The pit limiter's indicator, and the North American pit-lane limit.
-- The rain light's position and flash pattern.
+- The rain light's lamp (inferred as the rear fog lamps, §3.5) and its flash pattern for the series.
 - The meaning of `POS`, the blue "R" box and the DISK values on the display.
 - When the car pops or bangs. None of the recordings were listened to.
 - The Dream Racing car's own configuration (passenger seat, net, display firmware).

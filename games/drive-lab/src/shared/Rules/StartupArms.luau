@@ -159,6 +159,12 @@ function StartupArms.hand(track: Config.Track, sinceKey: number?): Hand?
 	}
 end
 
+-- Whether a hand is free on the wheel for gestures: the start-up has put it there and the drawn
+-- hands have finished settling from the body's at the hand-over (`share` 1).
+function StartupArms.onWheel(track: Config.Track, sinceKey: number?, share: number): boolean
+	return share >= 1 and sinceKey ~= nil and StartupArms.hand(track, sinceKey) == nil
+end
+
 -- A point given in the wrist's frame (such as the index's tip), in the seat frame.
 function StartupArms.apply(pose: Pose, offset: Vector): Vector
 	local q, p = pose.rotation, pose.position

@@ -120,3 +120,24 @@ describe("Hand-over: the DR458's drawn hands", function()
 		end)
 	end
 end)
+
+describe("Hand-over: gestures wait for the drawn hands to settle", function()
+	local track = DR458.driver.startupPaths.RIGHT
+	local done = track.keys[#track.keys][1]
+
+	it("gives no hand to a gesture while the drawn hands still ease in, start-up or not", function()
+		for _, share in { 0, 0.5, 0.999 } do
+			expect(StartupArms.onWheel(track, done + 1, share)).toBe(false)
+		end
+	end)
+
+	it("gives the hand once settled and the start-up has put it on the wheel", function()
+		expect(StartupArms.onWheel(track, done + 1, 1)).toBe(true)
+		expect(StartupArms.onWheel(track, done, 1)).toBe(true)
+	end)
+
+	it("keeps it from gestures with the engine off or through the start-up", function()
+		expect(StartupArms.onWheel(track, nil, 1)).toBe(false)
+		expect(StartupArms.onWheel(track, done - 0.01, 1)).toBe(false)
+	end)
+end)
