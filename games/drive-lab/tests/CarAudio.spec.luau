@@ -162,6 +162,7 @@ describe("CarAudio config", function()
 	end)
 
 	it("keeps every Sound volume each car sets within Roblox's 0 to 10", function()
+		-- Roblox's engine reference, Sound.Volume: "Can be set between 0 and 10".
 		local MAX_VOLUME = 10
 		for _, car in PACKS do
 			local pack = car.pack

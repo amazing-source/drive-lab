@@ -347,6 +347,7 @@ describe("RoadAudio config", function()
 		expect(RoadAudio.cutoff(tuning, AUDIBLE_KMH) >= AUDIBLE_CUTOFF_HZ).toBeTruthy()
 	end)
 
+	-- Roblox's engine reference, AudioPlayer.Volume: "Ranges from 0 to 10".
 	it("keeps the wind and the roar within AudioPlayer's 0 to 10 in every car, view and surface", function()
 		local tuning = Config.TUNING
 		local surfaceGain = tuning.otherSurface.gain
