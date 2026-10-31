@@ -576,8 +576,7 @@ function Model.step(
 		steer = Drift.steer(car, state.drift, steer, forward, right, yaw)
 	end
 	state.wheelSteer = steer
-	-- A drift's end is not a handbrake pull: the rear stays free until the car runs straight.
-	state.handbrake = if state.drift.wants or state.drift.exiting then 0 else controls.handbrake
+	state.handbrake = if state.drift.wants then 0 else controls.handbrake
 	Steering.update(car, state.steering, steer, forward, dt)
 	updateCorners(state, wheels, mode, dt)
 	local alaTarget =
