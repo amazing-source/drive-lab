@@ -1,0 +1,44 @@
+Issue #179: the DR458's cockpit control sounds, the owner's picks, levelled under the engine.
+
+Picks (shortlist: drive-lab-assets/dr458/audio/preview/round2/buttons/, SHORTLIST.json), A for every
+control, B for the wiper motor and the washer pump. Store sounds are Roblox's licensed Pro Sound
+Effects library (ProSoundEffects), downloadable without a session; the wiper motor is a region of the
+DR458's events file 79771227703971 (Freesound 425395, Soundholder, CC BY 4.0).
+
+Measured loudness (python -I tools/audio/measure_control_sounds.py, fixture
+games/drive-lab/tests/fixtures/dr458_control_sounds.json; loudest 100 ms for a one-shot, the whole
+region for a loop; a mono file on both channels at full level) and the level heard against the idle
+loop (-18 LUFS) with each db:
+  wheel button 9112955977 0-0.25        -31.92 LUFS  db +7.9   -> -6.0 LU
+  panel toggle 9117028855 0-0.25        -19.47       db -4.5   -> -6.0
+  manettino    9118727603 0-0.25        -24.41       db +0.4   -> -6.0
+  master key   9114402893 2.15-2.6      -13.27       db -10.7  -> -6.0
+  guard        9119727134 0-0.3         -10.72       db -13.3  -> -6.0
+  ENGINE START 9125343291 0-0.3         -20.50       db -3.5   -> -6.0
+  radio press  9117795848 0-0.15        -27.50       db +3.5   -> -6.0
+  radio hiss   9118026602 0.2-2.2       -14.37       db -17.6  -> -14.0
+  radio tail   9118021986 0.27-1        -14.06       db -11.9  -> -8.0
+  wiper motor  79771227703971 7.09175-14.19175  -18.00  db -12  -> -12.0
+  washer pump  9120563177 0-0.4         -14.39       db -15.6  -> -12.0
+These are the levels of the shortlist the owner heard (a click 6 LU under the idle, the loops 12, the
+hiss 14, the tail 8). One correction on the way: the shortlist's renderer decoded mono files through
+ffmpeg's upmix, 3 dB under full level. The engine loops are measured at full level, so the fixture
+measures every file that way, and the mono picks' gains are 3 dB lower than the shortlist's numbers
+would give. The levels heard against the idle are the same.
+
+Gates at the branch head: stylua, selene (0/0/0), luau-lsp (src), lune run tools/test/run (90 spec
+files, 922 passed), lune run tools/test/tools (20 tools, 20 run, 0 failed), rojo build.
+
+Deliberate breaks, each restored with `git checkout -- games` (922 passed after):
+B1  HEADLIGHTS (LIGHT) removed from the press table
+    FAIL CarAudio config > DR458: has a sound for each cockpit control the owner listed, and no other
+B2  the wheel button at db 14 (6.1 dB louder: heard at +0.1 LU over the idle)
+    FAIL CarAudio config > DR458: plays every control sound under the idle engine, by its measured loudness
+B3  the wheel button's region changed to 0-0.3 s without re-measuring
+    FAIL the same spec (no measurement for that region)
+B4  the fast wiper rate 1.2 instead of 1.538
+    FAIL CarAudio config > DR458: plays its wiper motor at the rate that fits its recorded wipe to each wiper speed
+B5  the SVJ given a controls table
+    FAIL CarAudio config > SVJ: has no cockpit control sounds
+
+SVJ: its offline audio timeline in Strada, Sport and Corsa is byte-identical to main.
