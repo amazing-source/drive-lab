@@ -177,8 +177,8 @@ local Model: Binding.CarModel = {
 			outer = { forward = 1.23468, right = 0.53392, up = 0.40393 },
 		},
 		nozzles = {
-			{ forward = 1.667, right = -0.25, up = 0.315 },
-			{ forward = 1.667, right = 0.25, up = 0.315 },
+			{ forward = 1.611, right = -0.25, up = 0.322 },
+			{ forward = 1.611, right = 0.25, up = 0.322 },
 		},
 	},
 }
