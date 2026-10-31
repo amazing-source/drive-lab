@@ -238,7 +238,7 @@ describe("DR458 binding", function()
 		end
 	end)
 
-	it("refuses a wiper whose arm or blade the manifest lacks", function()
+	it("lists a wiper whose arm or blade the manifest lacks as pending, and binds none", function()
 		for _, change in { { arm = "Wiper_Missing" }, { blade = { "Wiper_BladeInner", "Wiper_Missing" } } } do
 			local settings = table.clone(Settings)
 			local wiper = table.clone(Settings.wiper :: any)
@@ -246,9 +246,9 @@ describe("DR458 binding", function()
 				wiper[key] = value
 			end
 			settings.wiper = wiper
-			expect(function()
-				ManifestBinding.binding(MANIFEST, DR458, settings)
-			end).toThrow()
+			local written, pending = ManifestBinding.binding(MANIFEST, DR458, settings)
+			expect(written.wiper).toBe(nil)
+			expect(string.find(table.concat(pending, "; "), "wiper", 1, true) ~= nil).toBe(true)
 		end
 	end)
 
