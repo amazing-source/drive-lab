@@ -315,7 +315,7 @@ local HELP: Rules.Help = {
 			rows = {
 				{
 					label = "Pit limiter",
-					text = "In gear {PIT_GEAR} below {PIT_KMH} km/h, arms the limiter so the accelerator cannot take the car past {PIT_KMH} km/h; press again, or shift down out of gear {PIT_GEAR}, to release it.",
+					text = "Arms the limiter in any forward gear, so the accelerator cannot take the car past {PIT_KMH} km/h and the car slows by itself from above it; press again, or select neutral or reverse, to release it.",
 					controls = { "PIT_LIMITER" },
 				},
 				{
@@ -325,13 +325,19 @@ local HELP: Rules.Help = {
 				},
 				{
 					label = "Wiper",
-					text = "Switches the windscreen wiper on or off; switched off, it finishes its sweep and parks.",
+					text = "Steps the windscreen wiper through its {WIPER_SPEEDS} speeds, then off; switched off, it finishes its sweep and parks.",
 					controls = { "WIPER" },
 				},
 				{
 					label = "Washer",
 					text = "Sprays the windscreen while held and runs the wiper, which makes {WIPES} more wipes after the spray stops.",
 					controls = { "WASHER" },
+					keyboardGesture = "Hold",
+				},
+				{
+					label = "Pit radio",
+					text = "Talks to the pit crew while held, as the RADIO button on the wheel does.",
+					controls = { "RADIO" },
 					keyboardGesture = "Hold",
 				},
 			},
@@ -440,11 +446,11 @@ local function carValues(entry: Contract.Entry): { [string]: number }
 	local pit = switches.pitLimiter
 	if pit then
 		values.PIT_KMH = pit.limitKmh
-		values.PIT_GEAR = pit.armGear
 	end
 	local wiper = switches.wiper
 	if wiper then
 		values.WIPES = wiper.afterWash
+		values.WIPER_SPEEDS = #wiper.speeds
 	end
 	local pages = switches.displayPages
 	if pages then

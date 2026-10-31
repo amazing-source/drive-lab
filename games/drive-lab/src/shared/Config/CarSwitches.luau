@@ -16,17 +16,20 @@ export type Switches = {
 	rainLight: boolean,
 	-- Pages the display steps through; nil on a display with one.
 	displayPages: number?,
+	-- A push-to-talk radio to the pit crew.
+	radio: boolean?,
 }
 
 -- Config/Controls entries that only a car with a given feature has (Config/Cars/Contract.features:
--- pitLimiter, wiper, rainLight, displayPages, escButton, launch, cabinLight). Every other control
--- is on every car.
+-- pitLimiter, wiper, rainLight, displayPages, radio, escButton, launch, cabinLight). Every other
+-- control is on every car.
 local NEEDS: { [string]: string } = {
 	PIT_LIMITER = "pitLimiter",
 	WIPER = "wiper",
 	WASHER = "wiper",
 	RAIN_LIGHT = "rainLight",
 	DISPLAY_PAGE = "displayPages",
+	RADIO = "radio",
 	ESC_OFF = "escButton",
 	CABIN_LIGHT = "cabinLight",
 }

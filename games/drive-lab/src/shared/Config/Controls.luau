@@ -18,12 +18,13 @@ export type Controls = {
 	INDICATOR_LEFT: { Enum.KeyCode },
 	INDICATOR_RIGHT: { Enum.KeyCode },
 	-- On a car that has them (Config/CarSwitches): the pit limiter, the display's pages, the wiper,
-	-- its washer (held) and the rain light.
+	-- its washer (held), the rain light and the pit radio (held).
 	PIT_LIMITER: { Enum.KeyCode },
 	DISPLAY_PAGE: { Enum.KeyCode },
 	WIPER: { Enum.KeyCode },
 	WASHER: { Enum.KeyCode },
 	RAIN_LIGHT: { Enum.KeyCode },
+	RADIO: { Enum.KeyCode },
 	HUD_MODE: { Enum.KeyCode },
 	-- Steps the game-feel level (Config/GameFeel).
 	GAME_FEEL: { Enum.KeyCode },
@@ -67,13 +68,14 @@ local Controls: Controls = table.freeze({
 	LIGHTS_PAD = { Enum.KeyCode.DPadDown },
 	INDICATOR_LEFT = { Enum.KeyCode.X, Enum.KeyCode.DPadLeft },
 	INDICATOR_RIGHT = { Enum.KeyCode.C, Enum.KeyCode.DPadRight },
-	-- P, Y, O and B sit in the same place on QWERTY and AZERTY; One is the key AZERTY prints 1
+	-- P, Y, O, B and I sit in the same place on QWERTY and AZERTY; One is the key AZERTY prints 1
 	-- (with &). Z is not free: AZERTY's Z is the throttle, W.
 	PIT_LIMITER = { Enum.KeyCode.P },
 	DISPLAY_PAGE = { Enum.KeyCode.Y },
 	WIPER = { Enum.KeyCode.O },
 	WASHER = { Enum.KeyCode.B },
 	RAIN_LIGHT = { Enum.KeyCode.One },
+	RADIO = { Enum.KeyCode.I },
 	-- The driving HUD: full, minimal, off.
 	HUD_MODE = { Enum.KeyCode.U },
 	-- The key beside the rain light's; AZERTY prints it é, and the controls screen shows it so.

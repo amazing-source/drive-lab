@@ -20,6 +20,7 @@ local DriverGestures = require("../DriverGestures")
 local DriverStartup = require("../DriverStartup")
 local Driving = require("../Driving")
 local ExhaustFlames = require("../../Rules/ExhaustFlames")
+local HudDesign = require("../HudDesign")
 local RimBlur = require("../RimBlur")
 local StartupArms = require("../../Rules/StartupArms")
 local Types = require("./Types")
@@ -60,6 +61,8 @@ export type Entry = {
 	-- The car's display: a dial face, or a binnacle screen with pages and shift lights. One of them.
 	cluster: Cluster.Face?,
 	binnacle: Binnacle.Screen?,
+	-- The car's own driving HUD; without it, Config/Hud's.
+	hud: HudDesign.Design?,
 	assists: DriverAssists.Tuning,
 	switches: CarSwitches.Switches,
 }
@@ -303,18 +306,27 @@ local function checkDisplay(entry: Entry)
 	end
 end
 
--- The switches' numbers are usable: a limiter with a band, a wiper with a wipe time, more than
--- one display page.
+-- The switches' numbers are usable: a limiter with a band that arms in a forward gear, a wiper
+-- with a wipe time per speed, slowest first, more than one display page.
 local function checkSwitches(entry: Entry)
 	local switches = entry.switches
 	local pit = switches.pitLimiter
 	if pit then
 		assert(pit.limitKmh > 0 and pit.band > 0, "the pit limiter needs a limit and a band")
-		assert(pit.armBelowKmh <= pit.limitKmh, "the pit limiter arms above its own limit")
+		assert(
+			pit.armBelowKmh == nil or pit.armBelowKmh <= pit.limitKmh,
+			"the pit limiter arms above its own limit"
+		)
+		assert(pit.armFromGear >= 1 and pit.armFromGear % 1 == 0, "the pit limiter arms from a forward gear")
+		assert(pit.armToGear == nil or pit.armToGear >= pit.armFromGear, "the pit limiter has no arming gear")
 	end
 	local wiper = switches.wiper
 	if wiper then
-		assert(wiper.wipeSeconds > 0, "the wiper needs a wipe time")
+		assert(#wiper.speeds >= 1, "the wiper needs a speed")
+		for index, seconds in wiper.speeds do
+			assert(seconds > 0, "the wiper needs a wipe time at each speed")
+			assert(index == 1 or seconds < wiper.speeds[index - 1], "the wiper's speeds go slowest first")
+		end
 		assert(
 			wiper.afterWash >= 0 and wiper.afterWash % 1 == 0,
 			"the wiper's wipes after a wash are a count"
@@ -415,6 +427,9 @@ function Contract.define(entry: Entry): Entry
 	checkDriverSize(entry)
 	checkModes(entry)
 	checkDisplay(entry)
+	if entry.hud then
+		HudDesign.check(entry.hud)
+	end
 	checkSwitches(entry)
 	checkGestures(entry)
 	checkFlames(entry)
@@ -502,6 +517,7 @@ function Contract.features(entry: Entry): Features
 		wiper = switches.wiper ~= nil,
 		rainLight = switches.rainLight,
 		displayPages = switches.displayPages ~= nil,
+		radio = switches.radio == true,
 		escButton = entry.assists.escButton ~= nil,
 		launch = entry.physics.launch ~= nil,
 		cabinLight = entry.model.cabinLight ~= nil,

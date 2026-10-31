@@ -1,0 +1,15 @@
+Road coverage of the HUD panel, offline (#167): no Studio for agents, so both frame images were
+laid at the HUD's placement (Ui/HudView.place: bottom centre at 0.17 of the height in the chase
+view, bottom right at 0.13 in the cockpit, 14 px margin) on an earlier chase capture of the SVJ
+(1721 x 865, horizon at row 340, found as the sharpest drop in row brightness), alpha-weighted.
+
+chase    SVJ    panel 641x147 px  opaque share of screen 5.13%  of the ground below the horizon 8.45%
+chase    DR458  panel 441x147 px  opaque share of screen 4.33%  of the ground below the horizon 7.14%
+cockpit  SVJ    panel 490x112 px  opaque share of screen 2.99%  of the ground below the horizon 4.92%
+cockpit  DR458  panel 337x112 px  opaque share of screen 2.52%  of the ground below the horizon 4.16%
+chase: DR458 / SVJ ground covered = 0.845
+cockpit: DR458 / SVJ ground covered = 0.844
+
+From the images alone: the SVJ frame (1024 x 235) is 81.0% opaque, the DR458's (2172 x 724 design,
+1024 x 341 uploaded) 99.5%; at the same height the DR458's is narrower (3.0 : 1 against 4.36 : 1),
+0.086 H^2 of opaque area against 0.102 H^2.

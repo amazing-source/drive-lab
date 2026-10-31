@@ -214,3 +214,46 @@ describe("Hand gestures: when the hand leaves the grip and comes back", function
 		end
 	)
 end)
+
+-- Steps for `seconds`, returning each control the hand worked with the time it did.
+local function worked(r: Rig, seconds: number): { { control: string, at: number } }
+	local found = {}
+	for _ = 1, math.max(1, math.round(seconds / DT)) do
+		r.now += DT
+		local control = HandGestures.step(r.hand, r.inputs, HOLD, r.now, DT)
+		if control then
+			table.insert(found, { control = control, at = r.now })
+		end
+	end
+	return found
+end
+
+describe("Hand gestures: the instant the hand works its control", function()
+	it("reports a button once, as the thumb reaches it, and again on a press while it is held", function()
+		local r = rig()
+		r.down.PIT_LIMITER = true
+		HandGestures.press(r.hand, BUTTON, r.now)
+		local first = worked(r, 0.5)
+		expect(#first).toBe(1)
+		expect(first[1].control).toBe("PIT_LIMITER")
+		-- The thumb reaches the button at the track's end, 0.2 s in (the hand starts the frame after
+		-- the press is seen).
+		expect(first[1].at > 0.2 and first[1].at <= 0.2 + 2 * DT + 1e-9).toBe(true)
+		HandGestures.press(r.hand, BUTTON, r.now)
+		local again = worked(r, 0.1)
+		expect(#again).toBe(1)
+		r.down.PIT_LIMITER = false
+		expect(#worked(r, 1)).toBe(0)
+	end)
+
+	it("reports a knob as its turn completes, not when the hand reaches its end", function()
+		local r = rig({ DRIVING_MODE = "1" })
+		HandGestures.press(r.hand, KNOB, r.now)
+		local found = worked(r, 1)
+		expect(#found).toBe(1)
+		expect(found[1].control).toBe("DRIVING_MODE")
+		-- The frame the press is seen, the hand does not move; the turn completes within two frames of
+		-- its time on the track.
+		expect(found[1].at > KNOB_TURN.finish and found[1].at <= KNOB_TURN.finish + 2 * DT + 1e-9).toBe(true)
+	end)
+end)
