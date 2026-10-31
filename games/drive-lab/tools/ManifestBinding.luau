@@ -62,6 +62,9 @@ export type Settings = {
 	windshield: { string },
 	-- Each start-up control's rest and other end, as angles from its modelled pose.
 	controlStates: { [string]: { rest: number, other: number } },
+	-- The wiper's arm (a hinge part, modelled parked), its blade's two ends among the manifest's
+	-- points, inner first, and the washer's jets (manifest frame, as the manifest has none).
+	wiper: { arm: string, blade: { string }, nozzles: { Point } }?,
 }
 
 local ManifestBinding = {}
@@ -357,6 +360,25 @@ function ManifestBinding.binding(
 	end
 	table.sort(pending)
 
+	local wiper = nil
+	local wiperSettings = settings.wiper
+	if wiperSettings then
+		local arm = hinge(byName, wiperSettings.arm, centre)
+		need(arm.travel, `{wiperSettings.arm} has no range`)
+		local function point(name: string): Point
+			return ManifestBinding.toRig(need(points[name], `the manifest has no point {name}`), centre)
+		end
+		local nozzles = {}
+		for index, nozzle in wiperSettings.nozzles do
+			nozzles[index] = ManifestBinding.toRig(nozzle, centre)
+		end
+		wiper = {
+			hinge = arm,
+			blade = { inner = point(wiperSettings.blade[1]), outer = point(wiperSettings.blade[2]) },
+			nozzles = nozzles,
+		}
+	end
+
 	local model: Binding.CarModel = {
 		wheels = wheels,
 		calipers = settings.calipers,
@@ -389,6 +411,7 @@ function ManifestBinding.binding(
 		exhaustOutlets = outlets,
 		shiftLights = settings.shiftLights,
 		panelLamps = settings.panelLamps,
+		wiper = wiper,
 	}
 	return model, pending
 end
@@ -409,6 +432,10 @@ local ORDER = {
 	"travel",
 	"diameter",
 	"hinge",
+	"blade",
+	"inner",
+	"outer",
+	"nozzles",
 	"positions",
 	"parts",
 	"openAngle",
@@ -431,6 +458,7 @@ local ORDER = {
 	"exhaustOutlets",
 	"shiftLights",
 	"panelLamps",
+	"wiper",
 }
 local RANK: { [string]: number } = {}
 for index, key in ORDER do

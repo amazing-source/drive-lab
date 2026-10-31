@@ -203,12 +203,14 @@ export type Windshield = {
 	-- A drop with its trail.
 	trail: GlassSprite,
 	-- Peak opacity, how much the scene's light shades the drops, canvas pixels per stud, metres
-	-- the drops sit inside the glass, and seconds a wiper's pass takes to fade one.
+	-- the drops sit inside the glass, seconds a wiper's pass takes to fade one, and metres either
+	-- side of the blade's edge that it still clears (Rules/WiperSweep).
 	opacity: number,
 	lightInfluence: number,
 	pixelsPerStud: number,
 	inset: number,
 	wipeSeconds: number,
+	wiperReach: number,
 	drops: WindshieldDrops.Tuning,
 }
 
@@ -675,6 +677,7 @@ local Atmosphere: Atmosphere = table.freeze({
 		pixelsPerStud = 300,
 		inset = 0.01,
 		wipeSeconds = 0.15,
+		wiperReach = 0.01,
 		drops = table.freeze({
 			rate = 6,
 			doubleAt = 60,

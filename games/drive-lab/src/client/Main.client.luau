@@ -26,6 +26,7 @@ local START_ORDER = {
 	Controllers.StreetLights,
 	Controllers.CarLights,
 	Controllers.CarSwitches,
+	Controllers.CarWiper,
 	Controllers.RimBlur,
 	Controllers.Reflectors,
 	Controllers.Hud,

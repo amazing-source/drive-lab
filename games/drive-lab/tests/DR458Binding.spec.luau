@@ -212,6 +212,49 @@ describe("DR458 binding", function()
 		expect(table.concat(complete, "; ")).toBe("")
 	end)
 
+	it("writes a wiper from its hinge part and its blade's points, moved to the centre of mass", function()
+		local parts = table.clone(MANIFEST.parts)
+		table.insert(parts, {
+			name = "Wiper_Arm",
+			group = "Chassis",
+			motion = "hinge",
+			pivot = { forward = 2.7, right = -0.15, up = 0.72 },
+			axis = { forward = -0.6, right = 0, up = -0.8 },
+			range = 1.5,
+			positive = "lifts the blade off its park line",
+		})
+		local points = table.clone(MANIFEST.points :: { [string]: ManifestBinding.Point })
+		points.Wiper_BladeInner = { forward = 2.6, right = -0.05, up = 0.78 }
+		points.Wiper_BladeOuter = { forward = 2.38, right = 0.45, up = 0.83 }
+		local settings = table.clone(Settings)
+		local nozzle = { forward = 2.76, right = 0.25, up = 0.74 }
+		settings.wiper =
+			{ arm = "Wiper_Arm", blade = { "Wiper_BladeInner", "Wiper_BladeOuter" }, nozzles = { nozzle } }
+		local written = ManifestBinding.binding({ parts = parts, points = points }, DR458, settings)
+		local wiper = written.wiper
+		assert(wiper, "the binding has a wiper")
+		local centre = ManifestBinding.centreOfMass(DR458)
+		expect(
+			same(
+				wiper.hinge.pivot,
+				ManifestBinding.toRig({ forward = 2.7, right = -0.15, up = 0.72 }, centre)
+			)
+		).toBe(true)
+		expect(wiper.hinge.travel).toBe(1.5)
+		expect(wiper.hinge.part).toBe("Wiper_Arm")
+		expect(math.abs(wiper.hinge.axis.forward + 0.6) < 1e-4 and math.abs(wiper.hinge.axis.up + 0.8) < 1e-4).toBe(
+			true
+		)
+		expect(same(wiper.blade.inner, ManifestBinding.toRig(points.Wiper_BladeInner, centre))).toBe(true)
+		expect(same(wiper.blade.outer, ManifestBinding.toRig(points.Wiper_BladeOuter, centre))).toBe(true)
+		expect(same(wiper.nozzles[1], ManifestBinding.toRig(nozzle, centre))).toBe(true)
+		settings.wiper =
+			{ arm = "Wiper_Missing", blade = { "Wiper_BladeInner", "Wiper_BladeOuter" }, nozzles = {} }
+		expect(function()
+			ManifestBinding.binding({ parts = parts, points = points }, DR458, settings)
+		end).toThrow()
+	end)
+
 	it("moves every point from the rear axle on the ground to the centre of mass", function()
 		local centre = ManifestBinding.centreOfMass(DR458)
 		expect(centre.forward).toBeNear(2.650 * 0.42, 1e-9)
