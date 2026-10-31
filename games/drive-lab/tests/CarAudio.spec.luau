@@ -11,14 +11,15 @@ local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect
 
--- The length of each uploaded events.ogg, seconds (manifest.json beside the files).
-local SVJ_EVENTS_LENGTH = 18.6001
-local DR458_EVENTS_LENGTH = 14.6917
+-- The length of each uploaded events file, seconds, by asset (manifest.json beside the files).
+local FILE_LENGTHS: { [string]: number } = {
+	[SVJ.eventsSoundId] = 18.6001,
+	[DR458.eventsSoundId] = 14.6917,
+}
 
--- Each car's pack with the length of its events file and of the file its pops are cut from.
-local PACKS: { { name: string, pack: CarAudio.Pack, eventsLength: number, popsLength: number } } = {
-	{ name = "SVJ", pack = SVJ, eventsLength = SVJ_EVENTS_LENGTH, popsLength = SVJ_EVENTS_LENGTH },
-	{ name = "DR458", pack = DR458, eventsLength = DR458_EVENTS_LENGTH, popsLength = SVJ_EVENTS_LENGTH },
+local PACKS: { { name: string, pack: CarAudio.Pack } } = {
+	{ name = "SVJ", pack = SVJ },
+	{ name = "DR458", pack = DR458 },
 }
 
 -- The DR458's own start-up sound's length, seconds (its Sound.TimeLength, read in Studio).
@@ -54,25 +55,25 @@ describe("CarAudio config", function()
 			expect(uploaded(Pack.eventsSoundId)).toBeTruthy()
 		end)
 
-		it(
-			`{car.name}: keeps every one-shot region inside the file it is cut from, in order and apart`,
-			function()
-				local function inOrder(regions: { CarAudio.Region }, from: number, length: number): number
-					local previousEnd = from
-					for _, region in regions do
-						expect(region.from >= previousEnd).toBeTruthy()
-						expect(region.to > region.from).toBeTruthy()
-						previousEnd = region.to
-					end
-					expect(previousEnd <= length).toBeTruthy()
-					return previousEnd
+		it(`{car.name}: keeps each one-shot inside the file it is cut from, in order and apart`, function()
+			local function inOrder(regions: { CarAudio.Region }, from: number, length: number): number
+				local previousEnd = from
+				for _, region in regions do
+					expect(region.from >= previousEnd).toBeTruthy()
+					expect(region.to > region.from).toBeTruthy()
+					previousEnd = region.to
 				end
-				local eventsEnd = inOrder({ Pack.startup.region, Pack.gear.region }, 0, car.eventsLength)
-				local ownFile = CarAudio.popsSoundId(Pack) == Pack.eventsSoundId
-				inOrder(Pack.pops.regions, if ownFile then eventsEnd else 0, car.popsLength)
-				expect(Pack.startup.handOver < Pack.startup.region.to - Pack.startup.region.from).toBeTruthy()
+				expect(previousEnd <= length).toBeTruthy()
+				return previousEnd
 			end
-		)
+			local eventsLength = FILE_LENGTHS[Pack.eventsSoundId]
+			local popsFile = CarAudio.popsSoundId(Pack)
+			local popsLength = FILE_LENGTHS[popsFile]
+			assert(eventsLength and popsLength, "the length of every file its one-shots are cut from")
+			local eventsEnd = inOrder({ Pack.startup.region, Pack.gear.region }, 0, eventsLength)
+			inOrder(Pack.pops.regions, if popsFile == Pack.eventsSoundId then eventsEnd else 0, popsLength)
+			expect(Pack.startup.handOver < Pack.startup.region.to - Pack.startup.region.from).toBeTruthy()
+		end)
 
 		it(`{car.name}: hands the idle over before the next loop up, inside both loops`, function()
 			local idle = Pack.engineLayers[1]
