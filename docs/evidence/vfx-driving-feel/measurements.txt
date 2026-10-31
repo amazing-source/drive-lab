@@ -1,0 +1,70 @@
+Measurements for #160 (2026-10-31). All offline numbers come from this branch's rules and config.
+
+TOP SPEEDS (DriveSim.topSpeed, flat out, 1/60 s)
+SVJ 354.1 km/h (Corsa); DR458 301.9 km/h (OFF). The margin spec measures these itself.
+
+WIND: matched loudness, as tests/RoadAudio.spec.luau computes it
+(engine loops -18 LUFS in the highest gear, road pack -20 LUFS, equaliser bands left out)
+Smallest engine lead over wind + roar, asphalt, up to each car's top speed:
+                         main               this branch
+SVJ outside on/off       6.5 / 6.5 dB       8.2 / 8.2 dB
+SVJ cockpit on/off       11.7 / 11.7 dB     9.7 / 9.7 dB
+DR458 outside on/off     8.8 / 5.3 dB  <-   9.8 / 6.2 dB (the coast near 191 km/h)
+DR458 cockpit on/off     13.6 / 10.2 dB     11.3 / 7.8 dB
+loudest surface (3 dB rule): SVJ 4.9 -> 6.0, DR458 3.6 -> 4.2
+main breaks the 6 dB rule on the DR458 coasting near its top speed (5.3 dB); the spec never
+checked the DR458 or a coast before.
+Wind under the engine (on throttle), outside, km/h:dB. main: 50:31 100:23 150:18 200:14 300:10.
+This branch: 50:20 100:16 150:15 200:13 300:11. Cockpit, main: 100:33 150:28 300:20; this branch:
+100:18 150:17 300:13.
+
+WIND: rendered (tools/road_timeline.luau Corsa + tools/audio/render_road_preview.py, SVJ,
+BS.1770 K-weighted over 3 s, ungated; the moving low-pass and equalisers modelled)
+Wind alone, LUFS, before -> after:
+  71 km/h chase   -56.2 -> -47.8   (+8.4)
+ 126 km/h chase   -47.8 -> -41.8   (+6.0)
+ 163 km/h chase   -43.0 -> -38.8   (+4.2)
+ 193 km/h chase   -39.4 -> -36.6   (+2.8)
+ 253 km/h chase   -33.8 -> -33.2   (+0.6)
+ 305 km/h cockpit -43.5 -> -37.0   (+6.5)
+ 336 km/h chase   -28.0 -> -30.2   (-2.2, held by the 6 dB rule)
+Smallest engine lead over wind + roar while moving: +7.4 -> +8.4 dB (the lift near 319 km/h).
+
+FIELD OF VIEW (tools/chase_camera.luau, SVJ, Corsa, 60 FPS, steady full throttle)
+km/h  gear  g     chase fov
+  60   1   1.15   80.2
+ 100   2   0.76   79.3
+ 140   3   0.55   75.9
+ 200   4   0.36   73.1
+ 250   5   0.23   72.5
+Cockpit and hood take 0.4 of the kick and 0.5 of the speed term: 68.4 at a 1.15 g start from rest,
+66.1 at 300 km/h and 0.15 g.
+
+BLUR: edit-mode captures, Studio viewport 759 x 288. Sharpness = mean absolute Laplacian of the
+grey image in a region, against the same pose with no blur.
+- At the editor's Automatic quality the depth of field did not render at all: three captures with
+  none, 0.5/0.4 and 0.8/0.7 were byte-identical. At Level21 it rendered. BlurEffect rendered at both.
+- Chase, FOV 80.2:   horizon   near road   car
+  far 0.4            22 %      100 %       99 %
+  far 0.7            21 %      100 %       99 %
+  BlurEffect 3 px    78 %       56 %       99 %
+  The road in frame lies inside the car's sharp range, so the near blur barely shows there.
+- Cockpit, FOV 68.4, windows as Controllers/CockpitGlazing sets them (SmoothPlastic 0.88): with
+  the edit model's Glass windows the depth of field changed 9 pixels of 218,592.
+                     outside L   outside ahead   mirror   cluster
+  far 0.15           68 %        80 %            100 %    100 %
+  far 0.40           18 %        25 %            102 %    100 %
+  far 0.25 and 0.40 washed the outside into a white haze with no horizon (05_rejected...).
+- Chosen: chase far 0.3 at a full pull; cockpit and hood 0.15, their speed blur 0.05.
+
+STREAKS: edit-mode captures, a staged slab of streaks at the config's 300 km/h size
+- 7 mm wide at transparency 0.8: no pixel changed by more than 3 levels (invisible).
+- 2 cm at 0.6: 81 pixels changed, at most 11 levels.
+- Chosen: 2.5 cm at 0.55, density 0.02 (12_svj_chase_300kmh...). From the cockpit's still
+  capture none showed: the slabs sit beside and above the path, behind the pillars and roof.
+
+PER-FRAME COST (Lune 0.10.5, 1e6 iterations, this machine; Luau CPU only, two runs)
+FOV speed target + ease + field of view          183 / 216 ns
+blur pull share + ease + depth + depth of field  555 / 495 ns
+streaks share + three rates + cap                468 / 462 ns
+streak resize fit (only on a 5 % speed change)   345 / 309 ns
