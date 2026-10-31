@@ -9,7 +9,8 @@ without Studio; Roblox's own resampling and 3D panning are not reproduced.
 <loops dir> holds the car's set (tools/audio/cut_loops.py for the SVJ, cut_dr458.py for the
 DR458); the timeline names each layer's file in the pack's order, and the limiter and events
 files, and a one-shot's own file when it is cut from another (the DR458's pops come from the
-SVJ's events.ogg, copied in as svj_events.ogg). [from s] [to s] keep a stretch of the run. Every file is matched to -16 LUFS (K-weighted,
+SVJ's events.ogg, copied in as svj_events.ogg). A loop with a region (a pack whose loops share a
+file) plays only that stretch of its file. [from s] [to s] keep a stretch of the run. Every file is matched to -16 LUFS (K-weighted,
 ungated), lower only if a peak would pass -1 dBFS, so two renders compare at the same loudness.
 Decoding and the MP3 go through ffmpeg.
 """
@@ -73,11 +74,21 @@ def main(timeline_path, loops, out, start=None, stop=None):
     def track(values):
         return np.interp(clock, times, np.array(values, dtype=float))
 
+    regions = timeline.get("regions") or {}
+    decoded = {}
+
+    def loop_audio(name, region):
+        if name not in decoded:
+            decoded[name] = decode(os.path.join(loops, name))
+        audio = decoded[name]
+        return audio[int(round(region["from"] * RATE)) : int(round(region["to"] * RATE))] if region else audio
+
     mix = np.zeros((total, 2))
+    layer_regions = regions.get("layers") or [False] * len(files["layers"])
     for index, name in enumerate(files["layers"]):
-        audio = decode(os.path.join(loops, name))
+        audio = loop_audio(name, layer_regions[index])
         mix += loop_play(audio, track([f["speeds"][index] for f in frames]), track([f["volumes"][index] for f in frames]))
-    limiter = decode(os.path.join(loops, files["limiter"]))
+    limiter = loop_audio(files["limiter"], regions.get("limiter"))
     mix += loop_play(limiter, track([f["limiterSpeed"] for f in frames]), track([f["limiter"] for f in frames]))
 
     sources = {files["events"]: decode(os.path.join(loops, files["events"]))}

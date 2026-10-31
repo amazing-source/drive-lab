@@ -593,3 +593,86 @@ describe("Car contract: flames", function()
 		end
 	end)
 end)
+
+describe("Car contract: loop regions", function()
+	local SHARED = "rbxassetid://1"
+
+	-- Every loop of the SVJ's pack in one file, each with its own region, then `change`.
+	local function packed(change: ((any) -> ())?): Contract.Entry
+		return svjWith(function(entry)
+			local pack = entry.audio
+			local from = 0
+			local function place(loop: any, seconds: number)
+				loop.soundId = SHARED
+				loop.region = { from = from, to = from + seconds }
+				from += seconds
+			end
+			for _, layer in pack.engineLayers do
+				place(layer, 5)
+			end
+			place(pack.limiter, 2)
+			place(pack.far, 3)
+			if change then
+				change(pack)
+			end
+		end)
+	end
+
+	it("accepts loops that share one file through regions that do not overlap", function()
+		local entry = Contract.define(packed())
+		local regions = {}
+		for _, layer in entry.audio.engineLayers do
+			table.insert(regions, layer.region and layer.region.from)
+		end
+		expect(table.concat(regions, ",")).toBe("0,5,10")
+		expect(entry.audio.far.region and entry.audio.far.region.to).toBe(20)
+	end)
+
+	it("accepts a loop alone in its file with a region, and the catalog's packs without any", function()
+		Contract.define(svjWith(function(entry)
+			entry.audio.engineLayers[2].region = { from = 0.5, to = 4 }
+		end))
+		for _, entry in Catalog.cars do
+			Contract.checkLoopRegions(entry.audio)
+		end
+	end)
+
+	it("refuses a loop that shares a file without a region of its own", function()
+		expect(function()
+			Contract.define(packed(function(pack)
+				pack.engineLayers[3].region = nil
+			end))
+		end).toThrow()
+		expect(function()
+			Contract.define(packed(function(pack)
+				pack.limiter.region = nil
+			end))
+		end).toThrow()
+	end)
+
+	it("refuses two loops whose regions overlap in their file", function()
+		expect(function()
+			Contract.define(packed(function(pack)
+				pack.engineLayers[2].region = { from = 4.9, to = 10 }
+			end))
+		end).toThrow()
+		expect(function()
+			Contract.define(packed(function(pack)
+				pack.far.region = { from = 1, to = 2 }
+			end))
+		end).toThrow()
+	end)
+
+	it("refuses a region that does not run forward from 0 or later", function()
+		expect(function()
+			Contract.define(packed(function(pack)
+				pack.engineLayers[1].region = { from = 0, to = 0 }
+			end))
+		end).toThrow()
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				entry.audio.far.region = { from = -1, to = 2 }
+			end))
+		end).toThrow()
+	end)
+end)
