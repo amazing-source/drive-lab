@@ -291,6 +291,7 @@ local function update(current: Session, dt: number)
 	local events = CarAudioEvents.step(current.events, car, dt)
 	-- The engine's throttle drops at every fuel cut; while the limiter bounces it counts as open.
 	local mix = EngineSound.step(current.engine, car.rpm, if events.limiter then 1 else car.throttle, dt)
+	current.model:SetAttribute(CarAudio.ENGINE_LEVEL_ATTRIBUTE, pack.engineVolume * EngineSound.level(mix))
 
 	local dip = pack.shiftDip
 	local dipGoal = if car.shifting then dip.gain else 1

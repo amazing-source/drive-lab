@@ -68,6 +68,16 @@ function EngineSound.loudness(tuning: Tuning, rpm: number): number
 	return 10 ^ (db / 20)
 end
 
+-- The mix's loops together as one linear amplitude: what the engine plays before the pack's
+-- volume, the shift dip and the start-up.
+function EngineSound.level(mix: Mix): number
+	local sum = 0
+	for _, volume in mix.volumes do
+		sum += volume * volume
+	end
+	return math.sqrt(sum)
+end
+
 -- An equal-power hand-over from a one-shot to the loops over `from` to `to` seconds into the
 -- one-shot: the loops' share and the one-shot's gain at `position`.
 function EngineSound.handOver(from: number, to: number, position: number): (number, number)
