@@ -288,7 +288,7 @@ WALK0 = OPEN_END
 LEAN0, HOP0 = WALK0 + 36, WALK0 + 52
 SIT, T1, T2, OVER = HOP0 + 10, HOP0 + 15, HOP0 + 20, HOP0 + 26
 DROP, D1, D2, SEATED = OVER + 12, OVER + 8, OVER + 16, OVER + 26
-CLOSE_FROM, END = SEATED - 4, SEATED + 40
+CLOSE_FROM, ON_HAND_OVER, END = SEATED - 4, SEATED + 34, SEATED + 40
 # The SVJ's InsideClose door curve (Config/Cars/SVJ/Door.luau), seconds from its start: the door
 # swings shut at the speed the game's other door does.
 SVJ_CLOSE = ((0.0, 1.0), (0.033, 0.995), (0.1, 0.961), (0.2, 0.88), (0.233, 0.847), (0.3, 0.756), (0.433, 0.55), (0.566, 0.369), (0.7, 0.228), (0.8, 0.143), (0.966, 0.031), (1.033, 0.004), (1.066, 0.0))
@@ -404,7 +404,8 @@ def getin(b, car, s, start, ends):
     for track, value in ((b.pelvis, s["pelvis"]), (b.torso, s["torso"]), (b.neck, s["neck"]), (b.neck_loc, s["neck_loc"])):
         track.at(END, value)
     for limb, t in ends.items():
-        b.targets[limb].at(END, t)
+        b.targets[limb].at(ON_HAND_OVER, t).at(END, t)
+
 
 # The exit's beats: InsideOpen, then GetOut ending at the mark's idle stance (the root jumps there
 # between clips), then OutsideClose from the mark.
@@ -545,6 +546,17 @@ ARMS = ["Right Arm", "Left Arm"]
 LEGS = ["Right Leg", "Left Leg"]
 
 
+def left_arm_hand_over(start, end):
+    """The left blocky arm at its hand-over pose: no pose of it in reach of the rest clears both the
+    stowed window net and upper door bar and the door card (per-group grid); named per group at the
+    depths measured, on the hand-over frames only (coordinator's decision)."""
+    why = "DECIDED (coordinator, owner's overnight mandate): the left blocky arm at the hand-over pose against the "
+    return [
+        {"why": why + "stowed window net and the upper door bar", "from": start, "to": end, "parts": ["Left Arm"], "groups": ["cage"], "depth": 0.206},
+        {"why": why + "door card", "from": start, "to": end, "parts": ["Left Arm"], "groups": ["door"], "depth": 0.212},
+    ]
+
+
 def entry_contacts():
     """Named contacts (depth, studs at scale 1) and held limbs, for car_entry_clear.py; the check's
     allow file is written from the same list at the measured depths."""
@@ -554,10 +566,10 @@ def entry_contacts():
         {"why": "PROPOSED (rigid-thigh class): thighs over the sill and the door bars while the legs swing in", "from": HOP0 + 4, "to": DROP + 4, "parts": LEGS, "groups": ["cage", "sill"], "depth": 0.25},
         {"why": "PROPOSED: the bottom across the door bars while sitting and turning on them", "from": HOP0 + 4, "to": DROP, "parts": ["Torso"], "groups": ["cage"], "depth": 0.15},
         {"why": "DECIDED (owner, option D): torso sides into the bucket's bolsters, 5.5 cm seated", "from": OVER + 4, "to": END, "parts": ["Torso"], "groups": ["seat"], "depth": 0.261},
-        {"why": "DECIDED (seated pose): head on the headrest pad, at the house checker's depth (its 0.62-stud head box; the seated check's smaller box measured 0.89 cm)", "from": SEATED, "to": END, "parts": ["Head"], "groups": ["seat"], "depth": 0.059},
-        {"why": "DECIDED (coordinator, B): the blocky arms at their hand-over pose beside the torso, into the bucket's bolsters as the torso's sides are", "from": SEATED, "to": END, "parts": ARMS, "groups": ["seat"], "depth": 0.22},
-        {"why": "DECIDED (coordinator): the blocky legs at their least-deep pose in the bucket, under the wheel", "from": SEATED - 6, "to": END, "parts": LEGS, "groups": ["seat"], "depth": 0.17},
-    ]
+        {"why": "DECIDED (seated pose): head on the headrest pad: 0.0589 on the house checker's 0.05-stud cloud, 0.060 on a 0.04-stud one (its 0.62-stud head box; the seated check's smaller box measured 0.89 cm)", "from": SEATED, "to": END, "parts": ["Head"], "groups": ["seat"], "depth": 0.061},
+        {"why": "DECIDED (coordinator, B): the blocky arms at their hand-over pose beside the torso, into the bucket's bolsters as the torso's sides are", "from": SEATED - 8, "to": END, "parts": ARMS, "groups": ["seat"], "depth": 0.22},
+        {"why": "DECIDED (coordinator): the blocky legs at their least-deep pose in the bucket, under the wheel", "from": SEATED - 10, "to": END, "parts": LEGS, "groups": ["seat"], "depth": 0.17},
+    ] + left_arm_hand_over(ON_HAND_OVER, END)
     holds = [
         {"from": WALK0, "to": HOP0 + 2, "limb": "right_leg"},
         {"from": WALK0, "to": HOP0 + 2, "limb": "left_leg"},
@@ -588,11 +600,11 @@ def exit_contacts():
         {"why": "PROPOSED (rigid-thigh class): thighs over the door bars and the sill while the legs swing out", "from": GO_D1 - 4, "to": GO_STAND, "parts": LEGS, "groups": ["cage", "sill"], "depth": 0.25},
         {"why": "PROPOSED: the bottom across the door bars while turning on them", "from": GO_D1, "to": GO_STAND - 4, "parts": ["Torso"], "groups": ["cage"], "depth": 0.15},
         {"why": "DECIDED (owner, option D): torso sides into the bucket's bolsters, 5.5 cm seated", "from": 0, "to": GO_C - 4, "parts": ["Torso"], "groups": ["seat"], "depth": 0.261},
-        {"why": "DECIDED (seated pose): head on the headrest pad, at the house checker's depth", "from": 0, "to": GO_D2, "parts": ["Head"], "groups": ["seat"], "depth": 0.059},
+        {"why": "DECIDED (seated pose): head on the headrest pad: 0.0589 on the house checker's 0.05-stud cloud, 0.060 on a 0.04-stud one", "from": 0, "to": GO_D2, "parts": ["Head"], "groups": ["seat"], "depth": 0.061},
         {"why": "DECIDED (coordinator, B): the blocky arms at their hand-over pose beside the torso, into the bucket's bolsters as the torso's sides are", "from": 0, "to": IO_END + 4, "parts": ARMS, "groups": ["seat"], "depth": 0.22},
         {"why": "DECIDED (coordinator): the blocky legs at their least-deep pose in the bucket, under the wheel", "from": 0, "to": GO_D2, "parts": LEGS, "groups": ["seat"], "depth": 0.17},
         {"why": "right hand flat on the door card, tugging the door in", "from": GO_END + 30, "to": GO_END + 52, "parts": ["Right Arm"], "groups": ["door"], "depth": 0.12},
-    ]
+    ] + left_arm_hand_over(0, HAND_OVER + 2)
     holds = [
         {"from": HAND_OVER + 8, "to": HAND_OVER + 18, "limb": "left_arm"},
         {"from": GO_STAND, "to": OC_END, "limb": "right_leg"},

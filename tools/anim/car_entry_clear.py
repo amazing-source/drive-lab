@@ -18,6 +18,7 @@ the allowances or the scene change.
 import argparse
 import importlib
 import json
+import math
 import os
 import sys
 
@@ -160,7 +161,7 @@ def main(argv):
     }
     targets = {k: t.sample(np.array(frames, float)) for k, t in body.targets.items()}
     table, previous = {}, None
-    guess = {k: np.array([0.0, 0.0]) for k in LIMB_PART}
+    guess = {k: np.array(body.guess[k], dtype=float) for k in LIMB_PART}
     for i, f in enumerate(frames):
         held = [h["limb"] for h in holds if h["from"] <= f <= h["to"]]
         free = [k for k in LIMB_PART if k not in held]
@@ -205,6 +206,15 @@ def main(argv):
                 c += a.smooth * 1e-3 * float(np.sum((x[8:] - previous_limbs(previous, free)) ** 2))
             return c
 
+        def excess_of(x):
+            pose, misses = pose_of(x)
+            parts = r6_fk.pose_parts(pose)
+            worst = math.sqrt(misses) - 0.02
+            for part, groups in part_depths(scene, door, parts).items():
+                for g, d in groups.items():
+                    worst = max(worst, d - allowed(allow, f, part, g, 0.04))
+            return worst
+
         def previous_limbs(prev, free_now):
             out = []
             for limb in free_now:
@@ -215,7 +225,7 @@ def main(argv):
             prev_angles = {}
             base_pose, _ = pose_of(np.r_[pel0, tor0, nek0[0], nek0[2], np.zeros(2 * len(free))])
             for limb in free:
-                ang, _ = r6_fk.aim(base_pose, limb, targets[limb][i], POINT[limb], guess=(0.0, 0.0))
+                ang, _ = r6_fk.aim(base_pose, limb, targets[limb][i], POINT[limb], guess=tuple(guess[limb]))
                 prev_angles[limb] = (ang[0], ang[2])
             x0 = np.r_[pel0, tor0, nek0[0], nek0[2], [v for limb in free for v in prev_angles[limb]]]
         else:
@@ -224,11 +234,20 @@ def main(argv):
             for limb in free:
                 if limb not in prev_angles:
                     base_pose, _ = pose_of(np.r_[x0[0:8], np.zeros(2 * len(free))])
-                    ang, _ = r6_fk.aim(base_pose, limb, targets[limb][i], POINT[limb], guess=(0.0, 0.0))
+                    ang, _ = r6_fk.aim(base_pose, limb, targets[limb][i], POINT[limb], guess=tuple(guess[limb]))
                     prev_angles[limb] = (ang[0], ang[2])
             x0 = np.r_[x0, [v for limb in free for v in prev_angles[limb]]]
-        found = minimize(cost, x0, method="Powell", options={"maxfev": a.iters, "xtol": 1e-3, "ftol": 1e-8})
-        x = found.x
+        # A frame the authored beats already keep within every allowance is left as authored.
+        authored_pose, _ = pose_of(np.r_[pel0, tor0, nek0[0], nek0[2], np.zeros(2 * len(free))])
+        authored = [pel0, tor0, [nek0[0], nek0[2]]]
+        for limb in free:
+            ang, _ = r6_fk.aim(authored_pose, limb, targets[limb][i], POINT[limb], guess=tuple(prev_angles.get(limb, guess[limb])))
+            authored.append([ang[0], ang[2]])
+        x_auth = np.concatenate([np.asarray(v, dtype=float) for v in authored])
+        if excess_of(x_auth) <= 0.0:
+            x = x_auth
+        else:
+            x = minimize(cost, x0, method="Powell", options={"maxfev": a.iters, "xtol": 1e-3, "ftol": 1e-8}).x
         pose, misses = pose_of(x)
         parts = r6_fk.pose_parts(pose)
         worst = []
