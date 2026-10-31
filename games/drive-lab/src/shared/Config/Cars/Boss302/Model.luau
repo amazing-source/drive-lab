@@ -9,7 +9,7 @@ local Model: Binding.CarModel = {
 	calipers = { { "Caliper_FL" }, { "Caliper_FR" }, { "Caliper_RL" }, { "Caliper_RR" } },
 	steeringWheel = "SteeringWheel",
 	steeringWheelLift = 0,
-	seat = { forward = 0, right = 0, up = 0 },
+	seat = { forward = -0.3398, right = -0.3746, up = 0.0657 },
 	hullClearance = 0.25,
 	bodyRaise = 0,
 	cluster = { forward = 0, right = 0, up = 0, width = 0, height = 0, tilt = 0 },
@@ -33,9 +33,9 @@ local Model: Binding.CarModel = {
 	pedals = {
 		{
 			part = "Pedal_Throttle",
-			pivot = { forward = 0.6992, right = -0.2654, up = 0.1056 },
+			pivot = { forward = 0.6475, right = -0.2745, up = 0.139 },
 			axis = { forward = 0, right = 1, up = 0 },
-			travel = 0.26,
+			travel = 0.205,
 		},
 		{
 			part = "Pedal_Brake",

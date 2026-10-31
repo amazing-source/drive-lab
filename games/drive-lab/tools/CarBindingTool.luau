@@ -29,6 +29,7 @@ local KEPT = {
 	"gates_rad",
 	"knob",
 	"push_m",
+	"knob_offset_m",
 }
 
 local CarBindingTool = {}

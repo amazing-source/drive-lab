@@ -11,7 +11,9 @@ local CarBindings = require("../tools/CarBindings")
 local ManifestBinding = require("../tools/ManifestBinding")
 local Model = require("../src/shared/Config/Cars/Boss302/Model")
 local ModelPending = require("../src/shared/Config/Cars/Boss302/ModelPending")
+local ShiftHand = require("../src/shared/Rules/ShiftHand")
 local Startup = require("../src/shared/Config/Cars/Boss302/Startup")
+local Types = require("../src/shared/Config/Cars/Types")
 local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect
@@ -141,10 +143,44 @@ describe("Boss 302 binding", function()
 		end
 	)
 
+	it("moves its knob into each gate where the 3D model's own gate pose puts it (Blender)", function()
+		local shifter = assert(Model.shifter, "the lever is bound")
+		local gates = (CAR.physics.gearbox.manual :: Types.ManualGearboxConfig).gates
+		local lever = ShiftHand.leverFromBinding(shifter, gates, Model.seat)
+		local offsets =
+			assert(part("Shifter_Lever").knob_offset_m, "the fixture has the per-gate knob offsets")
+		local checked = 0
+		for name, offset in offsets do
+			local gear = if name == "R" then -1 elseif name == "N" then 0 else assert(tonumber(name))
+			local gate = gates[gear]
+			local knob = ShiftHand.lever(lever, gate.column, gate.row, 0).position
+			-- Seat frame (x right, y up, z back) against the manifest's (forward, right, up), rounded to 0.1 mm.
+			expect(knob.x - lever.knob.x).toBeNear(offset.right, 1e-4)
+			expect(knob.y - lever.knob.y).toBeNear(offset.up, 1e-4)
+			expect(lever.knob.z - knob.z).toBeNear(offset.forward, 1e-4)
+			checked += 1
+		end
+		expect(checked).toBe(8)
+	end)
+
+	it("seats the driver at the draft's hip point, from the rig's centre", function()
+		local hip = assert(
+			assert(MANIFEST.points, "the fixture has points").Driver_HPoint,
+			"the draft has the hip point"
+		)
+		local seat = ManifestBinding.toRig(hip, CENTRE)
+		expect(Model.seat.forward).toBeNear(seat.forward, 1e-4)
+		expect(Model.seat.right).toBeNear(seat.right, 1e-4)
+		expect(Model.seat.up).toBeNear(seat.up, 1e-4)
+		-- The driver's side of a left-hand-drive car.
+		expect(Model.seat.right < 0).toBe(true)
+		expect(string.find(table.concat(ModelPending, "\n"), "seat:", 1, true)).toBe(nil)
+	end)
+
 	it("lists what the draft lacks, so the car stays out of the catalog until it has it", function()
 		local listed = table.concat(ModelPending, "\n")
 		for _, lacking in
-			{ "wheels", "door", "steering wheel", "seat", "windshield", "the 3D model", "shift animation" }
+			{ "wheels", "door", "steering wheel", "windshield", "the 3D model", "shift animation" }
 		do
 			expect(string.find(listed, lacking, 1, true) ~= nil).toBe(true)
 		end
