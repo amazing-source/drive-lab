@@ -20,6 +20,11 @@ export type Lean = {
 -- An optional critically damped spring on the chase camera's yaw; `hz` is its natural frequency.
 export type YawSpring = { enabled: boolean, hz: number }
 
+-- An optional turn of the chase camera toward where a drifting car is going: `share` of the angle
+-- between its heading and its path, times the drift's engagement (the car's Drift attribute),
+-- eased with `halfLife` (s), and only above `minSpeed` (m/s), where the path is well defined.
+export type DriftBlend = { enabled: boolean, share: number, halfLife: number, minSpeed: number }
+
 -- From the rear axle (the midpoint of the rear hubs), in the car's frame: `distance` behind,
 -- `height` above, aimed at a point `lookAhead` ahead at hub height, then tilted up by `pitch`.
 export type Chase = {
@@ -29,6 +34,7 @@ export type Chase = {
 	pitch: number,
 	lean: Lean,
 	yawSpring: YawSpring,
+	driftBlend: DriftBlend,
 }
 
 -- Degrees the view widens per g of acceleration (none braking), up to `max`; it eases in with
@@ -101,6 +107,9 @@ local CarCamera: CarCamera = table.freeze({
 		-- Off: Assetto Corsa's yaw is rigid. On, it soaks up yaw chatter and trails a steady
 		-- turn by 2 * yaw rate / (2 pi hz): 1.9 degrees at 30 degrees a second and 5 Hz.
 		yawSpring = table.freeze({ enabled = false, hz = 5 }),
+		-- Off until the owner has looked at it. On, at 0.4, a 25 degree drift turns the camera
+		-- 10 degrees toward the car's path, as racing games' drift cameras do.
+		driftBlend = table.freeze({ enabled = false, share = 0.4, halfLife = 0.2, minSpeed = 5 }),
 	}),
 	-- The player sets the seat, as in a sim: the mouse wheel moves the eye forward and back,
 	-- with Shift up and down, a centimetre a notch within these limits (metres, about the
