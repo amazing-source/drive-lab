@@ -1,0 +1,40 @@
+Deliberate breaks for agent/car-startup-lean (#228), each applied alone to the committed tree
+(76b0432), run against the spec that owns the rule, then restored with git checkout.
+Runner: the repo's spec runner limited to one spec file (games/drive-lab/tests/<Name>.spec.luau).
+Every break failed; the tree was clean after the run. The runtime pieces (Rig/StartupLean,
+the BodyLean and CarCamera hooks) use CFrames and the live rig and have no spec; see the PR.
+
+== BREAK: degrees eases linearly between keys instead of smoothstep
+   file: games/drive-lab/src/shared/Rules/StartupLean.luau
+   exit: 1
+   FAIL Startup lean: how far forward > passes through each key and smoothsteps between them: games/drive-lab/tests/StartupLean.spec:59: expected 1.09375 within 1e-12, got 1.75
+   FAIL Startup lean: how far forward > starts and settles with no jump: zero speed at each key: games/drive-lab/tests/StartupLean.spec:68: expected true, got false
+   5 passed, 2 failed
+== BREAK: degrees holds the end keys' values outside their span
+   file: games/drive-lab/src/shared/Rules/StartupLean.luau
+   exit: 1
+   FAIL Startup lean: how far forward > is 0 with no lean, no start key, or outside the keys' span: games/drive-lab/tests/StartupLean.spec:42: expected 0, got 0.6481481481481484
+   6 passed, 1 failed
+== BREAK: degrees leans with no start key (engine off counts as the key)
+   file: games/drive-lab/src/shared/Rules/StartupLean.luau
+   exit: 1
+   FAIL Startup lean: how far forward > is 0 with no lean, no start key, or outside the keys' span: games/drive-lab/tests/StartupLean.spec:41: expected 0, got 7
+   6 passed, 1 failed
+== BREAK: turn tips the torso backward (sign flipped)
+   file: games/drive-lab/src/shared/Rules/StartupLean.luau
+   exit: 1
+   FAIL Startup lean: the turn about the hips > keeps the hips where they are: games/drive-lab/tests/StartupLean.spec:77: expected -0.003 within 1e-12, got -0.0005626131318970501
+   FAIL Startup lean: the turn about the hips > tips the torso's top toward the nose by the angle, in the seat's upright plane: games/drive-lab/tests/StartupLean.spec:86: expected 0.5925276909847932 within 1e-12, got 0.5949650778528961
+   5 passed, 2 failed
+== BREAK: turn rotates about the seat's origin, not the hips (no offset)
+   file: games/drive-lab/src/shared/Rules/StartupLean.luau
+   exit: 1
+   FAIL Startup lean: the turn about the hips > keeps the hips where they are: games/drive-lab/tests/StartupLean.spec:77: expected -0.003 within 1e-12, got -0.0017589450208724913
+   FAIL Startup lean: the turn about the hips > tips the torso's top toward the nose by the angle, in the seat's upright plane: games/drive-lab/tests/StartupLean.spec:86: expected 0.5925276909847932 within 1e-12, got 0.5937687459639207
+   5 passed, 2 failed
+== BREAK: turn's rotation uses the full angle instead of the half angle
+   file: games/drive-lab/src/shared/Rules/StartupLean.luau
+   exit: 1
+   FAIL Startup lean: the turn about the hips > keeps the hips where they are: games/drive-lab/tests/StartupLean.spec:77: expected -0.003 within 1e-12, got -0.0017327232019588212
+   FAIL Startup lean: the turn about the hips > tips the torso's top toward the nose by the angle, in the seat's upright plane: games/drive-lab/tests/StartupLean.spec:86: expected 0.5925276909847932 within 1e-12, got 0.580444712563639
+   5 passed, 2 failed
