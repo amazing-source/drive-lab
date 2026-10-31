@@ -168,6 +168,7 @@ function Model.new(car: CarConfig, help: InputHelp.InputHelp?): VehicleState
 			mode = car.modes[car.modeOrder[1]],
 			gearboxMode = "auto",
 			holdGear = false,
+			clutchPedal = 0,
 		},
 		motion = { forwardSpeed = 0, rightSpeed = 0, yawRate = 0, frontSteer = 0, rearSteer = 0, grip = 1 },
 	}
@@ -206,6 +207,7 @@ local function gearboxContext(
 	context.brake = state.controls.brake
 	context.mode = state.car.modes[input.drivingMode]
 	context.gearboxMode = input.gearboxMode
+	context.clutchPedal = input.clutchPedal or 0
 	local launch = state.car.launch
 	context.holdGear = state.launch.phase == "Launching" and launch ~= nil and not launch.autoUpshift
 		or Drift.engaged(state.drift)
@@ -252,27 +254,42 @@ local function updateCorners(
 	end
 end
 
--- The engine's throttle this substep: the driver's after TC, ESC and reverse's top speed, the
--- gearbox's cut or blip, the idle governor, then the limiter.
+-- The engine's throttle this substep: the driver's after TC, ESC, reverse's top speed and the
+-- governor, the gearbox's cut, blip or share, the idle governor (none once stalled), then the
+-- limiter.
 local function engineThrottle(
 	state: VehicleState,
 	input: DriverInput,
 	prediction: Prediction,
 	dt: number
 ): number
-	local electronics, engine = state.electronics, state.engine
+	local electronics, engine, car = state.electronics, state.engine, state.car
 	local engineSpeed = state.drive.speeds[1]
 	local driver = state.controls.throttle
 		* electronics.tcFactor
 		* electronics.escFactor
-		* Gearbox.reverseCut(state.car.gearbox, state.gearbox.gear, prediction.forward)
+		* Gearbox.reverseCut(car.gearbox, state.gearbox.gear, prediction.forward)
+	local governor = car.engine.governor
+	if governor then
+		driver *= math.clamp((governor.speed - math.abs(prediction.forward)) / governor.band, 0, 1)
+	end
 	local driveTorque = Engine.output(engine, engineSpeed, driver)
 	local context = gearboxContext(state, input, math.abs(prediction.forward), driveTorque)
-	local cut, blip = Gearbox.update(state.car.gearbox, state.car.engine, state.gearbox, context, dt)
-	local throttle = if cut then 0 else math.max(driver, blip)
-	throttle = math.max(throttle, Engine.idleThrottle(engine, engineSpeed))
+	local cut, blip, share = Gearbox.update(state.car.gearbox, state.car.engine, state.gearbox, context, dt)
+	local throttle = if cut then 0 else math.max(driver * share, blip)
+	if Gearbox.stalled(state.gearbox) then
+		throttle = 0
+	else
+		local idleRpm = context.mode.idleRpm
+		local idleSpeed = if idleRpm then idleRpm * Engine.RAD_PER_RPM else nil
+		throttle = math.max(throttle, Engine.idleThrottle(engine, engineSpeed, idleSpeed))
+	end
 	state.engineState.speed = engineSpeed
-	local limit = if state.gearbox.holding then engine.launchSpeed else engine.limiterSpeed
+	local limit = if state.gearbox.holding
+		then engine.launchSpeed
+		elseif Gearbox.pullingAway(car.gearbox, state.gearbox, context) then engine.launchSpeed
+			* (1 + car.gearbox.clutchSlipBand)
+		else engine.limiterSpeed
 	if Engine.updateLimiter(engine, state.engineState, limit) then
 		throttle = 0
 	end
@@ -483,6 +500,8 @@ local function buildResult(state: VehicleState, chassis: ChassisMotion, dt: numb
 	end
 	local drive, electronics, gearbox = state.drive, state.electronics, state.gearbox
 	local output = drive.outputTorque
+	local hbox = gearbox.hbox
+	local plan = hbox.plan
 	return {
 		wheels = results,
 		aeroDrag = state.aeroForces.drag,
@@ -512,6 +531,14 @@ local function buildResult(state: VehicleState, chassis: ChassisMotion, dt: numb
 			driftTarget = state.drift.target,
 			steer = if Drift.engaged(state.drift) then state.wheelSteer else state.controls.steer,
 			rearSteerAngle = state.steering.rearAngle,
+			clutchPedal = hbox.pedal,
+			handAt = hbox.handAt,
+			footAt = hbox.footAt,
+			shiftFrom = if plan then plan.from else gearbox.gear,
+			shiftTo = if plan then plan.to else gearbox.gear,
+			shiftElapsed = if plan then hbox.time else 0,
+			stalled = hbox.stalled,
+			shiftRefused = hbox.refused,
 		},
 	}
 end
@@ -609,6 +636,17 @@ function Model.step(
 		substep(state, input, wheels, chassis, prediction, mode, h)
 	end
 	return buildResult(state, chassis, dt)
+end
+
+-- Starts a stalled engine (Gearbox.restart's interlock), cranking it to idle. Returns whether it
+-- started.
+function Model.restart(state: VehicleState, clutchPedal: number): boolean
+	if not Gearbox.restart(state.car.gearbox, state.gearbox, clutchPedal) then
+		return false
+	end
+	local speeds = state.drive.speeds
+	speeds[1] = math.max(speeds[1], state.engine.idleSpeed)
+	return true
 end
 
 return table.freeze(Model)

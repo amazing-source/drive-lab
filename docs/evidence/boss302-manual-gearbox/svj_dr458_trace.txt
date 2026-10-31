@@ -1,0 +1,71 @@
+SVJ and DR458 driven frame by frame on tools/DriveSim, on the base (61f6d7a) and on this branch, at 30 and 60 FPS.
+Each frame prints the time, every telemetry field the base has (rpm, gear, speed, throttle, brake, ABS/TC/ESC,
+shifting, front share, clutch, limiter, ALA, launch, steer, rear steer, drift), each wheel's forward and right
+force, spin and load, and the body's x, y and heading, all at 17 significant digits.
+
+Scenario per car and frame rate: launch control held 1.5 s then flat out to 9 s (auto shifts to 5th), 30
+frames at 60 % throttle with paddle downshifts in manual, a coast, a full brake, a 0.4 steer at half throttle,
+a 2 s drift with the handbrake, a full brake to a stop and 3 s more on the brake (the reverse hold).
+
+Result: 4,862 frames each; the two outputs are byte-identical (cmp).
+  base:        sha256 7f2eee0ae147a56dc8f9a47d65239bc0f147c884711a02b6c6b1de7be1896bb0
+  this branch: sha256 7f2eee0ae147a56dc8f9a47d65239bc0f147c884711a02b6c6b1de7be1896bb0
+
+The trace script:
+
+-- Prints every frame of SVJ and DR458 scenarios at full precision, for a byte comparison between
+-- two trees. Run from the tree's root: lune run <this file> <root>
+
+
+local DriveSim = require("./tools/DriveSim")
+local SVJ = require("./src/shared/Config/Cars/SVJ/Physics")
+local DR458 = require("./src/shared/Config/Cars/DR458/Physics")
+
+local FIELDS = {
+	"rpm", "gear", "speedKmh", "throttle", "brake", "absActive", "tcActive", "escActive", "shifting",
+	"frontTorqueShare", "clutch", "limiter", "alaOpen", "launch", "steer", "rearSteerAngle", "drift", "driftTarget",
+}
+
+local out = {}
+local function frame(label, sim, input, dt)
+	local r = DriveSim.frame(sim, input, dt)
+	local parts = { label, string.format("%.17g", sim.time) }
+	for _, f in FIELDS do
+		table.insert(parts, tostring(r.telemetry[f]))
+	end
+	for _, w in r.wheels do
+		table.insert(parts, string.format("%.17g/%.17g/%.17g/%.17g", w.forwardForce, w.rightForce, w.spin, w.load))
+	end
+	table.insert(parts, string.format("%.17g/%.17g/%.17g", sim.body.x, sim.body.y, sim.body.heading))
+	table.insert(out, table.concat(parts, " "))
+end
+
+for _, case in { { "SVJ", SVJ, "Corsa" }, { "DR458", DR458, DR458.modeOrder[1] } } do
+	local name, car, mode = case[1], case[2], case[3]
+	for _, fps in { 30, 60 } do
+		local dt = 1 / fps
+		-- Launch control, flat out with auto shifts, a manual paddle sequence, braking, a turn and a drift.
+		local sim = DriveSim.new(car)
+		local hold = DriveSim.input({ throttle = 1, brake = 1, drivingMode = mode, esc = false })
+		while sim.time < 1.5 do frame(name .. fps .. "hold", sim, hold, dt) end
+		local go = DriveSim.input({ throttle = 1, drivingMode = mode, esc = false })
+		while sim.time < 9 do frame(name .. fps .. "go", sim, go, dt) end
+		local coast = DriveSim.input({ drivingMode = mode, gearboxMode = "manual" })
+		for i = 1, 30 do
+			local paddle = DriveSim.input({ throttle = 0.6, drivingMode = mode, gearboxMode = "manual", shiftDown = i % 10 == 0 })
+			frame(name .. fps .. "paddle", sim, paddle, dt)
+		end
+		while sim.time < 11 do frame(name .. fps .. "coast", sim, coast, dt) end
+		local stop = DriveSim.input({ brake = 1, drivingMode = mode })
+		while sim.time < 14 do frame(name .. fps .. "stop", sim, stop, dt) end
+		local turn = DriveSim.input({ throttle = 0.5, steer = 0.4, drivingMode = mode })
+		while sim.time < 18 do frame(name .. fps .. "turn", sim, turn, dt) end
+		local drift = DriveSim.input({ throttle = 1, steer = 0.6, drivingMode = mode, drift = true, handbrake = 1 })
+		while sim.time < 20 do frame(name .. fps .. "drift", sim, drift, dt) end
+		local back = DriveSim.input({ brake = 1, drivingMode = mode })
+		while sim.time < 24 do frame(name .. fps .. "back", sim, back, dt) end
+		local rev = DriveSim.input({ brake = 1, drivingMode = mode })
+		while sim.time < 27 do frame(name .. fps .. "reverse", sim, rev, dt) end
+	end
+end
+print(table.concat(out, "\n"))

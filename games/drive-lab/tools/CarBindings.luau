@@ -5,6 +5,7 @@
 	looked for, and the files written (Config/Cars/<Car>/Model.luau and ModelPending.luau, and the
 	redacted manifest the specs read, tests/fixtures/<car>_manifest.json).
 ]]
+local Boss302 = require("../src/shared/Config/Cars/Boss302/Physics")
 local Boss302Binding = require("./Boss302Binding")
 local DR458 = require("../src/shared/Config/Cars/DR458/Physics")
 local DR458Binding = require("./DR458Binding")
@@ -28,10 +29,6 @@ export type Car = {
 
 local FOLDER = "games/drive-lab/src/shared/Config/Cars"
 
--- The Boss's physics is the handling agent's (Config/Cars/Boss302/Physics, #209), not on main yet:
--- its three centre-of-mass values, as on its branch, until it lands.
-local BOSS302_CENTRE = { wheelbase = 2.720, frontWeightShare = 0.55, cgHeight = 0.51 }
-
 local Cars: { [string]: Car } = {
 	DR458 = {
 		tool = "games/drive-lab/tools/dr458_binding.luau",
@@ -49,11 +46,14 @@ local Cars: { [string]: Car } = {
 	Boss302 = {
 		tool = "games/drive-lab/tools/car_binding.luau Boss302",
 		settings = Boss302Binding,
-		-- Only the centre of mass is read (ManifestBinding.centreOfMass).
-		physics = BOSS302_CENTRE :: any,
+		physics = Boss302,
+		-- What the Boss's entry still needs beyond the parts the manifest lacks (#209).
 		notes = {
-			"centre of mass: borrowed from the handling agent's Boss physics (#209) until it lands",
+			"the 3D model: the promoted manifest and the import (this binding is from the cockpit parts draft)",
+			"the shifter's knob: the hand's grip point on the lever",
 			"gauges: the six Needle_* dials are not bound yet (the cluster's needles are a later field)",
+			"the driver's shift animation (Shift.luau: the reach, release and foot timings)",
+			"the remaining car entry: audio, camera, HUD, lights and the start-up",
 		},
 		model = `{FOLDER}/Boss302/Model.luau`,
 		pending = `{FOLDER}/Boss302/ModelPending.luau`,

@@ -112,7 +112,9 @@ describe("Boss 302 binding", function()
 
 	it("lists what the draft lacks, so the car stays out of the catalog until it has it", function()
 		local listed = table.concat(ModelPending, "\n")
-		for _, lacking in { "wheels", "door", "steering wheel", "seat", "windshield", "centre of mass" } do
+		for _, lacking in
+			{ "wheels", "door", "steering wheel", "seat", "windshield", "the 3D model", "shift animation" }
+		do
 			expect(string.find(listed, lacking, 1, true) ~= nil).toBe(true)
 		end
 	end)
