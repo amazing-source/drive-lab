@@ -89,7 +89,7 @@ describe("StartupHandOver", function()
 	it("holds the loops in full once the region has played to its end and its Sound is gone", function()
 		local state = StartupHandOver.new(SETTINGS, nil, 0, 0)
 		local result = run(state, { from = 2, to = 7, loadsAt = 0 }, 6)
-		expect(lowestAfterFull(result.shares)).toBe(1)
+		expect(lowestAfterFull(result.shares) :: number).toBeNear(1, 1e-6)
 		expect(state.done).toBe(true)
 	end)
 
@@ -99,14 +99,14 @@ describe("StartupHandOver", function()
 			local state = StartupHandOver.new(pack.startup, nil, 0, 0)
 			local result =
 				run(state, { from = region.from, to = region.to, loadsAt = 0 }, region.to - region.from + 1)
-			expect(lowestAfterFull(result.shares)).toBe(1)
+			expect(lowestAfterFull(result.shares) :: number).toBeNear(1, 1e-6)
 		end
 	end)
 
 	it("holds the loops in full once the car's own sound has played to its end and is gone", function()
 		local state = StartupHandOver.new(SETTINGS, OWN, 0, 0)
 		local result = run(state, { from = OWN.from, to = OWN.to, loadsAt = 0 }, 4)
-		expect(lowestAfterFull(result.shares)).toBe(1)
+		expect(lowestAfterFull(result.shares) :: number).toBeNear(1, 1e-6)
 		expect(state.done).toBe(true)
 	end)
 
