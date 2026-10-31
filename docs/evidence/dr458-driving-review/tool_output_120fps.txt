@@ -1,0 +1,39 @@
+DR458 driving review, DriveSim at 120 FPS
+
+Manettino | 0-50 km/h s | 0-100 km/h s | 0-200 km/h s | launch rear slip mean / peak | TC acting share
+1 | 1.42 | 2.98 | 8.81 | 0.064 / 0.642 | 49 %
+2 | 1.39 | 2.96 | 8.80 | 0.054 / 0.604 | 56 %
+OFF | 1.53 | 3.03 | 8.85 | 1.347 / 4.848 | 0 %
+
+Gear | at 9,000 rpm km/h | at 9,200 rpm (limiter) km/h | manual top km/h | auto shift rpm | at km/h
+1 | 73.9 | 75.6 | 75.0 | 9088 | 71.7
+2 | 104.5 | 106.8 | 105.8 | 9101 | 102.8
+3 | 139.7 | 142.8 | 141.3 | 9096 | 138.4
+4 | 176.5 | 180.5 | 178.4 | 9100 | 175.8
+5 | 221.1 | 226.0 | 223.4 | 9099 | 220.9
+6 | 271.1 | 277.1 | 274.7 | 9100 | 271.7
+7 | 330.1 | 337.4 | - | - | -
+Top speed: 301.6 km/h in 7 at 8289 rpm (from 250 km/h in 7th)
+
+Braking, manettino 1 | ABS on: m, peak g | ABS off: m, peak g
+100-0 km/h (from 3) | 24.6, 1.66 | 26.1, 1.67
+200-0 km/h (from 5) | 95.9, 1.93 | 102.0, 1.75
+Check: DriveSim.brake 100-0 km/h with ABS, 24.6 m
+
+Lateral, assists off | g | body slip deg | downforce kg
+40 m skidpad, speed ramp (DriveSim.skidpad) | 1.481 | - | -
+100 km/h, steering ramp | 1.512 | -1.4 | 47
+200 km/h, steering ramp | 1.673 | -2.5 | 185
+250 km/h, steering ramp | 1.760 | -2.6 | 286
+
+Traction by position | 2nd from 50 km/h, 1.5 s full: rear slip mean / peak, TC share | power step
+1 | 0.036 / 0.054, 0 % | 0.86 g before, body slip peak 7.3 deg, rear slip peak 0.10
+2 | 0.036 / 0.054, 0 % | 0.86 g before, body slip peak 2.4 deg, rear slip peak 0.07
+OFF | 0.036 / 0.054, 0 % | 0.86 g before, body slip peak 89.4 deg, rear slip peak 13.06
+
+Slip ratio | 0.04 | 0.08 | 0.16 | 0.3 | 0.6 | 1 | 2
+Front Fx / peak | 0.85 | 1.00 | 0.93 | 0.86 | 0.80 | 0.78 | 0.77
+Rear Fx / peak | 0.85 | 1.00 | 0.93 | 0.86 | 0.80 | 0.78 | 0.77
+Slip angle deg | 2 | 5.5 | 8 | 12 | 20 | 30 | 45 | 60
+Front Fy / peak | 0.72 | 1.00 | 0.98 | 0.93 | 0.88 | 0.85 | 0.82 | 0.81
+Rear Fy / peak | 0.72 | 1.00 | 0.98 | 0.93 | 0.88 | 0.85 | 0.82 | 0.81

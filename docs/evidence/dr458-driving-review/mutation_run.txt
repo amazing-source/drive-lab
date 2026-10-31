@@ -1,0 +1,21 @@
+Break 1: driveline.rearReduction 5.14 -> 4.5 (expect gear speeds x 5.14/4.5 = +14.2 %)
+Gear | at 9,000 rpm km/h | at 9,200 rpm (limiter) km/h | manual top km/h | auto shift rpm | at km/h
+1 | 84.5 | 86.3 | 85.6 | 9075 | 82.2
+2 | 119.3 | 122.0 | 120.7 | 9094 | 117.7
+3 | 159.6 | 163.1 | 161.3 | 9090 | 158.4
+4 | 201.6 | 206.1 | 203.7 | 9098 | 201.1
+5 | 252.5 | 258.2 | 255.7 | 9098 | 252.8
+6 | 309.7 | 316.6 | 302.3 | - | -
+7 | 377.0 | 385.4 | - | - | -
+Top speed: 295.1 km/h in 7 at 7097 rpm (from 250 km/h in 7th)
+Result: 1st at 9,000 rpm 73.9 -> 84.5 km/h (+14.3 %), as predicted. Top speed falls, 301.6 -> 295.1 km/h: longer gearing leaves 7th further under the power peak.
+
+Break 2: front and rear peakMuY 1.73 -> 1.50 (expect lateral g down, about 13 % at low speed)
+40 m skidpad, speed ramp (DriveSim.skidpad) | 1.314 | - | -
+100 km/h, steering ramp | 1.343 | -1.6 | 47
+200 km/h, steering ramp | 1.490 | -2.6 | 185
+250 km/h, steering ramp | 1.573 | -2.8 | 286
+Result: skidpad 1.484 -> 1.314 g (-11.5 %), 100 km/h 1.515 -> 1.343 g (-11.4 %). Smaller than the predicted 13 %: the friction cut is 13.3 %, and load sensitivity and the balance absorb part of it.
+
+Restored: git diff on Physics.luau is empty, and the 60 FPS output matches tool_output_60fps.txt:
+identical
