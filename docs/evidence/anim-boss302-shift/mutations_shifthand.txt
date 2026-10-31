@@ -1,0 +1,21 @@
+== B8 the knob's push ignored
+FAIL Shift hand: the lever > stands the knob a lever's length above the pivot in neutral and leans it into the gates: games/drive-lab/tests/ShiftHand.spec:78: expected 0.238 within 1e-12, got 0.24999999999999997
+94 spec files, 986 passed, 1 failed
+== B9 columns snap instead of turning between
+FAIL Shift hand: the lever > turns between its columns' angles and holds past the outer ones: games/drive-lab/tests/ShiftHand.spec:83: expected -4.5 within 1e-12, got 0
+94 spec files, 986 passed, 1 failed
+== B10 the grip not turned with the lever
+FAIL Shift hand: the lever > carries the grip with the lever: the wrist keeps its place in the knob's frame: games/drive-lab/tests/ShiftHand.spec:108: expected 0.07 within 1e-09, got 0.05535434366210917
+94 spec files, 986 passed, 1 failed
+== B11 the way not carried onto the live grip
+FAIL Shift hand: between the wheel and the knob > starts on the live grip and ends on the live knob: games/drive-lab/tests/ShiftHand.spec:126: expected 0 within 1e-09, got 0.030000000000000027
+94 spec files, 986 passed, 1 failed
+== B12 the end carried onto the knob in one jump
+FAIL Shift hand: between the wheel and the knob > moves without a jump on the way: games/drive-lab/tests/ShiftHand.spec:138: expected true, got false
+94 spec files, 986 passed, 1 failed
+== B13 the back row leaning forward
+FAIL Shift hand: the lever > stands the knob a lever's length above the pivot in neutral and leans it into the gates: games/drive-lab/tests/ShiftHand.spec:72: expected true, got false
+94 spec files, 986 passed, 1 failed
+== B14 the turns in the other order than the manifest's
+FAIL Shift hand: the lever > stands the knob a lever's length above the pivot in neutral and leans it into the gates: games/drive-lab/tests/ShiftHand.spec:68: expected 0.31089138373994224 within 1e-12, got 0.31181841410131994
+94 spec files, 986 passed, 1 failed

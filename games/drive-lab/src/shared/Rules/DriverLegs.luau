@@ -92,6 +92,20 @@ function DriverLegs.turned(pedal: Config.Pedal, point: Vector, angle: number): V
 	})
 end
 
+-- The heel under a sole whose ball rides a hung pedal: slid from where it rested along the floor
+-- (toward the nose by `slide`, rising by heelSlope per metre) until heel to ball is the sole's
+-- length at rest again. `slide` is the root of a quadratic that is 0 at rest.
+local function heelOnFloor(pedal: Config.Pedal, ball: Vector): Vector
+	local heel, slope = pedal.heel, pedal.heelSlope or 0
+	local rest = sub(pedal.ball, heel)
+	local across, up, along = ball.x - heel.x, ball.y - heel.y, ball.z - heel.z
+	local half = along - slope * up
+	local surplus = across * across + up * up + along * along - dot(rest, rest)
+	local square = 1 + slope * slope
+	local slide = (-half - math.sqrt(math.max(half * half - square * surplus, 0))) / square
+	return { x = heel.x, y = heel.y + slope * slide, z = heel.z - slide }
+end
+
 -- Where the right sole meets its pedal: lying on the throttle's plate and turning with it, or the
 -- heel on the floor and the ball on the brake's pad; in between the heel slides across the floor
 -- while the ball lifts over the pads.
@@ -104,13 +118,13 @@ function DriverLegs.rightSole(
 	local throttle, brake = footwell.throttle, footwell.brake
 	local share = ease(over)
 	local lift = scale(LIFT_DIRECTION, Config.SWITCH_LIFT * 4 * over * (1 - over))
-	local heel = lerp(DriverLegs.turned(throttle, throttle.heel, throttleAngle), brake.heel, share)
-	local ball = lerp(
-		DriverLegs.turned(throttle, throttle.ball, throttleAngle),
-		DriverLegs.turned(brake, brake.ball, brakeAngle),
-		share
-	)
-	return heel, add(ball, lift)
+	local throttleBall = DriverLegs.turned(throttle, throttle.ball, throttleAngle)
+	local brakeBall = DriverLegs.turned(brake, brake.ball, brakeAngle)
+	local throttleHeel = if throttle.hangs
+		then heelOnFloor(throttle, throttleBall)
+		else DriverLegs.turned(throttle, throttle.heel, throttleAngle)
+	local brakeHeel = if brake.hangs then heelOnFloor(brake, brakeBall) else brake.heel
+	return lerp(throttleHeel, brakeHeel, share), add(lerp(throttleBall, brakeBall, share), lift)
 end
 
 -- The shoe's frame from where its sole meets the pedal, and the ankle joint above that.
@@ -156,8 +170,41 @@ function DriverLegs.right(
 	return leg(hip, heel, ball, footwell.kneeToward.right)
 end
 
-function DriverLegs.left(footwell: Config.Footwell, hip: Vector): Leg
-	return leg(hip, footwell.footrest.heel, footwell.footrest.ball, footwell.kneeToward.left)
+-- The clutch's angle (radians about its hinge): it goes down only under the foot. `onClutch` is how
+-- far the left foot has come from the footrest onto the clutch, 0 to 1; `clutch` the pedal's
+-- press, 0 up to 1 down. 0 in a car without a clutch.
+function DriverLegs.clutchAngle(footwell: Config.Footwell, onClutch: number, clutch: number): number
+	local pedal = footwell.clutch
+	if pedal == nil then
+		return 0
+	end
+	return pedal.travel * math.clamp(clutch, 0, 1) * ease(math.clamp(onClutch, 0, 1))
+end
+
+-- Where the left sole is: on the footrest, or the heel on the floor and the ball on the clutch's
+-- pad turning with it; in between the heel slides across the floor while the ball lifts over the
+-- pads, as the right foot crosses between its pedals.
+function DriverLegs.leftSole(
+	footwell: Config.Footwell,
+	onClutch: number,
+	clutchAngle: number
+): (Vector, Vector)
+	local rest, pedal = footwell.footrest, footwell.clutch
+	if pedal == nil then
+		return rest.heel, rest.ball
+	end
+	local over = math.clamp(onClutch, 0, 1)
+	local share = ease(over)
+	local lift = scale(LIFT_DIRECTION, Config.SWITCH_LIFT * 4 * over * (1 - over))
+	local ball = DriverLegs.turned(pedal, pedal.ball, clutchAngle)
+	local heel = if pedal.hangs then heelOnFloor(pedal, ball) else pedal.heel
+	return lerp(rest.heel, heel, share), add(lerp(rest.ball, ball, share), lift)
+end
+
+-- `onClutch` and `clutchAngle` default to the foot on its footrest.
+function DriverLegs.left(footwell: Config.Footwell, hip: Vector, onClutch: number?, clutchAngle: number?): Leg
+	local heel, ball = DriverLegs.leftSole(footwell, onClutch or 0, clutchAngle or 0)
+	return leg(hip, heel, ball, footwell.kneeToward.left)
 end
 
 -- The ankle a sole asks for, before the leg's reach is applied.
