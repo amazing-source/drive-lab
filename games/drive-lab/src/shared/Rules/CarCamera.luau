@@ -25,6 +25,16 @@ local function finite(value: number): number
 	return if value == value and math.abs(value) < math.huge then value else 0
 end
 
+-- What a notch of the mouse wheel moves in the cockpit view: the eye's height with its modifier
+-- held, its distance forward otherwise, and nothing while the clutch key is in use, since the
+-- clutch mode's key (Config/Controls CLUTCH) is the height's modifier too.
+function Rules.eyeScroll(heightModifier: boolean, clutchInUse: boolean): ("Height" | "Forward")?
+	if clutchInUse then
+		return nil
+	end
+	return if heightModifier then "Height" else "Forward"
+end
+
 -- Share of the remaining gap closed this frame; the gap halves every `halfLife` seconds.
 function Rules.blend(dt: number, halfLife: number): number
 	return 1 - 0.5 ^ (dt / halfLife)

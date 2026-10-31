@@ -21,6 +21,7 @@ local ControlPresses = require(script.Parent.Parent.Rig.ControlPresses)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local DriveModes = require(ReplicatedStorage.Shared.Rules.DriveModes)
 local DriverAssists = require(ReplicatedStorage.Shared.Rules.DriverAssists)
+local DrivingConfig = require(ReplicatedStorage.Shared.Config.Driving)
 local Gearbox = require(ReplicatedStorage.Shared.Vehicle.Gearbox)
 local GearboxModes = require(ReplicatedStorage.Shared.Rules.GearboxModes)
 local InputHelp = require(ReplicatedStorage.Shared.Config.InputHelp)
@@ -52,6 +53,10 @@ local escSwitch = DriverAssists.newSwitch()
 local pitLimiter = PitLimiter.newState()
 local tyreReadings: { TyreSmoke.Wheel } = {}
 local stall = Stall.newTracker()
+local STALL_TIMING: Stall.Timing = table.freeze({
+	resendAfter = DrivingConfig.STALL_RESEND_SECONDS,
+	resumeAfter = DrivingConfig.STALL_RESUME_SECONDS,
+})
 -- Shifts refused with the player's clutch up, counted for the car's grind (Rules/GearboxModes).
 local grinds = 0
 -- The gear of the frame before, on a car with an H-pattern manual, for the instant a shift engages.
@@ -257,11 +262,13 @@ local function start(seat: Seat)
 		local result = VehicleRunner.step(current, gated(entry, model, current, input), dt)
 		VehicleRunner.animate(current, dt)
 		publish(model, result, current, mode)
-		local action = Stall.step(stall, result.telemetry.stalled, CarState.read(model).engine == "On")
+		local engineOn = CarState.read(model).engine == "On"
+		local action = Stall.step(stall, result.telemetry.stalled, engineOn, os.clock(), STALL_TIMING)
 		if action == "Report" then
 			Net.send(Remotes.CAR_ACTION, { car = model, action = "Stall" })
 		elseif action == "Restart" then
-			-- The key start already asked for the clutch down (Rules/CarEntry.startRefusal).
+			-- The key start already asked for the clutch down (Rules/CarEntry.startRefusal); a resume
+			-- follows the engine the server shows running.
 			VehicleModel.restart(current.state, 1)
 		end
 	end)
