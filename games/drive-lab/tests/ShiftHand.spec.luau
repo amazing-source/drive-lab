@@ -159,14 +159,17 @@ describe("Shift hand: the lever from the car's model binding", function()
 		expect(at(2).z > neutral.z and at(3).z < neutral.z).toBe(true)
 	end)
 
-	it("refuses gates whose gears of one column disagree on its angle", function()
-		local skewed = table.clone(shifter.gates)
-		skewed["4"] = { side = 0.05, fore = skewed["4"].fore }
-		local bent = table.clone(shifter)
-		bent.gates = skewed
-		expect(function()
-			ShiftHand.leverFromBinding(bent, gates, seat)
-		end).toThrow()
+	it("refuses gates whose gears of one column, or of one row, disagree on its angle", function()
+		for _, change in { { "4", 0.05, nil }, { "3", nil, 0.3 }, { "6", nil, -0.1 } } do
+			local skewed = table.clone(shifter.gates)
+			local angles = skewed[change[1]]
+			skewed[change[1]] = { side = change[2] or angles.side, fore = change[3] or angles.fore }
+			local bent = table.clone(shifter)
+			bent.gates = skewed
+			expect(function()
+				ShiftHand.leverFromBinding(bent, gates, seat)
+			end).toThrow()
+		end
 	end)
 
 	it("moves a part on the lever rigidly about the pivot, slid down the lever by the push", function()
