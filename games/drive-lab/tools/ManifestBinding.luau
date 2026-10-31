@@ -57,6 +57,9 @@ export type Settings = {
 	hullClearance: number,
 	-- The driver's hip point, by its name among the manifest's points.
 	hipPoint: string,
+	-- The windscreen's corners among the manifest's points, in the binding's order: top left, top
+	-- right, bottom right, bottom left, the driver's left first.
+	windshield: { string },
 	-- Each start-up control's rest and other end, as angles from its modelled pose.
 	controlStates: { [string]: { rest: number, other: number } },
 }
@@ -66,6 +69,8 @@ local ManifestBinding = {}
 ManifestBinding.BODY = "Chassis"
 
 local MAX_DEPTH = 8
+-- An exterior lamp: Light_<corner>_<role>, lit by the car's lamp set (Config/Cars/<Car>/Lights).
+local CORNERS = { FrontLeft = true, FrontRight = true, RearLeft = true, RearRight = true }
 
 function ManifestBinding.index(manifest: Manifest): { [string]: Part }
 	local byName: { [string]: Part } = {}
@@ -147,6 +152,33 @@ function ManifestBinding.mover(byName: { [string]: Part }, settings: Settings, p
 		parent = parentGroup(byName, settings, carrier)
 	end
 	return nil
+end
+
+-- Whether the manifest carries any exterior lamp: an emissive part named Light_<corner>_<role>.
+function ManifestBinding.hasLamps(manifest: Manifest): boolean
+	for _, part in manifest.parts do
+		local corner, role = string.match(part.name, "^Light_(%a+)_(%a+)$")
+		if part.motion == "emissive" and corner and role and CORNERS[corner] then
+			return true
+		end
+	end
+	return false
+end
+
+-- The windscreen's corners from the centre of mass, or nil if the manifest lacks any of them.
+local function windscreen(points: { [string]: Point }, settings: Settings, centre: Point): { Point }?
+	if #settings.windshield == 0 then
+		return nil
+	end
+	local corners: { Point } = {}
+	for _, name in settings.windshield do
+		local point = points[name]
+		if point == nil then
+			return nil
+		end
+		table.insert(corners, ManifestBinding.toRig(point, centre))
+	end
+	return corners
 end
 
 -- The centre of mass in the manifest's frame, where the rig puts it (Car/CarRig rigFrame).
@@ -316,8 +348,13 @@ function ManifestBinding.binding(
 		need(points[settings.hipPoint], `the manifest has no point {settings.hipPoint}`),
 		centre
 	)
-	table.insert(pending, "windshield: no windscreen corners in the manifest")
-	table.insert(pending, "lamps: no exterior lamps in the manifest")
+	local windshield = windscreen(points, settings, centre)
+	if windshield == nil then
+		table.insert(pending, "windshield: no windscreen corners in the manifest")
+	end
+	if not ManifestBinding.hasLamps(manifest) then
+		table.insert(pending, "lamps: no exterior lamps in the manifest")
+	end
 	table.sort(pending)
 
 	local model: Binding.CarModel = {
@@ -337,7 +374,7 @@ function ManifestBinding.binding(
 			tilt = round(math.rad(screen.tilt_back_deg)),
 		},
 		glazing = settings.glazing,
-		windshield = {},
+		windshield = windshield or {},
 		door = {
 			parts = doorParts,
 			pivot = doorHinge.pivot,

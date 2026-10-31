@@ -23,8 +23,9 @@ local Settings: ManifestBinding.Settings = {
 	assemblies = { Door_L = "Door_L_Skin", Door_R = ManifestBinding.BODY },
 	door = { group = "Door_L", hinge = "Door_L_Skin" },
 	-- The start-up's controls (Config/Cars/DR458/Startup): the master key, the ignition's guard and
-	-- its switch. ENGINE START is pressed by the hand, not turned.
-	controls = { "TunnelKey_Master", "PanelGuard_Ignition", "PanelSwitch_Ignition" },
+	-- its switch. ENGINE START is pressed by the hand, not turned. The RAIN LIGHT toggle is the
+	-- panel switch the driver flicks with the rain light (Config/Cars/DR458/Switches).
+	controls = { "TunnelKey_Master", "PanelGuard_Ignition", "PanelSwitch_Ignition", "PanelSwitch_RainLight" },
 	pedals = { "Pedal_Throttle", "Pedal_Brake" },
 	-- The knob's positions in the order the manifest gives them, from its modelled pointer.
 	modeKnob = { part = "WheelRotary_Manettino", modes = { "OFF", "1", "2" } },
@@ -48,6 +49,14 @@ local Settings: ManifestBinding.Settings = {
 	-- EST: the collision shell above kerb height; the race car rides 65 to 118 mm off the ground.
 	hullClearance = 0.25,
 	hipPoint = "Driver_HPoint",
+	-- The 3D lead's corners of the clear pane (windscreen_points.py, the SVJ's method). The pane
+	-- wraps, so the quad stops 0.14 to 0.18 m short of the glass's side edges.
+	windshield = {
+		"Windshield_TopLeft",
+		"Windshield_TopRight",
+		"Windshield_BottomRight",
+		"Windshield_BottomLeft",
+	},
 	-- From the cockpit modeller (cockpit_points.json; photos 013 and 015, every control off): the
 	-- key and the guard are modelled off and closed; the ignition toggle is modelled straight out,
 	-- off when tipped down (+0.35) and on when up (-0.35).
@@ -55,6 +64,8 @@ local Settings: ManifestBinding.Settings = {
 		TunnelKey_Master = { rest = 0, other = math.pi / 2 },
 		PanelGuard_Ignition = { rest = 0, other = 1.75 },
 		PanelSwitch_Ignition = { rest = 0.35, other = -0.35 },
+		-- EST: modelled like the ignition toggle beside it, off tipped down and on up.
+		PanelSwitch_RainLight = { rest = 0.35, other = -0.35 },
 	},
 }
 

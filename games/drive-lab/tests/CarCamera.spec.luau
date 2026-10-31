@@ -204,3 +204,36 @@ describe("CarCamera", function()
 		expect(Rules.fieldOfView("Cockpit", 0 / 0)).toBe(fov.Cockpit.base)
 	end)
 end)
+
+describe("Chase camera drift blend", function()
+	local blend = CarCamera.CHASE.driftBlend
+
+	it("turns not at all while no drift is engaged, or below its minimum speed", function()
+		expect(Rules.driftYawTarget(0, 0, math.rad(25), 20, blend)).toBe(0)
+		expect(Rules.driftYawTarget(1, 0, math.rad(25), blend.minSpeed - 0.1, blend)).toBe(0)
+	end)
+
+	it("turns its share of the angle from the heading to the path, times the engagement", function()
+		expect(Rules.driftYawTarget(1, 0, math.rad(25), 20, blend)).toBeNear(
+			blend.share * math.rad(25),
+			1e-12
+		)
+		expect(Rules.driftYawTarget(0.5, 0, -math.rad(25), 20, blend)).toBeNear(
+			-0.5 * blend.share * math.rad(25),
+			1e-12
+		)
+	end)
+
+	it("turns the short way round across 180 degrees", function()
+		local turn = Rules.driftYawTarget(1, math.rad(179), math.rad(-179), 20, blend)
+		expect(turn).toBeNear(blend.share * math.rad(2), 1e-9)
+	end)
+
+	it("eases toward the turn, half the gap every half-life", function()
+		expect(Rules.stepDriftYaw(0, 0.2, blend.halfLife, blend.halfLife)).toBeNear(0.1, 1e-12)
+	end)
+
+	it("stays off until the owner has looked at it", function()
+		expect(blend.enabled).toBe(false)
+	end)
+end)

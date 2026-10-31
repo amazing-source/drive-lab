@@ -19,9 +19,9 @@ local Workspace = game:GetService("Workspace")
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
+local Contract = require(ReplicatedStorage.Shared.Config.Cars.Contract)
 local Config = require(ReplicatedStorage.Shared.Config.CarEntry)
 local DoorMark = require(ReplicatedStorage.Shared.Car.DoorMark)
-local Driving = require(ReplicatedStorage.Shared.Config.Driving)
 local Log = require(ReplicatedStorage.Kit.Log)
 local Net = require(ReplicatedStorage.Kit.Net)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -224,7 +224,7 @@ local function seat(car: Car, player: Player, startedAt: number)
 		character,
 		root,
 		DoorMark.frame(car.entry.door, car.seat),
-		Driving.DRIVER_SCALE
+		Contract.driverScale(car.entry)
 	)
 	car.seat:Sit(humanoid)
 end
@@ -233,7 +233,8 @@ local function enter(car: Car, player: Player, request: Request)
 	if not claim(car, player, "Enter") then
 		return
 	end
-	local arrived = awaitArrival(car, player, "Enter")
+	-- A direct door seats the body from where it pressed: no walk to the mark to wait for.
+	local arrived = car.entry.door.direct or awaitArrival(car, player, "Enter")
 	local _, humanoid = body(player)
 	local state, at = CarState.read(car.model), now()
 	if not arrived or humanoid == nil or not reservedFor(car, player, "Enter") then

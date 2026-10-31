@@ -1,0 +1,26 @@
+Tyre pack (#137): Studio measurement, edit mode, 2026-10-31 02:34-02:35 (Studio lock held).
+Place "Drive Lab" holding main 5d207ad; edit peer only, no server or client peers
+(get_studio_mode "stop" and get_connected_instances checked first).
+
+Method: one execute_luau call made SoundService.AudioAgentTyreMeasure_Temp with seven
+AudioPlayers (Looping, Volume 1; a tyre loop as its PlaybackRegion), each wired only to an
+AudioAnalyzer, with no AudioDeviceOutput, so nothing was audible. It waited for IsReady, played
+all seven together, sampled RmsLevel and PeakLevel every frame for 6 s (980 samples each, no zero
+sample), then destroyed the folder in the same call. FindFirstChild afterwards: gone.
+
+Offline = the unweighted RMS of the same region in the local file (channel mean).
+
+  loop          asset id          region s             TimeLength  Studio RMS  offline RMS  diff
+  AC squeal     101810748485104   0.25-3.621229        7.6415      -23.12      -23.09       -0.03
+  AC skid       101810748485104   4.121229-7.391458    7.6415      -23.14      -23.06       -0.08
+  real squeal   94272123883693    0.25-4.35            8.7000      -24.10      -23.86       -0.24
+  real skid     94272123883693    4.85-8.45            8.7000      -24.57      -24.12       -0.45
+  SVJ idle      123221049271080   whole                16.8714     -19.75      -19.78       +0.03
+  SVJ on        73085619329523    whole                24.8853     -21.41      -21.36       -0.05
+  SVJ off       95100012663530    whole                22.1782     -20.37      -20.36       -0.01
+
+Read: both packs load and play in this place (the private-audio grant holds), their lengths match
+the files, and after Roblox's transcoding every tyre and engine loop keeps its offline level
+within 0.5 dB, so the balance in levels.txt holds in Studio to that margin. The 6 s window covers
+1.5 to 1.8 repeats of a tyre loop and a quarter to a third of an engine loop, against whole
+loops offline; that may explain the largest differences (not tested). Seams cannot be measured this way (RmsLevel is per 21 ms buffer).

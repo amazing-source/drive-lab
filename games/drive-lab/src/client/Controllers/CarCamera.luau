@@ -178,7 +178,7 @@ end
 -- Every frame in every view, getting in and out included, so neither the chase nor the kick is
 -- stale when it shows.
 local function follow(drive: Drive, dt: number)
-	ChaseView.step(chaseState, drive.model, drive.chassis.CFrame, dt)
+	ChaseView.step(chaseState, drive.model, drive.chassis.CFrame, drive.chassis.AssemblyLinearVelocity, dt)
 	Rules.stepKick(kick, Rules.kickTarget(number(drive.model, "LongitudinalG")), dt)
 end
 

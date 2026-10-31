@@ -4,12 +4,14 @@
 	controller would play: each engine loop's volume and speed, the shift dip, the limiter, the
 	start-up's hand-over, and every one-shot (gear clunks, pops) with its region, volume and
 	speed. tools/audio/render_preview.py turns it into a listening file, so the sound can be
-	judged without Studio.
+	judged without Studio. A start-up played from the car's own sound is named in `startupSound`,
+	not among the one-shots.
 
-	    lune run games/drive-lab/tools/audio_timeline.luau [SVJ|DR458] [mode] > timeline.json
+	    lune run games/drive-lab/tools/audio_timeline.luau [SVJ|DR458] [mode] [fallback] > timeline.json
 
 	The mode is one of the car's (SVJ: Strada, Sport, Corsa, default Corsa; DR458: 1, 2, OFF,
-	default 1).
+	default 1). `fallback` plays a car's start-up from the events file's region, as it does when
+	its own start-up sound fails to load (taken here as failing at the press).
 
 	The car drives DriveSim on its own physics: start-up, a moment at idle, full throttle from
 	rest, a lift at speed, hard braking to a stop (the DR458's run is longer, to reach sixth).
@@ -25,6 +27,7 @@ local EngineSound = require("../src/shared/Rules/EngineSound")
 local ExhaustPops = require("../src/shared/Rules/ExhaustPops")
 local SVJPack = require("../src/shared/Config/Cars/SVJ/Audio")
 local SVJPhysics = require("../src/shared/Config/Cars/SVJ/Physics")
+local StartupHandOver = require("../src/shared/Rules/StartupHandOver")
 local Types = require("../src/shared/Config/Cars/Types")
 local process = require("@lune/process")
 local serde = require("@lune/serde")
@@ -36,6 +39,8 @@ assert(car == "SVJ" or car == "DR458", `unknown car {car}: SVJ or DR458`)
 local pack: CarAudio.Pack = if car == "DR458" then DR458Pack else SVJPack
 local mode: Types.DrivingMode = process.args[2] or if car == "DR458" then "1" else "Corsa"
 assert(pack.popTriggers.liftChance[mode] ~= nil, `the {car} has no {mode} mode`)
+local fallback = process.args[3] == "fallback"
+assert(process.args[3] == nil or fallback, `unknown option {process.args[3]}: fallback`)
 math.randomseed(7)
 
 type Readout = CarAudioEvents.Readout & { speedKmh: number }
@@ -118,7 +123,7 @@ local pops = ExhaustPops.new(pack.popTriggers)
 local frames, shots = {}, {}
 local dip, limiterShare = 1, 0
 local startup = pack.startup
-local startupLength = startup.region.to - startup.region.from
+local own = if fallback then nil else startup.sound
 -- Level with the idle loop it hands over to, as Controllers/CarAudio sets it.
 local idle = pack.engineLayers[1]
 for _, layer in pack.engineLayers do
@@ -126,17 +131,30 @@ for _, layer in pack.engineLayers do
 		idle = layer
 	end
 end
-table.insert(shots, {
-	t = 0,
-	kind = "startup",
-	from = startup.region.from,
-	to = startup.region.to,
-	volume = pack.engineVolume
-		* idle.volume
-		* EngineSound.loudness(pack.engineTuning, idle.rpm)
-		* 10 ^ (startup.boostDb / 20),
-	speed = 1,
-})
+local idleLevel = pack.engineVolume * idle.volume * EngineSound.loudness(pack.engineTuning, idle.rpm)
+-- The car's own start-up sound cannot be downloaded, so the preview does not render it.
+local startupSound = if own
+	then {
+		id = own.id,
+		from = own.from,
+		handOver = own.handOver,
+		to = own.to,
+		volume = idleLevel * own.volume,
+	}
+	else nil
+if own == nil then
+	table.insert(shots, {
+		t = 0,
+		kind = "startup",
+		from = startup.region.from,
+		to = startup.region.to,
+		volume = idleLevel * 10 ^ (startup.boostDb / 20),
+		speed = 1,
+	})
+end
+
+local handOver = StartupHandOver.new(startup, own, 0, 0)
+local played: CarAudio.Region = if own then { from = own.from, to = own.to } else startup.region
 
 for index, readout in readouts do
 	local time = (index - 1) * DT
@@ -151,9 +169,18 @@ for index, readout in readouts do
 		DT,
 		pack.limiter.halfLife
 	)
-	-- The start-up's own hand-over: none until its fade-out begins, then equal power.
-	local progress = math.clamp((time - startup.handOver) / (startupLength - startup.handOver), 0, 1)
-	local master = pack.engineVolume * dip * math.sin(progress * math.pi / 2)
+	-- Offline the start-up is loaded from the press; as in the engine, it is removed as it ends,
+	-- and a removed Sound no longer reads as loaded.
+	local position = played.from + time
+	local playing = position < played.to
+	local share = StartupHandOver.step(
+		handOver,
+		{ playing = playing, loaded = playing, position = position },
+		readout.rpm,
+		time,
+		DT
+	)
+	local master = pack.engineVolume * dip * share
 	local onDuck = 1 - (1 - pack.limiter.onDuck) * limiterShare
 	local volumes, speeds = {}, {}
 	for layerIndex, layer in pack.engineLayers do
@@ -196,6 +223,12 @@ for index, readout in readouts do
 end
 
 local files = if car == "DR458" then FILES.DR458 else FILES.SVJ
-print(
-	serde.encode("json", { dt = DT, car = car, mode = mode, files = files, frames = frames, shots = shots })
-)
+print(serde.encode("json", {
+	dt = DT,
+	car = car,
+	mode = mode,
+	files = files,
+	frames = frames,
+	shots = shots,
+	startupSound = startupSound,
+}))

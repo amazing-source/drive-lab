@@ -11,6 +11,7 @@ as the livery bake), or every set the map names when no report is given. Per set
   so a map two sets share (carbon gloss and satin colour) uploads once;
 - source-derived sets (a source texture on the mesh's own UVs): with alpha (the stitch strip) the
   ColorMap keeps it, AlphaMode Transparency, MeshPart Transparency >= 0.02; without, opaque Overlay;
+  decal sets (label cards) the same, always with alpha;
 - baked sets (a livery bake): ColorMap and RoughnessMap from the bake, metalness 0, no NormalMap;
 - flat sets: no SurfaceAppearance, the MeshPart's Material, Color and Transparency only.
 `surface_appearances.json` maps each set to its files and properties; the upload step swaps file
@@ -102,9 +103,11 @@ for name in used:
             c["MeshPart"]["Transparency"] = spec["transparency"]
         contract[name] = c
         continue
-    if kind == "source_derived":
-        blended = spec.get("alpha") == "color"
-        col = Image.open(spec["color"]).convert("RGBA" if blended else "RGB")
+    if kind in ("source_derived", "decal"):
+        # A decal set (label cards) is its own image with alpha, named relative to the car's work folder.
+        blended = kind == "decal" or spec.get("alpha") == "color"
+        source = spec["color"] if kind == "source_derived" else LIB.parent.parent / spec["image"]
+        col = Image.open(source).convert("RGBA" if blended else "RGB")
         check(col, name, "ColorMap", alpha_ok=blended)
         sa = {"ColorMap": write(col, name, "color"), "AlphaMode": "Transparency" if blended else "Overlay"}
         rough = Image.fromarray(np.full((16, 16), round(spec["roughness"] * 255), np.uint8), "L")

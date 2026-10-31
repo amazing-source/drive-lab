@@ -134,4 +134,22 @@ describe("EngineSound", function()
 		end
 		expect(throttleFine.throttle).toBeNear(throttleCoarse.throttle, 1e-9)
 	end)
+
+	it("hands a one-shot over to the loops at equal power: none before, all after, never back", function()
+		local share, gain = EngineSound.handOver(3, 3.5, 2.9)
+		expect(share).toBe(0)
+		expect(gain).toBe(1)
+		share, gain = EngineSound.handOver(3, 3.5, 3.6)
+		expect(share).toBeNear(1, 1e-12)
+		expect(gain).toBeNear(0, 1e-12)
+		local previous = 0
+		for position = 3, 3.5, 0.01 do
+			share, gain = EngineSound.handOver(3, 3.5, position)
+			expect(share * share + gain * gain).toBeNear(1, 1e-9)
+			expect(share >= previous).toBeTruthy()
+			previous = share
+		end
+		share = EngineSound.handOver(3, 3.5, 3.25)
+		expect(share).toBeNear(math.sqrt(0.5), 1e-9)
+	end)
 end)

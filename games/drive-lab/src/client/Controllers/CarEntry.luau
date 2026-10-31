@@ -21,6 +21,7 @@ local Workspace = game:GetService("Workspace")
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
+local Contract = require(ReplicatedStorage.Shared.Config.Cars.Contract)
 local Config = require(ReplicatedStorage.Shared.Config.CarEntry)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local DoorMark = require(ReplicatedStorage.Shared.Car.DoorMark)
@@ -162,6 +163,15 @@ local function approach(current: Body, car: Model, intent: Intent): string?
 	then
 		return `the car's state does not allow it (entry {state.entry}, door {state.door})`
 	end
+	if intent == "Enter" and entry.door.direct then
+		-- No walk and no placing: the server seats the body from where it stands.
+		if not awaitReservation(current, car) then
+			return "the server held the car for no one"
+		end
+		pending = { car = car, intent = intent, askedAt = now() }
+		send(car, intent, now())
+		return nil
+	end
 	local outcome = EntryWalk.toMark(
 		walker(current, true),
 		entry.door,
@@ -302,7 +312,7 @@ local function update()
 			exiting = car
 		elseif state.entry == "Enter" then
 			exiting = nil
-			SeatHandOver.seatedSize(current)
+			SeatHandOver.seatedSize(current, Contract.driverScale(entry))
 		end
 		seatedClips(current, car, entry, at)
 		local held = exitHeld

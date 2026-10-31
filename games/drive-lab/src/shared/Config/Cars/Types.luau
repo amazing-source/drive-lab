@@ -218,6 +218,19 @@ export type LaunchConfig = {
 	autoUpshift: boolean,
 }
 
+-- The car's own numbers for the shared drift (Vehicle/Drift, Config/Drift).
+export type DriftProfile = {
+	-- Body slip (rad) at full lock toward the turn. The steering lock bounds it: past about the lock
+	-- less the front tyres' peak slip, the front wheels cannot follow the car's path any more.
+	maxAngle: number,
+	-- Share of the rear tyres' grip at the target angle: lower is looser.
+	holdShare: number,
+	-- Traction control's slip threshold while drifting.
+	tcSlip: number,
+	-- Most of the gearbox's torque the coupling may send forward while drifting.
+	frontShare: number,
+}
+
 export type SimulationConfig = {
 	maxSubstep: number,
 	solverIterations: number,
@@ -252,6 +265,8 @@ export type CarConfig = {
 	modeOrder: { DrivingMode },
 	-- A car without launch control never arms one.
 	launch: LaunchConfig?,
+	-- A car without a profile never drifts: its drift button stays the handbrake.
+	drift: DriftProfile?,
 	simulation: SimulationConfig,
 }
 
@@ -330,6 +345,12 @@ function Types.define(car: CarConfig): CarConfig
 		assert(launch.slipRatio > 0 and launch.endSpeed > 0, "launch control needs a slip and an end speed")
 	end
 	checkModes(car)
+	local drift = car.drift
+	if drift then
+		assert(drift.maxAngle > 0, "a drift needs a maximum angle")
+		assert(drift.holdShare > 0 and drift.holdShare <= 1, "a drift's hold share must be in (0, 1]")
+		assert(drift.frontShare >= 0 and drift.frontShare <= 1, "a drift's front share must be in [0, 1]")
+	end
 	return deepFreeze(car)
 end
 

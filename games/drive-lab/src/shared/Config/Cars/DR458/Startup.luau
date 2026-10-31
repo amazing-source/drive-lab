@@ -28,14 +28,13 @@ local Startup: CarEntry.Startup = {
 	pressAt = 2.4,
 	wheelAt = 3.9,
 	drivableAt = 4.1,
-	-- Measured by the audio agent on the start-up the pack plays (the Ferrari 360 recording,
-	-- events.wav 0.5 to 4.85 s, from the press): the starter from 0.2 s, the catch at 1.43 s, the
-	-- flare's peak of 1,810 rpm at 2.0 s, a fast idle of 1,430 at 2.75 s, settled near 1,050 from
-	-- 3.7 s. The 200 rpm while cranking and the last point, the physics' 1,000 rpm idle, are theirs.
-	catchAfter = 1.43,
+	-- The start-up sound is the store recording (Audio's startup.sound), started at the press: its
+	-- catch and revs follow that recording's firing order and end at the car's idle; the starter's
+	-- revs are EST, as its sound carries no engine order.
+	catchAfter = 0.71,
 	rpm = {
-		times = { 0, 0.2, 1.4, 1.55, 1.67, 1.8, 2.0, 2.4, 2.75, 3.0, 3.35, 3.7, 4.35 },
-		values = { 0, 200, 200, 1100, 1480, 1680, 1810, 1580, 1430, 1310, 1130, 1060, 1000 },
+		times = { 0, 0.70, 0.95, 1.15, 1.45, 1.65, 2.05, 2.45, 2.98 },
+		values = { 250, 250, 2170, 2480, 2360, 2200, 1450, 1160, 1000 },
 	},
 	-- As the SVJ's: the right foot holds the brake from the key until driving unlocks.
 	brake = 0.6,

@@ -13,6 +13,7 @@ local STARTUP = SVJ.startup
 -- The SVJ's START flap, the one cabin control its start-up moves.
 local FLAP = STARTUP.moves[1]
 local Config = SVJ.driver.startupPaths
+local FLAP_LINE = assert(Config.FLAP, "the SVJ's paths carry its flap")
 
 local function gap(a: Vector, b: Vector): number
 	return math.sqrt((a.x - b.x) ^ 2 + (a.y - b.y) ^ 2 + (a.z - b.z) ^ 2)
@@ -142,7 +143,7 @@ local function flapEdge(t: number): Vector
 		engineAt = 0,
 	}
 	local angle = -FLAP.angle * CarEntryRules.controlOpenness(FLAP, state, t)
-	local hinge, edge = Config.FLAP.hinge, Config.FLAP.edge
+	local hinge, edge = FLAP_LINE.hinge, FLAP_LINE.edge
 	local y, z = edge.y - hinge.y, edge.z - hinge.z
 	return {
 		x = edge.x,

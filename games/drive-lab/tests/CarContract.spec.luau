@@ -1,6 +1,8 @@
 --!strict
 local Catalog = require("../src/shared/Config/Cars/Catalog")
 local Contract = require("../src/shared/Config/Cars/Contract")
+local DriverArms = require("../src/shared/Config/DriverArms")
+local Driving = require("../src/shared/Config/Driving")
 local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect
@@ -22,6 +24,18 @@ describe("Car catalog", function()
 		expect(Catalog.of(modelNamed("Unknown"))).toBe(nil)
 		expect(Catalog.of(modelNamed(nil))).toBe(nil)
 		expect(Catalog.of(modelNamed(1))).toBe(nil)
+	end)
+
+	it("admits a car only once its model binding has nothing pending", function()
+		local fs = require("@lune/fs")
+		for name in Catalog.cars do
+			local path = `games/drive-lab/src/shared/Config/Cars/{name}/ModelPending.luau`
+			if fs.isFile(path) then
+				local pending = (require :: any)(`../src/shared/Config/Cars/{name}/ModelPending`)
+				expect(`{name}: {table.concat(pending, "; ")}`).toBe(`{name}: `)
+			end
+		end
+		expect(Catalog.of(modelNamed("DR458"))).toBe(Catalog.cars.DR458)
 	end)
 
 	it("freezes every entry all the way down", function()
@@ -116,6 +130,66 @@ describe("Car contract: the driver", function()
 				entry.model.pedals = nil
 			end))
 		end).toThrow()
+	end)
+
+	it("keeps the SVJ's driver at Driving.DRIVER_SCALE with Config/DriverArms' arm lengths", function()
+		local svj = Catalog.cars.SVJ
+		expect(Contract.driverScale(svj)).toBe(Driving.DRIVER_SCALE)
+		local upper, lower = Contract.armLengths(svj)
+		expect(upper).toBe(DriverArms.UPPER_LENGTH)
+		expect(lower).toBe(DriverArms.LOWER_LENGTH)
+	end)
+
+	it("gives a car its own driver scale and arm lengths, and refuses unusable ones", function()
+		local own = Contract.define(svjWith(function(entry)
+			entry.driver.scale = 1.15
+			entry.driver.arms = { upper = 1.25, lower = 1.13 }
+		end))
+		expect(Contract.driverScale(own)).toBe(1.15)
+		local upper, lower = Contract.armLengths(own)
+		expect(upper).toBe(1.25)
+		expect(lower).toBe(1.13)
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				entry.driver.scale = 0
+			end))
+		end).toThrow()
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				entry.driver.arms = { upper = 1.25, lower = -1 }
+			end))
+		end).toThrow()
+	end)
+
+	it("finds the SVJ's footwell on its binding's pedal hinges", function()
+		local svj = Catalog.cars.SVJ
+		expect(#Contract.footwellMismatches(svj.model, svj.driver.footwell)).toBe(0)
+	end)
+
+	it("refuses a footwell whose hinge, axis or signed travel disagrees with the binding", function()
+		-- A pedal hinge 3 cm off the binding's pivot.
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				entry.driver.footwell.throttle.hinge.z += 0.03
+			end))
+		end).toThrow()
+		-- The binding turning a pedal about the car's left, so its weld turns against the foot.
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				entry.model.pedals[2].axis = { forward = 0, right = -1, up = 0 }
+			end))
+		end).toThrow()
+		-- A binding that presses the throttle the other way from the footwell.
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				entry.model.pedals[1].travel = -entry.driver.footwell.throttle.travel
+			end))
+		end).toThrow()
+		-- The same travel on both sides is accepted.
+		local same = Contract.define(svjWith(function(entry)
+			entry.model.pedals[1].travel = entry.driver.footwell.throttle.travel
+		end))
+		expect(#Contract.footwellMismatches(same.model, same.driver.footwell)).toBe(0)
 	end)
 end)
 
@@ -359,6 +433,96 @@ describe("Car contract: a binnacle display", function()
 			end).toThrow()
 		end
 	end)
+end)
+
+-- The SVJ with its own start-up sound, timed to its start-up (catch 0.75 s after the press, the
+-- starter's revs held to 0.7 s), and then `change` made to that sound or that start-up.
+local function withSound(change: (any) -> ()): Contract.Entry
+	return svjWith(function(entry)
+		entry.audio.startup.sound = {
+			id = "rbxassetid://1",
+			volume = 1,
+			from = 0.2,
+			starterEnds = 0.9,
+			catchAt = 0.95,
+			handOver = 9,
+			to = 10,
+		}
+		change(entry)
+	end)
+end
+
+describe("Car contract: the start-up sound", function()
+	it("accepts a start-up sound that keeps to the start-up's timing, and none at all", function()
+		expect(Contract.define(withSound(function() end)).audio.startup.sound ~= nil).toBeTruthy()
+		expect(Catalog.cars.SVJ.audio.startup.sound).toBe(nil)
+	end)
+
+	it("refuses a start-up sound that is not an uploaded asset, or has no level", function()
+		local breaks: { (any) -> () } = {
+			function(entry)
+				entry.audio.startup.sound.id = "126032464409866"
+			end,
+			function(entry)
+				entry.audio.startup.sound.volume = 0
+			end,
+		}
+		for _, change in breaks do
+			expect(function()
+				Contract.define(withSound(change))
+			end).toThrow()
+		end
+	end)
+
+	it("refuses a start-up sound whose times run out of order", function()
+		-- Each break keeps the catch and the starter's revs in step, so only the order is wrong.
+		local breaks: { (any) -> () } = {
+			function(entry)
+				local sound = entry.audio.startup.sound
+				sound.from, sound.starterEnds, sound.catchAt = -0.1, 0.6, 0.65
+			end,
+			function(entry)
+				entry.audio.startup.sound.handOver = entry.audio.startup.sound.to
+			end,
+			function(entry)
+				entry.audio.startup.sound.handOver = entry.audio.startup.sound.catchAt
+			end,
+		}
+		for _, change in breaks do
+			expect(function()
+				Contract.define(withSound(change))
+			end).toThrow()
+		end
+	end)
+
+	it("refuses a start-up sound that catches at another time than the start-up", function()
+		expect(function()
+			Contract.define(withSound(function(entry)
+				entry.audio.startup.sound.catchAt += 0.1
+			end))
+		end).toThrow()
+		expect(function()
+			Contract.define(withSound(function(entry)
+				entry.startup.catchAfter += 0.1
+			end))
+		end).toThrow()
+	end)
+
+	it(
+		"refuses instruments that leave the starter's revs before its starter stops or after the catch",
+		function()
+			expect(function()
+				Contract.define(withSound(function(entry)
+					entry.audio.startup.sound.starterEnds = entry.audio.startup.sound.catchAt
+				end))
+			end).toThrow()
+			expect(function()
+				Contract.define(withSound(function(entry)
+					entry.startup.rpm.values[3] = entry.startup.rpm.values[1]
+				end))
+			end).toThrow()
+		end
+	)
 end)
 
 describe("Car contract: flames", function()
