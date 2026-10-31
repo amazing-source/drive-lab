@@ -299,6 +299,7 @@ LEAN0, HOP0 = WALK0 + 36, WALK0 + 52
 SIT, T1, T2, OVER = HOP0 + 10, HOP0 + 15, HOP0 + 20, HOP0 + 26
 DROP, D1, D2, SEATED = OVER + 12, OVER + 8, OVER + 16, OVER + 26
 CLOSE_FROM, ON_HAND_OVER, END = SEATED - 4, SEATED + 34, SEATED + 40
+HOLD_FROM = SEATED + 6  # the limbs on their hand-over pose from here
 # The SVJ's InsideClose door curve (Config/Cars/SVJ/Door.luau), seconds from its start: the door
 # swings shut at the speed the game's other door does.
 SVJ_CLOSE = ((0.0, 1.0), (0.033, 0.995), (0.1, 0.961), (0.2, 0.88), (0.233, 0.847), (0.3, 0.756), (0.433, 0.55), (0.566, 0.369), (0.7, 0.228), (0.8, 0.143), (0.966, 0.031), (1.033, 0.004), (1.066, 0.0))
@@ -408,15 +409,14 @@ def getin(b, car, s, start, ends):
     #    1.15 R6 reaches nothing on this door that pulls, and any reach lays its arm on the card).
     for t, v in SVJ_CLOSE:
         b.door.at(CLOSE_FROM + round(t * FPS), (v,))
-    # Into the hand-over pose from its own side: an R6 arm reaches a palm point two ways, and the
-    # solve keeps whichever way the arm arrives from.
-    for limb in ("right_arm", "left_arm"):
-        b.targets[limb].at(SEATED + 8, ends[limb] + np.array([0.15 if limb == "left_arm" else -0.15, 0.35, -0.25]))
+    # The limbs settle into their hand-over pose just after the body sits and hold it while the
+    # door shuts: between sitting and the hand-over no pose of the blocky arms in reach clears the
+    # bars, the net and the bucket.
     for track, value in ((b.pelvis, s["pelvis"]), (b.torso, s["torso"]), (b.neck, s["neck"]), (b.neck_loc, s["neck_loc"])):
         track.at(END, value)
     for limb, t in ends.items():
-        b.targets[limb].at(ON_HAND_OVER, t).at(END, t)
-    hold_hand_over(b, ON_HAND_OVER, END)
+        b.targets[limb].at(HOLD_FROM, t).at(END, t)
+    hold_hand_over(b, HOLD_FROM, END)
 
 
 # The exit's beats: InsideOpen, then GetOut ending at the mark's idle stance (the root jumps there
@@ -590,7 +590,10 @@ def entry_contacts():
         {"why": "DECIDED (seated pose): head on the headrest pad: 0.0589 on the house checker's 0.05-stud cloud, 0.060 on a 0.04-stud one (its 0.62-stud head box; the seated check's smaller box measured 0.89 cm)", "from": SEATED, "to": END, "parts": ["Head"], "groups": ["seat"], "depth": 0.061},
         {"why": "DECIDED (coordinator, B): the blocky arms at their hand-over pose beside the torso, into the bucket's bolsters as the torso's sides are", "from": SEATED - 8, "to": END, "parts": ARMS, "groups": ["seat"], "depth": 0.22},
         {"why": "DECIDED (coordinator): the blocky legs at their least-deep pose in the bucket, under the wheel", "from": SEATED - 10, "to": END, "parts": LEGS, "groups": ["seat"], "depth": 0.17},
-    ] + left_arm_hand_over(ON_HAND_OVER, END)
+    ] + left_arm_hand_over(ON_HAND_OVER, END) + [
+        {**e, "why": "DEVIATION, approved by the coordinator: the left arm on its hand-over pose from just after sitting, at the hand-over depths, while the door shuts (the limb planner found no pose of it in reach clear of the bars, the net and the bucket from f212 to f225)", "from": HOLD_FROM, "to": ON_HAND_OVER - 1}
+        for e in left_arm_hand_over(0, 0)
+    ]
     holds = [
         {"from": WALK0, "to": HOP0 + 4, "limb": "right_leg"},
         {"from": WALK0, "to": HOP0 + 4, "limb": "left_leg"},

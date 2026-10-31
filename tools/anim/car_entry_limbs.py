@@ -3,7 +3,8 @@ Plans each limb's path through a span at once, for a car_entry_track.py table wh
 settled: every frame's swing and spread on a grid of cells, each cell scored by how far the limb
 goes past its named allowances (per group, the door at that frame's openness, the ground) and how
 far its end is off the authored target, and the cheapest path through the frames found by dynamic
-programming, a frame moving at most --turn cells off the last. A per-frame search can only look
+programming; a frame moving more than --turn cells off the last on an axis pays like a contact
+(held and fixed frames can move faster than that, and the path must still join them). A per-frame search can only look
 one frame ahead, so a limb boxed in by a bar flips onto its other branch or gets stuck; a path
 planned over the whole span goes round in time. Held limbs and limbs with fixed angles are fixed
 points the path passes through.
@@ -112,7 +113,7 @@ def main(argv):
     ap.add_argument("--from", dest="start", type=int, required=True)
     ap.add_argument("--to", dest="end", type=int, required=True)
     ap.add_argument("--cell", type=float, default=6.0)
-    ap.add_argument("--turn", type=int, default=2, help="cells a frame may move off the last, each axis")
+    ap.add_argument("--turn", type=int, default=2, help="cells a frame moves off the last, each axis, before it pays")
     ap.add_argument("--spacing", type=float, default=0.08)
     ap.add_argument("--window", type=float, default=60.0)
     ap.add_argument("--limbs", default=",".join(LIMB_PART))
@@ -169,7 +170,10 @@ def main(argv):
                 costs.append(None)
                 continue
             forced.append(None)
-            centres = [np.asarray(table[str(f)]["angles"][limb], float)] if limb in table.get(str(f), {}).get("angles", {}) else [guess]
+            if limb in table.get(str(f), {}).get("angles", {}):
+                centres = [np.asarray(table[str(f)]["angles"][limb], float)]
+            else:
+                centres = [np.array(body.poses[f][r6_fk.LIMB_JOINT[limb]][0])[[0, 2]]]
             ahead = [g for g in body.fixed.get(limb, {}) if f < g]
             if ahead:
                 centres.append(np.asarray(body.fixed[limb][min(ahead)], float))
@@ -187,46 +191,37 @@ def main(argv):
             costs.append(cost)
             guess = centres[0]
             print(f"{limb} f{f}: {len(cells)} cells, {int(np.sum(excess <= 0))} clear", flush=True)
-        # Dynamic programming over the frames; a frame's cell moves at most `turn` cells each axis.
-        shape = grid.shape
-        value = np.full(n, np.inf)
-        back = []
+        # Dynamic programming over the frames, between the scored cells of one frame and the next.
+        # A step costs its turn; a step past `turn` cells on an axis costs like a contact, so the
+        # path only takes one where held or fixed frames ask for it (they can move faster).
+        limit = a.turn * a.cell
+        live, value, back = [], None, []
         for i in range(len(frames)):
-            here = np.full(n, np.inf)
             if forced[i] is not None:
-                here[forced[i][0]] = 0.0
+                cells, here = np.array([forced[i][0]]), np.zeros(1)
             else:
-                here = costs[i].copy()
+                cells = np.flatnonzero(np.isfinite(costs[i]))
+                here = costs[i][cells]
             if i == 0:
+                live.append(cells)
                 value = here
                 back.append(None)
                 continue
-            prev = value.reshape(shape)
-            best = np.full(shape, np.inf)
-            arg = np.zeros(shape + (2,), dtype=int)
-            for di in range(-a.turn, a.turn + 1):
-                for dj in range(-a.turn, a.turn + 1):
-                    shifted = np.full(shape, np.inf)
-                    src_i = slice(max(0, -di), shape[0] - max(0, di))
-                    dst_i = slice(max(0, di), shape[0] - max(0, -di))
-                    src_j = slice(max(0, -dj), shape[1] - max(0, dj))
-                    dst_j = slice(max(0, dj), shape[1] - max(0, -dj))
-                    shifted[dst_i, dst_j] = prev[src_i, src_j] + ((di * a.cell) ** 2 + (dj * a.cell) ** 2) / 100.0
-                    better = shifted < best
-                    best = np.where(better, shifted, best)
-                    arg[..., 0] = np.where(better, di, arg[..., 0])
-                    arg[..., 1] = np.where(better, dj, arg[..., 1])
-            value = best.ravel() + here
-            back.append(arg.reshape(n, 2))
-        cell = int(np.argmin(value))
-        total = float(value[cell])
-        chosen = [cell]
+            step = np.abs(grid.angles[cells][:, None, :] - grid.angles[live[-1]][None, :, :])
+            over = np.maximum(step - limit, 0.0).sum(axis=2)
+            total = value[None, :] + (step ** 2).sum(axis=2) / 100.0 + EXCESS_COST * 0.01 * over
+            arg = np.argmin(total, axis=1)
+            value = total[np.arange(len(cells)), arg] + here
+            back.append(arg)
+            live.append(cells)
+        k = int(np.argmin(value))
+        total = float(value[k])
+        chosen = [int(live[-1][k])]
         for i in range(len(frames) - 1, 0, -1):
-            di, dj = back[i][cell]
-            ci, cj = divmod(cell, shape[1])
-            cell = (ci - di) * shape[1] + (cj - dj)
-            chosen.append(cell)
+            k = int(back[i][k])
+            chosen.append(int(live[i - 1][k]))
         chosen.reverse()
+        jumps = sum(1 for i in range(1, len(frames)) if np.any(np.abs(grid.angles[chosen[i]] - grid.angles[chosen[i - 1]]) > limit + 1e-6))
         bad = 0
         for i, f in enumerate(frames):
             angles = forced[i][1] if forced[i] is not None else grid.angles[chosen[i]]
@@ -237,7 +232,7 @@ def main(argv):
                 row.setdefault("targets", {})[limb] = [round(float(v), 4) for v in end[chosen[i]]]
                 if not costs[i][chosen[i]] < EXCESS_COST * 0.002:
                     bad += 1
-        print(f"{limb}: path cost {total:.1f}, {bad} frames past an allowance on the {a.spacing} cloud", flush=True)
+        print(f"{limb}: path cost {total:.1f}, {bad} frames past an allowance on the {a.spacing} cloud, {jumps} steps past --turn", flush=True)
     json.dump(out, open(a.out, "w", encoding="utf-8", newline="\n"), indent=0)
     return 0
 
