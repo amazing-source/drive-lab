@@ -66,16 +66,20 @@ function StartupLean.rootTurn(humanoid: Humanoid, root: BasePart, jointPivot: Ve
 	return CFrame.new(-jointPivot) * inRoot * CFrame.new(jointPivot)
 end
 
--- `point` (world) with the start-up lean last put on the humanoid's root undone.
-function StartupLean.unlean(humanoid: Humanoid, point: Vector3): Vector3
+-- `frame` (world) with the start-up lean last put on the humanoid's root undone: where a part
+-- riding the torso would be without it.
+function StartupLean.unleanFrame(humanoid: Humanoid, frame: CFrame): CFrame
 	local last = applied[humanoid]
 	if last == nil or humanoid.SeatPart ~= last.seat then
-		return point
+		return frame
 	end
-	local seat, lean = last.seat, last.lean
-	return seat.CFrame:PointToWorldSpace(
-		lean:Inverse():PointToWorldSpace(seat.CFrame:PointToObjectSpace(point))
-	)
+	local seat = last.seat.CFrame
+	return seat * last.lean:Inverse() * seat:ToObjectSpace(frame)
+end
+
+-- `point` (world) with the start-up lean last put on the humanoid's root undone.
+function StartupLean.unlean(humanoid: Humanoid, point: Vector3): Vector3
+	return StartupLean.unleanFrame(humanoid, CFrame.new(point)).Position
 end
 
 return StartupLean

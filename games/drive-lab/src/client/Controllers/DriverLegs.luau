@@ -29,6 +29,8 @@ local DriverLegs = require(ReplicatedStorage.Shared.Config.DriverLegs)
 local Legs = require(ReplicatedStorage.Shared.Rules.DriverLegs)
 local Units = require(ReplicatedStorage.Shared.Units)
 
+local StartupLean = require(script.Parent.Parent.Rig.StartupLean)
+
 type Side = {
 	-- +1 for the right leg, -1 for the left.
 	sign: number,
@@ -45,6 +47,7 @@ type Pedal = { weld: Weld, rest: CFrame, angle: number }
 type Driver = {
 	entry: Catalog.Entry,
 	character: Model,
+	humanoid: Humanoid?,
 	torso: BasePart,
 	model: Model,
 	seat: BasePart,
@@ -198,6 +201,7 @@ local function build(model: Model, entry: Catalog.Entry, character: Model): Driv
 	return {
 		entry = entry,
 		character = character,
+		humanoid = character:FindFirstChildOfClass("Humanoid"),
 		torso = torso,
 		model = model,
 		seat = seat,
@@ -261,10 +265,12 @@ local function pose(driver: Driver, state: CarEntry.State, now: number, dt: numb
 	local seat = driver.seat.CFrame
 	local hip, centre = DriverLegs.HIP, DriverLegs.PELVIS_CENTRE
 	table.insert(parts, driver.pelvis)
-	table.insert(
-		frames,
-		driver.torso.CFrame * CFrame.new(Vector3.new(centre.x, centre.y, centre.z) * driver.scale)
-	)
+	-- The trousers' seat stays on the hips and the cushion through the start-up's torso lean.
+	local humanoid = driver.humanoid
+	local body = if humanoid
+		then StartupLean.unleanFrame(humanoid, driver.torso.CFrame)
+		else driver.torso.CFrame
+	table.insert(frames, body * CFrame.new(Vector3.new(centre.x, centre.y, centre.z) * driver.scale))
 	for _, side in driver.sides do
 		local at = seat:PointToObjectSpace(
 			driver.torso.CFrame:PointToWorldSpace(Vector3.new(side.sign * hip.x, hip.y, hip.z) * driver.scale)
