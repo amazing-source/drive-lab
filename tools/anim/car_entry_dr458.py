@@ -612,8 +612,9 @@ def apply_table(b, path):
         b.neck.at(f, row["neck"])
         for limb, t in row["targets"].items():
             b.targets[limb].at(f, t)
+        # A pose the choreography holds (hold_hand_over) wins over the search's angles.
         for limb, (x, z) in row.get("angles", {}).items():
-            b.fixed.setdefault(limb, {})[f] = (x, z)
+            b.fixed.setdefault(limb, {}).setdefault(f, (x, z))
 
 
 def exit_contacts():
@@ -643,10 +644,46 @@ def exit_contacts():
     return allow, holds
 
 
+CLOSE_LEAD = 8  # InsideClose: frames seated before the door starts to swing
+CLOSE_END = CLOSE_LEAD + round(SVJ_CLOSE[-1][0] * FPS) + 8
+
+
+def close_timeline(car, rest_path):
+    """InsideClose: seated on the hand-over pose (the drawn hands are what shows), the door swings
+    shut on its own on the SVJ's close curve, as at the end of GetIn (decision E1')."""
+    s = car.seated()
+    ends, _ = seated_ends(car, s, rest_path)
+    b = Body(CLOSE_END + 1, FPS)
+    for track, value in ((b.pelvis, s["pelvis"]), (b.torso, s["torso"]), (b.neck, s["neck"]), (b.neck_loc, s["neck_loc"])):
+        track.at(0, value).at(CLOSE_END, value)
+    for limb, t in ends.items():
+        b.targets[limb].at(0, t).at(CLOSE_END, t)
+        b.twist[limb].at(0, (0,))
+    hold_hand_over(b, 0, CLOSE_END)
+    b.door.at(0, (1.0,))
+    for t, v in SVJ_CLOSE:
+        b.door.at(CLOSE_LEAD + round(t * FPS), (v,))
+    b.door.at(CLOSE_END, (0.0,))
+    return b, [{"name": "InsideClose", "start": 0, "end": CLOSE_END}]
+
+
+def close_contacts():
+    """InsideClose's named contacts: the seated hand-over pose's, decided."""
+    allow = [
+        {"why": "DECIDED (owner, option D): torso sides into the bucket's bolsters, 5.5 cm seated", "from": 0, "to": CLOSE_END, "parts": ["Torso"], "groups": ["seat"], "depth": 0.261},
+        {"why": "DECIDED (seated pose): head on the headrest pad", "from": 0, "to": CLOSE_END, "parts": ["Head"], "groups": ["seat"], "depth": 0.061},
+        {"why": "DECIDED (coordinator, B): the blocky arms at their hand-over pose beside the torso, into the bucket's bolsters", "from": 0, "to": CLOSE_END, "parts": ARMS, "groups": ["seat"], "depth": 0.22},
+        {"why": "DECIDED (coordinator): the blocky legs at their least-deep pose in the bucket, under the wheel", "from": 0, "to": CLOSE_END, "parts": LEGS, "groups": ["seat"], "depth": 0.17},
+    ] + left_arm_hand_over(0, CLOSE_END)
+    return allow, []
+
+
 def timeline(car, rest, which):
-    """(body, clips) of the entry or the exit timeline."""
+    """(body, clips) of the entry, the exit or the inside close timeline."""
     if which == "exit":
         return exit_timeline(car, rest)
+    if which == "close":
+        return close_timeline(car, rest)
     b, s, yaw_out, yaw_seat, (o0, o1, total) = entry(car, rest)
     return b, [{"name": "OutsideOpen", "start": o0, "end": o1}, {"name": "GetIn", "start": o1, "end": total - 1}]
 
@@ -659,7 +696,7 @@ def build(argv):
     b, _ = timeline(Car(scene, pose), rest, which)
     if "--clear" in argv:
         apply_table(b, argv[argv.index("--clear") + 1])
-    allow, holds = exit_contacts() if which == "exit" else entry_contacts()
+    allow, holds = {"exit": exit_contacts, "close": close_contacts}.get(which, entry_contacts)()
     return b, allow, holds
 
 

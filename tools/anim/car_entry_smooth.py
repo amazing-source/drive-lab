@@ -81,12 +81,16 @@ def main(argv):
     turn = {f: table[str(f)]["neck"][1] for f in frames}
     base = {f: evaluate(f, xs[f], turn[f])[0] for f in frames}
     locked = {f: [k for k, limb in enumerate(LIMB_PART) if f in body.fixed.get(limb, {})] for f in frames}
+    planted = {f for s0, s1, _ in body.support for f in range(s0, s1 + 1)}
     for p in range(a.passes):
         accepted = 0
         for f in frames[1:-1]:
             if f - 1 not in xs or f + 1 not in xs:
                 continue
             trial = (xs[f - 1] + 2 * xs[f] + xs[f + 1]) / 4
+            if f in planted:
+                # The bake solves a planted stance from the authored body: only the limbs move.
+                trial[0:8] = xs[f][0:8]
             for k in locked[f]:
                 trial[8 + 2 * k: 10 + 2 * k] = xs[f][8 + 2 * k: 10 + 2 * k]
             r, _ = evaluate(f, trial, turn[f])

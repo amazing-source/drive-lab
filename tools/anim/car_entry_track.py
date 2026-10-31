@@ -35,7 +35,7 @@ LIMB_SPEED = 7.0  # degrees a frame a limb turns freely; past it the move costs 
 # torso's and the neck's angles), so a search can never flip a limb onto its other branch or pop
 # the body: a contact that cannot be cleared within it is reported, not jumped over.
 MAX_LIMB_TURN = 2 * LIMB_SPEED
-MAX_BODY_STEP = np.array([0.08, 0.08, 0.08, 5.0, 5.0, 5.0, 8.0, 8.0])
+MAX_BODY_STEP = np.array([0.08, 0.08, 0.08, 5.0, 5.0, 5.0, 12.0, 12.0])
 BODY_LEVELS = ((0.2, 10.0), (0.1, 5.0), (0.05, 2.5), (0.025, 1.25))
 LIMB_LEVELS = (16.0, 8.0, 4.0, 2.0)
 
@@ -105,9 +105,11 @@ def pattern(evaluate, x, scales, rng, samples=16, rounds=4):
     return best
 
 
-def search_body(fr, centres, auth, pred, w_pred, step, rng, w_auth=1.0, bounded=False):
+def search_body(fr, centres, auth, pred, w_pred, step, rng, w_auth=1.0, bounded=False, held=None):
     """(pelvis, torso angles, neck nod and roll) from each centre; the best per centre. `bounded`:
-    within MAX_BODY_STEP of the previous frame (`pred` less the authored step)."""
+    within MAX_BODY_STEP of the previous frame (`pred` less the authored step). `held`: {limb:
+    (target, guess)}, limbs whose point must stay on its target, scored with the body (a hand
+    pushing a door can only reach it through the body's pose)."""
     pel_a, tor_a, nek_a = auth
     pel_p, tor_p, nek_p = pred
     torso_cache = {}
@@ -126,7 +128,12 @@ def search_body(fr, centres, auth, pred, w_pred, step, rng, w_auth=1.0, bounded=
         torso_m, head_m = fr.torso_head(pel, tor, nek)
         key = tuple(np.round(x[0:6], 6))
         if key not in torso_cache:
-            torso_cache[key] = fr.excess("Torso", torso_m)
+            worst = fr.excess("Torso", torso_m)
+            for limb, (target, guess) in (held or {}).items():
+                angles, miss = fast_aim(torso_m, limb, target, POINT[limb], guess, 12)
+                limb_m = r6_fk.limb_frame(torso_m, r6_fk.LIMB_JOINT[limb], angles)
+                worst = max(worst, fr.excess(LIMB_PART[limb], limb_m), miss - 0.02)
+            torso_cache[key] = worst
         return (rank(max(torso_cache[key], fr.excess("Head", head_m))), d)
 
     out = []
@@ -278,7 +285,8 @@ def main(argv):
             bodies = [((0, 0.0), auth[0], auth[1], auth[2])]
         else:
             goals = goals_of(f)
-            bodies = search_body(fr, centres, auth, pred, w, a.step, rng, 1.0 + 20.0 * max([p for _, p in goals.values()] + [0.0]), previous is not None)
+            held_now = {limb: (targets[limb][i], prev_limbs.get(limb, guess[limb])) for limb in held}
+            bodies = search_body(fr, centres, auth, pred, w, a.step, rng, 1.0 + 20.0 * max([p for _, p in goals.values()] + [0.0]), previous is not None, held_now)
         tgt = {k: targets[k][i] for k in LIMB_PART}
         fixed = {limb: np.asarray(body.fixed[limb][f], float) for limb in LIMB_PART if f in body.fixed.get(limb, {})}
         goals = goals_of(f)
