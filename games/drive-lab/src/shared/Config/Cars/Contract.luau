@@ -19,6 +19,7 @@ local DriverAssists = require("../../Rules/DriverAssists")
 local DriverGestures = require("../DriverGestures")
 local DriverStartup = require("../DriverStartup")
 local Driving = require("../Driving")
+local ExhaustFlames = require("../../Rules/ExhaustFlames")
 local RimBlur = require("../RimBlur")
 local Types = require("./Types")
 
@@ -48,6 +49,8 @@ export type Entry = {
 	camera: CarCamera.CarViews,
 	rimBlur: RimBlur.Rims,
 	audio: CarAudio.Pack,
+	-- Which of its pops throw flame; without it, every pop does.
+	flames: ExhaustFlames.CarFlames?,
 	lights: CarLights.Lights,
 	-- The car's display: a dial face, or a binnacle screen with pages and shift lights. One of them.
 	cluster: Cluster.Face?,
@@ -207,6 +210,31 @@ local function checkModes(entry: Entry)
 	if modes then
 		checkNames(entry, modes, "the assists")
 	end
+	local flames = entry.flames
+	if flames then
+		checkCovers(entry, flames.chance, "the flames")
+	end
+end
+
+local function share(value: number): boolean
+	return value >= 0 and value <= 1
+end
+
+-- The flames' chances and shares are shares, 0 to 1.
+local function checkFlames(entry: Entry)
+	local flames = entry.flames
+	if flames == nil then
+		return
+	end
+	for mode, chances in flames.chance do
+		assert(
+			share(chances.Lift) and share(chances.Downshift) and share(chances.Upshift),
+			`the flames' chances in the {mode} mode are not shares`
+		)
+	end
+	assert(share(flames.minStrength), "the flames' quietest pop is not a share")
+	assert(share(flames.fireballFrom), "the flames' fireball threshold is not a share")
+	assert(share(flames.dayShare), "the flames' daylight brightness is not a share")
 end
 
 -- A dial face draws every drive mode the car has in that mode's colours, and its red zone on its
@@ -333,6 +361,7 @@ function Contract.define(entry: Entry): Entry
 	checkDisplay(entry)
 	checkSwitches(entry)
 	checkGestures(entry)
+	checkFlames(entry)
 	Contract.checkStartupSound(entry.startup, entry.audio)
 	return deepFreeze(entry)
 end
@@ -418,6 +447,7 @@ function Contract.features(entry: Entry): Features
 		displayPages = switches.displayPages ~= nil,
 		escButton = entry.assists.escButton ~= nil,
 		launch = entry.physics.launch ~= nil,
+		cabinLight = entry.model.cabinLight ~= nil,
 	}
 end
 

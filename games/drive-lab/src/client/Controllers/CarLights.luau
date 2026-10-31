@@ -6,11 +6,12 @@
 
 	The driver of a car: H cycles the headlights (automatic, on, off; automatic means at night or
 	in heavy rain), J switches the high beam, or flashes it while held on a car whose switch flashes
-	(Config/CarSwitches), X and C toggle the left and right indicators, L the
-	cabin light; on a pad, D-pad left and right are the indicators and D-pad down steps the
+	(Config/CarSwitches), even with the headlights off, X and C toggle the left and right
+	indicators, L the cabin light; on a pad, D-pad left and right are the indicators and D-pad down steps the
 	headlights Auto, On, high beam, Off on a tap and switches the cabin light on a hold. The car this player drives also shows its brakes and
-	reverse from its readouts; other cars show what this client can know: running lights and
-	headlights. Everything here is local.
+	reverse from its readouts, and its rain light from its switch (RainLightOn, Controllers/
+	CarSwitches); other cars show what this client can know: running lights and headlights.
+	Everything here is local.
 ]]
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
@@ -39,6 +40,8 @@ local highBeam = false
 local indicator: Rules.Side? = nil
 local indicatorSince = 0
 local cabin = false
+local rainLightOn = false
+local rainLightSince = 0
 local pad: Rules.Press = { since = nil, spent = false }
 local sinceScan = 0
 
@@ -84,15 +87,22 @@ local function toggleIndicator(side: Rules.Side)
 	indicatorSince = os.clock()
 end
 
+-- The cabin light's controls do nothing in a car whose model has no cabin lamp.
+local function hasCabinLight(model: Model?): boolean
+	local entry = model and Catalog.of(model)
+	return entry ~= nil and entry.model.cabinLight ~= nil
+end
+
 local function padButton(now: number)
 	local down = false
 	for _, key in Controls.LIGHTS_PAD do
 		down = down or UserInputService:IsGamepadButtonDown(Enum.UserInputType.Gamepad1, key)
 	end
-	local gesture = Rules.press(pad, down and drivenModel() ~= nil, now, Config.PAD_HOLD_SECONDS)
+	local driving = drivenModel()
+	local gesture = Rules.press(pad, down and driving ~= nil, now, Config.PAD_HOLD_SECONDS)
 	if gesture == "Tap" then
 		mode, highBeam = Rules.nextPadLights(mode, highBeam)
-	elseif gesture == "Hold" then
+	elseif gesture == "Hold" and hasCabinLight(driving) then
 		cabin = not cabin
 	end
 end
@@ -112,6 +122,11 @@ local function update(dt: number)
 	local rain = Workspace:GetAttribute("RainIntensity")
 	local serverNow = Workspace:GetServerTimeNow()
 	local driven = drivenModel()
+	local rainSwitch = driven ~= nil and driven:GetAttribute("RainLightOn") == true
+	if rainSwitch ~= rainLightOn then
+		rainLightOn = rainSwitch
+		rainLightSince = now
+	end
 	for model, lamps in cars do
 		if model.Parent == nil then
 			cars[model] = nil
@@ -123,11 +138,13 @@ local function update(dt: number)
 			and entry ~= nil
 			and entry.switches.highBeam == "Flash"
 			and held(Controls.HIGH_BEAM)
+		local rainLight = entry and entry.lights.rain
 		local lit = Rules.decide({
 			running = entry ~= nil
 				and CarEntry.startup(entry, CarState.read(model), serverNow).sincePress ~= nil,
 			mode = if mine then mode else "Auto",
-			highBeam = mine and (highBeam or flashing),
+			highBeam = mine and highBeam,
+			flash = flashing,
 			night = night,
 			rain = if typeof(rain) == "number" then rain else 0,
 			brake = if mine then number(model, "Brake", 0) else 0,
@@ -135,7 +152,9 @@ local function update(dt: number)
 			indicator = if mine then indicator else nil,
 			indicating = now - indicatorSince,
 			cabin = mine and cabin,
-		}, Config.TUNING)
+			rainLight = mine and rainLight ~= nil and rainLightOn,
+			rainLightFor = now - rainLightSince,
+		}, Config.TUNING, rainLight and rainLight.pattern)
 		-- Shadowed lights cost a pass each; only the car this player drives casts them.
 		CarLamps.apply(lamps, lit, daylight, mine)
 		if mine then
@@ -173,7 +192,7 @@ function Controller.start()
 			if entry and entry.switches.highBeam == "Toggle" then
 				highBeam = not highBeam
 			end
-		elseif table.find(Controls.CABIN_LIGHT, key) then
+		elseif table.find(Controls.CABIN_LIGHT, key) and hasCabinLight(drivenModel()) then
 			cabin = not cabin
 		elseif table.find(Controls.INDICATOR_LEFT, key) then
 			toggleIndicator("Left")

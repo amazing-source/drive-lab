@@ -3,9 +3,10 @@
 	What a car's lamps show for a given state, as the Aventador S and SVJ behave (sources in
 	Config/CarLights): nothing lit until the ignition is on; running lights then, dimmed with the
 	headlights and out on the side whose indicator runs; headlights by mode (automatic at night or
-	in heavy rain), with the high beam on top of them when the driver asks for it; tail lights with
-	the headlights; brake and reversing lights; indicators that flash from the moment they are
-	switched on; and the cabin light, which works with the ignition off.
+	in heavy rain), with the high beam on top of them when the driver asks for it, or on its own
+	while a flasher is held; tail lights with the headlights; brake and reversing lights; indicators
+	that flash from the moment they are switched on; a rear rain light, steady or flashing as the
+	car's is; and the cabin light, which works with the ignition off.
 ]]
 local CarLights = {}
 
@@ -18,6 +19,8 @@ export type State = {
 	mode: Mode,
 	-- The driver has the high beam selected; it shines only while the headlights are on.
 	highBeam: boolean,
+	-- The driver holds a headlight flasher: the high beam shines with the headlights on or off.
+	flash: boolean?,
 	night: boolean,
 	rain: number,
 	brake: number,
@@ -26,7 +29,14 @@ export type State = {
 	-- Seconds since the indicator was switched on.
 	indicating: number,
 	cabin: boolean,
+	-- The rain light's switch, and seconds since it was switched on.
+	rainLight: boolean?,
+	rainLightFor: number?,
 }
+
+-- How a car's rain light shows while switched on: flashing at `hz`, lit for `onShare` of each
+-- period, or steady at an `hz` of 0.
+export type RainPattern = { hz: number, onShare: number }
 
 export type Tuning = {
 	rainOn: number,
@@ -52,6 +62,9 @@ export type Lit = {
 	left: boolean,
 	right: boolean,
 	cabin: boolean,
+	-- The rain light switched on with the ignition, and whether its lamp is lit this instant.
+	rainLightOn: boolean,
+	rainLight: boolean,
 }
 
 export type Levels = {
@@ -64,6 +77,7 @@ export type Levels = {
 	tail: number,
 	stop: number,
 	reverse: number,
+	rain: number,
 }
 
 export type Press = { since: number?, spent: boolean }
@@ -93,14 +107,22 @@ local function drl(side: Side, state: State, headlights: boolean, tuning: Tuning
 	return if headlights then tuning.drlWithHeadlights else 1
 end
 
-function CarLights.decide(state: State, tuning: Tuning): Lit
+-- Whether a switched-on rain light is lit `elapsed` seconds after it was switched on.
+function CarLights.rainLit(elapsed: number, pattern: RainPattern?): boolean
+	if pattern == nil or pattern.hz <= 0 then
+		return true
+	end
+	return CarLights.blinkOn(elapsed, pattern.hz, pattern.onShare)
+end
+
+function CarLights.decide(state: State, tuning: Tuning, rainPattern: RainPattern?): Lit
 	local running = state.running
 	local auto = state.night or state.rain >= tuning.rainOn
 	local headlights = running and (state.mode == "On" or (state.mode == "Auto" and auto))
 	local flash = running and CarLights.blinkOn(state.indicating, tuning.blinkHz, tuning.blinkOnShare)
 	return {
 		headlights = headlights,
-		highBeam = headlights and state.highBeam,
+		highBeam = running and ((headlights and state.highBeam) or state.flash == true),
 		drlLeft = drl("Left", state, headlights, tuning),
 		drlRight = drl("Right", state, headlights, tuning),
 		tail = headlights,
@@ -109,6 +131,10 @@ function CarLights.decide(state: State, tuning: Tuning): Lit
 		left = state.indicator == "Left" and flash,
 		right = state.indicator == "Right" and flash,
 		cabin = state.cabin,
+		rainLightOn = running and state.rainLight == true,
+		rainLight = running
+			and state.rainLight == true
+			and CarLights.rainLit(state.rainLightFor or 0, rainPattern),
 	}
 end
 
@@ -142,7 +168,30 @@ function CarLights.levels(lit: Lit, tailShare: number, highBeamLevel: number): L
 		tail = if lit.brake then 1 elseif lit.tail then tailShare else 0,
 		stop = on(lit.brake),
 		reverse = on(lit.reverse),
+		rain = on(lit.rainLight),
 	}
+end
+
+-- Whether the cockpit's tell-tale for `switch` is lit: it shows the switch, so a flashing rain
+-- light's tell-tale stays steady. Unknown switches stay dark.
+function CarLights.tellTale(switch: string, lit: Lit): boolean
+	if switch == "headlights" then
+		return lit.headlights
+	elseif switch == "highBeam" then
+		return lit.highBeam
+	elseif switch == "rainLight" then
+		return lit.rainLightOn
+	end
+	return false
+end
+
+-- How much of an LED's full colour it shows (0 to 1) at a glow `strength`, against its day
+-- strength: Neon has no strength of its own, its glow follows how bright its colour is.
+function CarLights.ledShare(strength: number, day: number): number
+	if day <= 0 then
+		return 0
+	end
+	return math.clamp(strength / day, 0, 1)
 end
 
 -- A lamp's EmissiveStrength at `level` of its output, between its night and day strengths.

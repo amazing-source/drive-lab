@@ -1,0 +1,118 @@
+Spec of the per-group rule: python -I tools/anim/car_entry_check_spec.py
+
+1. As committed (green):
+   ok   masked_cage     --no-per-group  exit 0 failures []
+   ok   masked_cage     --per-group     exit 1 failures [('Right Leg', 'cage', 0.2)]
+   ok   masked_cage     (default)       exit 1 failures [('Right Leg', 'cage', 0.2)]
+   ok   masked_door     --no-per-group  exit 0 failures []
+   ok   masked_door     --per-group     exit 1 failures [('Right Leg', 'door', 0.2)]
+   ok   masked_ground   --no-per-group  exit 0 failures []
+   ok   masked_ground   --per-group     exit 1 failures [('Right Leg', 'ground', 0.1)]
+   ok   both_allowed    --per-group     exit 0 failures []
+   ok   cage_under_tol  --per-group     exit 0 failures []
+   ok   deepest_over    --no-per-group  exit 1 failures [('Right Leg', 'seat', 0.22)]
+   ok   deepest_over    --per-group     exit 1 failures [('Right Leg', 'cage', 0.2), ('Right Leg', 'seat', 0.22)]
+   ok   masked_cage     (listed scene)  exit 0 failures [] per_group False
+   all 12 expectations hold
+   exit 0
+
+2. Deliberate break 1, the per-group branch tests only the deepest group (applied to a copy of car_entry_check.py):
+   271c271
+   <             tested = contacts if per_group else ({group: best} if group else {})
+   ---
+   >             tested = {group: best} if group else {}
+   ok   masked_cage     --no-per-group  exit 0 failures []
+   FAIL masked_cage     --per-group     exit 0 failures []
+        expected exit 1 failures [('Right Leg', 'cage', 0.2)] per_group True; got per_group True
+   FAIL masked_cage     (default)       exit 0 failures []
+        expected exit 1 failures [('Right Leg', 'cage', 0.2)] per_group True; got per_group True
+   ok   masked_door     --no-per-group  exit 0 failures []
+   FAIL masked_door     --per-group     exit 0 failures []
+        expected exit 1 failures [('Right Leg', 'door', 0.2)] per_group True; got per_group True
+   ok   masked_ground   --no-per-group  exit 0 failures []
+   FAIL masked_ground   --per-group     exit 0 failures []
+        expected exit 1 failures [('Right Leg', 'ground', 0.1)] per_group True; got per_group True
+   ok   both_allowed    --per-group     exit 0 failures []
+   ok   cage_under_tol  --per-group     exit 0 failures []
+   ok   deepest_over    --no-per-group  exit 1 failures [('Right Leg', 'seat', 0.22)]
+   FAIL deepest_over    --per-group     exit 1 failures [('Right Leg', 'seat', 0.22)]
+        expected exit 1 failures [('Right Leg', 'cage', 0.2), ('Right Leg', 'seat', 0.22)] per_group True; got per_group True
+   ok   masked_cage     (listed scene)  exit 0 failures [] per_group False
+   5 of 12 expectations failed
+   exit 1
+
+3. Deliberate break 2, the default flipped: an unlisted scene runs deepest-only (applied to a copy of car_entry_check.py):
+   188c188
+   <     per_group = args.per_group if args.per_group is not None else scene_sha256 not in DEEPEST_ONLY_SCENES
+   ---
+   >     per_group = args.per_group if args.per_group is not None else scene_sha256 in DEEPEST_ONLY_SCENES
+   ok   masked_cage     --no-per-group  exit 0 failures []
+   ok   masked_cage     --per-group     exit 1 failures [('Right Leg', 'cage', 0.2)]
+   FAIL masked_cage     (default)       exit 0 failures []
+        expected exit 1 failures [('Right Leg', 'cage', 0.2)] per_group True; got per_group False
+   ok   masked_door     --no-per-group  exit 0 failures []
+   ok   masked_door     --per-group     exit 1 failures [('Right Leg', 'door', 0.2)]
+   ok   masked_ground   --no-per-group  exit 0 failures []
+   ok   masked_ground   --per-group     exit 1 failures [('Right Leg', 'ground', 0.1)]
+   ok   both_allowed    --per-group     exit 0 failures []
+   ok   cage_under_tol  --per-group     exit 0 failures []
+   ok   deepest_over    --no-per-group  exit 1 failures [('Right Leg', 'seat', 0.22)]
+   ok   deepest_over    --per-group     exit 1 failures [('Right Leg', 'cage', 0.2), ('Right Leg', 'seat', 0.22)]
+   FAIL masked_cage     (listed scene)  exit 1 failures [('Right Leg', 'cage', 0.2)] per_group True
+   2 of 12 expectations failed
+   exit 1
+
+4. Deliberate break 3, every group held to the deepest group's allowance (applied to a copy of car_entry_check.py):
+   277c277
+   <                     if a["from"] <= fr <= a["to"] and part in a["parts"] and g in a["groups"]:
+   ---
+   >                     if a["from"] <= fr <= a["to"] and part in a["parts"] and group in a["groups"]:
+   ok   masked_cage     --no-per-group  exit 0 failures []
+   FAIL masked_cage     --per-group     exit 0 failures []
+        expected exit 1 failures [('Right Leg', 'cage', 0.2)] per_group True; got per_group True
+   FAIL masked_cage     (default)       exit 0 failures []
+        expected exit 1 failures [('Right Leg', 'cage', 0.2)] per_group True; got per_group True
+   ok   masked_door     --no-per-group  exit 0 failures []
+   FAIL masked_door     --per-group     exit 0 failures []
+        expected exit 1 failures [('Right Leg', 'door', 0.2)] per_group True; got per_group True
+   ok   masked_ground   --no-per-group  exit 0 failures []
+   FAIL masked_ground   --per-group     exit 0 failures []
+        expected exit 1 failures [('Right Leg', 'ground', 0.1)] per_group True; got per_group True
+   ok   both_allowed    --per-group     exit 0 failures []
+   ok   cage_under_tol  --per-group     exit 0 failures []
+   ok   deepest_over    --no-per-group  exit 1 failures [('Right Leg', 'seat', 0.22)]
+   ok   deepest_over    --per-group     exit 1 failures [('Right Leg', 'cage', 0.2), ('Right Leg', 'seat', 0.22)]
+   ok   masked_cage     (listed scene)  exit 0 failures [] per_group False
+   4 of 12 expectations failed
+   exit 1
+
+5. Deliberate break 4, allowances ignored (applied to a copy of car_entry_check.py):
+   278c278
+   <                         allowed = max(allowed, a.get("depth", 0.0))
+   ---
+   >                         allowed = 0.0
+   FAIL masked_cage     --no-per-group  exit 1 failures [('Right Leg', 'seat', 0.22)]
+        expected exit 0 failures [] per_group False; got per_group False
+   FAIL masked_cage     --per-group     exit 1 failures [('Right Leg', 'cage', 0.2), ('Right Leg', 'seat', 0.22)]
+        expected exit 1 failures [('Right Leg', 'cage', 0.2)] per_group True; got per_group True
+   FAIL masked_cage     (default)       exit 1 failures [('Right Leg', 'cage', 0.2), ('Right Leg', 'seat', 0.22)]
+        expected exit 1 failures [('Right Leg', 'cage', 0.2)] per_group True; got per_group True
+   FAIL masked_door     --no-per-group  exit 1 failures [('Right Leg', 'seat', 0.22)]
+        expected exit 0 failures [] per_group False; got per_group False
+   FAIL masked_door     --per-group     exit 1 failures [('Right Leg', 'door', 0.2), ('Right Leg', 'seat', 0.22)]
+        expected exit 1 failures [('Right Leg', 'door', 0.2)] per_group True; got per_group True
+   FAIL masked_ground   --no-per-group  exit 1 failures [('Right Leg', 'seat', 0.22)]
+        expected exit 0 failures [] per_group False; got per_group False
+   FAIL masked_ground   --per-group     exit 1 failures [('Right Leg', 'ground', 0.1), ('Right Leg', 'seat', 0.22)]
+        expected exit 1 failures [('Right Leg', 'ground', 0.1)] per_group True; got per_group True
+   FAIL both_allowed    --per-group     exit 1 failures [('Right Leg', 'cage', 0.2), ('Right Leg', 'seat', 0.22)]
+        expected exit 0 failures [] per_group True; got per_group True
+   FAIL cage_under_tol  --per-group     exit 1 failures [('Right Leg', 'seat', 0.22)]
+        expected exit 0 failures [] per_group True; got per_group True
+   ok   deepest_over    --no-per-group  exit 1 failures [('Right Leg', 'seat', 0.22)]
+   ok   deepest_over    --per-group     exit 1 failures [('Right Leg', 'cage', 0.2), ('Right Leg', 'seat', 0.22)]
+   FAIL masked_cage     (listed scene)  exit 1 failures [('Right Leg', 'seat', 0.22)] per_group False
+   10 of 12 expectations failed
+   exit 1
+
+6. Restored: the committed file runs green again (step 1); git diff shows no break left.

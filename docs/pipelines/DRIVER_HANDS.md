@@ -272,7 +272,7 @@ measured on the cockpit dump c6 with the v9_a10 grip):
 |---|---|---|---|---|
 | The open left hand closing onto the rim | last 0.15 s before its grip | 3.6 mm (6) | a posed hand swaps from Rest to Grip; the open fingers dip into the rim before they close | coordinator, on renders |
 | The open right hand closing onto the rim | last 0.15 s before its grip | about 1.5 mm (3) | as above | coordinator |
-| The left hand brushing the A-pillar's cage padding | taking the rim | 3.5 mm (5) | the left grip itself rests 1.7 mm into that padding, so there is no clean way in; tighten if the padding is opened | coordinator |
+| ~~The left hand brushing the A-pillar's cage padding~~ | taking the rim | 3.5 mm (5), then none | the left grip rested 1.7 mm into that padding; the cockpit agent thinned its inboard face by up to 4 mm and the hand no longer touches it, so the allowance is gone | coordinator; removed after re-measuring |
 
 ## 11. Thumb presses on the wheel's buttons
 

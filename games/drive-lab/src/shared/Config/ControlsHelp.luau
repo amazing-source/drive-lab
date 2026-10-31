@@ -289,6 +289,14 @@ local HELP: Rules.Help = {
 					text = "Tap to step the headlights through automatic, on, full beam and off; hold for {PAD_HOLD} s to switch the cabin light.",
 					controls = { "LIGHTS_PAD" },
 					gamepadGesture = "Tap or hold",
+					requires = "cabinLight",
+				},
+				{
+					label = "Lights, on a gamepad",
+					text = "Tap to step the headlights through automatic, on, full beam and off.",
+					controls = { "LIGHTS_PAD" },
+					gamepadGesture = "Tap",
+					lacks = "cabinLight",
 				},
 				{
 					label = "Indicators, left / right",

@@ -1,5 +1,6 @@
 --!strict
 local Config = require("../src/shared/Config/TyreSmoke")
+local DR458 = require("../src/shared/Config/Cars/DR458/Physics")
 local DriveSim = require("../tools/DriveSim")
 local SVJ = require("../src/shared/Config/Cars/SVJ/Physics")
 local T = require("../../../tools/test/T")
@@ -141,6 +142,25 @@ describe("TyreSmoke", function()
 	end)
 end)
 
+-- The highest total particles a second the emitters are set to over a run, the tread's heat
+-- included, with the game's own thresholds on a dry road.
+local function peakRate(sim: DriveSim.Sim, input, seconds: number): number
+	local readings: { TyreSmoke.Wheel } = {}
+	local heats, rates = {}, {}
+	local peak = 0
+	local stop = sim.time + seconds
+	while sim.time < stop do
+		local result = DriveSim.frame(sim, input, DT)
+		TyreSmoke.measure(sim.model, result.wheels, readings)
+		local total = 0
+		for _, rate in TyreSmoke.rates(readings, 0, Config.THRESHOLDS, heats, DT, rates) do
+			total += rate
+		end
+		peak = math.max(peak, total)
+	end
+	return peak
+end
+
 describe("TyreSmoke on the SVJ's physics", function()
 	it("makes none cruising at 100 km/h", function()
 		local sim = DriveSim.new(SVJ)
@@ -199,5 +219,62 @@ describe("TyreSmoke on the SVJ's physics", function()
 		local readings = TyreSmoke.measure(sim.model, result.wheels, {})
 		expect(readings[3].slide).toBe(0)
 		expect(readings[4].slide > Config.THRESHOLDS.slide.from).toBe(true)
+	end)
+end)
+
+-- The DR458's slicks peak at a smaller slip than the SVJ's road tyres (Config/Cars/DR458/Physics),
+-- so the same thresholds are checked on its own physics: its manettino's 2 and 1 keep traction
+-- control, OFF drops it.
+describe("TyreSmoke on the DR458's physics", function()
+	it("makes none cruising at 100 km/h", function()
+		local sim = DriveSim.new(DR458)
+		DriveSim.setSpeed(sim, 100 * KMH, 4)
+		for _, share in peakShares(sim, DriveSim.input({ throttle = 0.25, drivingMode = "1" }), 3) do
+			expect(share).toBe(0)
+		end
+	end)
+
+	-- Its fronts reach a share of 0.13 for an instant as the brakes bite in positions 1 and OFF (the
+	-- car's own ABS calibration; position 2's tighter one stays near 0.01), so this is judged on what
+	-- the emitters are set to after the tread's heat: what the player sees.
+	it(
+		"emits under one puff a second at any moment of an ABS stop from 150 km/h, in every position",
+		function()
+			for _, mode in { "1", "2", "OFF" } do
+				local sim = DriveSim.new(DR458)
+				DriveSim.setSpeed(sim, 150 * KMH, 5)
+				expect(peakRate(sim, DriveSim.input({ brake = 1, drivingMode = mode }), 4) < 1).toBe(true)
+			end
+		end
+	)
+
+	it("makes almost none launching on traction control in positions 2 and 1", function()
+		for _, mode in { "2", "1" } do
+			local sim = DriveSim.new(DR458)
+			local hold = DriveSim.input({ throttle = 1, brake = 1, drivingMode = mode })
+			while sim.time < 1.5 do
+				DriveSim.frame(sim, hold, DT)
+			end
+			for _, share in peakShares(sim, DriveSim.input({ throttle = 1, drivingMode = mode }), 3) do
+				expect(share < 0.1).toBe(true)
+			end
+		end
+	end)
+
+	it("smokes all four slicks in full locked at 150 km/h without ABS", function()
+		local sim = DriveSim.new(DR458)
+		DriveSim.setSpeed(sim, 150 * KMH, 5)
+		for _, share in peakShares(sim, DriveSim.input({ brake = 1, abs = false, drivingMode = "OFF" }), 2) do
+			expect(share > 0.95).toBe(true)
+		end
+	end)
+
+	it("smokes the rear slicks spinning up in OFF without traction control, the fronts not at all", function()
+		local sim = DriveSim.new(DR458)
+		local peaks = peakShares(sim, DriveSim.input({ throttle = 1, tc = false, drivingMode = "OFF" }), 1)
+		expect(peaks[1]).toBe(0)
+		expect(peaks[2]).toBe(0)
+		expect(peaks[3] > 0.9).toBe(true)
+		expect(peaks[4] > 0.9).toBe(true)
 	end)
 end)

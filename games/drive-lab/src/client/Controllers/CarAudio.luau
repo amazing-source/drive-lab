@@ -1,8 +1,8 @@
 --!strict
 --[[
 	Plays the car the local player drives: the engine loops mixed by rpm and throttle, the
-	limiter, the start-up, gear changes, the shift cut and the exhaust's pops, each with its
-	flame (Rules/ExhaustPops decides when). The readouts come from the attributes Driving sets
+	limiter, the start-up, gear changes, the shift cut and the exhaust's pops, with their flames
+	(Rules/ExhaustPops decides when it pops, Rules/ExhaustFlames which pops throw flame). The readouts come from the attributes Driving sets
 	on the car every frame, and only the driver's client has them, so other players' cars stay
 	silent for now.
 
@@ -27,6 +27,7 @@ local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local DriveModes = require(ReplicatedStorage.Shared.Rules.DriveModes)
 local EngineSound = require(ReplicatedStorage.Shared.Rules.EngineSound)
+local ExhaustFlamesRules = require(ReplicatedStorage.Shared.Rules.ExhaustFlames)
 local ExhaustPops = require(ReplicatedStorage.Shared.Rules.ExhaustPops)
 local StartupHandOver = require(ReplicatedStorage.Shared.Rules.StartupHandOver)
 local Types = require(ReplicatedStorage.Shared.Config.Cars.Types)
@@ -43,8 +44,9 @@ type Session = {
 	pack: CarAudio.Pack,
 	-- The car's drive modes, in order (Config/Cars).
 	modes: { Types.DrivingMode },
-	-- Where its pops throw flames; nil on a model with no outlets bound.
-	exhaust: Binding.Exhaust?,
+	-- Where its pops throw flames (the binding's outlets), and which of them do.
+	binding: Binding.CarModel,
+	flames: ExhaustFlamesRules.CarFlames?,
 	chassis: BasePart,
 	-- Everything the session made: destroying them stops every sound.
 	owned: { Instance },
@@ -174,7 +176,7 @@ local function oneShot(
 	return sound
 end
 
-local function pop(current: Session)
+local function pop(current: Session, mode: Types.DrivingMode)
 	local pops = current.pack.pops
 	local volume = between(pops.volume)
 	oneShot(
@@ -187,13 +189,10 @@ local function pop(current: Session)
 		between(pops.speed)
 	)
 	-- The flame goes with the bang: a louder pop throws more of it.
-	local exhaust = current.exhaust
-	if exhaust then
-		ExhaustFlames.burst(
-			current.model,
-			exhaust,
-			(volume - pops.volume.from) / (pops.volume.to - pops.volume.from)
-		)
+	local strength = (volume - pops.volume.from) / (pops.volume.to - pops.volume.from)
+	local share = ExhaustFlamesRules.share(current.flames, mode, current.pops.kind or "Lift", strength, draw)
+	if share then
+		ExhaustFlames.burst(current.model, current.binding, share, current.flames)
 	end
 end
 
@@ -344,7 +343,7 @@ local function update(current: Session, dt: number)
 		)
 	end
 	if ExhaustPops.step(current.pops, events, car, mode, os.clock(), draw) then
-		pop(current)
+		pop(current, mode)
 	end
 end
 
@@ -397,7 +396,8 @@ local function start(model: Model, entry: Catalog.Entry, sincePress: number)
 		model = model,
 		pack = pack,
 		modes = entry.physics.modeOrder,
-		exhaust = entry.model.exhaust,
+		binding = entry.model,
+		flames = entry.flames,
 		chassis = chassis,
 		owned = { engineGroup, eventsGroup, enginePoint, exhaustPoint },
 		engine = EngineSound.new(mixerLayers, pack.engineTuning),

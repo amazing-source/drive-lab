@@ -1,0 +1,168 @@
+car_entry_check.py on the SVJ's shipped bake 4 (scene 7710cfda47eb, each timeline's own allow list), both rules.
+
+== entry (--allow allow_entry.json), no flag: deepest-only, the default for this scene
+229 frames, cloud 1390697 points (+door 565078), tol 0.04
+contacts tested: only the group of each part's deepest point
+  worst Torso       0.0740 at f160 (paint)
+  worst Head        0.0000 at f0 (None)
+  worst Right Arm   0.1480 at f26 (door)
+  worst Left Arm    0.1166 at f193 (door)
+  worst Right Leg   0.1402 at f163 (paint)
+  worst Left Leg    0.2518 at f192 (interior)
+FAILURES 2
+  f161   Right Leg  slide      2.3000  limit 0.6000
+  f161   Left Leg   slide      0.9600  limit 0.6000
+SPANS 2
+  f161-f161 Left Leg   slide      max 0.9600 at f161  limit 0.6000  (1 frames)
+  f161-f161 Right Leg  slide      max 2.3000 at f161  limit 0.6000  (1 frames)
+
+== entry (--allow allow_entry.json), --per-group
+229 frames, cloud 1390697 points (+door 565078), tol 0.04
+contacts tested: every group a part touches
+  worst Torso       0.0740 at f160 (paint)
+  worst Head        0.0000 at f0 (None)
+  worst Right Arm   0.1480 at f26 (door)
+  worst Left Arm    0.1166 at f193 (door)
+  worst Right Leg   0.1402 at f163 (paint)
+  worst Left Leg    0.2518 at f192 (interior)
+FAILURES 2
+  f161   Right Leg  slide      2.3000  limit 0.6000
+  f161   Left Leg   slide      0.9600  limit 0.6000
+SPANS 2
+  f161-f161 Left Leg   slide      max 0.9600 at f161  limit 0.6000  (1 frames)
+  f161-f161 Right Leg  slide      max 2.3000 at f161  limit 0.6000  (1 frames)
+
+== exit (--allow allow_exit.json), no flag: deepest-only, the default for this scene
+307 frames, cloud 1861401 points (+door 565078), tol 0.04
+contacts tested: only the group of each part's deepest point
+  worst Torso       0.0000 at f0 (None)
+  worst Head        0.0000 at f0 (None)
+  worst Right Arm   0.1416 at f240 (door)
+  worst Left Arm    0.1157 at f13 (door)
+  worst Right Leg   0.3967 at f85 (interior)
+  worst Left Leg    0.1420 at f104 (paint)
+FAILURES 16
+  f107   Right Leg  slide      1.9100  limit 0.6000
+  f107   Left Leg   slide      1.9100  limit 0.6000
+  f144   Right Leg  slide      1.1400  limit 0.6000
+  f153   Right Leg  slide      1.4000  limit 0.6000
+  f169   Left Leg   slide      0.7400  limit 0.6000
+  f195   Right Leg  slide      0.6300  limit 0.6000
+  f211   Right Leg  slide      0.6300  limit 0.6000
+  f221   Right Leg  slide      0.7700  limit 0.6000
+  f243   Right Leg  slide      1.1900  limit 0.6000
+  f244   Left Leg   slide      1.1500  limit 0.6000
+  f248   Left Leg   slide      0.8700  limit 0.6000
+  f249   Right Leg  slide      0.9900  limit 0.6000
+  f250   Right Leg  slide      1.2700  limit 0.6000
+  f279   Left Leg   slide      0.6200  limit 0.6000
+  f295   Left Leg   slide      0.6200  limit 0.6000
+  f304   Left Leg   slide      0.7700  limit 0.6000
+SPANS 15
+  f107-f107 Left Leg   slide      max 1.9100 at f107  limit 0.6000  (1 frames)
+  f107-f107 Right Leg  slide      max 1.9100 at f107  limit 0.6000  (1 frames)
+  f144-f144 Right Leg  slide      max 1.1400 at f144  limit 0.6000  (1 frames)
+  f153-f153 Right Leg  slide      max 1.4000 at f153  limit 0.6000  (1 frames)
+  f169-f169 Left Leg   slide      max 0.7400 at f169  limit 0.6000  (1 frames)
+  f195-f195 Right Leg  slide      max 0.6300 at f195  limit 0.6000  (1 frames)
+  f211-f211 Right Leg  slide      max 0.6300 at f211  limit 0.6000  (1 frames)
+  f221-f221 Right Leg  slide      max 0.7700 at f221  limit 0.6000  (1 frames)
+  f243-f243 Right Leg  slide      max 1.1900 at f243  limit 0.6000  (1 frames)
+  f244-f244 Left Leg   slide      max 1.1500 at f244  limit 0.6000  (1 frames)
+  f248-f248 Left Leg   slide      max 0.8700 at f248  limit 0.6000  (1 frames)
+  f249-f250 Right Leg  slide      max 1.2700 at f250  limit 0.6000  (2 frames)
+  f279-f279 Left Leg   slide      max 0.6200 at f279  limit 0.6000  (1 frames)
+  f295-f295 Left Leg   slide      max 0.6200 at f295  limit 0.6000  (1 frames)
+  f304-f304 Left Leg   slide      max 0.7700 at f304  limit 0.6000  (1 frames)
+
+== exit (--allow allow_exit.json), --per-group
+307 frames, cloud 1861401 points (+door 565078), tol 0.04
+contacts tested: every group a part touches
+  worst Torso       0.0000 at f0 (None)
+  worst Head        0.0000 at f0 (None)
+  worst Right Arm   0.1416 at f240 (door)
+  worst Left Arm    0.1157 at f13 (door)
+  worst Right Leg   0.3967 at f85 (interior)
+  worst Left Leg    0.1420 at f104 (paint)
+FAILURES 16
+  f107   Right Leg  slide      1.9100  limit 0.6000
+  f107   Left Leg   slide      1.9100  limit 0.6000
+  f144   Right Leg  slide      1.1400  limit 0.6000
+  f153   Right Leg  slide      1.4000  limit 0.6000
+  f169   Left Leg   slide      0.7400  limit 0.6000
+  f195   Right Leg  slide      0.6300  limit 0.6000
+  f211   Right Leg  slide      0.6300  limit 0.6000
+  f221   Right Leg  slide      0.7700  limit 0.6000
+  f243   Right Leg  slide      1.1900  limit 0.6000
+  f244   Left Leg   slide      1.1500  limit 0.6000
+  f248   Left Leg   slide      0.8700  limit 0.6000
+  f249   Right Leg  slide      0.9900  limit 0.6000
+  f250   Right Leg  slide      1.2700  limit 0.6000
+  f279   Left Leg   slide      0.6200  limit 0.6000
+  f295   Left Leg   slide      0.6200  limit 0.6000
+  f304   Left Leg   slide      0.7700  limit 0.6000
+SPANS 15
+  f107-f107 Left Leg   slide      max 1.9100 at f107  limit 0.6000  (1 frames)
+  f107-f107 Right Leg  slide      max 1.9100 at f107  limit 0.6000  (1 frames)
+  f144-f144 Right Leg  slide      max 1.1400 at f144  limit 0.6000  (1 frames)
+  f153-f153 Right Leg  slide      max 1.4000 at f153  limit 0.6000  (1 frames)
+  f169-f169 Left Leg   slide      max 0.7400 at f169  limit 0.6000  (1 frames)
+  f195-f195 Right Leg  slide      max 0.6300 at f195  limit 0.6000  (1 frames)
+  f211-f211 Right Leg  slide      max 0.6300 at f211  limit 0.6000  (1 frames)
+  f221-f221 Right Leg  slide      max 0.7700 at f221  limit 0.6000  (1 frames)
+  f243-f243 Right Leg  slide      max 1.1900 at f243  limit 0.6000  (1 frames)
+  f244-f244 Left Leg   slide      max 1.1500 at f244  limit 0.6000  (1 frames)
+  f248-f248 Left Leg   slide      max 0.8700 at f248  limit 0.6000  (1 frames)
+  f249-f250 Right Leg  slide      max 1.2700 at f250  limit 0.6000  (2 frames)
+  f279-f279 Left Leg   slide      max 0.6200 at f279  limit 0.6000  (1 frames)
+  f295-f295 Left Leg   slide      max 0.6200 at f295  limit 0.6000  (1 frames)
+  f304-f304 Left Leg   slide      max 0.7700 at f304  limit 0.6000  (1 frames)
+
+== close (--allow allow_close.json), no flag: deepest-only, the default for this scene
+55 frames, cloud 871635 points (+door 565078), tol 0.04
+contacts tested: only the group of each part's deepest point
+  worst Torso       0.0000 at f0 (None)
+  worst Head        0.0000 at f0 (None)
+  worst Right Arm   0.0000 at f0 (None)
+  worst Left Arm    0.0000 at f0 (None)
+  worst Right Leg   0.0000 at f0 (None)
+  worst Left Leg    0.0000 at f0 (None)
+FAILURES 0
+SPANS 0
+
+== close (--allow allow_close.json), --per-group
+55 frames, cloud 871635 points (+door 565078), tol 0.04
+contacts tested: every group a part touches
+  worst Torso       0.0000 at f0 (None)
+  worst Head        0.0000 at f0 (None)
+  worst Right Arm   0.0000 at f0 (None)
+  worst Left Arm    0.0000 at f0 (None)
+  worst Right Leg   0.0000 at f0 (None)
+  worst Left Leg    0.0000 at f0 (None)
+FAILURES 0
+SPANS 0
+
+== seated (no allow list), no flag: deepest-only, the default for this scene
+31 frames, cloud 847171 points (+door 565078), tol 0.04
+contacts tested: only the group of each part's deepest point
+  worst Torso       0.0000 at f0 (None)
+  worst Head        0.0000 at f0 (None)
+  worst Right Arm   0.0000 at f0 (None)
+  worst Left Arm    0.0000 at f0 (None)
+  worst Right Leg   0.0000 at f0 (None)
+  worst Left Leg    0.0000 at f0 (None)
+FAILURES 0
+SPANS 0
+
+== seated (no allow list), --per-group
+31 frames, cloud 847171 points (+door 565078), tol 0.04
+contacts tested: every group a part touches
+  worst Torso       0.0000 at f0 (None)
+  worst Head        0.0000 at f0 (None)
+  worst Right Arm   0.0000 at f0 (None)
+  worst Left Arm    0.0000 at f0 (None)
+  worst Right Leg   0.0000 at f0 (None)
+  worst Left Leg    0.0000 at f0 (None)
+FAILURES 0
+SPANS 0
+

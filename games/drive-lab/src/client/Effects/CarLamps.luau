@@ -2,10 +2,13 @@
 --[[
 	One car's lamps on this client. Each lamp is a piece of the car's light mesh with its own
 	SurfaceAppearance (tools/blender/split_lights.py), so a lamp glows by its EmissiveStrength
-	alone; the housings and the rear fog lamps never glow. Roblox lights added here throw the
-	light: a beam per headlight and a farther one on high beam, a red glow behind each tail lamp, an amber glow at each
-	indicator, a reversing light, and the cabin light in the roof console. Only what changed is
-	written.
+	alone; the housings never glow, nor do the rear fog lamps on a car without a rain light switch,
+	which lights them as its rain light. Roblox lights added here throw the light: a beam per
+	headlight and a farther one on high beam, a red glow behind each tail lamp, an amber glow at
+	each indicator, a reversing light, a red glow behind each rain light, and the cabin light in the
+	roof console. The cockpit's tell-tales glow with the switch they show. Each car names the pieces
+	it cannot do without (its lights' `required`); every other piece is lit when the model has it.
+	Only what changed is written.
 ]]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -15,6 +18,9 @@ local Rules = require(ReplicatedStorage.Shared.Rules.CarLights)
 local Units = require(ReplicatedStorage.Shared.Units)
 
 type Glow = { look: SurfaceAppearance, spec: Config.Glow, strength: number }
+-- A tell-tale LED with no SurfaceAppearance: lit, it is Neon in its tint, darker for a dimmer glow
+-- (Neon's glow follows its colour); unlit, plastic in the colour it came with.
+type Led = { part: BasePart, spec: Config.Glow, unlit: Color3, strength: number }
 -- A light that switches with a lamp; `base` is its brightness at night.
 type Switch = { light: Light, base: number, on: boolean, brightness: number }
 
@@ -29,12 +35,16 @@ export type Lamps = {
 	tail: { Glow },
 	stop: { Glow },
 	reverse: { Glow },
+	rain: { Glow },
+	tellTales: { [string]: { Glow } },
+	leds: { [string]: { Led } },
 	beams: { Switch },
 	highBeams: { Switch },
 	tailGlows: { PointLight },
 	blinksLeft: { Switch },
 	blinksRight: { Switch },
-	reversing: Switch,
+	rainGlows: { Switch },
+	reversing: Switch?,
 	cabin: Switch?,
 	tailShown: number,
 	nightShown: number,
@@ -42,15 +52,11 @@ export type Lamps = {
 }
 
 local SIDES = { "Left", "Right" }
--- Pieces that never glow: each corner's housing and the rear fog lamps (no switch for them).
-local DARK = {
-	"Light_FrontLeft",
-	"Light_FrontRight",
-	"Light_RearLeft",
-	"Light_RearRight",
-	"Light_RearLeft_Fog",
-	"Light_RearRight_Fog",
-}
+-- An LED that arrives glowing (Neon) is shown unlit at this much darker than its tint.
+local LED_UNLIT_DARKENING = 0.85
+-- Each corner's housing never glows; the rear fog lamps glow only as a rain light.
+local HOUSINGS = { "Light_FrontLeft", "Light_FrontRight", "Light_RearLeft", "Light_RearRight" }
+local FOG = { "Light_RearLeft_Fog", "Light_RearRight_Fog" }
 
 local function piece(model: Model, name: string): BasePart?
 	local found = model:FindFirstChild(name, true)
@@ -129,6 +135,12 @@ local function concat(...: { Glow }): { Glow }
 	return list
 end
 
+local function joined(first: { string }, second: { string }): { string }
+	local list = table.clone(first)
+	table.move(second, 1, #second, #list + 1, list)
+	return list
+end
+
 local function sides(pattern: string): { string }
 	return { string.format(pattern, "Left"), string.format(pattern, "Right") }
 end
@@ -188,78 +200,149 @@ local function show(list: { Glow }, level: number, daylight: number)
 	end
 end
 
--- The pieces the lamps cannot do without, or nil while any has not streamed in.
-local function required(model: Model): { [string]: BasePart }?
-	local names = {}
-	for _, lamp in
-		{ "Front%s_Projector", "Front%s_Modules", "Rear%s_Tail", "Rear%s_Indicator", "Rear%s_Reverse" }
-	do
-		for _, name in sides("Light_" .. lamp) do
-			table.insert(names, name)
-		end
-	end
-	local parts = {}
+-- Whether every piece the car's lamps cannot do without has streamed in.
+local function hasRequired(model: Model, names: { string }): boolean
 	for _, name in names do
-		local part = piece(model, name)
-		if part == nil then
-			return nil
+		if piece(model, name) == nil then
+			return false
 		end
-		parts[name] = part
 	end
-	return parts
+	return true
 end
 
-local function addSources(lamps: Lamps, parts: { [string]: BasePart })
-	local headlight, high, indicator = lamps.lights.headlight, lamps.lights.highBeam, lamps.lights.indicator
+local function addBeams(lamps: Lamps, projector: BasePart)
+	local headlight, high = lamps.lights.headlight, lamps.lights.highBeam
+	local front = CFrame.new(0, 0, -projector.Size.Z / 2) * CFrame.Angles(headlight.pitch, 0, 0)
+	local at = attach(projector, "HeadlightBeam", front)
+	local spot = spotLight(
+		at,
+		Enum.NormalId.Front,
+		headlight.angle,
+		headlight.brightness,
+		headlight.range,
+		headlight.color
+	)
+	table.insert(lamps.beams, switchFor(spot))
+	local level = CFrame.new(0, 0, -projector.Size.Z / 2) * CFrame.Angles(high.pitch, 0, 0)
+	local reach = attach(projector, "HighBeam", level)
+	local far =
+		spotLight(reach, Enum.NormalId.Front, high.angle, high.brightness, high.range, headlight.color)
+	table.insert(lamps.highBeams, switchFor(far))
+end
+
+local function addSources(lamps: Lamps, model: Model)
+	local indicator = lamps.lights.indicator
 	for _, side in SIDES do
-		local projector = parts[`Light_Front{side}_Projector`]
-		local front = CFrame.new(0, 0, -projector.Size.Z / 2) * CFrame.Angles(headlight.pitch, 0, 0)
-		local at = attach(projector, "HeadlightBeam", front)
-		local spot = spotLight(
-			at,
-			Enum.NormalId.Front,
-			headlight.angle,
-			headlight.brightness,
-			headlight.range,
-			headlight.color
-		)
-		table.insert(lamps.beams, switchFor(spot))
-		local level = CFrame.new(0, 0, -projector.Size.Z / 2) * CFrame.Angles(high.pitch, 0, 0)
-		local reach = attach(projector, "HighBeam", level)
-		local far =
-			spotLight(reach, Enum.NormalId.Front, high.angle, high.brightness, high.range, headlight.color)
-		table.insert(lamps.highBeams, switchFor(far))
-		local tail = attach(parts[`Light_Rear{side}_Tail`], "TailGlow", CFrame.identity)
-		table.insert(lamps.tailGlows, pointLight(tail, 0, 0, lamps.lights.tail.color))
+		local projector = piece(model, `Light_Front{side}_Projector`)
+		if projector then
+			addBeams(lamps, projector)
+		end
+		local tailPiece = piece(model, `Light_Rear{side}_Tail`)
+		if tailPiece then
+			local tail = attach(tailPiece, "TailGlow", CFrame.identity)
+			table.insert(lamps.tailGlows, pointLight(tail, 0, 0, lamps.lights.tail.color))
+		end
 		local blinks = if side == "Left" then lamps.blinksLeft else lamps.blinksRight
 		for _, name in { `Light_Front{side}_Modules`, `Light_Rear{side}_Indicator` } do
-			local glow = attach(parts[name], "IndicatorGlow", CFrame.identity)
-			local light = pointLight(glow, indicator.brightness, indicator.range, indicator.color)
-			table.insert(blinks, switchFor(light))
+			local found = piece(model, name)
+			if found then
+				local glow = attach(found, "IndicatorGlow", CFrame.identity)
+				local light = pointLight(glow, indicator.brightness, indicator.range, indicator.color)
+				table.insert(blinks, switchFor(light))
+			end
+		end
+	end
+	local rain = lamps.lights.rain
+	if rain then
+		for _, name in FOG do
+			local found = piece(model, name)
+			if found then
+				local glow = attach(found, "RainLightGlow", CFrame.identity)
+				table.insert(
+					lamps.rainGlows,
+					switchFor(pointLight(glow, rain.brightness, rain.range, rain.color))
+				)
+			end
 		end
 	end
 end
 
--- Between the two reversing lamps, facing back.
-local function reversingLight(parts: { [string]: BasePart }, lights: Config.Lights): Switch
-	local left, right = parts.Light_RearLeft_Reverse, parts.Light_RearRight_Reverse
-	local middle = left.CFrame:PointToObjectSpace((left.Position + right.Position) / 2)
+-- Between the reversing lamps the model has (or at its only one), facing back; nil without any.
+local function reversingLight(model: Model, lights: Config.Lights): Switch?
+	local found: { BasePart } = {}
+	for _, name in sides("Light_Rear%s_Reverse") do
+		local part = piece(model, name)
+		if part then
+			table.insert(found, part)
+		end
+	end
+	if #found == 0 then
+		return nil
+	end
+	local host = found[1]
+	local sum = Vector3.zero
+	for _, part in found do
+		sum += part.Position
+	end
+	local middle = host.CFrame:PointToObjectSpace(sum / #found)
 	local settings = lights.reverse
-	local at = attach(left, "ReverseLight", CFrame.new(middle))
+	local at = attach(host, "ReverseLight", CFrame.new(middle))
 	local spot =
 		spotLight(at, Enum.NormalId.Back, settings.angle, settings.brightness, settings.range, settings.color)
 	return switchFor(spot)
+end
+
+-- Each tell-tale the car has a glow for and its model binding a piece for, by the switch it shows:
+-- a glow where the piece has a SurfaceAppearance, an LED where it has none.
+local function tellTales(model: Model, entry: Catalog.Entry): ({ [string]: { Glow } }, { [string]: { Led } })
+	local looks: { [string]: { Glow } } = {}
+	local leds: { [string]: { Led } } = {}
+	local specs, pieces = entry.lights.tellTales, entry.model.panelLamps
+	if specs == nil or pieces == nil then
+		return looks, leds
+	end
+	for switch, spec in specs do
+		local name = pieces[switch]
+		local part = name and piece(model, name)
+		if part and part:FindFirstChildOfClass("SurfaceAppearance") then
+			looks[switch] = glows(model, { part.Name }, spec)
+		elseif part then
+			local unlit = if part.Material == Enum.Material.Neon
+				then colour(spec.tint):Lerp(Color3.new(), LED_UNLIT_DARKENING)
+				else part.Color
+			part.Material = Enum.Material.SmoothPlastic
+			part.Color = unlit
+			leds[switch] = { { part = part, spec = spec, unlit = unlit, strength = 0 } }
+		end
+	end
+	return looks, leds
+end
+
+local function showLeds(list: { Led }, level: number, daylight: number)
+	for _, led in list do
+		local spec = led.spec
+		local strength = Rules.strength(level, spec.night, spec.day, daylight)
+		if math.abs(strength - led.strength) > 1e-3 then
+			led.strength = strength
+			local lit = strength > 0
+			led.part.Material = if lit then Enum.Material.Neon else Enum.Material.SmoothPlastic
+			led.part.Color = if lit
+				then Color3.new():Lerp(colour(spec.tint), Rules.ledShare(strength, spec.day))
+				else led.unlit
+		end
+	end
 end
 
 local CarLamps = {}
 
 -- The lamps of a car once its light pieces have streamed in; nil before that.
 function CarLamps.build(model: Model, entry: Catalog.Entry): Lamps?
-	local parts = required(model)
-	if parts == nil then
+	if not hasRequired(model, entry.lights.required) then
 		return nil
 	end
-	for _, name in DARK do
+	local hasRain = entry.lights.rain ~= nil
+	local dark: { string } = if hasRain then HOUSINGS else joined(HOUSINGS, FOG)
+	for _, name in dark do
 		local part = piece(model, name)
 		local look = part and part:FindFirstChildOfClass("SurfaceAppearance")
 		if look then
@@ -288,18 +371,23 @@ function CarLamps.build(model: Model, entry: Catalog.Entry): Lamps?
 		tail = glows(model, sides("Light_Rear%s_Tail"), glow.tail),
 		stop = glows(model, sides("Light_Rear%s_Bar"), glow.stop),
 		reverse = glows(model, sides("Light_Rear%s_Reverse"), glow.reverse),
+		rain = if hasRain then glows(model, FOG, glow.fog) else {},
+		tellTales = {},
+		leds = {},
 		beams = {},
 		highBeams = {},
 		tailGlows = {},
 		blinksLeft = {},
 		blinksRight = {},
-		reversing = reversingLight(parts, entry.lights),
+		rainGlows = {},
+		reversing = reversingLight(model, entry.lights),
 		cabin = cabinLight(model, entry),
 		tailShown = -1,
 		nightShown = -1,
 		shadows = nil,
 	}
-	addSources(lamps, parts)
+	lamps.tellTales, lamps.leds = tellTales(model, entry)
+	addSources(lamps, model)
 	return lamps
 end
 
@@ -316,6 +404,13 @@ function CarLamps.apply(lamps: Lamps, lit: Rules.Lit, daylight: number, shadows:
 	show(lamps.tail, levels.tail, daylight)
 	show(lamps.stop, levels.stop, daylight)
 	show(lamps.reverse, levels.reverse, daylight)
+	show(lamps.rain, levels.rain, daylight)
+	for switch, list in lamps.tellTales do
+		show(list, if Rules.tellTale(switch, lit) then 1 else 0, daylight)
+	end
+	for switch, list in lamps.leds do
+		showLeds(list, if Rules.tellTale(switch, lit) then 1 else 0, daylight)
+	end
 	local tail = levels.tail
 
 	local night = 1 - daylight
@@ -342,6 +437,9 @@ function CarLamps.apply(lamps: Lamps, lit: Rules.Lit, daylight: number, shadows:
 		set(switch, lit.right, night)
 	end
 	set(lamps.reversing, lit.reverse, night)
+	for _, switch in lamps.rainGlows do
+		set(switch, lit.rainLight, night)
+	end
 	set(lamps.cabin, lit.cabin, night)
 	if shadows ~= lamps.shadows then
 		lamps.shadows = shadows
