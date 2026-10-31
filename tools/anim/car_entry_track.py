@@ -31,6 +31,11 @@ from car_entry_clear import CORNERS, LIMB_PART, POINT, Scene, allowed, fast_aim,
 QUANTUM = 0.002
 MARGIN = 0.002  # kept under every allowance: the house check samples its own cloud
 LIMB_SPEED = 7.0  # degrees a frame a limb turns freely; past it the move costs like a missed target
+# The most a frame may move off the previous one (a limb's swing and spread, the pelvis, the
+# torso's and the neck's angles), so a search can never flip a limb onto its other branch or pop
+# the body: a contact that cannot be cleared within it is reported, not jumped over.
+MAX_LIMB_TURN = 2 * LIMB_SPEED
+MAX_BODY_STEP = np.array([0.08, 0.08, 0.08, 5.0, 5.0, 5.0, 8.0, 8.0])
 BODY_LEVELS = ((0.2, 10.0), (0.1, 5.0), (0.05, 2.5), (0.025, 1.25))
 LIMB_LEVELS = (16.0, 8.0, 4.0, 2.0)
 
@@ -100,16 +105,24 @@ def pattern(evaluate, x, scales, rng, samples=16, rounds=4):
     return best
 
 
-def search_body(fr, centres, auth, pred, w_pred, step, rng, w_auth=1.0):
-    """(pelvis, torso angles, neck nod and roll) from each centre; the best per centre."""
+def search_body(fr, centres, auth, pred, w_pred, step, rng, w_auth=1.0, bounded=False):
+    """(pelvis, torso angles, neck nod and roll) from each centre; the best per centre. `bounded`:
+    within MAX_BODY_STEP of the previous frame (`pred` less the authored step)."""
     pel_a, tor_a, nek_a = auth
     pel_p, tor_p, nek_p = pred
     torso_cache = {}
+    mid = np.concatenate([np.asarray(v, float) for v in pred])
+    reach = MAX_BODY_STEP * step
 
     def evaluate(x):
+        if bounded:
+            x = np.clip(x, mid - reach, mid + reach)
         pel, tor, nek = x[0:3], x[3:6], x[6:8]
-        d = w_auth * (float(np.sum((pel - pel_a) ** 2)) / 0.25 ** 2 + float(np.sum(((tor - tor_a) / 20.0) ** 2)) + float(np.sum(((nek - nek_a) / 30.0) ** 2)))
-        d += w_pred * (float(np.sum((pel - pel_p) ** 2)) / (0.06 * step) ** 2 + float(np.sum(((tor - tor_p) / (4.0 * step)) ** 2)) + float(np.sum(((nek - nek_p) / (8.0 * step)) ** 2)))
+        # Close to the authored pose, and to the previous frame moved by the authored step; the
+        # weights let an offset forced by a contact decay by about a third a frame once it is
+        # free (the per-frame bounds keep the return smooth).
+        d = w_auth * (float(np.sum((pel - pel_a) ** 2)) / 0.15 ** 2 + float(np.sum(((tor - tor_a) / 10.0) ** 2)) + float(np.sum(((nek - nek_a) / 15.0) ** 2)))
+        d += w_pred * (float(np.sum((pel - pel_p) ** 2)) / (0.12 * step) ** 2 + float(np.sum(((tor - tor_p) / (8.0 * step)) ** 2)) + float(np.sum(((nek - nek_p) / (12.0 * step)) ** 2)))
         torso_m, head_m = fr.torso_head(pel, tor, nek)
         key = tuple(np.round(x[0:6], 6))
         if key not in torso_cache:
@@ -120,6 +133,8 @@ def search_body(fr, centres, auth, pred, w_pred, step, rng, w_auth=1.0):
     for centre in centres:
         x0 = np.concatenate([np.asarray(v, float) for v in centre])
         k, x = pattern(evaluate, x0, [(dp, dp, dp, dt, dt, dt, 2 * dt, 2 * dt) for dp, dt in BODY_LEVELS], rng)
+        if bounded:
+            x = np.clip(x, mid - reach, mid + reach)
         out.append((k, x[0:3], x[3:6], x[6:8]))
     return sorted(out, key=lambda r: r[0])
 
@@ -170,6 +185,10 @@ def search_limbs(fr, pel, tor, nek, held, targets, prev, guess, pin, rng, fixed=
             total_rank, angles[limb], misses[limb] = max(total_rank, rank(e)), np.array([aimed[0], aimed[2]]), miss
             continue
 
+        if limb in prev:
+            near = np.asarray(prev[limb], float)
+            lo, hi = np.maximum(lo, near - MAX_LIMB_TURN * step), np.minimum(hi, near + MAX_LIMB_TURN * step)
+
         def evaluate(v):
             v = np.clip(v, lo, hi)
             m = r6_fk.limb_frame(torso_m, joint, (v[0], 0.0, v[1]))
@@ -184,7 +203,9 @@ def search_limbs(fr, pel, tor, nek, held, targets, prev, guess, pin, rng, fixed=
             return (rank(e), d)
 
         best = None
-        starts = [start] + ([np.asarray(prev[limb], float)] if limb in prev else []) + ([goal[limb][0]] if limb in goal else [])
+        # From the previous angles when there are some: a start aimed afresh, or the held pose
+        # ahead, can sit on the limb's other branch.
+        starts = [np.asarray(prev[limb], float)] if limb in prev else [start]
         for c in starts:
             k, v = pattern(evaluate, np.clip(c, lo, hi), [(s, s) for s in LIMB_LEVELS], rng, samples=6, rounds=3)
             v = np.clip(v, lo, hi)
@@ -257,7 +278,7 @@ def main(argv):
             bodies = [((0, 0.0), auth[0], auth[1], auth[2])]
         else:
             goals = goals_of(f)
-            bodies = search_body(fr, centres, auth, pred, w, a.step, rng, 1.0 + 20.0 * max([p for _, p in goals.values()] + [0.0]))
+            bodies = search_body(fr, centres, auth, pred, w, a.step, rng, 1.0 + 20.0 * max([p for _, p in goals.values()] + [0.0]), previous is not None)
         tgt = {k: targets[k][i] for k in LIMB_PART}
         fixed = {limb: np.asarray(body.fixed[limb][f], float) for limb in LIMB_PART if f in body.fixed.get(limb, {})}
         goals = goals_of(f)
