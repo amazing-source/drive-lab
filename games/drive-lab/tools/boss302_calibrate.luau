@@ -3,7 +3,8 @@
 	Prints the Boss 302 Laguna Seca against the published data (research note §1.10) and the cost
 	of one Model.step. `lune run games/drive-lab/tools/boss302_calibrate` from the repo root.
 	Standing starts are flat out in the automatic, TracKey's with its launch control armed on the
-	brake first; distances and times are from the start, with no one-foot rollout.
+	brake first. Times are given from rest and, as MT and Edmunds time them, with the first foot
+	(the rollout) taken off.
 ]]
 local Boss302 = require("../src/shared/Config/Cars/Boss302/Physics")
 local DriveSim = require("./DriveSim")
@@ -13,6 +14,7 @@ local KMH = 1 / 3.6
 local MPH = 1.609344 / 3.6
 local G = 9.81
 local QUARTER_MILE = 402.336
+local ROLLOUT = 0.3048
 
 local function stepCost(dt: number): number
 	local sim = DriveSim.new(Boss302)
@@ -29,7 +31,11 @@ local function stepCost(dt: number): number
 	return (os.clock() - start) / runs * 1e6
 end
 
-local function standingStart(mode: string, launch: boolean, dt: number): (number, number, number, string)
+local function standingStart(
+	mode: string,
+	launch: boolean,
+	dt: number
+): (number, number, number, number, string)
 	local sim = DriveSim.new(Boss302)
 	if launch then
 		local hold = DriveSim.input({ throttle = 1, brake = 1, drivingMode = mode })
@@ -39,7 +45,7 @@ local function standingStart(mode: string, launch: boolean, dt: number): (number
 	end
 	local go = DriveSim.input({ throttle = 1, drivingMode = mode })
 	local start, startX = sim.time, sim.body.x
-	local time60, gear = math.huge, 1
+	local time60, gear, rollout = math.huge, 1, 0
 	local shifts: { string } = {}
 	while sim.time - start < 20 do
 		local before = DriveSim.forwardSpeed(sim)
@@ -48,15 +54,18 @@ local function standingStart(mode: string, launch: boolean, dt: number): (number
 		if before < 60 * MPH and after >= 60 * MPH then
 			time60 = sim.time - dt * (after - 60 * MPH) / (after - before) - start
 		end
+		if rollout == 0 and sim.body.x - startX >= ROLLOUT then
+			rollout = sim.time - start
+		end
 		if result.telemetry.gear ~= gear then
 			gear = result.telemetry.gear
 			table.insert(shifts, ("%d at %.2f s, %.0f km/h"):format(gear, sim.time - start, after / KMH))
 		end
 		if sim.body.x - startX >= QUARTER_MILE then
-			return time60, sim.time - start, after, table.concat(shifts, "; ")
+			return time60, sim.time - start, after, rollout, table.concat(shifts, "; ")
 		end
 	end
-	return time60, math.huge, 0, table.concat(shifts, "; ")
+	return time60, math.huge, 0, rollout, table.concat(shifts, "; ")
 end
 
 local function topSpeed(dt: number): number
@@ -79,11 +88,18 @@ local dt = 1 / 60
 print("")
 print("Target | Source | Result")
 for _, case in { { "TracKey", true }, { "Normal", false } } do
-	local time60, quarter, trap, shifts = standingStart(case[1], case[2], dt)
-	local how = if case[2] then "TracKey, launch control" else "Normal, from rest"
-	print(("0-60 mph 4.0-4.6 s | MT, Edmunds | %.2f s (%s)"):format(time60, how))
+	local time60, quarter, trap, rollout, shifts = standingStart(case[1], case[2], dt)
+	local how = if case[2] then "TracKey, launch control" else "Normal, no launch control"
 	print(
-		("1/4 mile 12.3-12.7 s @ 112.9-115.8 mph | MT, Edmunds | %.2f s @ %.1f mph"):format(
+		("0-60 mph 4.0-4.3 s with rollout, 4.6 from rest | MT, Edmunds | %.2f s with rollout, %.2f from rest (%s)"):format(
+			time60 - rollout,
+			time60,
+			how
+		)
+	)
+	print(
+		("1/4 mile 12.3-12.7 s @ 112.9-115.8 mph, with rollout | MT, Edmunds | %.2f s with rollout, %.2f from rest @ %.1f mph"):format(
+			quarter - rollout,
 			quarter,
 			trap / MPH
 		)
