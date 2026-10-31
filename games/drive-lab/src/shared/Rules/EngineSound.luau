@@ -68,6 +68,16 @@ function EngineSound.loudness(tuning: Tuning, rpm: number): number
 	return 10 ^ (db / 20)
 end
 
+-- The mix's loops together as one linear amplitude: what the engine plays before the pack's
+-- volume, the shift dip and the start-up.
+function EngineSound.level(mix: Mix): number
+	local sum = 0
+	for _, volume in mix.volumes do
+		sum += volume * volume
+	end
+	return math.sqrt(sum)
+end
+
 -- Where `rpm` sits in the hand-over from `lower` to `upper`: 0 is all lower, 1 all upper.
 local function handover(lower: Layer, upper: Layer, tuning: Tuning, rpm: number): number
 	local centre = lower.crossoverRpm or math.sqrt(lower.rpm * upper.rpm)
