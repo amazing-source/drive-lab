@@ -73,9 +73,58 @@ export type EngineConfig = {
 	limiterHysteresis: number,
 	-- Rev limit while the car is held on the brake with the clutch open (launch control).
 	launchRpm: number,
+	-- A top-speed limit (m/s): the throttle fades out over the last `band` below it. None when
+	-- absent.
+	governor: { speed: number, band: number }?,
+}
+
+-- A gate of an H-pattern gearbox on a grid: columns left to right, row +1 up and −1 down, row 0 the
+-- neutral rail across them.
+export type Gate = { column: number, row: number }
+
+-- Seconds each part of a human shift takes (Vehicle/ShiftPlan).
+export type ShiftTiming = {
+	-- The hand from the wheel to the knob and back, and the left foot from its rest to the
+	-- clutch pedal: full moves, shortened by how far the limb already is.
+	reach: number,
+	release: number,
+	footMove: number,
+	clutchIn: number,
+	-- Out of a gate onto the rail.
+	leave: number,
+	-- On a path into reverse, the knob pushed down on the rail before crossing (the lockout).
+	push: number,
+	-- Along the rail to another column: a base plus this per column crossed.
+	crossBase: number,
+	crossPerColumn: number,
+	-- From the rail into the target gate; the gear engages at its end.
+	enter: number,
+	clutchOut: number,
+	-- The hand stays on the knob this long after a shift, for the next one.
+	linger: number,
+}
+
+-- A manual gearbox (`kind = "manual"`): the gates, the human shift, and the clutch pedal. A pedal
+-- runs 0 (up, clutch in full engagement) to 1 (down, none).
+export type ManualGearboxConfig = {
+	-- By gear: −1 reverse, 0 neutral (where the lever rests), 1 to top.
+	gates: { [number]: Gate },
+	timing: ShiftTiming,
+	-- The pedal at which the clutch starts to bite on its way up, and how much further up it
+	-- carries its full torque.
+	bitePoint: number,
+	biteWidth: number,
+	-- With the player's own clutch, the engine stalls below this speed (rpm) while the clutch bites.
+	stallRpm: number,
+	-- Whether a downshift blips the throttle to the new gear's speed.
+	revMatch: boolean,
 }
 
 export type GearboxConfig = {
+	-- "manual" for an H-pattern box with a clutch (`manual` holds it); absent, the automated
+	-- single clutch (Vehicle/Gearbox).
+	kind: "manual"?,
+	manual: ManualGearboxConfig?,
 	ratios: { number },
 	reverseRatio: number,
 	-- Reverse's top speed (m/s): the engine's torque fades to nothing over the last
@@ -202,6 +251,8 @@ export type ModeConfig = {
 	absReapplySlip: number?,
 	lsdPowerRamp: number?,
 	lsdCoastRamp: number?,
+	-- An idle speed (rpm) the mode sets in place of the engine's, as a track calibration's.
+	idleRpm: number?,
 }
 
 export type Modes = { [DrivingMode]: ModeConfig }
@@ -216,6 +267,8 @@ export type LaunchConfig = {
 	endSpeed: number,
 	-- Whether the automatic shifts up by itself during a launch; manual never does.
 	autoUpshift: boolean,
+	-- It also arms with ESC on; absent, ESC must be switched off.
+	withEsc: boolean?,
 }
 
 -- The car's own numbers for the shared drift (Vehicle/Drift, Config/Drift).
@@ -299,6 +352,24 @@ local function checkTyre(tyre: TyreConfig, axle: string)
 	assert(tyre.relaxationLengthX > 0 and tyre.relaxationLengthY > 0, `{axle} relaxation lengths`)
 end
 
+-- An H box needs every gear's gate and a neutral, positive times, and a pedal curve inside the travel.
+local function checkManual(gearbox: GearboxConfig)
+	local manual = gearbox.manual
+	assert(manual, "a manual gearbox needs its `manual` settings")
+	for gear = -1, #gearbox.ratios do
+		assert(manual.gates[gear], `the manual gearbox has no gate for gear {gear}`)
+	end
+	local timing = manual.timing
+	for name, value in timing :: { [string]: number } do
+		assert(value >= 0, `the manual gearbox's {name} time must not be negative`)
+	end
+	assert(timing.push > 0 and timing.clutchOut > 0, "a manual gearbox needs a push and a clutch-out time")
+	assert(
+		manual.biteWidth > 0 and manual.bitePoint <= 1 and manual.bitePoint - manual.biteWidth >= 0,
+		"a manual gearbox's clutch must bite inside the pedal's travel"
+	)
+end
+
 -- The drive-mode control steps through every mode the car has, each once.
 local function checkModes(car: CarConfig)
 	local listed: { [string]: boolean } = {}
@@ -327,6 +398,9 @@ function Types.define(car: CarConfig): CarConfig
 	checkTyre(car.rear.tyre, "rear")
 	local ratios = car.gearbox.ratios
 	assert(#ratios >= 1, "gearbox needs at least one forward ratio")
+	if car.gearbox.kind == "manual" then
+		checkManual(car.gearbox)
+	end
 	for index = 2, #ratios do
 		assert(ratios[index] < ratios[index - 1], "gear ratios must fall from first to top")
 	end
