@@ -92,6 +92,15 @@ function DriverLegs.turned(pedal: Config.Pedal, point: Vector, angle: number): V
 	})
 end
 
+-- The heel under a sole whose ball rides a hung pedal: where it rested on the floor, slid along
+-- the car (z) until heel to ball is the sole's length at rest again.
+local function heelOnFloor(pedal: Config.Pedal, ball: Vector): Vector
+	local rest = sub(pedal.ball, pedal.heel)
+	local across, up = ball.x - pedal.heel.x, ball.y - pedal.heel.y
+	local along = math.sqrt(math.max(dot(rest, rest) - across * across - up * up, 0))
+	return { x = pedal.heel.x, y = pedal.heel.y, z = ball.z + along }
+end
+
 -- Where the right sole meets its pedal: lying on the throttle's plate and turning with it, or the
 -- heel on the floor and the ball on the brake's pad; in between the heel slides across the floor
 -- while the ball lifts over the pads.
@@ -104,13 +113,13 @@ function DriverLegs.rightSole(
 	local throttle, brake = footwell.throttle, footwell.brake
 	local share = ease(over)
 	local lift = scale(LIFT_DIRECTION, Config.SWITCH_LIFT * 4 * over * (1 - over))
-	local heel = lerp(DriverLegs.turned(throttle, throttle.heel, throttleAngle), brake.heel, share)
-	local ball = lerp(
-		DriverLegs.turned(throttle, throttle.ball, throttleAngle),
-		DriverLegs.turned(brake, brake.ball, brakeAngle),
-		share
-	)
-	return heel, add(ball, lift)
+	local throttleBall = DriverLegs.turned(throttle, throttle.ball, throttleAngle)
+	local brakeBall = DriverLegs.turned(brake, brake.ball, brakeAngle)
+	local throttleHeel = if throttle.hangs
+		then heelOnFloor(throttle, throttleBall)
+		else DriverLegs.turned(throttle, throttle.heel, throttleAngle)
+	local brakeHeel = if brake.hangs then heelOnFloor(brake, brakeBall) else brake.heel
+	return lerp(throttleHeel, brakeHeel, share), add(lerp(throttleBall, brakeBall, share), lift)
 end
 
 -- The shoe's frame from where its sole meets the pedal, and the ankle joint above that.
@@ -182,9 +191,9 @@ function DriverLegs.leftSole(
 	local over = math.clamp(onClutch, 0, 1)
 	local share = ease(over)
 	local lift = scale(LIFT_DIRECTION, Config.SWITCH_LIFT * 4 * over * (1 - over))
-	local heel = lerp(rest.heel, pedal.heel, share)
-	local ball = lerp(rest.ball, DriverLegs.turned(pedal, pedal.ball, clutchAngle), share)
-	return heel, add(ball, lift)
+	local ball = DriverLegs.turned(pedal, pedal.ball, clutchAngle)
+	local heel = if pedal.hangs then heelOnFloor(pedal, ball) else pedal.heel
+	return lerp(rest.heel, heel, share), add(lerp(rest.ball, ball, share), lift)
 end
 
 -- `onClutch` and `clutchAngle` default to the foot on its footrest.

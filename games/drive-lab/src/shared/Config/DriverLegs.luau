@@ -13,12 +13,16 @@ export type Point = { x: number, y: number, z: number }
 -- A pedal turns about the seat's x axis through `hinge`, by `travel` radians at a full press (the
 -- sign that moves its face toward the nose). `heel` and `ball` are where the sole meets the pedal,
 -- or the floor, at rest.
+-- `hangs`: hung from above, so only the ball rides the pad and the heel slides along the floor,
+-- keeping the sole's length; otherwise the throttle's heel turns with its plate (an organ pedal)
+-- and the brake's and clutch's heel stays put.
 export type Pedal = {
 	part: string,
 	hinge: Point,
 	travel: number,
 	heel: Point,
 	ball: Point,
+	hangs: boolean?,
 }
 
 -- One car's footwell: the pedals the right foot works, the footrest the left foot rests on, the
