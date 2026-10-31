@@ -1,9 +1,10 @@
 --!strict
 --[[
 	The air debris a fast car drives through (Effects/AirDebris, Rules/AirDebris), and the leaves
-	and grit its wake lifts off the road. Meant to be barely there: a few specks at a time, never
-	streaks. Plain numbers and { r, g, b } colours so Lune can load it; sizes and distances in
-	metres. Art seeds tuned by eye in edit-mode captures (2026-10-28); the owner judges them.
+	and grit its wake lifts off the road: a few specks at a time, and at high speed faint streaks
+	of air past the sides and the roof. Plain numbers and { r, g, b } colours so Lune can load
+	it; sizes and distances in metres. Art seeds tuned by eye in edit-mode captures; the owner
+	judges them.
 ]]
 local RulesAirDebris = require("../Rules/AirDebris")
 
@@ -54,6 +55,23 @@ export type Wake = {
 	spread: number,
 }
 
+export type Streaks = {
+	texture: string,
+	shape: RulesAirDebris.Streak,
+	speeds: RulesAirDebris.Speeds,
+	-- Streaks a cubic metre of air at the full speed share, and the most a second from every
+	-- slab together.
+	density: number,
+	maxRate: number,
+	color: Rgb,
+	-- Through the middle of a streak's life.
+	transparency: number,
+	-- m/s it drifts along the car's path: VelocityParallel lays a particle along its motion.
+	drift: number,
+	-- Share a streak's length must change by before the emitters are resized.
+	resize: number,
+}
+
 export type AirDebris = {
 	SPEEDS: RulesAirDebris.Speeds,
 	-- Road wetness over which the dry kinds give way to water.
@@ -73,6 +91,7 @@ export type AirDebris = {
 	-- Kinds the wake lifts.
 	WAKE_KINDS: { string },
 	WAKE: Wake,
+	STREAKS: Streaks,
 }
 
 local AirDebris: AirDebris = table.freeze({
@@ -140,6 +159,27 @@ local AirDebris: AirDebris = table.freeze({
 		outward = 50,
 		rise = 35,
 		spread = 25,
+	}),
+	-- The rain pack's fine streak (Config/Atmosphere STREAK_FINE), already uploaded. A streak is
+	-- the car's travel over a 1/30 s exposure, 2 m at 216 km/h; wider than a real speck's smear so
+	-- it shows (7 mm at 0.8 transparency drew nothing in a capture), lit by the scene so it never
+	-- glows at night, and only from 150 km/h, where the wind is loud.
+	STREAKS = table.freeze({
+		texture = "rbxassetid://132075823485064",
+		shape = table.freeze({
+			along = 0.631,
+			across = 0.0266,
+			maxLength = 2.5,
+			width = 0.025,
+			exposure = 1 / 30,
+		}),
+		speeds = table.freeze({ from = 150, to = 300, exponent = 1.5 }),
+		density = 0.02,
+		maxRate = 30,
+		color = table.freeze({ r = 236, g = 238, b = 242 }),
+		transparency = 0.55,
+		drift = 0.5,
+		resize = 0.05,
 	}),
 })
 

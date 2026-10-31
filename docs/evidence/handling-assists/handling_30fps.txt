@@ -1,0 +1,33 @@
+Handling on DriveSim at 30 FPS, right-hand corners; keyboard help, the stick on the pad's help
+
+Held corner, then an event with the key still down: peak oversteer body slip, deg
+Catch from 20 deg and 0.8 rad/s at 100 km/h: settle s / most slip the other way, deg
+Notch | car | brake 0.3 at 120 | brake 1 at 120 | power at 60 | lift at 80 | catch: keys | stick | hands off
+Realistic | SVJ Strada | 7.9 | 10.4 | 3.0 | 4.0 | never / 89.6 SPUN | never / 89.9 SPUN | 2.90
+Realistic | SVJ Corsa ESC off | 64.4 SPUN | 24.7 | 89.2 SPUN | 10.9 | never / 0.0 SPUN | never / 89.3 SPUN | 3.03
+Realistic | DR458 1 | 59.5 SPUN | 5.4 | 10.9 | 3.2 | never / 89.2 SPUN | never / 88.1 SPUN | 2.00
+Realistic | DR458 OFF | 60.7 SPUN | 5.7 | 88.7 SPUN | 3.8 | never / 88.5 SPUN | never / 89.4 SPUN | 1.73
+Balanced | SVJ Strada | 7.9 | 10.4 | 3.0 | 4.0 | 1.10 / 4.5 | 0.97 / 3.2 | 0.77
+Balanced | SVJ Corsa ESC off | 13.8 | 14.4 | 14.7 | 11.0 | 1.07 / 5.8 | 0.97 / 3.9 | 0.73
+Balanced | DR458 1 | 11.1 | 5.4 | 8.3 | 3.2 | 0.80 / 5.0 | 0.77 / 4.3 | 0.80
+Balanced | DR458 OFF | 10.8 | 5.7 | 20.7 | 3.8 | 1.27 / 9.3 | 0.77 / 4.1 | 2.00
+Forgiving | SVJ Strada | 6.9 | 14.9 | 3.0 | 4.0 | 0.97 / 2.5 | 0.93 / 2.2 | 0.77
+Forgiving | SVJ Corsa ESC off | 10.3 | 7.4 | 8.9 | 5.7 | 0.93 / 2.6 | 0.90 / 2.3 | 0.73
+Forgiving | DR458 1 | 7.3 | 5.3 | 3.7 | 3.2 | 0.80 / 5.0 | 0.77 / 4.1 | 0.80
+Forgiving | DR458 OFF | 7.2 | 5.6 | 11.3 | 3.6 | 1.37 / 9.3 | 0.77 / 4.0 | 1.37
+
+Normal driving on the keys: step steer yaw rad/s and t90 s, lane change at 120 km/h peak slip deg;
+assist = the most of the steering the slide assist held
+Notch | car | step at 100 | step at 180 | lane change 0.7 s
+Realistic | SVJ Strada | 0.403, 0.50, assist 0.00 | 0.228, 0.57, assist 0.00 | 3.8, assist 0.00
+Realistic | SVJ Corsa ESC off | 0.406, 0.50, assist 0.00 | 0.224, 0.57, assist 0.00 | 4.1, assist 0.00
+Realistic | DR458 1 | 0.540, 0.57, assist 0.00 | 0.325, 0.53, assist 0.00 | 2.3, assist 0.00
+Realistic | DR458 OFF | 0.538, 0.57, assist 0.00 | 0.325, 0.53, assist 0.00 | 2.3, assist 0.00
+Balanced | SVJ Strada | 0.403, 0.50, assist 0.00 | 0.228, 0.57, assist 0.00 | 3.8, assist 0.00
+Balanced | SVJ Corsa ESC off | 0.406, 0.50, assist 0.00 | 0.224, 0.57, assist 0.00 | 4.1, assist 0.00
+Balanced | DR458 1 | 0.540, 0.57, assist 0.00 | 0.325, 0.53, assist 0.00 | 2.3, assist 0.00
+Balanced | DR458 OFF | 0.538, 0.57, assist 0.00 | 0.325, 0.53, assist 0.00 | 2.3, assist 0.00
+Forgiving | SVJ Strada | 0.403, 0.50, assist 0.00 | 0.228, 0.57, assist 0.00 | 3.8, assist 0.00
+Forgiving | SVJ Corsa ESC off | 0.406, 0.50, assist 0.00 | 0.224, 0.57, assist 0.00 | 4.1, assist 0.00
+Forgiving | DR458 1 | 0.540, 0.57, assist 0.00 | 0.325, 0.53, assist 0.00 | 2.3, assist 0.00
+Forgiving | DR458 OFF | 0.538, 0.57, assist 0.00 | 0.325, 0.53, assist 0.00 | 2.3, assist 0.00

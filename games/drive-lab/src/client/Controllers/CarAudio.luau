@@ -130,11 +130,17 @@ local function loop(
 	soundId: string,
 	soundGroup: SoundGroup,
 	rollOff: CarAudio.Region,
-	parent: Instance
+	parent: Instance,
+	region: CarAudio.Region?
 ): Sound
 	local sound = Instance.new("Sound")
 	sound.SoundId = soundId
 	sound.Looped = true
+	if region then
+		sound.PlaybackRegionsEnabled = true
+		sound.PlaybackRegion = NumberRange.new(region.from, region.to)
+		sound.LoopRegion = NumberRange.new(region.from, region.to)
+	end
 	sound.Volume = 0
 	sound.SoundGroup = soundGroup
 	sound.RollOffMode = Enum.RollOffMode.InverseTapered
@@ -382,7 +388,7 @@ local function start(model: Model, entry: Catalog.Entry, sincePress: number)
 	local layers: { Sound } = table.create(#pack.engineLayers)
 	local mixerLayers: { EngineSound.Layer } = table.create(#pack.engineLayers)
 	for _, layer in pack.engineLayers do
-		table.insert(layers, loop(layer.soundId, engineGroup, pack.rollOff, enginePoint))
+		table.insert(layers, loop(layer.soundId, engineGroup, pack.rollOff, enginePoint, layer.region))
 		table.insert(
 			mixerLayers,
 			{ rpm = layer.rpm, load = layer.load, volume = layer.volume, crossoverRpm = layer.crossoverRpm }
@@ -399,8 +405,8 @@ local function start(model: Model, entry: Catalog.Entry, sincePress: number)
 		engine = EngineSound.new(mixerLayers, pack.engineTuning),
 		events = CarAudioEvents.new(pack.events),
 		layers = layers,
-		limiter = loop(pack.limiter.soundId, engineGroup, pack.rollOff, exhaustPoint),
-		far = loop(pack.far.soundId, engineGroup, pack.farRollOff, exhaustPoint),
+		limiter = loop(pack.limiter.soundId, engineGroup, pack.rollOff, exhaustPoint, pack.limiter.region),
+		far = loop(pack.far.soundId, engineGroup, pack.farRollOff, exhaustPoint, pack.far.region),
 		engineGroup = engineGroup,
 		eventsGroup = eventsGroup,
 		engineEqualiser = engineEqualiser,

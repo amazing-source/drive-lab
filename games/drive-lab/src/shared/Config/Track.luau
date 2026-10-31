@@ -1,12 +1,16 @@
 --!strict
 --[[
-	The endless test road. Metres; the server converts with Units, so the road keeps real
-	proportions whatever the world scale.
+	The test road. Metres; the server converts with Units, so the road keeps real proportions
+	whatever the world scale.
 ]]
 local StreetLamps = require("../Rules/StreetLamps")
 
+-- Straight: one endless straight. Bends: an endless road of seeded straights and bends.
+-- Circuit: the closed lap of Config/Circuit, laid once.
+export type Layout = "Straight" | "Bends" | "Circuit"
+
 export type Track = {
-	BENDS: boolean,
+	LAYOUT: Layout,
 	SEED: number,
 	ROAD_WIDTH: number,
 	VERGE_WIDTH: number,
@@ -31,9 +35,7 @@ export type Track = {
 }
 
 local Track: Track = table.freeze({
-	-- Off: one endless straight, the owner's choice for testing (2026-10-27). On: straights and
-	-- bends from the seeded path below.
-	BENDS = false,
+	LAYOUT = "Circuit" :: Layout,
 	-- Same seed, same road, so a run can be repeated.
 	SEED = 2026,
 	-- Two 3.5 m lanes and 2 m shoulders; grass beyond (lower grip, as off a real road).
@@ -43,8 +45,8 @@ local Track: Track = table.freeze({
 	-- Path resolution and how much road one chunk adds.
 	STEP = 6,
 	CHUNK_STEPS = 100,
-	-- Road is laid this far ahead of every player and cleared this far behind all of them. At
-	-- the SVJ's top speed (98 m/s) the lookahead lasts 15 s.
+	-- The endless layouts lay road this far ahead of every player and clear it this far behind all
+	-- of them. At the SVJ's top speed (98 m/s) the lookahead lasts 15 s.
 	LOOKAHEAD = 1500,
 	KEEP_BEHIND = 800,
 	-- A straight start, long enough for a full-throttle run to 200 km/h, then curves ease in.

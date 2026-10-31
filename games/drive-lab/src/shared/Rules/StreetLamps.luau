@@ -10,9 +10,22 @@ local StreetLamps = {}
 export type Layout = Scatter.Layout
 export type Spot = Scatter.Spot
 
--- Every lamp spot with arc length in [from, to), metres; side is -1 (left) or 1 (right).
-function StreetLamps.spots(from: number, to: number, seed: number, layout: Layout): { Spot }
-	return Scatter.spots(from, to, seed, layout)
+-- Every lamp spot with arc length in [from, to), metres, outside the keep-out zones; side is -1
+-- (left) or 1 (right).
+function StreetLamps.spots(
+	from: number,
+	to: number,
+	seed: number,
+	layout: Layout,
+	keepOut: { Scatter.Zone }?
+): { Spot }
+	local kept = {}
+	for _, spot in Scatter.spots(from, to, seed, layout) do
+		if Scatter.outside(keepOut, spot.s, spot.s) then
+			table.insert(kept, spot)
+		end
+	end
+	return kept
 end
 
 -- Whether lamps are lit at this time of day (hours, 0-24): from dusk until dawn.

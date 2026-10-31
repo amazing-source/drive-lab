@@ -1,0 +1,132 @@
+Deliberate breaks for #162, each applied to the committed branch, run through `lune run tools/test/run`,
+then restored with `git checkout -- games/drive-lab/src`. Run 2026-10-31 on 0bc40f8. Up to three FAIL
+lines are kept per break.
+
+## Circuit closes: the first closing straight solved with a sign error
+file: games/drive-lab/src/shared/Rules/Circuit.luau
+exit 1: the run stops while loading tests/Bridges.spec, which builds the lap at its top:
+  <worktree>\games\drive-lab\src\shared\Rules\Circuit:122: the closing straights come out at -250.0000000000001 and 206.60254037844405 m, under their minimums
+
+## Circuit full turn: the full-circle check removed
+file: games/drive-lab/src/shared/Rules/Circuit.luau
+exit 1: 87 spec files, 845 passed, 1 failed
+  FAIL Circuit > turns one full circle, and refuses a layout that does not: <worktree>\games\drive-lab\tests\Circuit.spec:51: expected the function to throw
+
+## Circuit closing minimums: the minimum check removed and a 300 m minimum asked
+file: games/drive-lab/src/shared/Config/Circuit.luau
+exit 1: 87 spec files, 845 passed, 1 failed
+  FAIL Circuit > sizes both closing straights at or above their minimums: <worktree>\games\drive-lab\tests\Circuit.spec:61: expected true, got false
+
+## Circuit radii: the hairpin at 20 m, under the 25 m floor
+file: games/drive-lab/src/shared/Config/Circuit.luau
+exit 1: 87 spec files, 845 passed, 1 failed
+  FAIL Circuit > keeps every radius in bounds, with corners tighter than the endless road's and a fast one: <worktree>\games\drive-lab\tests\Circuit.spec:71: expected true, got false
+
+## Circuit exact arcs: the arc's sideways term with its sign flipped
+file: games/drive-lab/src/shared/Rules/Circuit.luau
+exit 1: 87 spec files, 841 passed, 5 failed
+  FAIL Bridges > bridges every river crossing, each on a straight, square across, clear of the bends: <worktree>\games\drive-lab\tests\Bridges.spec:34: expected 0, got 1
+  FAIL Bridges > reports a crossing on a bend, or too slanted, instead of bridging it: <worktree>\games\drive-lab\tests\Bridges.spec:50: expected 2, got 1
+  FAIL Circuit > lays points a step apart on the exact arcs, the last one at the lap's end: <worktree>\games\drive-lab\tests\Circuit.spec:102: expected 5.996400647944459 within 1e-09, got 5.327917297254034
+
+## Circuit clearance: the hairpin at 18 m with the floor lowered to 15 m (return run 36 m away)
+file: games/drive-lab/src/shared/Config/Circuit.luau
+exit 1: 87 spec files, 845 passed, 1 failed
+  FAIL Circuit > never brings two parts of the road near each other: <worktree>\games\drive-lab\tests\Circuit.spec:123: expected true, got false
+
+## Circuit field: the bounds take half the margin
+file: games/drive-lab/src/shared/Rules/Circuit.luau
+exit 1: 87 spec files, 845 passed, 1 failed
+  FAIL Circuit > holds the whole lap inside the field, its margin all round: <worktree>\games\drive-lab\tests\Circuit.spec:132: expected true, got false
+
+## Circuit crossings: the bisection keeps the wrong half
+file: games/drive-lab/src/shared/Rules/Circuit.luau
+exit 1: 87 spec files, 845 passed, 1 failed
+  FAIL Circuit > finds where the road crosses a line, and how square across: <worktree>\games\drive-lab\tests\Circuit.spec:147: expected 255 within 0.000001, got 254
+
+## Bridges on bends: the bend check removed
+file: games/drive-lab/src/shared/Rules/Bridges.luau
+exit 1: 87 spec files, 845 passed, 1 failed
+  FAIL Bridges > reports a crossing on a bend, or too slanted, instead of bridging it: <worktree>\games\drive-lab\tests\Bridges.spec:51: expected true, got false
+
+## Bridges angle: the slant check removed
+file: games/drive-lab/src/shared/Rules/Bridges.luau
+exit 1: 87 spec files, 845 passed, 1 failed
+  FAIL Bridges > reports a crossing on a bend, or too slanted, instead of bridging it: <worktree>\games\drive-lab\tests\Bridges.spec:69: expected true, got false
+
+## Bridges full depth: the block's reach past the step ignored
+file: games/drive-lab/src/shared/Rules/Bridges.luau
+exit 1: 87 spec files, 845 passed, 1 failed
+  FAIL Bridges > keeps the full-depth road out of the channel and rests the deck on it at both banks: <worktree>\games\drive-lab\tests\Bridges.spec:85: expected false, got true
+
+## Bridges bearing: the deck margin cut to 3 m
+file: games/drive-lab/src/shared/Config/Circuit.luau
+exit 1: 87 spec files, 845 passed, 1 failed
+  FAIL Bridges > keeps the full-depth road out of the channel and rests the deck on it at both banks: <worktree>\games\drive-lab\tests\Bridges.spec:93: expected true, got false
+
+## Bridges parapets: only the left one
+file: games/drive-lab/src/shared/Rules/Bridges.luau
+exit 1: 87 spec files, 845 passed, 1 failed
+  FAIL Bridges > runs a parapet along both edges of every deck, its face continuing the guardrail's: <worktree>\games\drive-lab\tests\Bridges.spec:129: expected true, got nil
+
+## Bridges parapet face: the kerb 0.2 m wider than the guardrail line
+file: games/drive-lab/src/shared/Config/Circuit.luau
+exit 1: 87 spec files, 845 passed, 1 failed
+  FAIL Bridges > runs a parapet along both edges of every deck, its face continuing the guardrail's: <worktree>\games\drive-lab\tests\Bridges.spec:127: expected 5.8 within 1e-09, got 6
+
+## Bridges approaches: one section short
+file: games/drive-lab/src/shared/Rules/Bridges.luau
+exit 1: 87 spec files, 845 passed, 1 failed
+  FAIL Bridges > leads a guardrail onto and away from every parapet end, the same however the road is cut: <worktree>\games\drive-lab\tests\Bridges.spec:157: expected 1021.7875959474386 within 1e-09, got 1033.7875959474386
+
+## Bridges keep-out: the zone forgets the approach guardrails
+file: games/drive-lab/src/shared/Rules/Bridges.luau
+exit 1: 87 spec files, 845 passed, 1 failed
+  FAIL Bridges > keeps lamps, posts, other guardrails and gantries off every bridge and its guardrails: <worktree>\games\drive-lab\tests\Bridges.spec:195: expected false, got true
+
+## Roadside keep-out: guardrail stretches no longer checked
+file: games/drive-lab/src/shared/Rules/Roadside.luau
+exit 1: 87 spec files, 844 passed, 2 failed
+  FAIL Bridges > keeps lamps, posts, other guardrails and gantries off every bridge and its guardrails: <worktree>\games\drive-lab\tests\Bridges.spec:205: expected false, got true
+  FAIL Roadside keep-out zones > drops whole guardrail stretches that reach into a zone, and keeps every other one: <worktree>\games\drive-lab\tests\Roadside.spec:201: expected 27, got 31
+
+## Roadside keep-out: delineators no longer checked
+file: games/drive-lab/src/shared/Rules/Roadside.luau
+exit 1: 87 spec files, 844 passed, 2 failed
+  FAIL Bridges > keeps lamps, posts, other guardrails and gantries off every bridge and its guardrails: <worktree>\games\drive-lab\tests\Bridges.spec:198: expected false, got true
+  FAIL Roadside keep-out zones > keeps posts and gantries out of a zone and leaves them as they were outside it: <worktree>\games\drive-lab\tests\Roadside.spec:219: expected true, got false
+
+## Roadside keep-out: gantries no longer checked
+file: games/drive-lab/src/shared/Rules/Roadside.luau
+exit 1: 87 spec files, 845 passed, 1 failed
+  FAIL Roadside keep-out zones > keeps posts and gantries out of a zone and leaves them as they were outside it: <worktree>\games\drive-lab\tests\Roadside.spec:240: expected 0, got 32
+
+## StreetLamps keep-out: lamps no longer checked
+file: games/drive-lab/src/shared/Rules/StreetLamps.luau
+exit 1: 87 spec files, 844 passed, 2 failed
+  FAIL Bridges > keeps lamps, posts, other guardrails and gantries off every bridge and its guardrails: <worktree>\games\drive-lab\tests\Bridges.spec:195: expected false, got true
+  FAIL StreetLamps keep-out zones > leaves no lamp in a zone and every lamp outside it: <worktree>\games\drive-lab\tests\StreetLamps.spec:83: expected 109, got 138
+
+## Circuit tiles: neighbouring tiles only meet, no overlap
+file: games/drive-lab/src/shared/Rules/Circuit.luau
+exit 1: 87 spec files, 845 passed, 1 failed
+  FAIL Circuit tiles > covers the field in tiles that overlap by more than a voxel and stay inside it: <worktree>\games\drive-lab\tests\Circuit.spec:169: expected true, got false
+
+## TrackPath turn: signed instead of unsigned
+file: games/drive-lab/src/shared/Rules/TrackPath.luau
+exit 1: 87 spec files, 844 passed, 2 failed
+  FAIL Circuit > lays points a step apart on the exact arcs, the last one at the lap's end: <worktree>\games\drive-lab\tests\Circuit.spec:96: expected 0.1 within 1e-09, got -0.09999999999999999
+  FAIL TrackPath: a step's block > measures the turn between two points, whichever way it bends: <worktree>\games\drive-lab\tests\TrackPath.spec:93: expected 0.1 within 1e-12, got -0.09999999999999999
+
+## TrackPath block: the extra metre dropped
+file: games/drive-lab/src/shared/Rules/TrackPath.luau
+exit 1: 87 spec files, 845 passed, 1 failed
+  FAIL TrackPath: a step's block > reaches past the step by the bend's opening at its outer edge and a metre: <worktree>\games\drive-lab\tests\TrackPath.spec:98: expected 7, got 6
+
+## TrackPath default: bends on any layout but Bends
+file: games/drive-lab/src/shared/Rules/TrackPath.luau
+exit 1: 87 spec files, 845 passed, 1 failed
+  FAIL TrackPath: a step's block > bends only on the Bends layout when not told: <worktree>\games\drive-lab\tests\TrackPath.spec:109: expected false, got true
+
+## Restored
+87 spec files, 846 passed, 0 failed
