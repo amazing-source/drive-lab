@@ -67,6 +67,17 @@ local Settings: ManifestBinding.Settings = {
 		-- EST: modelled like the ignition toggle beside it, off tipped down and on up.
 		PanelSwitch_RainLight = { rest = 0.35, other = -0.35 },
 	},
+	-- The 3D artist's wiper: one arm with its blade, modelled parked, and the ends of the blade's
+	-- rubber edge. EST: no washer jet shows on the photo car, so two sit under the bonnet's rear
+	-- edge either side of the centre line, where road cars carry them.
+	wiper = {
+		arm = "Wiper_Arm",
+		blade = { "Wiper_BladeInner", "Wiper_BladeOuter" },
+		nozzles = {
+			{ forward = 2.78, right = -0.25, up = 0.735 },
+			{ forward = 2.78, right = 0.25, up = 0.735 },
+		},
+	},
 }
 
 return Settings

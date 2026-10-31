@@ -48,14 +48,21 @@ local function pane(): WindshieldDrops.Pane
 	return WindshieldDrops.pane(corners, { x = 0, y = 0, z = 1 })
 end
 
+-- The wiper as the DR458's binding ships it, in the windscreen's frame, as Atmosphere/Windshield
+-- builds it.
 local function geometry(): WiperSweep.Geometry
+	local wiper = Model.wiper
+	assert(wiper, "the DR458's binding has its wiper")
+	local function chassis(point: Hinge.CarPoint): Hinge.Vector
+		return { x = point.right, y = point.up + Model.bodyRaise, z = -point.forward }
+	end
 	return WiperSweep.geometry(
 		pane(),
-		rig(MANIFEST.pivot),
-		Hinge.chassis(MANIFEST.axis),
-		rig(MANIFEST.inner),
-		rig(MANIFEST.outer),
-		MANIFEST.range,
+		chassis(wiper.hinge.pivot),
+		Hinge.chassis(wiper.hinge.axis),
+		chassis(wiper.blade.inner),
+		chassis(wiper.blade.outer),
+		wiper.hinge.travel or 0,
 		REACH
 	)
 end
@@ -65,6 +72,22 @@ local function distance(a: Hinge.Vector, b: Hinge.Vector): number
 end
 
 describe("WiperSweep", function()
+	it("ships the 3D artist's wiper in the DR458's binding", function()
+		local wiper = Model.wiper
+		assert(wiper, "the DR458's binding has its wiper")
+		local function near(a: Hinge.Vector, b: Hinge.Vector): boolean
+			return distance(a, b) < 1e-4
+		end
+		local function chassis(point: Hinge.CarPoint): Hinge.Vector
+			return { x = point.right, y = point.up + Model.bodyRaise, z = -point.forward }
+		end
+		expect(near(chassis(wiper.hinge.pivot), rig(MANIFEST.pivot))).toBe(true)
+		expect(near(Hinge.chassis(wiper.hinge.axis), Hinge.chassis(MANIFEST.axis))).toBe(true)
+		expect(near(chassis(wiper.blade.inner), rig(MANIFEST.inner))).toBe(true)
+		expect(near(chassis(wiper.blade.outer), rig(MANIFEST.outer))).toBe(true)
+		expect(wiper.hinge.travel).toBe(MANIFEST.range)
+	end)
+
 	it("turns the blade the way the 3D artist measured, at half its range and at the far end", function()
 		local pivot, axis = Hinge.chassis(MANIFEST.pivot), Hinge.chassis(MANIFEST.axis)
 		for _, check in MANIFEST.turned do
