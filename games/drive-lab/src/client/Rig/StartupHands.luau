@@ -176,7 +176,8 @@ function StartupHands.place(
 	hands: Hands,
 	wheel: CFrame,
 	seat: CFrame,
-	sinceKey: number?
+	sinceKey: number?,
+	settle: { from: StartupArms.Pose, share: number }?
 ): (CFrame, BasePart, CFrame, BasePart, CFrame)
 	local gripFrame = wheel * hands.gripWrist
 	local hand = StartupArms.hand(hands.track, sinceKey)
@@ -187,6 +188,9 @@ function StartupHands.place(
 		if hand.toGrip > 0 then
 			local live = toPose(seat:ToObjectSpace(gripFrame))
 			pose = StartupArms.retarget(pose, StartupArms.finalPose(hands.track), live, hand.toGrip)
+		end
+		if settle then
+			pose = StartupArms.settle(settle.from, pose, settle.share)
 		end
 		wrist = seat * toCFrame(pose)
 		shape = hand.shape

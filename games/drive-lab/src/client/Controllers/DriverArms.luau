@@ -271,7 +271,13 @@ local function reach(
 	return CFrame.lookAt(shoulder, elbow, normal), CFrame.lookAt(elbow, reached, handBack)
 end
 
-local function pose(driver: Driver, state: CarEntry.State, now: number)
+-- How far the drawn arms are into the hand-over (CarEntry.handOverShare), nil when not drawn.
+local function handOverShare(entry: Catalog.Entry, state: CarEntry.State, now: number): number?
+	local handOver = entry.driver.handOver
+	return CarEntry.handOverShare(entry, state, now, if handOver then handOver.seconds else nil)
+end
+
+local function pose(driver: Driver, state: CarEntry.State, now: number, share: number)
 	local steer = driver.model:GetAttribute("Steer")
 	local turn = math.clamp(
 		(if typeof(steer) == "number" then steer else 0) * driver.maxTurn,
@@ -286,12 +292,16 @@ local function pose(driver: Driver, state: CarEntry.State, now: number)
 	local bias, overhang = DriverArms.ELBOW_BIAS, DriverArms.CUFF_OVERHANG
 	-- The hands rest while the engine is off and reach through the start-up after the key.
 	local sinceKey = if state.engine == "On" then now - state.engineAt else nil
+	local handOver = driver.entry.driver.handOver
 	for _, side in driver.sides do
 		local sign = side.sign
 		local inset = Vector3.new(sign * DriverArms.SHOULDER_INSET * scale, 0, 0)
 		local shoulder = torso:PointToWorldSpace(side.joint.C0.Position - inset)
+		local settle = if handOver and share < 1
+			then { from = if sign > 0 then handOver.right else handOver.left, share = share }
+			else nil
 		local wrist, hand, handFrame, cuff, cuffFrame =
-			StartupHands.place(side.hands, wheel, driver.seat.CFrame, sinceKey)
+			StartupHands.place(side.hands, wheel, driver.seat.CFrame, sinceKey, settle)
 		local wristAt = wrist.Position
 		-- Toward where the elbow would be with the forearm straight down the hand's axis.
 		local along = wrist.ZVector
@@ -312,10 +322,11 @@ local function pose(driver: Driver, state: CarEntry.State, now: number)
 	end
 end
 
--- Only once seated: getting in and out, the body animation moves the blocky arms.
+-- Only once seated (and, for a car with a hand-over, through its first moments of getting out):
+-- getting in and out, the body animation moves the blocky arms.
 local function seated(model: Model, now: number): boolean
 	local entry = Catalog.of(model)
-	return entry ~= nil and CarEntry.phase(entry, CarState.read(model), now) == "Seated"
+	return entry ~= nil and handOverShare(entry, CarState.read(model), now) ~= nil
 end
 
 local function update()
@@ -338,11 +349,12 @@ local function update()
 	local own = Players.LocalPlayer and Players.LocalPlayer.Character
 	for model, driver in drivers do
 		local state = CarState.read(model)
+		local share = handOverShare(driver.entry, state, now)
 		if
 			model.Parent == nil
 			or seatedCharacter(model) ~= driver.character
 			or driver.torso.Parent == nil
-			or CarEntry.phase(driver.entry, state, now) ~= "Seated"
+			or share == nil
 		then
 			release(driver)
 			drivers[model] = nil
@@ -351,7 +363,7 @@ local function update()
 				driver,
 				ArmPieces.sleevesShown(view, driver.character == own, DriverArms.COCKPIT_GLOVES_ONLY)
 			)
-			pose(driver, state, now)
+			pose(driver, state, now, share)
 		end
 	end
 	if #parts > 0 then

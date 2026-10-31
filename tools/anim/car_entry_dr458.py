@@ -192,6 +192,37 @@ SEATED_LEGS = {"right_leg": (84.0, 0.0, 1.0), "left_leg": (84.0, 0.0, -2.0)}
 SEATED_ARMS = {"right_arm": (38.0, 0.0, -31.7), "left_arm": (74.4, 0.0, 34.5)}
 
 
+def quat_matrix(q):
+    w, x, y, z = q
+    return np.array([
+        [1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y)],
+        [2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x)],
+        [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)],
+    ])
+
+
+def hand_over(car, rest_path):
+    """The drawn hands' pose at the hand-over (decision D): each with the resting hand's turn,
+    placed so its palm is where the blocky palm ends (SEATED_ARMS), in the DriverSeat frame
+    (studs of the 1.5x world), as Config/Cars/<car>/Driver.luau's `handOver` takes it."""
+    rest = json.load(open(rest_path, encoding="utf-8"))
+    s = car.seated()
+    rot = r6_fk.body_turn(*s["torso"])
+    loc = r6_fk.torso_root_offset(rot, s["pelvis"] - np.array([0.0, r6_fk.ROOT_HEIGHT, 0.0]))
+    pose = {"RootJoint": (rot, tuple(loc)), "Neck": ((0, 0, 0), (0, 0, 0))}
+    inv = np.linalg.inv(car.a)
+    out = {}
+    for limb, side in (("right_arm", "right"), ("left_arm", "left")):
+        pose[r6_fk.LIMB_JOINT[limb]] = (SEATED_ARMS[limb], (0, 0, 0))
+        palm = r6_fk.point(r6_fk.pose_parts(pose)[LIMB_PART[limb]], r6_fk.HAND)
+        palm_seat = inv[:3, :3] @ palm + inv[:3, 3]
+        r = quat_matrix(rest[side]["rotation"])
+        local = r.T @ (np.array(rest[side]["palmCentre"]) - np.array(rest[side]["wrist"]))
+        wrist = palm_seat - r @ local
+        out[side] = {"wrist": wrist, "rotation": rest[side]["rotation"], "palm": palm_seat, "rest_palm": np.array(rest[side]["palmCentre"])}
+    return out
+
+
 def entry(car, rest_path):
     s = car.seated()
     yaw_out = car.yaw_facing(car.outboard)

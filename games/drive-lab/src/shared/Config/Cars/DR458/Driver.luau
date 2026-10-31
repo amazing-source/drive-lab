@@ -45,6 +45,22 @@ local Driver: Contract.Driver = {
 		}),
 	}),
 	startupPaths = StartupPaths,
+	-- The drawn hands start where the body's blocky hands end its entry (their least-deep pose in
+	-- the bucket) and ease onto the thighs (tools/anim/car_entry_dr458.py hand_over: the resting
+	-- hand's turn, placed so its palm meets the blocky palm; metres, DriverSeat frame). 0.6 s keeps
+	-- the left hand, 23 cm from its rest, under 1 cm a frame at 60 fps. Inert while the door is the
+	-- direct stand-in.
+	handOver = table.freeze({
+		seconds = 0.6,
+		right = table.freeze({
+			position = table.freeze({ x = 0.19835, y = 0.18843, z = -0.04913 }),
+			rotation = table.freeze({ w = 0.97773, x = 0.20689, y = 0.03443, z = -0.00729 }),
+		}),
+		left = table.freeze({
+			position = table.freeze({ x = -0.26627, y = 0.34659, z = -0.08182 }),
+			rotation = table.freeze({ w = 0.981, x = 0.18948, y = 0.04092, z = -0.0079 }),
+		}),
+	}),
 }
 
 return table.freeze(Driver)

@@ -174,6 +174,18 @@ function StartupArms.apply(pose: Pose, offset: Vector): Vector
 	}
 end
 
+-- Between two poses, eased: `share` 0 is `from`, 1 is `to`; the position runs straight and the
+-- rotation turns the shorter way. The drawn hands' blend at the hand-over with the body's arms.
+function StartupArms.settle(from: Pose, to: Pose, share: number): Pose
+	local u = math.clamp(share, 0, 1)
+	u = u * u * (3 - 2 * u)
+	local a, b = from.position, to.position
+	return {
+		position = { x = a.x + (b.x - a.x) * u, y = a.y + (b.y - a.y) * u, z = a.z + (b.z - a.z) * u },
+		rotation = StartupArms.slerp(from.rotation, to.rotation, u),
+	}
+end
+
 -- The track's last key: where the keys put the hand on the wheel.
 function StartupArms.finalPose(track: Config.Track): Pose
 	local last = track.keys[#track.keys]
