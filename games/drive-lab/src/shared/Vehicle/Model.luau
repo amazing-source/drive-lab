@@ -82,11 +82,14 @@ export type VehicleState = {
 	basePeakX: { number },
 	basePeakY: { number },
 	drift: Drift.DriftState,
-	-- The handbrake the brakes get (the drift releases it), the steering the wheels get, and the
-	-- engine torque's share the drift allows this substep.
+	-- The handbrake the brakes get (the drift releases it) and the steering the wheels get.
 	handbrake: number,
 	wheelSteer: number,
-	driftTorque: number,
+	-- The drift's force (N, forward and right) and yaw torque (N·m) at the centre of mass, summed
+	-- over the frame's substeps times their length.
+	driftForward: number,
+	driftRight: number,
+	driftYaw: number,
 	throttle: number,
 	meanGrip: number,
 	context: Gearbox.Context,
@@ -150,7 +153,9 @@ function Model.new(car: CarConfig, help: InputHelp.InputHelp?): VehicleState
 		drift = Drift.newState(),
 		handbrake = 0,
 		wheelSteer = 0,
-		driftTorque = 1,
+		driftForward = 0,
+		driftRight = 0,
+		driftYaw = 0,
 		throttle = 0,
 		meanGrip = 1,
 		context = {
@@ -166,6 +171,24 @@ function Model.new(car: CarConfig, help: InputHelp.InputHelp?): VehicleState
 		},
 		motion = { forwardSpeed = 0, rightSpeed = 0, yawRate = 0, frontSteer = 0, rearSteer = 0, grip = 1 },
 	}
+end
+
+-- Yaw rate (rad/s) the player's own steering asks of the car: ESC's reference for the wheels the
+-- player's input `steer` (shaped, not yet filtered) would set, so a released key asks for none at
+-- once rather than as the filter returns the wheel.
+local function playerYawRate(
+	state: VehicleState,
+	steer: number,
+	forward: number,
+	right: number,
+	yaw: number
+): number
+	local motion = state.motion
+	motion.forwardSpeed, motion.rightSpeed, motion.yawRate = forward, right, yaw
+	motion.frontSteer = Steering.frontAngle(state.car.steering, steer, forward)
+	motion.rearSteer = state.steering.rearAngle
+	motion.grip = state.meanGrip
+	return Electronics.referenceYawRate(state.car, motion)
 end
 
 local function gearboxContext(
@@ -243,7 +266,6 @@ local function engineThrottle(
 		* electronics.tcFactor
 		* electronics.escFactor
 		* Gearbox.reverseCut(state.car.gearbox, state.gearbox.gear, prediction.forward)
-		* state.driftTorque
 	local driveTorque = Engine.output(engine, engineSpeed, driver)
 	local context = gearboxContext(state, input, math.abs(prediction.forward), driveTorque)
 	local cut, blip = Gearbox.update(state.car.gearbox, state.car.engine, state.gearbox, context, dt)
@@ -350,13 +372,14 @@ local function substep(
 )
 	local car, positions = state.car, state.positions
 	local profile = car.drift
-	if profile then
-		local grip, torque = Drift.shares(profile, state.drift, prediction.forward, prediction.right, dt)
-		state.driftTorque = torque
-		if Drift.engaged(state.drift) then
-			for wheel = Geometry.REAR_LEFT, Geometry.REAR_RIGHT do
-				state.tyreStates[wheel].peakX = state.basePeakX[wheel] * grip
-				state.tyreStates[wheel].peakY = state.basePeakY[wheel] * grip
+	if profile and Drift.engaged(state.drift) then
+		local front, rear = Drift.grip(profile, state.drift)
+		for wheel = 1, Geometry.WHEELS do
+			local tyre = state.tyreStates[wheel]
+			if Geometry.isFront(wheel) then
+				tyre.peakY = state.basePeakY[wheel] * front
+			else
+				tyre.peakX, tyre.peakY = state.basePeakX[wheel] * rear, state.basePeakY[wheel] * rear
 			end
 		end
 	end
@@ -411,6 +434,23 @@ local function substep(
 		forceY += right
 		moment += positions[wheel].forward * right - positions[wheel].right * forward
 	end
+	if profile then
+		local driftForward, driftRight, driftYaw = Drift.forces(
+			car,
+			profile,
+			state.drift,
+			prediction.forward,
+			prediction.right,
+			prediction.yaw,
+			moment
+		)
+		state.driftForward += driftForward * dt
+		state.driftRight += driftRight * dt
+		state.driftYaw += driftYaw * dt
+		forceX += driftForward
+		forceY += driftRight
+		moment += driftYaw
+	end
 	local airSpeed = math.sqrt(prediction.forward * prediction.forward + prediction.right * prediction.right)
 	if airSpeed > 1e-6 then
 		local drag = state.aeroForces.drag / airSpeed
@@ -446,6 +486,11 @@ local function buildResult(state: VehicleState, chassis: ChassisMotion, dt: numb
 	return {
 		wheels = results,
 		aeroDrag = state.aeroForces.drag,
+		driftForce = {
+			forward = state.driftForward / dt,
+			right = state.driftRight / dt,
+			yaw = state.driftYaw / dt,
+		},
 		downforceFront = state.aeroForces.downforceFront,
 		downforceRear = state.aeroForces.downforceRear,
 		telemetry = {
@@ -517,19 +562,22 @@ function Model.step(
 	local profile = car.drift
 	if profile then
 		local held = input.drift == true
+		local shaped = InputFilter.shape(state.help, pedals.steer)
 		Drift.update(
 			profile,
 			state.drift,
 			held,
-			InputFilter.shape(state.help, pedals.steer),
+			shaped,
 			forward,
 			right,
+			playerYawRate(state, shaped, forward, right, yaw),
 			dt
 		)
 		steer = Drift.steer(car, state.drift, steer, forward, right, yaw)
 	end
 	state.wheelSteer = steer
-	state.handbrake = if state.drift.wants then 0 else controls.handbrake
+	-- A drift's end is not a handbrake pull: the rear stays free until the car runs straight.
+	state.handbrake = if state.drift.wants or state.drift.exiting then 0 else controls.handbrake
 	Steering.update(car, state.steering, steer, forward, dt)
 	updateCorners(state, wheels, mode, dt)
 	local alaTarget =
@@ -557,6 +605,7 @@ function Model.step(
 	for wheel = 1, Geometry.WHEELS do
 		state.sumForward[wheel], state.sumRight[wheel] = 0, 0
 	end
+	state.driftForward, state.driftRight, state.driftYaw = 0, 0, 0
 	for _ = 1, count do
 		substep(state, input, wheels, chassis, prediction, mode, h)
 	end

@@ -124,6 +124,10 @@ local function applyForces(runner: Runner, result: Interface.StepResult, frame: 
 	local rearAxle = frontAxle - Units.metresToStuds(runner.car.wheelbase)
 	push(-up * Units.newtonsToForce(result.downforceFront), centre + forward * frontAxle)
 	push(-up * Units.newtonsToForce(result.downforceRear), centre + forward * rearAxle)
+	local drift = result.driftForce
+	push((forward * drift.forward + right * drift.right) * (1 / Units.NEWTONS_PER_FORCE_UNIT), centre)
+	-- LookVector × RightVector is down, so a yaw turning right is a torque about −up.
+	moment -= up * (drift.yaw / Units.NEWTON_METRES_PER_TORQUE_UNIT)
 	runner.rig.force.Force = total
 	runner.rig.torque.Torque = moment
 end

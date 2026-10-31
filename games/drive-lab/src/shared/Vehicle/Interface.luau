@@ -97,10 +97,15 @@ export type Telemetry = {
 	driftTarget: number,
 }
 
+-- The drift's own force (N, car frame) and yaw torque (N·m, positive turning right), at the centre
+-- of mass rather than the tyres', so its sideways pull cannot roll the car (Vehicle/Drift).
+export type DriftForce = { forward: number, right: number, yaw: number }
+
 export type StepResult = {
 	wheels: { WheelResult },
 	-- N, against the car's velocity through the air, at the centre of mass.
 	aeroDrag: number,
+	driftForce: DriftForce,
 	-- N, down, at each axle's line.
 	downforceFront: number,
 	downforceRear: number,

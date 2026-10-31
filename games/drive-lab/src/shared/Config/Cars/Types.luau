@@ -220,11 +220,19 @@ export type LaunchConfig = {
 
 -- The car's own numbers for the shared drift (Vehicle/Drift, Config/Drift).
 export type DriftProfile = {
-	-- Body slip (rad) at full lock toward the turn. The steering lock bounds it: past about the lock
-	-- less the front tyres' peak slip, the front wheels cannot follow the car's path any more.
-	maxAngle: number,
-	-- Share of the rear tyres' grip at the target angle: lower is looser.
-	holdShare: number,
+	-- Yaw rate (rad/s) a full steering input asks while drifting, and the most sideways
+	-- acceleration (m/s²) the turn may take, which lowers that rate as speed rises.
+	turnRate: number,
+	turnAccel: number,
+	-- Rate (1/s, per radian of body slip) at which the direction of travel turns onto the heading.
+	-- In a steady drift the body slip settles at the yaw rate over this.
+	alignRate: number,
+	-- Deceleration (m/s²) per radian of body slip while drifting: the slide's cost in speed.
+	scrub: number,
+	-- Share of the front tyres' sideways grip, and of the rear tyres' grip both ways, kept while
+	-- drifting, so the tyres neither fight nor double the turn the drift makes.
+	frontGrip: number,
+	rearGrip: number,
 	-- Traction control's slip threshold while drifting.
 	tcSlip: number,
 	-- Most of the gearbox's torque the coupling may send forward while drifting.
@@ -347,8 +355,14 @@ function Types.define(car: CarConfig): CarConfig
 	checkModes(car)
 	local drift = car.drift
 	if drift then
-		assert(drift.maxAngle > 0, "a drift needs a maximum angle")
-		assert(drift.holdShare > 0 and drift.holdShare <= 1, "a drift's hold share must be in (0, 1]")
+		assert(
+			drift.turnRate > 0 and drift.turnAccel > 0,
+			"a drift needs a turn rate and a turn acceleration"
+		)
+		assert(drift.alignRate > 0, "a drift needs an align rate")
+		assert(drift.scrub >= 0, "a drift's scrub must not be negative")
+		assert(drift.frontGrip > 0 and drift.frontGrip <= 1, "a drift's front grip must be in (0, 1]")
+		assert(drift.rearGrip > 0 and drift.rearGrip <= 1, "a drift's rear grip must be in (0, 1]")
 		assert(drift.frontShare >= 0 and drift.frontShare <= 1, "a drift's front share must be in [0, 1]")
 	end
 	return deepFreeze(car)

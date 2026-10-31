@@ -1,15 +1,22 @@
 --!strict
 --[[
-	The drift button (docs/research/13_drifting.md §5). Held above a speed with the steering past a
-	gate, it engages a drift that holds the body slip the steering asks for, through forces the
-	model already has: the front wheels follow the front axle's path plus a slip toward the turn
-	(the geometry of InputFilter.steerBounds), the rear tyres' grip and the engine's torque follow
-	the angle, traction control relaxes, ESC stands aside, and an all-wheel-drive car sends less
-	forward. Released, the target goes to zero and the engagement fades, so the drift steers itself
-	out. Below the gate the button is the handbrake it always was.
+	The drift button: an arcade drift (docs/research/13_drifting.md, issue #195). Held above a speed
+	with the steering past a gate, it engages a drift in which the steering rotates the car and the
+	direction of travel follows the heading, so the car swings round a corner in a short distance.
+	Two forces at the centre of mass do it, on top of the tyres:
+	- a yaw torque that brings the yaw rate to what the steering asks;
+	- a sideways force that turns the velocity onto the heading, keeping its speed.
 
-	`update` runs once a frame; the grip and torque shares run every substep, on the model's
-	predicted motion, so the law does not depend on the frame rate.
+	The second is deliberately not physical: it can pass what tyres could hold. The yaw torque also
+	cancels the tyres' own yaw moment, so the nose answers the drift rather than the tyres. The slide
+	costs speed in proportion to the slip. The tyres keep a share of their grip (the rear's for
+	driving too, so power spins them rather than launching the car out of the turn), and the front
+	wheels follow the front axle's path. Released, the drift ends without swinging the nose back: the
+	travel keeps turning onto the heading until the body slip is small, while the yaw follows what
+	the player's own steering asks.
+
+	`update` runs once a frame; `forces` and `grip` run every substep, on the model's predicted
+	motion, so the law does not depend on the frame rate.
 ]]
 local Config = require("../Config/Drift")
 local Geometry = require("./Geometry")
@@ -21,30 +28,20 @@ export type DriftState = {
 	engagement: number,
 	-- The gate is met this frame: the button is held, fast enough, steered or already sliding.
 	wants: boolean,
-	-- 1 for a drift to the right, −1 to the left: the turn it started in.
-	direction: number,
-	-- Body slip (rad) the drift aims for.
+	-- After a drift: the travel is still turning onto the heading.
+	exiting: boolean,
+	exitTime: number,
+	-- Yaw rate (rad/s) the drift brings the car to: the steering's while held, the player's own
+	-- steering's (the model's reference) on the way out.
+	yawTarget: number,
+	-- Body slip (rad) the drift settles at for the steering held now.
 	target: number,
-	-- Body slip (rad) at the last frame, and its rate (rad/s) over that frame.
-	frameSlip: number,
-	frameRate: number,
-	-- Body slip (rad) at the last substep, for the substep's own rate; seeded each frame while the
-	-- drift is not engaged, so an idle car does no work in its substeps.
-	substepSlip: number,
 }
 
 local Drift = {}
 
 function Drift.newState(): DriftState
-	return {
-		engagement = 0,
-		wants = false,
-		direction = 1,
-		target = 0,
-		frameSlip = 0,
-		frameRate = 0,
-		substepSlip = 0,
-	}
+	return { engagement = 0, wants = false, exiting = false, exitTime = 0, yawTarget = 0, target = 0 }
 end
 
 -- Body slip (rad), unsigned: the angle between the heading and the direction of travel.
@@ -56,25 +53,24 @@ function Drift.engaged(state: DriftState): boolean
 	return state.engagement > 0
 end
 
+-- Whether the drift's forces act: engaged, or ending.
+function Drift.active(state: DriftState): boolean
+	return state.engagement > 0 or state.exiting
+end
+
 -- Whether the assists are the drift's (TC relaxed, ESC aside) rather than the mode's.
 function Drift.assisting(state: DriftState): boolean
-	return state.engagement > Config.ENGAGED
+	return state.engagement > Config.ENGAGED or state.exiting
 end
 
--- The target body slip for a steering input `steer` (shaped, in [−1, 1]).
-function Drift.target(profile: Types.DriftProfile, state: DriftState, steer: number): number
-	if not state.wants then
-		return 0
-	end
-	local toward = steer * state.direction
-	if toward <= -Config.STEER_GATE then
-		return 0
-	end
-	local reach = math.clamp((toward - Config.STEER_GATE) / (1 - Config.STEER_GATE), 0, 1)
-	return Config.MIN_ANGLE + (profile.maxAngle - Config.MIN_ANGLE) * reach
+-- Yaw rate (rad/s) a full steering input asks at `speed` (m/s).
+function Drift.turnRate(profile: Types.DriftProfile, speed: number): number
+	return math.min(profile.turnRate, profile.turnAccel / math.max(speed, 1))
 end
 
--- Once a frame: the gate, the engagement's ramp, the direction and the target.
+-- Once a frame: the gate, the engagement's ramp, the exit and the yaw target. `steer` is the
+-- player's shaped input in [−1, 1], `reference` the yaw rate (rad/s) the player's own steering
+-- asks of the car.
 function Drift.update(
 	profile: Types.DriftProfile,
 	state: DriftState,
@@ -82,32 +78,32 @@ function Drift.update(
 	steer: number,
 	forwardSpeed: number,
 	rightSpeed: number,
+	reference: number,
 	dt: number
 )
 	local slip = Drift.bodySlip(forwardSpeed, rightSpeed)
-	state.frameRate = (slip - state.frameSlip) / dt
-	state.frameSlip = slip
 	local speed = math.sqrt(forwardSpeed * forwardSpeed + rightSpeed * rightSpeed)
+	local wasActive = Drift.active(state)
 	state.wants = held
+		and forwardSpeed > 0
 		and speed >= Config.MIN_SPEED
 		and (math.abs(steer) >= Config.STEER_GATE or slip > Config.SLIDE_GATE)
-	-- A new drift takes the side it is steered to; so does a held one steered the other way once
-	-- the car is near straight, which carries the drift through an S-bend.
-	local switching = steer * state.direction <= -Config.STEER_GATE and slip < Config.SLIDE_GATE
-	if state.wants and (state.engagement == 0 or switching) then
-		state.direction = if steer < 0 then -1 elseif steer > 0 then 1 elseif rightSpeed > 0 then -1 else 1
-	end
-	if state.engagement <= 0 then
-		state.substepSlip = slip
-	end
 	state.engagement = if state.wants
 		then math.min(1, state.engagement + dt / Config.RISE_TIME)
 		else math.max(0, state.engagement - dt / Config.FALL_TIME)
-	state.target = Drift.target(profile, state, steer)
+	if state.wants then
+		state.exiting, state.exitTime = false, 0
+	elseif wasActive then
+		state.exitTime += dt
+		state.exiting = forwardSpeed > 0 and slip > Config.EXIT_SLIP and state.exitTime < Config.EXIT_TIME
+	end
+	local rate = steer * Drift.turnRate(profile, speed)
+	state.yawTarget = if state.wants then rate else reference
+	state.target = if state.wants then math.abs(rate) / profile.alignRate else 0
 end
 
 -- The steering input the wheels get: the player's, blended by the engagement toward the front
--- axle's path plus the commanded slip toward the turn.
+-- axle's path, so the front tyres follow the car rather than steer it.
 function Drift.steer(
 	car: Types.CarConfig,
 	state: DriftState,
@@ -121,41 +117,48 @@ function Drift.steer(
 	end
 	local path =
 		math.atan((rightSpeed + Geometry.frontAxleDistance(car) * yawRate) / math.max(forwardSpeed, 1))
-	local over = state.frameSlip - state.target
-	local command = math.clamp(
-		Config.FRONT_SLIP - Config.STEER_OVER_GAIN * over - Config.STEER_RATE_GAIN * state.frameRate,
-		-1,
-		1
-	)
-	local angle = path + state.direction * command * car.front.tyre.slipAngleAtPeak
 	local perRadian = Steering.ratio(car.steering, forwardSpeed) / Steering.maxWheelAngle(car.steering)
-	local assisted = math.clamp(angle * perRadian, -1, 1)
+	local assisted = math.clamp(path * perRadian, -1, 1)
 	return player + state.engagement * (assisted - player)
 end
 
--- Every substep, from the predicted motion: the rear tyres' grip share and the engine torque's
--- share. Both are exactly 1 while the drift is not engaged.
-function Drift.shares(
+-- The share of the front tyres' sideways grip and of the rear tyres' grip kept now.
+function Drift.grip(profile: Types.DriftProfile, state: DriftState): (number, number)
+	local engagement = state.engagement
+	return 1 - engagement * (1 - profile.frontGrip), 1 - engagement * (1 - profile.rearGrip)
+end
+
+-- Every substep, from the predicted motion and the tyres' yaw moment (N·m): the drift's force at
+-- the centre of mass (N, forward and right) and its yaw torque (N·m, positive turning right). All
+-- zero while the drift is not active.
+function Drift.forces(
+	car: Types.CarConfig,
 	profile: Types.DriftProfile,
 	state: DriftState,
 	forwardSpeed: number,
 	rightSpeed: number,
-	dt: number
-): (number, number)
-	local engagement = state.engagement
-	if engagement <= 0 then
-		return 1, 1
+	yawRate: number,
+	tyreMoment: number
+): (number, number, number)
+	if not Drift.active(state) then
+		return 0, 0, 0
 	end
-	local slip = Drift.bodySlip(forwardSpeed, rightSpeed)
-	local rate = (slip - state.substepSlip) / dt
-	state.substepSlip = slip
-	local over = slip - state.target
-	local share = profile.holdShare
-		+ Config.ANGLE_GAIN * over / math.max(state.target, Config.SLIDE_GATE)
-		+ Config.ANGLE_RATE_GAIN * rate
-	local grip = 1 - engagement * (1 - math.clamp(share, Config.FLOOR_SHARE, 1))
-	local torque = 1 - engagement * math.clamp(over / Config.TORQUE_BAND, 0, 1)
-	return grip, torque
+	local share = if state.exiting then 1 else state.engagement
+	local time = if state.wants then Config.YAW_TIME else Config.EXIT_YAW_TIME
+	local limit = if state.wants then Config.YAW_ACCEL else Config.EXIT_YAW_ACCEL
+	local yawGap = math.clamp((state.yawTarget - yawRate) / time, -limit, limit)
+	local torque = share * (car.yawInertia * yawGap - tyreMoment)
+	if forwardSpeed <= 0 then
+		return 0, 0, torque
+	end
+	-- Turning the velocity (forward, right) toward the heading at alignRate × slip keeps its length:
+	-- the acceleration is that rate times the velocity turned a quarter turn. The scrub acts against
+	-- the velocity.
+	local slip = math.atan2(rightSpeed, forwardSpeed)
+	local turn = share * car.mass * profile.alignRate * slip
+	local speed = math.sqrt(forwardSpeed * forwardSpeed + rightSpeed * rightSpeed)
+	local scrub = share * car.mass * profile.scrub * math.abs(slip) / speed
+	return turn * rightSpeed - scrub * forwardSpeed, -turn * forwardSpeed - scrub * rightSpeed, torque
 end
 
 -- Traction control's slip threshold: the mode's, relaxed toward the profile's while drifting.

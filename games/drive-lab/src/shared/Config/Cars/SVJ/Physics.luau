@@ -348,12 +348,15 @@ return Types.define({
 		autoUpshift = true,
 	},
 
-	-- The shared drift (Vehicle/Drift). The lock caps the angle: 30° at the wheels, and the ratio
-	-- rising to 18:1 at speed leaves less of it there. In Sport the coupling already sends 7 %
-	-- forward; drifting caps it at 10 %.
+	-- The shared arcade drift (Vehicle/Drift): game values, not car data. In Sport the coupling
+	-- already sends 7 % forward; drifting caps it at 10 %.
 	drift = {
-		maxAngle = math.rad(25),
-		holdShare = 0.85,
+		turnRate = 1.6,
+		turnAccel = 36,
+		alignRate = 3.0,
+		scrub = 10,
+		frontGrip = 0.8,
+		rearGrip = 0.5,
 		tcSlip = 0.3,
 		frontShare = 0.10,
 	},

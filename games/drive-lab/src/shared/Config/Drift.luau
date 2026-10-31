@@ -1,8 +1,7 @@
 --!strict
 --[[
-	The drift every car shares (Rules/Drift); a car's own numbers are its `drift` profile
-	(Config/Cars/Types). Angles in radians, speeds in m/s. Why each value is what it is:
-	docs/research/13_drifting.md §5.
+	The drift every car shares (Vehicle/Drift); a car's own numbers are its `drift` profile
+	(Config/Cars/Types). Angles in radians, speeds in m/s, times in seconds.
 ]]
 export type Drift = {
 	-- Below this speed the drift button is only the handbrake.
@@ -15,37 +14,37 @@ export type Drift = {
 	FALL_TIME: number,
 	-- Engagement under which traction control's own threshold and ESC are back.
 	ENGAGED: number,
-	-- Target body slip with the steering centred; full lock toward the turn asks the car's maximum.
-	MIN_ANGLE: number,
-	-- Rear grip share: the profile's hold share at the target, plus ANGLE_GAIN per unit of the
-	-- angle's relative excess and ANGLE_RATE_GAIN per rad/s of its growth, never under FLOOR_SHARE.
-	FLOOR_SHARE: number,
-	ANGLE_GAIN: number,
-	ANGLE_RATE_GAIN: number,
-	-- Body slip past the target over which the engine's torque fades out.
-	TORQUE_BAND: number,
-	-- The front tyres' slip toward the turn, as a share of their peak, at the target; less by
-	-- STEER_OVER_GAIN per rad over it and STEER_RATE_GAIN per rad/s of growth.
-	FRONT_SLIP: number,
-	STEER_OVER_GAIN: number,
-	STEER_RATE_GAIN: number,
+	-- Seconds the yaw rate takes to close most of its gap to what the drift asks, and the most
+	-- angular acceleration (rad/s²) the drift may add.
+	YAW_TIME: number,
+	YAW_ACCEL: number,
+	-- After a drift, the travel keeps turning onto the heading until the body slip is under
+	-- EXIT_SLIP, for at most EXIT_TIME, while the yaw settles on what the player's steering asks
+	-- within EXIT_YAW_TIME, at up to EXIT_YAW_ACCEL (rad/s²).
+	EXIT_SLIP: number,
+	EXIT_TIME: number,
+	EXIT_YAW_TIME: number,
+	EXIT_YAW_ACCEL: number,
 }
 
 local Drift: Drift = table.freeze({
 	MIN_SPEED = 30 / 3.6,
 	STEER_GATE = 0.25,
 	SLIDE_GATE = math.rad(5),
-	RISE_TIME = 0.25,
+	-- A tap of the key engages it fully: a keyboard player taps Space into a corner.
+	RISE_TIME = 0.15,
 	FALL_TIME = 0.5,
 	ENGAGED = 0.05,
-	MIN_ANGLE = math.rad(15),
-	FLOOR_SHARE = 0.45,
-	ANGLE_GAIN = 0.8,
-	ANGLE_RATE_GAIN = 0.01 / math.rad(1),
-	TORQUE_BAND = math.rad(10),
-	FRONT_SLIP = 0.6,
-	STEER_OVER_GAIN = 1 / math.rad(10),
-	STEER_RATE_GAIN = 1 / math.rad(70),
+	-- Quick enough that the nose answers the key at once, slow enough not to jerk the body.
+	YAW_TIME = 0.12,
+	YAW_ACCEL = 8,
+	-- Small enough that what is left is ordinary grip driving, long enough for any drift to close.
+	EXIT_SLIP = math.rad(2),
+	EXIT_TIME = 1.5,
+	-- The rotation stops almost at once, so the car runs where it pointed when Space came up: about
+	-- 3° more of turn at 80 km/h, against 10° at the drift's own yaw time.
+	EXIT_YAW_TIME = 0.03,
+	EXIT_YAW_ACCEL = 25,
 })
 
 return Drift

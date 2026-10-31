@@ -1,12 +1,13 @@
 --!strict
 --[[
-	The shared drift (Vehicle/Drift), unit by unit, then through the vehicle model on both cars with
-	tools/DriftScenario. The bounds are docs/research/13_drifting.md §5.12's.
+	The arcade drift (Vehicle/Drift), unit by unit, then on both cars through tools/DriftTurn, driven
+	on the keys. The bounds are the issue's targets (#195): about 90° of heading and travel within
+	about 30 m at 80 km/h, and the heading held after the drift ends.
 ]]
 local Config = require("../src/shared/Config/Drift")
 local DR458 = require("../src/shared/Config/Cars/DR458/Physics")
 local Drift = require("../src/shared/Vehicle/Drift")
-local DriftScenario = require("../tools/DriftScenario")
+local DriftTurn = require("../tools/DriftTurn")
 local DriveSim = require("../tools/DriveSim")
 local InputHelp = require("../src/shared/Config/InputHelp")
 local SVJ = require("../src/shared/Config/Cars/SVJ/Physics")
@@ -23,231 +24,225 @@ local function profileOf(car: Types.CarConfig): Types.DriftProfile
 	return car.drift :: Types.DriftProfile
 end
 
--- A state stepped `frames` frames at `kmh` with the button and steering given.
+-- A state stepped `frames` frames at `kmh` straight ahead with the button and steering given.
 local function stepped(frames: number, held: boolean, steer: number, kmh: number): Drift.DriftState
 	local state = Drift.newState()
 	for _ = 1, frames do
-		Drift.update(profileOf(DR458), state, held, steer, kmh * KMH, 0, DT)
+		Drift.update(profileOf(DR458), state, held, steer, kmh * KMH, 0, 0, DT)
 	end
 	return state
 end
 
 describe("Drift gate and engagement", function()
-	it("engages only with the button held, above 30 km/h, and steered past the gate", function()
+	it("engages only held, moving forward above 30 km/h, and steered past the gate", function()
 		expect(stepped(5, true, 1, 80).wants).toBe(true)
 		expect(stepped(5, false, 1, 80).wants).toBe(false)
 		expect(stepped(5, true, 1, 29).wants).toBe(false)
 		expect(stepped(5, true, 0.2, 80).wants).toBe(false)
-		expect(stepped(5, true, -0.3, 80).direction).toBe(-1)
+		local reversing = Drift.newState()
+		Drift.update(profileOf(DR458), reversing, true, 1, -12, 0, 0, DT)
+		expect(reversing.wants).toBe(false)
 	end)
 
-	it("rises to full in 0.25 s and falls to nothing in 0.5 s", function()
+	it("rises to full in its rise time and falls to nothing in its fall time", function()
 		local frames = math.round(Config.RISE_TIME / DT)
 		expect(stepped(frames - 1, true, 1, 80).engagement < 1).toBe(true)
 		local state = stepped(frames, true, 1, 80)
 		expect(state.engagement).toBeNear(1, 1e-9)
 		for _ = 1, math.round(Config.FALL_TIME / DT) - 1 do
-			Drift.update(profileOf(DR458), state, false, 0, 80 * KMH, 0, DT)
+			Drift.update(profileOf(DR458), state, false, 0, 80 * KMH, 0, 0, DT)
 		end
 		expect(state.engagement > 0).toBe(true)
-		Drift.update(profileOf(DR458), state, false, 0, 80 * KMH, 0, DT)
+		Drift.update(profileOf(DR458), state, false, 0, 80 * KMH, 0, 0, DT)
 		expect(state.engagement).toBeNear(0, 1e-9)
-	end)
-
-	it("aims at 15° centred, the car's maximum at full lock, and nothing the other way", function()
-		local profile = profileOf(DR458)
-		local state = stepped(1, true, 1, 80)
-		expect(Drift.target(profile, state, 0)).toBeNear(math.rad(15), 1e-12)
-		expect(Drift.target(profile, state, 1)).toBeNear(profile.maxAngle, 1e-12)
-		expect(Drift.target(profile, state, -0.5)).toBe(0)
-		state.wants = false
-		expect(Drift.target(profile, state, 1)).toBe(0)
 	end)
 end)
 
-describe("Drift shares and assists", function()
-	it(
-		"leaves grip, torque, TC, the coupling and the steering exactly as they are while not engaged",
-		function()
-			local profile = profileOf(SVJ)
-			local state = Drift.newState()
-			local grip, torque = Drift.shares(profile, state, 20, -5, 0.001)
-			expect(grip).toBe(1)
-			expect(torque).toBe(1)
-			expect(Drift.tcSlip(profile, state, 0.08)).toBe(0.08)
-			expect(Drift.couplingCapacity(profile, state, 1234.5, 3000)).toBe(1234.5)
-			expect(Drift.steer(SVJ, state, 0.37, 20, -5, 0.4)).toBe(0.37)
-		end
-	)
-
-	it(
-		"holds the rear at its hold share on target, frees it past the target, and fades the torque",
-		function()
-			local profile = profileOf(DR458)
-			local state = stepped(30, true, 1, 80)
-			local onTarget = math.tan(state.target) * 20
-			state.substepSlip = state.target
-			local grip, torque = Drift.shares(profile, state, 20, onTarget, 0.001)
-			expect(grip).toBeNear(profile.holdShare, 1e-6)
-			expect(torque).toBe(1)
-			local far = math.tan(state.target + math.rad(15)) * 20
-			state.substepSlip = state.target + math.rad(15)
-			grip, torque = Drift.shares(profile, state, 20, far, 0.001)
-			expect(grip).toBe(1)
-			expect(torque).toBe(0)
-			state.substepSlip = 0
-			grip = Drift.shares(profile, state, 20, 0, 0.001)
-			expect(grip).toBeNear(Config.FLOOR_SHARE, 1e-9)
-		end
-	)
-
-	it("relaxes TC to the profile's slip and caps the coupling at its front share while engaged", function()
+describe("Drift law", function()
+	it("asks the steering's share of the turn rate, capped by the turn's sideways acceleration", function()
 		local profile = profileOf(SVJ)
+		expect(Drift.turnRate(profile, 10)).toBe(math.min(profile.turnRate, profile.turnAccel / 10))
+		expect(Drift.turnRate(profile, 40)).toBeNear(profile.turnAccel / 40, 1e-12)
+		local state = Drift.newState()
+		Drift.update(profile, state, true, -0.5, 30, 0, 0.7, DT)
+		expect(state.yawTarget).toBeNear(-0.5 * Drift.turnRate(profile, 30), 1e-12)
+		expect(state.target).toBeNear(0.5 * Drift.turnRate(profile, 30) / profile.alignRate, 1e-12)
+	end)
+
+	it("follows the player's own steering once released, and ends when the slip has closed", function()
+		local profile = profileOf(SVJ)
+		local state = Drift.newState()
+		Drift.update(profile, state, true, 1, 25, -8, 0, DT)
+		Drift.update(profile, state, false, 0, 25, -8, 0.25, DT)
+		expect(state.exiting).toBe(true)
+		expect(state.yawTarget).toBe(0.25)
+		Drift.update(profile, state, false, 0, 25, -25 * math.tan(Config.EXIT_SLIP / 2), 0, DT)
+		expect(state.exiting).toBe(false)
+		expect(Drift.active(state)).toBe(true)
+	end)
+
+	it("does nothing while neither engaged nor ending", function()
+		local profile = profileOf(SVJ)
+		local state = Drift.newState()
+		local forward, right, torque = Drift.forces(SVJ, profile, state, 25, -6, 0.8, 5000)
+		expect(forward).toBe(0)
+		expect(right).toBe(0)
+		expect(torque).toBe(0)
+		local front, rear = Drift.grip(profile, state)
+		expect(front).toBe(1)
+		expect(rear).toBe(1)
+		expect(Drift.tcSlip(profile, state, 0.08)).toBe(0.08)
+		expect(Drift.couplingCapacity(profile, state, 1234.5, 3000)).toBe(1234.5)
+		expect(Drift.steer(SVJ, state, 0.37, 20, -5, 0.4)).toBe(0.37)
+	end)
+
+	it("turns the velocity onto the heading without changing its length, and scrubs speed apart", function()
+		local profile = profileOf(DR458)
+		local state = stepped(30, true, 1, 80)
+		local forwardSpeed, rightSpeed = 20, -8
+		local fx, fy = Drift.forces(DR458, profile, state, forwardSpeed, rightSpeed, 0, 0)
+		local slip = math.atan2(rightSpeed, forwardSpeed)
+		local turn = DR458.mass * profile.alignRate * slip
+		local speed = math.sqrt(forwardSpeed ^ 2 + rightSpeed ^ 2)
+		local scrub = DR458.mass * profile.scrub * math.abs(slip) / speed
+		expect(fx).toBeNear(turn * rightSpeed - scrub * forwardSpeed, 1e-6)
+		expect(fy).toBeNear(-turn * forwardSpeed - scrub * rightSpeed, 1e-6)
+		expect(fy > 0).toBe(true)
+		-- Without the scrub the force is square to the velocity, so it turns it without speeding or
+		-- slowing it.
+		local noScrub = table.clone(profile)
+		noScrub.scrub = 0
+		local tx, ty = Drift.forces(DR458, noScrub, state, forwardSpeed, rightSpeed, 0, 0)
+		expect(math.abs(tx * forwardSpeed + ty * rightSpeed) < 1e-6 * math.abs(ty * forwardSpeed)).toBe(true)
+		expect(math.abs(ty) > 1000).toBe(true)
+	end)
+
+	it("brings the yaw rate to its target whatever the tyres' own moment", function()
+		local profile = profileOf(SVJ)
+		local state = stepped(30, true, 1, 80)
+		local _, _, freeTorque = Drift.forces(SVJ, profile, state, 22, -5, 0.5, 0)
+		local _, _, againstTyres = Drift.forces(SVJ, profile, state, 22, -5, 0.5, 4000)
+		expect(againstTyres).toBeNear(freeTorque - 4000, 1e-6)
+		local gap = math.clamp((state.yawTarget - 0.5) / Config.YAW_TIME, -Config.YAW_ACCEL, Config.YAW_ACCEL)
+		expect(freeTorque).toBeNear(SVJ.yawInertia * gap, 1e-6)
+	end)
+
+	it("keeps part of the front's sideways grip and of the rear's grip while engaged", function()
+		local profile = profileOf(SVJ)
+		local front, rear = Drift.grip(profile, stepped(30, true, 1, 80))
+		expect(front).toBeNear(profile.frontGrip, 1e-12)
+		expect(rear).toBeNear(profile.rearGrip, 1e-12)
 		local state = stepped(30, true, 1, 80)
 		expect(Drift.tcSlip(profile, state, 0.08)).toBeNear(profile.tcSlip, 1e-12)
 		expect(Drift.couplingCapacity(profile, state, 1200, 3000)).toBeNear(profile.frontShare * 3000, 1e-9)
 	end)
-
-	it("countersteers harder the further a right-hand drift is past its target", function()
-		local state = stepped(30, true, 1, 80)
-		state.frameSlip, state.frameRate = state.target, 0
-		local onTarget = Drift.steer(SVJ, state, 1, 20, -math.tan(state.target) * 20, 0.6)
-		state.frameSlip = state.target + math.rad(10)
-		local over = Drift.steer(SVJ, state, 1, 20, -math.tan(state.frameSlip) * 20, 0.6)
-		expect(over < onTarget).toBe(true)
-	end)
 end)
 
-describe("Drift through the model", function()
-	it("holds every drift near its target without a spin at 50, 80 and 130 km/h", function()
+describe("Drift on both cars, on the keys", function()
+	it("turns heading and travel 90° within 35 m at 80 km/h, throttle off or on, and 30 m at 60", function()
 		for _, car in CARS do
-			local maxAngle = profileOf(car).maxAngle
-			for _, kmh in { 50, 80, 130 } do
-				for _, steer in { 0.4, 1 } do
-					for _, throttle in { 0.3, 1 } do
-						local run = DriftScenario.run(car, { kmh = kmh, steer = steer, throttle = throttle })
-						expect(run.entry < 1).toBe(true)
-						expect(run.peak <= maxAngle + math.rad(8)).toBe(true)
-						expect(math.abs(run.held - run.target) <= math.rad(4)).toBe(true)
-						expect(run.snap <= math.rad(3)).toBe(true)
-						expect(run.settle <= 1.5).toBe(true)
-					end
-				end
+			for _, throttle in { 0, 1 } do
+				local fast = DriftTurn.turn(car, 80, throttle)
+				expect(fast.headingAt90 <= fast.travelAt90).toBe(true)
+				expect(fast.travelAt90 <= 35).toBe(true)
+				expect(DriftTurn.turn(car, 60, throttle).travelAt90 <= 30).toBe(true)
 			end
 		end
 	end)
 
-	it("drifts the same at 30, 60 and 120 FPS, with TC on and off", function()
+	it("keeps going where it points: the heading holds within 4° for 2 s after release", function()
 		for _, car in CARS do
-			for _, tc in { true, false } do
-				local reference =
-					DriftScenario.run(car, { kmh = 80, steer = 1, throttle = 1, tc = tc, fps = 120 })
-				for _, fps in { 30, 60 } do
-					local run =
-						DriftScenario.run(car, { kmh = 80, steer = 1, throttle = 1, tc = tc, fps = fps })
-					expect(math.abs(run.held - reference.held) <= math.rad(1.5)).toBe(true)
-					expect(run.peak <= profileOf(car).maxAngle + math.rad(8)).toBe(true)
-					expect(run.snap <= math.rad(3)).toBe(true)
-				end
+			for _, kmh in { 60, 80, 120 } do
+				local run = DriftTurn.turn(car, kmh, 0)
+				expect(run.headingDrift <= math.rad(4)).toBe(true)
+				expect(math.abs(run.slipAfter) <= math.rad(2)).toBe(true)
 			end
 		end
 	end)
 
-	it("exits the DR458's slow, light-throttle drift without sliding back the other way", function()
-		for _, fps in { 30, 60, 120 } do
-			local run = DriftScenario.run(DR458, { kmh = 50, steer = 1, throttle = 0.3, fps = fps })
-			expect(run.snap <= math.rad(3)).toBe(true)
+	it("turns the same within 3 m and holds within 4° at 30, 60 and 120 FPS", function()
+		for _, car in CARS do
+			local reference = DriftTurn.turn(car, 80, 0, 60)
+			for _, fps in { 30, 120 } do
+				local run = DriftTurn.turn(car, 80, 0, fps)
+				expect(math.abs(run.travelAt90 - reference.travelAt90) <= 3).toBe(true)
+				expect(run.headingDrift <= math.rad(4)).toBe(true)
+			end
 		end
 	end)
 
-	it("costs at most 12 km/h a second on a light throttle and at most 1 on full", function()
+	it("adds at least 10° to a steered corner with a 0.3 s tap of Space", function()
 		for _, car in CARS do
-			for _, kmh in { 50, 80, 130 } do
-				expect(DriftScenario.run(car, { kmh = kmh, steer = 1, throttle = 0.3 }).lossPerSecond <= 12).toBe(
-					true
+			local tapped, plain = DriftTurn.tap(car, 80)
+			expect(tapped - plain >= math.rad(10)).toBe(true)
+		end
+	end)
+
+	it("ends under braking or below the speed gate without swinging back or spinning", function()
+		for _, car in CARS do
+			for _, braking in { false, true } do
+				local ending = DriftTurn.ending(car, 50, braking)
+				expect(ending.endedAt < math.huge).toBe(true)
+				expect(ending.headingBack <= math.rad(2)).toBe(true)
+				expect(ending.spun).toBe(false)
+			end
+		end
+	end)
+
+	it("pulls at the centre of mass, so even a hard drift barely rolls the car", function()
+		for _, car in CARS do
+			local sim = DriveSim.new(car, InputHelp.keyboard)
+			DriveSim.setSpeed(sim, 80 * KMH, DriftTurn.gearFor(car, 80))
+			local roll = 0
+			while sim.time < 2.5 do
+				local held = sim.time >= 1
+				DriveSim.frame(
+					sim,
+					DriveSim.input({
+						steer = if held then 1 else 0,
+						drift = held,
+						handbrake = if held then 1 else 0,
+						drivingMode = car.modeOrder[1],
+						gearboxMode = "manual",
+					}),
+					DT
 				)
-				expect(DriftScenario.run(car, { kmh = kmh, steer = 1, throttle = 1 }).lossPerSecond <= 1).toBe(
-					true
+				roll = math.max(roll, math.abs(sim.body.roll))
+			end
+			expect(roll < math.rad(3)).toBe(true)
+		end
+	end)
+
+	it("carries a held drift through an S-bend: right, then left", function()
+		for _, car in CARS do
+			local sim = DriveSim.new(car, InputHelp.keyboard)
+			DriveSim.setSpeed(sim, 80 * KMH, DriftTurn.gearFor(car, 80))
+			local right, left = 0, 0
+			while sim.time < 3 do
+				DriveSim.frame(
+					sim,
+					DriveSim.input({
+						throttle = 1,
+						steer = if sim.time < 1.5 then 1 else -1,
+						drift = true,
+						handbrake = 1,
+						drivingMode = car.modeOrder[1],
+						gearboxMode = "manual",
+					}),
+					DT
 				)
-			end
-		end
-	end)
-
-	it("keeps TC on, relaxed: the rear spins past the mode's slip but well under TC off", function()
-		for _, car in CARS do
-			local modeSlip = car.modes[car.modeOrder[1]].tcSlipRatio
-			local on = DriftScenario.run(car, { kmh = 80, steer = 1, throttle = 1 })
-			local off = DriftScenario.run(car, { kmh = 80, steer = 1, throttle = 1, tc = false })
-			expect(on.rearSlipRatio > modeSlip + 0.1).toBe(true)
-			expect(on.rearSlipRatio < profileOf(car).tcSlip + 0.05).toBe(true)
-			expect(off.rearSlipRatio > on.rearSlipRatio + 0.05).toBe(true)
-		end
-	end)
-
-	it(
-		"sets ESC aside and caps the SVJ's front share at 10 % while drifting, then gives both back",
-		function()
-			local run = DriftScenario.run(SVJ, { kmh = 80, steer = 1, throttle = 1 })
-			expect(run.escShare).toBe(0)
-			expect(math.abs(run.frontShare) <= profileOf(SVJ).frontShare + 0.01).toBe(true)
-			expect(run.frontShareAfter > 0.3).toBe(true)
-		end
-	)
-
-	it("holds its gear through a drift in the automatic, as a driver would", function()
-		for _, car in CARS do
-			for _, kmh in { 50, 80, 130 } do
-				local run =
-					DriftScenario.run(car, { kmh = kmh, steer = 1, throttle = 1, gearboxMode = "auto" })
-				expect(run.shifts).toBe(0)
-				expect(run.peak <= profileOf(car).maxAngle + math.rad(8)).toBe(true)
-			end
-		end
-	end)
-
-	it("carries a held drift through an S-bend: right, straight, then left", function()
-		for _, car in CARS do
-			local sim = DriveSim.new(car)
-			DriveSim.setSpeed(sim, 80 * KMH, 3)
-			local mode = car.modeOrder[1]
-			local right, left, peak = 0, 0, 0
-			while sim.time < 6 do
-				local steer = if sim.time < 3 then 1 else -1
-				local input = DriveSim.input({
-					throttle = 1,
-					steer = steer,
-					drift = true,
-					drivingMode = mode,
-					gearboxMode = "manual",
-				})
-				DriveSim.frame(sim, input, DT)
 				local forward, side = DriveSim.localVelocity(sim.body)
 				local slip = math.atan2(side, math.abs(forward))
-				peak = math.max(peak, math.abs(slip))
-				right = math.min(right, slip)
-				left = math.max(left, slip)
+				right, left = math.min(right, slip), math.max(left, slip)
 			end
 			expect(right < -math.rad(15)).toBe(true)
 			expect(left > math.rad(15)).toBe(true)
-			expect(peak <= profileOf(car).maxAngle + math.rad(8)).toBe(true)
-		end
-	end)
-
-	it("drifts the same way to the left, and on a keyboard", function()
-		for _, car in CARS do
-			local right = DriftScenario.run(car, { kmh = 80, steer = 1, throttle = 1 })
-			local left = DriftScenario.run(car, { kmh = 80, steer = 1, throttle = 1, side = -1 })
-			expect(left.held).toBeNear(right.held, math.rad(0.5))
-			local keys =
-				DriftScenario.run(car, { kmh = 80, steer = 1, throttle = 1, help = InputHelp.keyboard })
-			expect(math.abs(keys.held - keys.target) <= math.rad(4)).toBe(true)
-			expect(keys.peak <= profileOf(car).maxAngle + math.rad(8)).toBe(true)
 		end
 	end)
 end)
 
 describe("Drift button and handbrake", function()
-	-- Final speed, heading and rear slip after `seconds` of `options` from `kmh` in 3rd.
+	-- Final speed, heading and rear slip after 1 s of `options` from `kmh` in 3rd.
 	local function after(
 		car: Types.CarConfig,
 		kmh: number,
