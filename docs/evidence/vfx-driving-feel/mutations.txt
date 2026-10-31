@@ -1,0 +1,59 @@
+Deliberate breaks for #160. Each break was made on a committed tree, the named spec run with a
+single-spec runner (the same T harness as tools/test/run), then the file restored with git checkout
+and the spec passing again. Line numbers are the failing expect at the time of each run (later
+specs inserted above shift them).
+
+WIND (tests/RoadAudio.spec.luau, 17 passing when restored)
+- Config/RoadAudio back to main's wind (volume 0.5, exponent 2, cutoff 500 Hz at 50 km/h to 8 kHz
+  at 350, cockpit -10 dB): FAIL "keeps every car's engine on top up to its top speed, on throttle
+  and coasting" (line 302: the DR458 coasting near its top speed, 5.3 dB) and FAIL "makes the wind
+  heard from everyday speeds in both views, for every car" (line 318).
+- windVolume 0.45: FAIL engine on top (line 302).
+- cockpit wind gain -10 dB: FAIL wind heard (line 318).
+- cutoff opening to 400 km/h: FAIL wind heard (line 322, the low-pass under 1.5 kHz at 100 km/h).
+
+FIELD OF VIEW (tests/CarCamera.spec.luau, 23 passing when restored)
+- Rules.fieldOfView without the speed term: FAIL "sets each view's field of view from its base and
+  its shares of the kick and the speed" (line 218: expected 66, got 60).
+- Rules.speedTarget without its cap: FAIL "widens nothing up to its start ... up to its cap" (line
+  233: expected 10, got 38.4).
+- Rules.stepSpeedWiden returning the target (no ease): FAIL "follows the speed with its half-life"
+  (line 255: expected 4, got 8).
+- FOV_KICK.max 15: FAIL "leaves room under the cap for a launch's 1.1 g" (line 126: expected 19.8,
+  got 15) and FAIL "widens the cockpit and the hood at least 7 degrees under 1 g" (line 133).
+- Cockpit kickShare 0.25: FAIL "widens the cockpit and the hood at least 7 degrees" (line 133).
+- FOV_SPEED.perKmh 0.02 (cap at 540 km/h): FAIL "reaches its cap at speeds the cars drive" (line 246).
+
+MOTION BLUR (tests/MotionBlur.spec.luau, tests/RainOptics.spec.luau)
+Rules, run on the first values:
+- depth: the chase view ignores the pull: FAIL "blurs the road before the car and the world past
+  it in the chase view" (line 95), FAIL "scales the pull's blur with its one intensity" (line 124),
+  FAIL the config's full-throttle check.
+- depth: the cockpit gets a near blur: FAIL "blurs only past the cabin in the cockpit and hood
+  views" (line 108: expected 0, got 0.5).
+- RainOptics: the cockpit's motion blur ignores the rain: FAIL "fades the cockpit's motion blur out
+  with the rain on the windscreen" (line 98: expected 0.2, got 0.4).
+- RainOptics: cockpit focus on the far distance: FAIL "blurs the world past the car's own body ...
+  never the body" (line 89: expected 6, got 30).
+- pulseSize ignoring the style: FAIL "draws the pull's blur in one style only" (line 134).
+After the calibration (final values):
+- depth: the cockpit takes the chase view's `far`: FAIL lines 110, 131 (expected 0.2, got 0.4) and
+  FAIL "never fogs the cockpit or the hood view" (line 169).
+- ACCELERATION.far 0.2: FAIL "blurs plainly at a full-throttle start" (line 160).
+- ACCELERATION.cabin 0.1: FAIL "blurs plainly at a full-throttle start" (line 162).
+- ACCELERATION.cabin 0.25: FAIL "never fogs the cockpit or the hood view" (line 169).
+- SPEED.far 0.1: FAIL "never fogs the cockpit or the hood view" (line 169).
+- style "FullScreen" by default: FAIL "starts in the depth of field style" (line 181) and FAIL the
+  full-throttle check (line 160).
+- (found in the Play check) the pull floor removed (`off` ignored): FAIL "counts a pull under its
+  floor as none, so the blur switches off after a pull" (line 139: expected 0, got 0.005).
+
+AIR STREAKS (tests/AirDebris.spec.luau, 11 passing when restored)
+- Rules.streak with exposure 1 s: FAIL "draws a streak as the car's travel over the exposure"
+  (line 79: expected 2, got 2.5, the cap).
+- Rules.streak with a 1000 m cap: FAIL the same spec on its cap line (line 85: expected 2.5, got
+  6.67). A first try used math.huge, which RainStreaks.length reads as 0, so it failed on line 79
+  for that reason instead; redone with a finite cap.
+- STREAKS.speeds.from 100: FAIL "draws its streaks only at speed" (line 113).
+- STREAKS.transparency 0.4: FAIL the same spec (line 116).
+- STREAKS.shape.width 0.006: FAIL "keeps its longest streak within the Squash range" (line 123).
