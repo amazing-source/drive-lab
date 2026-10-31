@@ -25,6 +25,8 @@ local Contract = require(ReplicatedStorage.Shared.Config.Cars.Contract)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local DriveModes = require(ReplicatedStorage.Shared.Rules.DriveModes)
 local DriverAssists = require(ReplicatedStorage.Shared.Rules.DriverAssists)
+local GameFeel = require(ReplicatedStorage.Shared.Rules.GameFeel)
+local GameFeelConfig = require(ReplicatedStorage.Shared.Config.GameFeel)
 local Rules = require(ReplicatedStorage.Shared.Rules.Hud)
 
 local MONTSERRAT = "rbxasset://fonts/families/Montserrat.json"
@@ -64,6 +66,9 @@ local ui: Ui? = nil
 local hudMode: Rules.Mode = "Full"
 local elapsed = 0
 local lastGear = ""
+-- The game-feel notch last seen on the driven car (nil until one is published) and when it changed.
+local lastNotch: GameFeelConfig.Notch? = nil
+local notchChangedAt: number? = nil
 
 local function share(x: number, y: number): UDim2
 	return UDim2.fromScale(x / Config.FRAME_SIZE.X, y / Config.FRAME_SIZE.Y)
@@ -331,8 +336,23 @@ local function refresh(current: Ui, model: Model, entry: Catalog.Entry)
 	current.speed.Text = tostring(math.round(number(model, "SpeedKmh")))
 	local launch = model:GetAttribute("Launch")
 	local mode = DriveModes.current(entry.physics.modeOrder, model:GetAttribute("DrivingMode"))
-	current.mode.Text =
-		Rules.modeText(entry.modeLabels[mode], launch == "Armed" or launch == "Launching", Config.LAUNCH_TEXT)
+	local published = model:GetAttribute("GameFeel")
+	if typeof(published) == "string" then
+		local notch: GameFeelConfig.Notch = GameFeel.current(published)
+		if lastNotch ~= nil and notch ~= lastNotch then
+			notchChangedAt = os.clock()
+		end
+		lastNotch = notch
+	end
+	local level = if lastNotch
+		then GameFeel.flash(lastNotch, notchChangedAt, os.clock(), GameFeelConfig.FLASH_SECONDS)
+		else nil
+	current.mode.Text = level
+		or Rules.modeText(
+			entry.modeLabels[mode],
+			launch == "Armed" or launch == "Launching",
+			Config.LAUNCH_TEXT
+		)
 
 	local assists = DriverAssists.assists(model:GetAttribute("EscOff") == true, mode, entry.assists)
 	paint(
@@ -366,6 +386,9 @@ local function update(dt: number)
 		and entry ~= nil
 		and CarEntry.phase(entry, CarState.read(model), Workspace:GetServerTimeNow()) == "Seated"
 	current.gui.Enabled = seated and hudMode ~= "Off"
+	if not seated then
+		lastNotch, notchChangedAt = nil, nil
+	end
 	if model == nil or entry == nil or not seated or hudMode == "Off" then
 		return
 	end
