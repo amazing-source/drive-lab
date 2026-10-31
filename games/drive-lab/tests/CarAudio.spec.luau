@@ -121,17 +121,21 @@ describe("CarAudio config", function()
 		expect(CarAudio.popsSoundId(SVJ)).toBe(SVJ.eventsSoundId)
 	end)
 
-	it("DR458: plays the SVJ's pops, out of the SVJ's events file at the SVJ's level and speed", function()
+	it("DR458: plays the SVJ's pops, out of the SVJ's events file at the SVJ's speed", function()
 		expect(CarAudio.popsSoundId(DR458)).toBe(SVJ.eventsSoundId)
 		expect(#DR458.pops.regions).toBe(#SVJ.pops.regions)
 		for index, region in SVJ.pops.regions do
 			expect(DR458.pops.regions[index].from).toBe(region.from)
 			expect(DR458.pops.regions[index].to).toBe(region.to)
 		end
-		for _, pair in { { DR458.pops.volume, SVJ.pops.volume }, { DR458.pops.speed, SVJ.pops.speed } } do
-			expect(pair[1].from).toBe(pair[2].from)
-			expect(pair[1].to).toBe(pair[2].to)
-		end
+		expect(DR458.pops.speed.from).toBe(SVJ.pops.speed.from)
+		expect(DR458.pops.speed.to).toBe(SVJ.pops.speed.to)
+	end)
+
+	it("DR458: plays them 4.5 dB under the SVJ's level, keeping the SVJ's spread", function()
+		local gain = 10 ^ (-4.5 / 20)
+		expect(DR458.pops.volume.from).toBeNear(SVJ.pops.volume.from * gain, 1e-9)
+		expect(DR458.pops.volume.to).toBeNear(SVJ.pops.volume.to * gain, 1e-9)
 	end)
 
 	it("DR458: pops on the SVJ's Corsa timing in every manettino position", function()
