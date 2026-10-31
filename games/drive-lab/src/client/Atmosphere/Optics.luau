@@ -4,8 +4,8 @@
 	as drops land on the lens, and a very light far depth of field, both off in the cockpit. The
 	blur is this module's own BlurEffect (the strongest blur in Lighting wins, so a menu's blur
 	is never weakened); a DepthOfFieldEffect the place already has is driven rather than doubled,
-	and every property written on it is put back on destroy. It also carries the speed's near
-	blur in the chase view (Rules/MotionBlur), the one depth of field serving both.
+	and every property written on it is put back on destroy. It also carries the motion blur of
+	the car's speed and pull (Rules/MotionBlur), the one depth of field serving both.
 ]]
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -23,6 +23,8 @@ export type Optics = {
 	created: boolean,
 	saved: Saved,
 	pulse: number,
+	-- The car's pull as a share of the acceleration blur, eased.
+	pull: number,
 }
 
 local Optics = {}
@@ -47,11 +49,11 @@ function Optics.new(): Optics
 		focus.Enabled = false
 		focus.Parent = Lighting
 	end
-	return { blur = blur, focus = focus, created = existing == nil, saved = saved, pulse = 0 }
+	return { blur = blur, focus = focus, created = existing == nil, saved = saved, pulse = 0, pull = 0 }
 end
 
 -- `landed` is how many drops hit the lens this frame; carDistance and carLength (studs) let
--- the chase view focus on the car, and speedKmh is that car's speed.
+-- the chase view focus on the car, and speedKmh and longitudinalG are that car's.
 function Optics.update(
 	optics: Optics,
 	dt: number,
@@ -60,7 +62,8 @@ function Optics.update(
 	landed: number,
 	carDistance: number?,
 	carLength: number,
-	speedKmh: number
+	speedKmh: number,
+	longitudinalG: number
 )
 	optics.pulse = RainOptics.contact(RainOptics.decay(optics.pulse, dt, Config.BLUR), landed, Config.BLUR)
 	local size = RainOptics.blurSize(view, optics.pulse, Config.BLUR)
@@ -73,8 +76,11 @@ function Optics.update(
 	if on then
 		blur.Size = size
 	end
-	local near = MotionBlur.speedNear(speedKmh, MotionBlurConfig.SPEED)
-	local depth = RainOptics.depthOfField(view, intensity, near, carDistance, carLength, Config.FOCUS)
+	local acceleration = MotionBlurConfig.ACCELERATION
+	optics.pull =
+		MotionBlur.follow(optics.pull, MotionBlur.pullShare(longitudinalG, acceleration), dt, acceleration)
+	local near, far = MotionBlur.depth(view, speedKmh, optics.pull, MotionBlurConfig.SPEED, acceleration)
+	local depth = RainOptics.depthOfField(view, intensity, near, far, carDistance, carLength, Config.FOCUS)
 	local focus = optics.focus
 	if focus.Enabled ~= depth.enabled then
 		focus.Enabled = depth.enabled

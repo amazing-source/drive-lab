@@ -16,6 +16,8 @@ export type EngineLayer = {
 	load: EngineSound.Load,
 	volume: number,
 	crossoverRpm: number?,
+	-- The stretch of its file it loops, when its file holds other loops too; the whole file else.
+	region: Region?,
 }
 
 -- Seconds into the packed events file, or any other range.
@@ -52,8 +54,23 @@ export type Pack = {
 	engineLayers: { EngineLayer },
 	engineTuning: EngineSound.Tuning,
 	engineVolume: number,
-	limiter: { soundId: string, rpm: number, volume: number, onDuck: number, halfLife: number },
-	far: { soundId: string, speed: number, volume: number, fromDistance: number, toDistance: number },
+	-- `region` as an engine layer's.
+	limiter: {
+		soundId: string,
+		rpm: number,
+		volume: number,
+		onDuck: number,
+		halfLife: number,
+		region: Region?,
+	},
+	far: {
+		soundId: string,
+		speed: number,
+		volume: number,
+		fromDistance: number,
+		toDistance: number,
+		region: Region?,
+	},
 	eventsSoundId: string,
 	-- `sound`, when set, plays instead of the events file's region, which stays as its fallback
 	-- should it fail to load: the two never play together.

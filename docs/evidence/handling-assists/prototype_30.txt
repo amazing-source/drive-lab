@@ -1,0 +1,17 @@
+Prototype at 30 FPS (scratch harness, keyboard help; stick on the pad help). Columns: light brake 0.3 / full brake at 120 km/h peak deg, power-on 60 peak deg (S = spun) | catch from 20 deg 0.8 rad/s at 100 km/h: keys settle s / overcorrection deg, hands off settle s, stick settle / overcorrection | step steer yaw rad/s and t90 s at 100 and 180 km/h | lane change 0.7 s peak deg
+== SVJ Strada
+Realistic      brk.3   7.9  brk1  10.4  pow   3.0  | keys never/89.6S hands 2.90  stick never/89.9S | yaw100 0.403 t90 0.50 yaw180 0.228 t90 0.57 | lane 3.8 
+Balanced       brk.3   7.9  brk1  10.4  pow   3.0  | keys 1.10/ 4.5  hands 0.77  stick 0.97/ 3.2  | yaw100 0.403 t90 0.50 yaw180 0.228 t90 0.57 | lane 3.8 
+Forgiving      brk.3   7.5  brk1   7.6  pow   3.0  | keys 0.97/ 2.5  hands 0.77  stick 0.93/ 2.2  | yaw100 0.403 t90 0.50 yaw180 0.228 t90 0.57 | lane 3.8 
+== SVJ Corsa ESC off
+Realistic      brk.3  64.4S brk1  24.7  pow  89.2S | keys never/ 0.0S hands 3.03  stick never/89.3S | yaw100 0.406 t90 0.50 yaw180 0.224 t90 0.57 | lane 4.1 
+Balanced       brk.3  13.8  brk1  14.4  pow  14.7  | keys 1.07/ 5.8  hands 0.73  stick 0.97/ 3.7  | yaw100 0.406 t90 0.50 yaw180 0.224 t90 0.57 | lane 4.1 
+Forgiving      brk.3  10.3  brk1   7.3  pow   8.9  | keys 0.90/ 2.2  hands 0.90  stick 0.90/ 2.2  | yaw100 0.406 t90 0.50 yaw180 0.224 t90 0.57 | lane 4.1 
+== DR458 1
+Realistic      brk.3  59.5S brk1   5.4  pow  10.9  | keys never/89.2S hands 2.00  stick never/88.1S | yaw100 0.540 t90 0.57 yaw180 0.325 t90 0.53 | lane 2.3 
+Balanced       brk.3  11.1  brk1   5.4  pow   8.3  | keys 0.80/ 5.0  hands 0.80  stick 0.80/ 5.0  | yaw100 0.540 t90 0.57 yaw180 0.325 t90 0.53 | lane 2.3 
+Forgiving      brk.3   6.6  brk1   5.4  pow   5.5  | keys 0.80/ 5.0  hands 0.80  stick 0.80/ 5.0  | yaw100 0.540 t90 0.57 yaw180 0.325 t90 0.53 | lane 2.3 
+== DR458 OFF
+Realistic      brk.3  60.7S brk1   5.7  pow  88.7S | keys never/88.5S hands 1.73  stick never/89.4S | yaw100 0.538 t90 0.57 yaw180 0.325 t90 0.53 | lane 2.3 
+Balanced       brk.3  10.8  brk1   5.7  pow  20.7  | keys 1.27/ 9.3  hands 2.00  stick 1.77/ 9.3  | yaw100 0.538 t90 0.57 yaw180 0.325 t90 0.53 | lane 2.3 
+Forgiving      brk.3   6.6  brk1   5.6  pow  11.3  | keys 1.37/ 9.3  hands 1.37  stick 1.37/ 9.3  | yaw100 0.538 t90 0.57 yaw180 0.325 t90 0.53 | lane 2.3 

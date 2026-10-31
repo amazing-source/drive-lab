@@ -180,3 +180,66 @@ describe("Roadside road end", function()
 		expect(Config.ROAD_END_SETBACK > 0).toBe(true)
 	end)
 end)
+
+describe("Roadside keep-out zones", function()
+	local ZONE = { from = 4000, to = 5500 }
+	local ZONES = { ZONE }
+
+	local function clearOf(from: number, to: number): boolean
+		return to <= ZONE.from or from >= ZONE.to
+	end
+
+	it("drops whole guardrail stretches that reach into a zone, and keeps every other one", function()
+		local all = Roadside.guardrails(0, 12000, SEED, GUARDRAILS)
+		local kept = Roadside.guardrails(0, 12000, SEED, GUARDRAILS, ZONES)
+		local expected = 0
+		for _, stretch in all do
+			if clearOf(stretch.from - GUARDRAILS.terminal, stretch.to + GUARDRAILS.terminal) then
+				expected += 1
+			end
+		end
+		expect(#kept).toBe(expected)
+		expect(#kept < #all).toBe(true)
+		for _, stretch in kept do
+			expect(clearOf(stretch.from - GUARDRAILS.terminal, stretch.to + GUARDRAILS.terminal)).toBe(true)
+		end
+	end)
+
+	it("keeps posts and gantries out of a zone and leaves them as they were outside it", function()
+		local posts = Roadside.delineators(
+			0,
+			12000,
+			SEED,
+			Config.DELINEATORS,
+			GUARDRAILS,
+			Config.DELINEATOR_CLEARANCE,
+			ZONES
+		)
+		for _, spot in posts do
+			expect(clearOf(spot.s, spot.s)).toBe(true)
+		end
+		local plain = Roadside.delineators(
+			0,
+			ZONE.from - 400,
+			SEED,
+			Config.DELINEATORS,
+			GUARDRAILS,
+			Config.DELINEATOR_CLEARANCE
+		)
+		local zoned = Roadside.delineators(
+			0,
+			ZONE.from - 400,
+			SEED,
+			Config.DELINEATORS,
+			GUARDRAILS,
+			Config.DELINEATOR_CLEARANCE,
+			ZONES
+		)
+		expect(#zoned).toBe(#plain)
+		local gantries = Roadside.gantries(0, 40000, SEED, Config.GANTRIES, { { from = 0, to = 40000 } })
+		expect(#gantries).toBe(0)
+		expect(#Roadside.gantries(0, 40000, SEED, Config.GANTRIES, {})).toBe(
+			#Roadside.gantries(0, 40000, SEED, Config.GANTRIES)
+		)
+	end)
+end)

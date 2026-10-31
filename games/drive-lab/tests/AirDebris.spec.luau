@@ -9,6 +9,15 @@ local T = require("../../../tools/test/T")
 local describe, it, expect = T.describe, T.it, T.expect
 
 local SPEEDS: AirDebris.Speeds = { from = 80, to = 280, exponent = 1 }
+local STREAK: AirDebris.Streak =
+	{ maxLength = 2.5, width = 0.006, exposure = 1 / 30, along = 0.6, across = 0.03 }
+local RainStreaks = require("../src/shared/Rules/RainStreaks")
+
+-- The streak a Fit draws: its length along the motion and its width, metres.
+local function drawn(fit: RainStreaks.Fit, streak: AirDebris.Streak): (number, number)
+	local stretch = RainStreaks.stretch(fit.squash)
+	return 2 * fit.size * stretch * streak.along, 2 * fit.size / stretch * streak.across
+end
 
 describe("AirDebris", function()
 	it("shows none below its speed, all of it from full speed, either way", function()
@@ -65,6 +74,19 @@ describe("AirDebris", function()
 		expect(nearly).toBeNear(12, 1e-9)
 	end)
 
+	it("draws a streak as the car's travel over the exposure, its width kept, up to its cap", function()
+		local length, width = drawn(AirDebris.streak(60, STREAK), STREAK)
+		expect(length).toBeNear(2, 1e-9)
+		expect(width).toBeNear(0.006, 1e-9)
+		length, width = drawn(AirDebris.streak(-30, STREAK), STREAK)
+		expect(length).toBeNear(1, 1e-9)
+		expect(width).toBeNear(0.006, 1e-9)
+		length = drawn(AirDebris.streak(200, STREAK), STREAK)
+		expect(length).toBeNear(2.5, 1e-9)
+		expect(AirDebris.streak(0, STREAK).size).toBe(0)
+		expect(AirDebris.streak(0 / 0, STREAK).size).toBe(0)
+	end)
+
 	it("reads nonsense as no debris, never as an error", function()
 		for _, odd in { 0 / 0, math.huge, -math.huge } do
 			expect(AirDebris.speedShare(odd, SPEEDS)).toBe(0)
@@ -84,6 +106,21 @@ describe("AirDebris settings", function()
 		local window = lead[2] - lead[1]
 		local limit = 1.3 * 9.81
 		expect(limit * window * window / 8 < Config.REGION.margin).toBe(true)
+	end)
+
+	it("draws its streaks only at speed, all of them by the cars' top speeds, never opaque", function()
+		local streaks = Config.STREAKS
+		expect(streaks.speeds.from >= 120).toBe(true)
+		expect(AirDebris.speedShare(streaks.speeds.from, streaks.speeds)).toBe(0)
+		expect(streaks.speeds.to <= 300).toBe(true)
+		expect(streaks.transparency >= 0.5).toBe(true)
+		expect(streaks.speeds.from >= Config.SPEEDS.from).toBe(true)
+	end)
+
+	it("keeps its longest streak within the Squash range Studio offers (-3 to 3)", function()
+		local shape = Config.STREAKS.shape
+		local longest = AirDebris.streak(shape.maxLength / shape.exposure * 2, shape)
+		expect(longest.squash <= 3).toBe(true)
 	end)
 
 	it("lives until the chase camera has passed it, at the slowest speed it shows", function()
