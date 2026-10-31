@@ -68,14 +68,15 @@ local Settings: ManifestBinding.Settings = {
 		PanelSwitch_RainLight = { rest = 0.35, other = -0.35 },
 	},
 	-- The 3D artist's wiper: one arm with its blade, modelled parked, and the ends of the blade's
-	-- rubber edge. EST: no washer jet shows on the photo car, so two sit under the bonnet's rear
-	-- edge either side of the centre line, where road cars carry them.
+	-- rubber edge. EST: no washer jet shows on the photo car, so two sit in the gap under the
+	-- bonnet's rear edge either side of the centre line, where road cars carry them (placed clear
+	-- of the bonnet by the 3D artist's ray probe on the master).
 	wiper = {
 		arm = "Wiper_Arm",
 		blade = { "Wiper_BladeInner", "Wiper_BladeOuter" },
 		nozzles = {
-			{ forward = 2.78, right = -0.25, up = 0.735 },
-			{ forward = 2.78, right = 0.25, up = 0.735 },
+			{ forward = 2.724, right = -0.25, up = 0.742 },
+			{ forward = 2.724, right = 0.25, up = 0.742 },
 		},
 	},
 }
