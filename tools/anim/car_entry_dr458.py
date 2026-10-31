@@ -106,37 +106,45 @@ def facing_right(yaw):
     return np.array([np.cos(a), 0.0, -np.sin(a)])
 
 
-def hike(b, steps, roll=7.0):
-    """A rigid leg clears the ground only if its hip rides up: over each (limb, start, end) step the
-    torso rolls toward the planted side (R6_ANIMATION.md section 4), on the lean and yaw the torso
-    had before any hike, so consecutive steps do not cancel."""
-    plan = []
-    for limb, start, end in steps:
-        sign = 1.0 if limb == "right_leg" else -1.0
-        frames = (start + 1, (start + end) // 2, end - 2)
-        for f, (lean, yaw, r) in zip(frames, b.torso.sample(np.array(frames, dtype=float))):
-            plan.append((f, (lean, yaw, r + sign * roll * (1.2 if f == frames[1] else 1.0))))
-    for f, turn in plan:
-        b.torso.at(f, turn)
-
-
-def step(b, limb, start, end, frm, to, lift=0.4):
-    """One step of `limb`, the other leg supporting, with the hip hiked (hike): the foot rises
-    straight up over two frames before it travels and comes straight down over two before it
-    lands, since a grounded sole that moves fails the check as a slide."""
-    other = "left_leg" if limb == "right_leg" else "right_leg"
-    frm, to = np.asarray(frm, float), np.asarray(to, float)
-    up = np.array([0.0, 1.0, 0.0])
-    b.support.append((start, end - 1, [other]))
-    t = b.targets[limb]
-    t.at(start, frm).at(start + 1, frm + up * 0.08).at(start + 2, frm + up * 0.22)
-    t.at(start + 4, frm * 0.6 + to * 0.4 + up * lift).at(end - 4, frm * 0.4 + to * 0.6 + up * lift)
-    t.at(end - 2, to + up * 0.22).at(end - 1, to + up * 0.08).at(end, to)
 
 
 def both(b, start, end):
     b.support.append((start, end, ["right_leg", "left_leg"]))
 
+
+
+def feet_at(car, point, yaw):
+    """Both soles beside a body centre (car x, y) facing `yaw`, on the ground, and that centre."""
+    c = car.p([point[0], point[1], 0.0])
+    c[1] = 0.0
+    r = facing_right(yaw) * 0.5
+    return {"right_leg": c + r, "left_leg": c - r}, c
+
+
+def walk(b, f, frm, to, yaw0, yaw1, lead, pairs=2, bulge=None):
+    """Side steps from one stance to another: each foot rises before it travels, the stepping hip
+    hikes, both feet are down for a frame between steps (`bulge` arcs the path outward)."""
+    order = (lead, "right_leg" if lead == "left_leg" else "left_leg")
+    n, at = 0, {limb: frm[limb] for limb in order}
+
+    def along(limb, u):
+        p = frm[limb] + (to[limb] - frm[limb]) * u
+        return p + (bulge * np.sin(np.pi * u) if bulge is not None else 0.0)
+
+    for k in range(pairs):
+        for limb in order:
+            to_k = along(limb, (k + 1) / pairs)
+            side_step(b, limb, f, f + 8, at[limb], to_k, lift=0.45)
+            at[limb] = to_k
+            n += 1
+            sign = 1.0 if limb == "right_leg" else -1.0
+            yaw = yaw0 + (yaw1 - yaw0) * (n - 0.5) / (2 * pairs)
+            b.torso.at(f + 1, (-1, yaw, sign * 6)).at(f + 4, (-1, yaw, sign * 7)).at(f + 6, (-1, yaw, sign * 6))
+            f += 9
+            mid = (at["right_leg"] + at["left_leg"]) / 2
+            b.pelvis.at(f - 1, (mid[0], 2.0, mid[2]))
+            both(b, f - 1, f - 1)
+    return f
 
 
 def seat_to_car(seat, studs=True):
@@ -162,14 +170,16 @@ def seated_ends(car, s, rest_path):
         part = r6_fk.pose_parts(pose)[r6_fk.JOINTS[r6_fk.LIMB_JOINT[limb]][1]]
         out[limb] = r6_fk.point(part, r6_fk.HAND)
         arm_ends[limb] = (goal, (end_x, -1.0, 0.0))
-    torso = r6_fk.pose_parts(pose)["Torso"]
-    for limb, side in (("right_leg", "right"), ("left_leg", "left")):
-        joint = r6_fk.point(torso, (0.5 if side == "right" else -0.5, -1, 0))
-        knee = car.p(seat_to_car(rest[side]["check"]["kneeMetres"], studs=False))
-        direction = knee - joint
-        direction[1] -= 0.25 * np.linalg.norm(direction)
-        out[limb] = joint + 2.0 * direction / np.linalg.norm(direction)
+    for limb, angles in SEATED_LEGS.items():
+        pose[r6_fk.LIMB_JOINT[limb]] = (angles, (0, 0, 0))
+        out[limb] = r6_fk.point(r6_fk.pose_parts(pose)[LIMB_PART[limb]], r6_fk.FOOT)
     return out, arm_ends
+
+
+# The blocky legs at the hand-over: forward over the cushion, the least deep in the bucket within
+# 40 degrees of the custom thighs (an R6 leg is 21.5 cm thick at 1.15; aimed along the custom
+# thighs it sinks 0.39-0.48 stud into the cushion, here 0.16).
+SEATED_LEGS = {"right_leg": (84.0, 0.0, 1.0), "left_leg": (84.0, 0.0, -2.0)}
 
 
 def entry(car, rest_path):
@@ -184,54 +194,38 @@ def entry(car, rest_path):
     b.door.at(0, (0.0,))
     b.neck_loc.at(0, (0.0, 0.0, 0.0))
 
-    # -- OutsideOpen: two pairs of short steps forward along the car to stand facing it, the right
-    # shoulder outboard of the door's pull at arm's length (the arm square to the skin); the hand
-    # pulls the door open while the body backs away from the hinge, lets go half way, and the
-    # body is back at the mark (outside the door's sweep) before the door swings past it.
+    # -- OutsideOpen: two pairs of short steps forward and out to stand behind the door facing
+    # mostly forward, the right arm reaching in to the door's pull (the stance where the blocky arm
+    # meets the skin most squarely); a tug opens the door a little as the body leans back; the
+    # body backs out past the door's sweep while the door swings slowly, then returns to the mark.
     handle = car.riding(b, DOOR_HANDLE + np.array([0.035, 0.0, 0.0]))
     yaw_in = car.yaw_facing(-car.outboard)
-    right_in = facing_right(yaw_in)
-    grab = car.p([GRAB[0], GRAB[1], 0.0])
-    grab[1] = 0.0
-    feet = {"right_leg": grab + right_in * 0.5, "left_leg": grab - right_in * 0.5}
+    yaw_pull = yaw_in + (yaw_seat - yaw_in) * 0.8
+
     both(b, 0, 1)
-    steps = []
-    f = 2
-    for k in range(2):
-        for limb in ("left_leg", "right_leg"):
-            frm, to = IDLE[limb], feet[limb]
-            step(b, limb, f, f + 9, frm + (to - frm) * k / 2, frm + (to - frm) * (k + 1) / 2)
-            steps.append((limb, f, f + 9))
-            b.torso.at(f + 5, (-2, yaw_in * (2 * k + (1 if limb == "right_leg" else 0.5)) / 4, 0))
-            f += 9
-            both(b, f, f)
-    b.pelvis.at(2, IDLE_PELVIS).at(f, (grab[0], 2.0, grab[2]))
-    b.torso.at(f, (-8, yaw_in, 0))
-    pull = f
-    release = pull + 12
-    b.targets["right_arm"].at(pull - 14, IDLE["right_arm"])
-    b.targets["right_arm"].at(pull - 5, car.p(DOOR_HANDLE + np.array([0.12, 0.04, 0.03])))
+    f = walk(b, 2, IDLE, pull_feet, 0.0, yaw_pull, "left_leg")
+    b.pelvis.at(2, IDLE_PELVIS).at(f, (pull_c[0], 2.0, pull_c[2]))
+    b.torso.at(f, (-10, yaw_pull, 0))
+    pull, release = f, f + 6
+    both(b, pull, release + 4)
+    b.hang("right_arm", 0, pull - 14)
+    b.targets["right_arm"].at(pull - 5, car.p(DOOR_HANDLE + np.array([0.12, 0.08, 0.03])))
     b.targets["right_arm"].attach(pull, release, handle)
     b.contact.append((pull, release))
-    for fr, v in ((pull + 2, 0.0), (pull + 6, 0.04), (release, 0.10), (release + 10, 0.2), (release + 17, 0.5), (release + 24, 0.85), (release + 29, 1.0)):
+    b.torso.at(release + 4, (4, yaw_pull, 0))
+    f = walk(b, release + 4, pull_feet, out_feet, yaw_pull, yaw_pull * 0.5, "right_leg", pairs=1)
+    b.pelvis.at(release + 4, (pull_c[0], 2.0, pull_c[2])).at(f, (out_c[0], 2.0, out_c[2]))
+    for fr, v in ((pull + 1, 0.0), (release, 0.025), (release + 8, 0.06), (f, 0.22), (f + 6, 0.6), (f + 13, 0.95), (f + 16, 1.0)):
         b.door.at(fr, (v,))
-    b.targets["right_arm"].at(release + 5, car.p(DOOR_HANDLE + np.array([0.25, 0.30, -0.08])))
+    b.targets["right_arm"].at(release + 3, car.p(DOOR_HANDLE + np.array([0.22, 0.10, -0.02])))
     b.hang("right_arm", release + 12, OPEN_END)
     b.hang("left_arm", 0, OPEN_END)
-    f = pull + 1
-    for k in range(2):
-        for limb in ("right_leg", "left_leg"):
-            frm, to = feet[limb], IDLE[limb]
-            step(b, limb, f, f + 9, frm + (to - frm) * k / 2, frm + (to - frm) * (k + 1) / 2, lift=0.35)
-            steps.append((limb, f, f + 9))
-            b.torso.at(f + 5, (-4, yaw_in * (1 - (2 * k + (1 if limb == "left_leg" else 0.5)) / 4), 0))
-            f += 9
-            both(b, f, f)
+    back = f + 2
+    f = walk(b, back, out_feet, IDLE, yaw_pull * 0.5, 0.0, "left_leg", pairs=1)
     both(b, f, OPEN_END + 1)
-    b.pelvis.at(pull + 1, (grab[0], 2.0, grab[2])).at(f, IDLE_PELVIS)
-    b.torso.at(f, (0, 0, 0))
-    hike(b, steps)
-    b.neck.at(0, (0, 0, 0)).at(8, (-12, -10, 0)).at(pull - 5, (-15, 0, 0)).at(release + 8, (5, 25, 0)).at(OPEN_END, (0, 0, 0))
+    b.pelvis.at(back, (out_c[0], 2.0, out_c[2])).at(f, IDLE_PELVIS)
+    b.torso.at(back, (0, yaw_pull * 0.5, 0)).at(f, (0, 0, 0))
+    b.neck.at(0, (0, 0, 0)).at(8, (-12, -10, 0)).at(pull - 5, (-15, -10, 0)).at(release + 8, (5, 15, 0)).at(OPEN_END, (0, 0, 0))
     b.pelvis.at(OPEN_END, IDLE_PELVIS)
     for limb in ("right_leg", "left_leg"):
         b.targets[limb].at(OPEN_END, IDLE[limb])
@@ -244,15 +238,26 @@ def entry(car, rest_path):
 
 
 # GetIn's beats, frames from the timeline's start.
-OPEN_END = 84
-GRAB = np.array([1.25, -1.22])  # body centre facing the car, right shoulder outboard of the pull
+OPEN_END = 88
+GRAB = np.array([1.50, -1.10])  # body behind the door, the right arm reaching in to its pull
+OUT = np.array([1.60, -0.72])  # past the door's sweep (radius 1.28 m about the hinge)
 WALK0 = OPEN_END
 LEAN0, HOP0 = WALK0 + 36, WALK0 + 52
 SIT, T1, T2, OVER = HOP0 + 10, HOP0 + 15, HOP0 + 20, HOP0 + 26
 DROP, D1, D2, SEATED = OVER + 12, OVER + 8, OVER + 16, OVER + 26
 MEET, SHUT, END = SEATED + 18, SEATED + 30, SEATED + 44
 KEY_FRAMES = {"B": SIT, "T1": T1, "T2": T2, "C": OVER, "D1": D1, "D2": D2}
-KEYS = {}
+# Key poses found by grid search on scene_v14 (the torso and head first, then each limb):
+# B sitting across the bars facing in, head inside; T1, T2 turning on them; C facing the nose,
+# torso leaning 55 degrees in across the bucket; D1, D2 over the bolster and down.
+KEYS = {
+    "B": {"pelvis": (0.7, -1.57, 0.58), "torso": (-55, -36.21, 10), "neck": (-15, 0, 0), "limbs": {"right_leg": (20, -15), "left_leg": (10, -5), "right_arm": (110, -130), "left_arm": (-140, -130)}},
+    "T1": {"pelvis": (0.685, -1.575, 0.565), "torso": (-45, -20.21, -10), "neck": (-25, 0, 0), "limbs": {"right_leg": (-20, -35), "left_leg": (0, -25), "right_arm": (130, 130), "left_arm": (-190, -130)}},
+    "T2": {"pelvis": (0.67, -1.58, 0.55), "torso": (-35, 10, -30), "neck": (-25, 0, 0), "limbs": {"right_leg": (0, -85), "left_leg": (60, -65), "right_arm": (90, 130), "left_arm": (-20, 100)}},
+    "C": {"pelvis": (0.676, -1.527, 0.588), "torso": (5, 57, -55), "neck": (-10, 0, 0), "limbs": {"right_leg": (100, -75), "left_leg": (50, 75), "right_arm": (20, 100), "left_arm": (-170, -130)}},
+    "D1": {"pelvis": (0.5599, -1.503, 0.54), "torso": (15, 48, -35), "neck": (-20, 0, 0), "limbs": {"right_leg": (50, -65), "left_leg": (40, 65), "right_arm": (140, -120), "left_arm": (190, -130)}},
+    "D2": {"pelvis": (0.4438, -1.48, 0.44), "torso": (10, 54, -15), "neck": (-5, 0, 0), "limbs": {"right_leg": (130, 15), "left_leg": (70, 75), "right_arm": (30, -30), "left_arm": (140, 130)}},
+}
 STANCE = np.array([1.03, -1.58])  # where the body stands facing the car to lean in (car x, y)
 # Palms over the stowed net's roll on the upper door bar (top z 0.525): an R6 palm is 0.15 stud
 # (3.2 cm at 1.15) above the arm's end face, which is what rests on the roll.
@@ -354,6 +359,120 @@ def getin(b, car, s, start, ends):
     b.targets["left_arm"].at(SHUT + 6, ends["left_arm"] + (0.3, 0.4, 0.0))
 
 
+# The exit's beats: InsideOpen, then GetOut ending at the mark's idle stance (the root jumps there
+# between clips), then OutsideClose from the mark.
+IO_END = 44
+GO_D2, GO_D1, GO_C, GO_T2, GO_T1, GO_B = 58, 66, 76, 82, 87, 93
+GO_STAND, GO_UP, GO_WALK = 103, 115, 116
+GO_END = GO_WALK + 40
+CLOSE_AT = np.array([1.43, -1.70])  # behind the open door, the right shoulder level with its pull loop
+PULL_LOOP = np.array([0.759, -1.881, 0.626])  # Door_L_PullLoop's centre, door shut
+
+
+def exit_timeline(car, rest_path):
+    """InsideOpen: the left hand reaches the door card's top edge and pushes the door open, which
+    swings on to its stop. GetOut: the entry's caged poses the other way, from the bucket up onto
+    the bars, turning to face the car with the head kept inside, the feet down outside, standing
+    up out from under the rail, side steps back to the mark. OutsideClose: steps up behind the open
+    door, the right hand takes its pull loop and draws it in while the body backs away, lets go,
+    and is past the door's sweep before it shuts; back to the mark."""
+    s = car.seated()
+    ends, _ = seated_ends(car, s, rest_path)
+    yaw_in = car.yaw_facing(-car.outboard)
+    yaw_seat = s["yaw"]
+    b = Body(OC_END + 1, FPS)
+    for track, value in ((b.pelvis, s["pelvis"]), (b.torso, s["torso"]), (b.neck, s["neck"]), (b.neck_loc, s["neck_loc"])):
+        track.at(0, value)
+    for limb, t in ends.items():
+        b.targets[limb].at(0, t)
+        b.twist[limb].at(0, (0,))
+    b.door.at(0, (0.0,))
+    # -- InsideOpen.
+    b.targets["left_arm"].at(8, car.p(CARD_TOP + np.array([-0.05, 0.0, -0.06])))
+    b.targets["left_arm"].attach(14, 24, car.riding(b, CARD_TOP))
+    b.contact.append((14, 24))
+    b.torso.at(14, (s["torso"][0] - 4, yaw_seat, 5)).at(24, (s["torso"][0] - 6, yaw_seat, 7)).at(IO_END, s["torso"])
+    b.neck.at(12, (-12, 20, 0)).at(30, (-8, 25, 0)).at(IO_END, s["neck"])
+    for fr, v in ((14, 0.0), (24, 0.12), (32, 0.45), (40, 0.9), (IO_END, 1.0)):
+        b.door.at(fr, (v,))
+    b.targets["left_arm"].at(34, ends["left_arm"])
+    for track, value in ((b.pelvis, s["pelvis"]), (b.neck_loc, s["neck_loc"])):
+        track.at(IO_END, value)
+    for limb, t in ends.items():
+        b.targets[limb].at(IO_END + 2, t)
+    # -- GetOut: the entry's key poses in reverse.
+    b.neck_loc.at(GO_D1, (0.0, 0.0, 0.0))
+    for name, frame in (("D2", GO_D2), ("D1", GO_D1), ("C", GO_C), ("T2", GO_T2), ("T1", GO_T1), ("B", GO_B)):
+        key_beats(b, car, frame, KEYS[name])
+    b.contact.append((GO_D2 - 2, GO_STAND + 2))
+    feet = feet_at(car, STANCE, yaw_in)[0]
+    for limb in ("right_leg", "left_leg"):
+        b.targets[limb].at(GO_STAND - 2, feet[limb] + (0, 0.05, 0)).at(GO_STAND, feet[limb])
+    both(b, GO_STAND, GO_WALK)
+    b.pelvis.at(GO_STAND, car.p([STANCE[0], STANCE[1], 0.43]))
+    b.torso.at(GO_STAND, (-40, yaw_in, 0)).at(GO_UP, (0, yaw_in, 0))
+    b.neck.at(GO_STAND, (-20, 0, 0)).at(GO_UP, (-10, 0, 0))
+    b.targets["right_arm"].at(GO_B + 4, car.p(BAR_REAR)).at(GO_STAND + 2, car.p(BAR_REAR))
+    b.targets["left_arm"].at(GO_B + 4, car.p(BAR_FRONT)).at(GO_STAND + 2, car.p(BAR_FRONT))
+    b.hang("right_arm", GO_UP - 2, GO_END)
+    b.hang("left_arm", GO_UP - 2, GO_END)
+    bulge = car.outboard * np.array([1.0, 0.0, 1.0]) * 0.55
+    f = walk(b, GO_WALK, feet, {k: IDLE[k] for k in feet}, yaw_in, 0.0, "right_leg", bulge=bulge)
+    both(b, f - 1, GO_END + 1)
+    b.pelvis.at(GO_END, IDLE_PELVIS)
+    b.torso.at(GO_END, (0, 0, 0))
+    b.neck.at(GO_END, (0, 0, 0))
+    for limb in ("right_leg", "left_leg"):
+        b.targets[limb].at(GO_END, IDLE[limb])
+    b.door.at(GO_END, (1.0,))
+    # -- OutsideClose.
+    yaw_close = yaw_seat
+    close_feet, close_c = feet_at(car, CLOSE_AT, yaw_close)
+    out_feet, out_c = feet_at(car, OUT, yaw_close * 0.5)
+    f = walk(b, GO_END + 1, {k: IDLE[k] for k in close_feet}, close_feet, 0.0, yaw_close, "left_leg")
+    b.pelvis.at(GO_END + 1, IDLE_PELVIS).at(f, (close_c[0], 2.0, close_c[2]))
+    pull, release = f + 2, f + 22
+    both(b, f - 1, pull + 1)
+    b.targets["right_arm"].at(pull - 8, car.p(car_point_at_door(car, PULL_LOOP, 1.0) + np.array([0.0, 0.10, 0.06])))
+    b.targets["right_arm"].attach(pull, release, car.riding(b, PULL_LOOP))
+    b.contact.append((pull, release))
+    for fr, v in ((pull, 1.0), (release, 0.62), (release + 12, 0.5), (release + 22, 0.3), (release + 30, 0.0)):
+        b.door.at(fr, (v,))
+    back_feet, back_c = feet_at(car, (CLOSE_AT + OUT) / 2, yaw_close * 0.75)
+    f = walk(b, pull + 1, close_feet, back_feet, yaw_close, yaw_close * 0.75, "right_leg", pairs=1)
+    b.pelvis.at(pull + 1, (close_c[0], 2.0, close_c[2])).at(f, (back_c[0], 2.0, back_c[2]))
+    f = walk(b, max(f, release + 1), back_feet, out_feet, yaw_close * 0.75, yaw_close * 0.5, "right_leg", pairs=1)
+    b.pelvis.at(f, (out_c[0], 2.0, out_c[2]))
+    b.hang("right_arm", release + 10, OC_END)
+    rest_at = f + 4
+    both(b, f - 1, rest_at + 1)
+    b.torso.at(rest_at, (0, yaw_close * 0.5, 0))
+    f = walk(b, rest_at + 2, out_feet, {k: IDLE[k] for k in out_feet}, yaw_close * 0.5, 0.0, "left_leg", pairs=1)
+    both(b, f - 1, OC_END + 1)
+    for track, value in ((b.pelvis, IDLE_PELVIS), (b.torso, (0, 0, 0)), (b.neck, (0, 0, 0))):
+        track.at(OC_END, value)
+    for limb in ("right_leg", "left_leg"):
+        b.targets[limb].at(OC_END, IDLE[limb])
+    clips = [
+        {"name": "InsideOpen", "start": 0, "end": IO_END},
+        {"name": "GetOut", "start": IO_END, "end": GO_END},
+        {"name": "OutsideClose", "start": GO_END, "end": OC_END},
+    ]
+    print(f"exit: InsideOpen ..f{IO_END}, GetOut ..f{GO_END}, OutsideClose ..f{OC_END}, pull f{pull}-f{release}, at rest past the sweep f{rest_at}")
+    return b, clips
+
+
+OC_END = GO_END + 100
+
+
+def car_point_at_door(car, point, openness):
+    """A door point (car metres, door shut) where the door puts it at `openness`, car metres."""
+    a = car.door_at(point, openness)
+    inv = np.linalg.inv(car.a)
+    seat = a @ inv[:3, :3].T + inv[:3, 3]
+    return H_POINT + TO_SEAT @ (seat * STUD)
+
+
 ARMS = ["Right Arm", "Left Arm"]
 LEGS = ["Right Leg", "Left Leg"]
 
@@ -362,7 +481,7 @@ def entry_contacts():
     """Named contacts (depth, studs at scale 1) and held limbs, for car_entry_clear.py; the check's
     allow file is written from the same list at the measured depths."""
     allow = [
-        {"why": "right hand on the door's pull, pulling", "from": 36, "to": 50, "parts": ["Right Arm"], "groups": ["door"], "depth": 0.15},
+        {"why": "right hand on the door's pull, pulling", "from": 34, "to": 50, "parts": ["Right Arm"], "groups": ["door"], "depth": 0.15},
         {"why": "hands on the door bars and the bucket, leaning in, pushing up, turning", "from": HOP0 - 2, "to": DROP + 2, "parts": ARMS, "groups": ["cage", "seat"], "depth": 0.15},
         {"why": "PROPOSED (rigid-thigh class): thighs over the sill and the door bars while the legs swing in", "from": HOP0 + 4, "to": DROP + 4, "parts": LEGS, "groups": ["cage", "sill"], "depth": 0.25},
         {"why": "PROPOSED: the bottom across the door bars while sitting and turning on them", "from": HOP0 + 4, "to": DROP, "parts": ["Torso"], "groups": ["cage"], "depth": 0.15},
@@ -393,30 +512,59 @@ def apply_table(b, path):
             b.targets[limb].at(f, t)
 
 
+def exit_contacts():
+    """The exit's named contacts and held limbs (as entry_contacts)."""
+    allow = [
+        {"why": "left hand on the door card's top edge, pushing the door open", "from": 12, "to": 26, "parts": ["Left Arm"], "groups": ["door"], "depth": 0.12},
+        {"why": "hands on the bucket and the door bars, climbing out and standing up", "from": GO_D2 - 2, "to": GO_STAND + 4, "parts": ARMS, "groups": ["cage", "seat"], "depth": 0.15},
+        {"why": "PROPOSED (rigid-thigh class): thighs over the door bars and the sill while the legs swing out", "from": GO_D1 - 4, "to": GO_STAND, "parts": LEGS, "groups": ["cage", "sill"], "depth": 0.25},
+        {"why": "PROPOSED: the bottom across the door bars while turning on them", "from": GO_D1, "to": GO_STAND - 4, "parts": ["Torso"], "groups": ["cage"], "depth": 0.15},
+        {"why": "DECIDED (owner, option D): torso sides into the bucket's bolsters, 5.5 cm seated", "from": 0, "to": GO_C - 4, "parts": ["Torso"], "groups": ["seat"], "depth": 0.261},
+        {"why": "DECIDED (seated pose): head on the headrest pad", "from": 0, "to": GO_D2, "parts": ["Head"], "groups": ["seat"], "depth": 0.059},
+        {"why": "right hand on the door's pull loop, drawing it in", "from": GO_END + 30, "to": GO_END + 64, "parts": ["Right Arm"], "groups": ["door"], "depth": 0.12},
+    ]
+    holds = [
+        {"from": 14, "to": 24, "limb": "left_arm"},
+        {"from": GO_STAND, "to": OC_END, "limb": "right_leg"},
+        {"from": GO_STAND, "to": OC_END, "limb": "left_leg"},
+        {"from": 0, "to": 6, "limb": "right_arm"},
+        {"from": 0, "to": 6, "limb": "left_arm"},
+    ]
+    return allow, holds
+
+
+def timeline(car, rest, which):
+    """(body, clips) of the entry or the exit timeline."""
+    if which == "exit":
+        return exit_timeline(car, rest)
+    b, s, yaw_out, yaw_seat, (o0, o1, total) = entry(car, rest)
+    return b, [{"name": "OutsideOpen", "start": o0, "end": o1}, {"name": "GetIn", "start": o1, "end": total - 1}]
+
+
 def build(argv):
-    """For car_entry_clear.py: <scene> <seated pose> <rest pose> [--clear table.json]."""
+    """For car_entry_clear.py: <scene> <seated pose> <rest pose> [--timeline entry|exit]
+    [--clear table.json]."""
     scene, pose, rest = argv[:3]
-    car = Car(scene, pose)
-    b, *_ = entry(car, rest)
+    which = argv[argv.index("--timeline") + 1] if "--timeline" in argv else "entry"
+    b, _ = timeline(Car(scene, pose), rest, which)
     if "--clear" in argv:
         apply_table(b, argv[argv.index("--clear") + 1])
-    allow, holds = entry_contacts()
+    allow, holds = exit_contacts() if which == "exit" else entry_contacts()
     return b, allow, holds
 
 
 def main(argv):
+    """<scene> <seated pose> <rest pose> <out dir> [--timeline entry|exit] [--clear table.json]"""
     scene, pose, rest, out_dir = argv[:4]
-    car = Car(scene, pose)
+    which = argv[argv.index("--timeline") + 1] if "--timeline" in argv else "entry"
     os.makedirs(out_dir, exist_ok=True)
-    b, s, yaw_out, yaw_seat, (o0, o1, total) = entry(car, rest)
+    b, clips = timeline(Car(scene, pose), rest, which)
     if "--clear" in argv:
         apply_table(b, argv[argv.index("--clear") + 1])
-    print("seated yaw", round(yaw_seat, 1), "outboard yaw", round(yaw_out, 1))
     b.solve()
-    clips = [{"name": "OutsideOpen", "start": o0, "end": o1}, {"name": "GetIn", "start": o1, "end": total - 1}]
     data = b.keys(every=1, clips=clips, markers=[])
-    write(os.path.join(out_dir, "entry.keys.json"), data)
-    with open(os.path.join(out_dir, "entry.fk.json"), "w", encoding="utf-8", newline="\n") as h:
+    write(os.path.join(out_dir, f"{which}.keys.json"), data)
+    with open(os.path.join(out_dir, f"{which}.fk.json"), "w", encoding="utf-8", newline="\n") as h:
         json.dump(b.fk_bake(), h)
     for f, limb, err in b.report_misses():
         if f % 6 == 0:
