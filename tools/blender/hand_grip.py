@@ -237,6 +237,8 @@ THUMB_RADIUS = 0.0095
 # How far the skin of a finger's pad and tip stands beyond its bone line plus its half
 # thickness, metres: kept off the wheel's own surface.
 SKIN_MARGIN = 0.003
+# Metres between the thumb's skin and the spoke's face when the thumb rests on it.
+SKIN_REST = 0.0005
 
 
 def thumb_chain(bones, turn, proximal, distal):
@@ -257,7 +259,23 @@ def thumb_chain(bones, turn, proximal, distal):
     return out
 
 
-def solve_thumb(bones, obstacles, spoke, avoid=True):
+def thumb_skin(hand, bones):
+    """The rest-pose skin of the thumb's last two bones (vertices weighted most to Thumb_Distal or
+    Thumb_Tip), as offsets from the distal bone's head: they move rigidly with that bone."""
+    names = {g.index: g.name for g in hand.vertex_groups}
+    head = bones[THUMB[2]].head_local
+    out = []
+    for v in hand.data.vertices:
+        if not v.groups:
+            continue
+        top = max(v.groups, key=lambda g: g.weight)
+        if names.get(top.group) in (THUMB[2], THUMB[3]):
+            out.append(hand.matrix_world @ v.co - head)
+    # Every third vertex is dense enough (about 2 mm apart) and keeps the search quick.
+    return out[::3]
+
+
+def solve_thumb(bones, obstacles, spoke, avoid=True, skin=None):
     """The thumb laid over the spoke: searched over the metacarpal's turn (about the rest pose's
     x, y, z) and the proximal and distal curls, for the tip resting on the spoke's surface, the
     thumb's last bones along it, and (with `avoid`) no part of the thumb inside the wheel.
@@ -277,6 +295,11 @@ def solve_thumb(bones, obstacles, spoke, avoid=True):
                     if found[0] is None:
                         continue
                     contact = abs(found[2] - THUMB_RADIUS)
+                    if skin:
+                        # Aim with the skin itself: its nearest point rests on the spoke's face.
+                        rot = turn @ Matrix.Rotation(proximal, 3, "Z") @ Matrix.Rotation(distal, 3, "Z")
+                        gap = min(spoke.find(chain[2] + rot @ off)[2] for off in skin)
+                        contact = abs(gap - SKIN_REST)
                     clearance = 1.0
                     if avoid:
                         for a, b in zip(chain[1:4], chain[2:4] + [tip]):
@@ -288,7 +311,7 @@ def solve_thumb(bones, obstacles, spoke, avoid=True):
                     along = sum(1 for k in range(7) if spoke.find(chain[2].lerp(tip, k / 6))[2] < THUMB_RADIUS + 0.006)
                     score = contact * 100 - along * 0.2 + (abs(mz) + abs(mx) + abs(my) + curl) * 0.002
                     if best is None or score < best[0]:
-                        best = (score, turn, proximal, distal, dict(tip_gap_mm=round((found[2] - THUMB_RADIUS) * 1000, 2), along=along,
+                        best = (score, turn, proximal, distal, dict(tip_gap_mm=round((found[2] - THUMB_RADIUS) * 1000, 2), skin_gap_mm=round(gap * 1000, 2) if skin else None, along=along,
                                                                      clearance_mm=round((clearance - THUMB_RADIUS) * 1000, 2) if avoid else None,
                                                                      metacarpal_deg=(mz, mx, my), curl_deg=curl))
     if best is None:
@@ -375,7 +398,9 @@ def main(args):
         report[finger] = [round(math.degrees(a)) for a in angles]
     thumb_tip = None
     if thumb_spoke:
-        turn_m, proximal, distal, thumb_report = solve_thumb(bones, obstacles, spoke, avoid="--thumb-break" not in args)
+        turn_m, proximal, distal, thumb_report = solve_thumb(
+            bones, obstacles, spoke, avoid="--thumb-break" not in args, skin=thumb_skin(hand, bones)
+        )
         pose_bone_world(arm, THUMB[0], turn_m)
         pose_bone_about_world_z(arm, THUMB[1], proximal)
         pose_bone_about_world_z(arm, THUMB[2], distal)
