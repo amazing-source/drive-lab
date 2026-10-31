@@ -165,6 +165,22 @@ local Model: Binding.CarModel = {
 		"ShiftLight_8",
 	},
 	panelLamps = { headlights = "PanelLamp_Light", rainLight = "PanelLamp_RainLight" },
+	wiper = {
+		hinge = {
+			part = "Wiper_Arm",
+			pivot = { forward = 1.602, right = -0.15, up = 0.30312 },
+			axis = { forward = -0.64048, right = 0.07345, up = -0.76446 },
+			travel = 1.97222,
+		},
+		blade = {
+			inner = { forward = 1.4907, right = 0.04719, up = 0.34242 },
+			outer = { forward = 1.23468, right = 0.53392, up = 0.40393 },
+		},
+		nozzles = {
+			{ forward = 1.667, right = -0.25, up = 0.315 },
+			{ forward = 1.667, right = 0.25, up = 0.315 },
+		},
+	},
 }
 
 return Model

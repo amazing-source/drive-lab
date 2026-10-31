@@ -125,6 +125,10 @@ local function bindingNames(): { string }
 	if knob then
 		table.insert(names, knob.hinge.part)
 	end
+	local wiper = Model.wiper
+	if wiper then
+		table.insert(names, wiper.hinge.part)
+	end
 	return names
 end
 
@@ -210,6 +214,42 @@ describe("DR458 binding", function()
 		expect(string.find(listed, "lamps", 1, true) ~= nil).toBe(true)
 		local _, complete = ManifestBinding.binding(MANIFEST, DR458, Settings)
 		expect(table.concat(complete, "; ")).toBe("")
+	end)
+
+	it("writes the wiper from its hinge part and its blade's points, moved to the centre of mass", function()
+		local wiper = Model.wiper
+		assert(wiper, "the DR458's binding has its wiper")
+		local arm = part("Wiper_Arm")
+		local points = MANIFEST.points :: { [string]: ManifestBinding.Point }
+		local centre = ManifestBinding.centreOfMass(DR458)
+		expect(wiper.hinge.part).toBe("Wiper_Arm")
+		expect(same(wiper.hinge.pivot, ManifestBinding.toRig(vector(arm.pivot), centre))).toBe(true)
+		expect(wiper.hinge.travel).toBe(arm.range)
+		local axis = vector(arm.axis)
+		expect(math.abs(wiper.hinge.axis.forward - axis.forward) < 1e-4).toBe(true)
+		expect(math.abs(wiper.hinge.axis.up - axis.up) < 1e-4).toBe(true)
+		expect(same(wiper.blade.inner, ManifestBinding.toRig(points.Wiper_BladeInner, centre))).toBe(true)
+		expect(same(wiper.blade.outer, ManifestBinding.toRig(points.Wiper_BladeOuter, centre))).toBe(true)
+		local settings = Settings.wiper
+		assert(settings, "the writer is told about the wiper")
+		expect(#wiper.nozzles).toBe(#settings.nozzles)
+		for index, nozzle in settings.nozzles do
+			expect(same(wiper.nozzles[index], ManifestBinding.toRig(nozzle, centre))).toBe(true)
+		end
+	end)
+
+	it("refuses a wiper whose arm or blade the manifest lacks", function()
+		for _, change in { { arm = "Wiper_Missing" }, { blade = { "Wiper_BladeInner", "Wiper_Missing" } } } do
+			local settings = table.clone(Settings)
+			local wiper = table.clone(Settings.wiper :: any)
+			for key, value in change do
+				wiper[key] = value
+			end
+			settings.wiper = wiper
+			expect(function()
+				ManifestBinding.binding(MANIFEST, DR458, settings)
+			end).toThrow()
+		end
 	end)
 
 	it("moves every point from the rear axle on the ground to the centre of mass", function()

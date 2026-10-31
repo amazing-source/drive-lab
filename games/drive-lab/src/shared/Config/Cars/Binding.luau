@@ -35,6 +35,12 @@ export type Hinge = {
 
 export type CarPoint = { forward: number, right: number, up: number }
 
+-- The windscreen wiper: its arm (with its blade) on a hinge, modelled parked, `travel` radians from
+-- parked to the far end of its sweep; the ends of the blade's wiping edge, parked; and where the
+-- washer's jets leave the body (all from the centre of mass, car frame, metres, before bodyRaise).
+-- Controllers/CarWiper turns it and runs the jets; Atmosphere/Windshield clears what it passes.
+export type Wiper = { hinge: Hinge, blade: { inner: CarPoint, outer: CarPoint }, nozzles: { CarPoint } }
+
 -- Where the exhaust's flames come out: two outlets either side of the midpoint of the rear
 -- light clusters, each a housing part and the pieces named after it (tools/blender/split_lights.py),
 -- `outlet` metres either side, behind and up, in the left housing's axes.
@@ -110,6 +116,8 @@ export type CarModel = {
 	-- Optional.
 	shiftLights: { string }?,
 	panelLamps: { [string]: string }?,
+	-- Optional.
+	wiper: Wiper?,
 }
 
 return table.freeze({})

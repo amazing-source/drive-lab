@@ -222,15 +222,19 @@ local function wetCameraAndCar(
 		wetness,
 		current.speedKmh
 	)
+	local model = nearest and nearest.model
+	local sweep = model and model:GetAttribute("WiperSweep")
 	Windshield.update(
 		current.windshield,
 		dt,
 		frame.view == "Cockpit",
-		nearest and nearest.model,
+		model,
 		intensity,
 		rain.exposure,
 		current.speedKmh,
-		rain.budget.lensDrops
+		rain.budget.lensDrops,
+		if typeof(sweep) == "number" then sweep else 0,
+		model ~= nil and model:GetAttribute("Washing") == true
 	)
 end
 
