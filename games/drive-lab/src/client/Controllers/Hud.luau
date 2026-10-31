@@ -24,8 +24,6 @@ local Contract = require(ReplicatedStorage.Shared.Config.Cars.Contract)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local DriveModes = require(ReplicatedStorage.Shared.Rules.DriveModes)
 local DriverAssists = require(ReplicatedStorage.Shared.Rules.DriverAssists)
-local GameFeel = require(ReplicatedStorage.Shared.Rules.GameFeel)
-local GameFeelConfig = require(ReplicatedStorage.Shared.Config.GameFeel)
 local HudLook = require(script.Parent.Parent.Ui.HudLook)
 local HudView = require(script.Parent.Parent.Ui.HudView)
 local Rules = require(ReplicatedStorage.Shared.Rules.Hud)
@@ -37,9 +35,6 @@ local localPlayer = Players.LocalPlayer
 local views: { [HudLook.Look]: HudView.View } = {}
 local hudMode: Rules.Mode = "Full"
 local elapsed = 0
--- The game-feel notch last seen on the driven car (nil until one is published) and when it changed.
-local lastNotch: GameFeelConfig.Notch? = nil
-local notchChangedAt: number? = nil
 
 local function drivenModel(): Model?
 	local character = localPlayer.Character
@@ -65,17 +60,6 @@ local function readouts(model: Model, entry: Catalog.Entry): HudView.Readouts
 	local launch = model:GetAttribute("Launch")
 	local mode = DriveModes.current(entry.physics.modeOrder, model:GetAttribute("DrivingMode"))
 	local assists = DriverAssists.assists(model:GetAttribute("EscOff") == true, mode, entry.assists)
-	local published = model:GetAttribute("GameFeel")
-	if typeof(published) == "string" then
-		local notch: GameFeelConfig.Notch = GameFeel.current(published)
-		if lastNotch ~= nil and notch ~= lastNotch then
-			notchChangedAt = os.clock()
-		end
-		lastNotch = notch
-	end
-	local level = if lastNotch
-		then GameFeel.flash(lastNotch, notchChangedAt, os.clock(), GameFeelConfig.FLASH_SECONDS)
-		else nil
 	return {
 		rpm = rpm,
 		redline = redline,
@@ -83,7 +67,7 @@ local function readouts(model: Model, entry: Catalog.Entry): HudView.Readouts
 		manual = manual,
 		gear = ClusterRules.gearLabel(math.round(number(model, "Gear"))),
 		speed = tostring(math.round(number(model, "SpeedKmh"))),
-		mode = level or Rules.modeText(
+		mode = Rules.modeText(
 			entry.modeLabels[mode],
 			launch == "Armed" or launch == "Launching",
 			Config.LAUNCH_TEXT
@@ -109,9 +93,6 @@ local function update(dt: number)
 	local view = if entry then views[HudLook.of(entry)] else nil
 	for _, other in views do
 		other.gui.Enabled = other == view and seated and hudMode ~= "Off"
-	end
-	if not seated then
-		lastNotch, notchChangedAt = nil, nil
 	end
 	if model == nil or entry == nil or view == nil or not seated or hudMode == "Off" then
 		return

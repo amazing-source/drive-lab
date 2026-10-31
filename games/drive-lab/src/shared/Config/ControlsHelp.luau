@@ -242,11 +242,6 @@ local HELP: Rules.Help = {
 					gamepadGesture = "Hold",
 				},
 				{
-					label = "Game feel (handling help)",
-					text = "Steps the handling help: Realistic is the car on its own, Balanced catches a slide once the tail is well out, Forgiving as soon as it lets go, and the HUD names the level for a moment.",
-					controls = { "GAME_FEEL" },
-				},
-				{
 					label = "Launch control",
 					requires = "launch",
 					text = "In Corsa with ESC off, stopped in first: hold the brake and floor the accelerator until LAUNCH shows and the engine holds {LAUNCH_RPM} rpm, then let go of the brake (in manual, shift up with E); lifting first cancels it, and the brake does not select reverse there.",
@@ -399,7 +394,6 @@ local HELP: Rules.Help = {
 		-- What a US keyboard prints; the screen shows the player's own label when it has one.
 		Semicolon = ";",
 		One = "1",
-		Two = "2",
 		Up = "Up arrow",
 		Down = "Down arrow",
 		Left = "Left arrow",

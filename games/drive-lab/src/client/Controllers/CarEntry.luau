@@ -345,7 +345,21 @@ local function afterAnimation()
 	end
 end
 
-local function onInputBegan(input: InputObject)
+local function keyNames(keys: { Enum.KeyCode }): { string }
+	local names = table.create(#keys)
+	for _, key in keys do
+		table.insert(names, key.Name)
+	end
+	return names
+end
+
+local SEATED_KEYS: Rules.SeatedKeys = {
+	door = keyNames(Controls.DOOR),
+	start = keyNames(Controls.START_ENGINE),
+	exit = keyNames(Controls.EXIT),
+}
+
+local function onInputBegan(input: InputObject, processed: boolean)
 	if UserInputService:GetFocusedTextBox() ~= nil then
 		return
 	end
@@ -358,11 +372,10 @@ local function onInputBegan(input: InputObject)
 	if car == nil then
 		return
 	end
-	if table.find(Controls.DOOR, key) then
-		send(car, "Door")
-	elseif table.find(Controls.START_ENGINE, key) then
-		send(car, "Start")
-	elseif table.find(Controls.EXIT, key) then
+	local action = Rules.seatedPress(key.Name, processed, SEATED_KEYS)
+	if action == "Door" or action == "Start" then
+		send(car, action)
+	elseif action == "Exit" then
 		exitHeld = { key = key, since = os.clock(), asked = false }
 	end
 end
