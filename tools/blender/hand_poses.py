@@ -7,7 +7,9 @@ exports both hands in their own wrist frame, with a sleeve cuff, for Roblox.
 Shapes:
 - Point: the index straight, the other fingers curled into the palm and the thumb over them, to
   lift the START flap by its edge and press the button;
-- Rest: a relaxed hand lying on the thigh, fingers a little curved and apart.
+- Rest: a relaxed hand lying on the thigh, fingers a little curved and apart;
+- Pinch: a key pinch, the thumb's pad pressed against the side of the curled index with a key's
+  blade (PINCH_GAP) between them, the other fingers curled; to turn a key.
 
 The hand's own frame (the frame the game moves): origin at the wrist joint, z from the wrist up
 the forearm, y out of the back of the hand, x = y cross z (toward the little finger on the
@@ -18,7 +20,8 @@ Output, in <out dir>: hand_{Point,Rest}_{R,L}.glb and cuff_{R,L}.glb in Roblox s
 world scale (1 stud = 0.28 / 1.5 m), already in the hand frame; poses.json with, per shape and
 side, the mesh centre (where Roblox puts the imported MeshPart), the cuff's centre, the index
 fingertip (the skin's end of the index) and the middle of the palm, all studs in the hand frame;
-and check renders.
+for Pinch also the point the blade is held at and the unit axis from the thumb's pad to the
+index across it; and check renders.
 """
 
 import json
@@ -53,7 +56,23 @@ SHAPES = {
         "Thumb": (8, 10),
         "spread": (-4, 0, 3, 7),
     },
+    "Pinch": {
+        "Index": (40, 55, 20),
+        "Middle": (70, 90, 50),
+        "Ring": (76, 95, 50),
+        "Little": (82, 95, 50),
+        "spread": (0, 0, 0, 0),
+        "pinch": True,
+    },
 }
+# The key pinch (metres): the blade held between the thumb's pad and the side of the index's
+# middle bone. The pad is THUMB_PAD along the thumb's end bone, which runs about 2.5 cm past the
+# skin (DRIVER_HANDS.md 8a).
+PINCH_GAP = 0.009
+THUMB_PAD = 0.35
+THUMB_RADIUS = 0.0095
+INDEX_RADIUS = 0.0085
+THUMB = ("Thumb_Metacarpal_R", "Thumb_Proximal_R", "Thumb_Distal_R", "Thumb_Tip_R")
 # Source hand axes -> the hand frame (Roblox axes): x = -z, y = +x, z = -y.
 TO_FRAME = Matrix(((0, 0, -1), (1, 0, 0), (0, -1, 0))).to_4x4()
 
@@ -85,12 +104,18 @@ def posed(hand_path, shape):
         spread(arm, f"{finger}_Proximal_R", fan)
         for part, angle in zip(("Proximal", "Intermediate", "Distal"), pose[finger]):
             flex(arm, f"{finger}_{part}_R", angle)
-    flex(arm, "Thumb_Metacarpal_R", pose["ThumbBase"])
-    flex(arm, "Thumb_Proximal_R", pose["Thumb"][0])
-    flex(arm, "Thumb_Distal_R", pose["Thumb"][1])
+    pinch = None
+    if pose.get("pinch"):
+        bpy.context.view_layer.update()
+        pinch = solve_pinch(arm)
+    else:
+        flex(arm, "Thumb_Metacarpal_R", pose["ThumbBase"])
+        flex(arm, "Thumb_Proximal_R", pose["Thumb"][0])
+        flex(arm, "Thumb_Distal_R", pose["Thumb"][1])
     bpy.context.view_layer.update()
     tip = arm.matrix_world @ arm.pose.bones["Index_Tip_R"].tail
     wrist = arm.data.bones["Wrist_R"].head_local.copy()
+    arm_world = arm.matrix_world.copy()
     bpy.context.view_layer.objects.active = hand
     for modifier in hand.modifiers:
         if modifier.type == "ARMATURE":
@@ -106,7 +131,73 @@ def posed(hand_path, shape):
     # The index's end on the skin: the bone's tail runs about 2.5 cm past the finger, so the
     # vertex nearest it is the fingertip the paths aim with.
     tail = place @ tip
-    return hand, min((v.co.copy() for v in hand.data.vertices), key=lambda co: (co - tail).length)
+    fingertip = min((v.co.copy() for v in hand.data.vertices), key=lambda co: (co - tail).length)
+    if pinch is not None:
+        pad, side = (place @ (arm_world @ p) for p in pinch[:2])
+        across = (side - pad).normalized()
+        pinch = {"point": side - across * (INDEX_RADIUS + PINCH_GAP / 2), "axis": across, "report": pinch[2]}
+    return hand, fingertip, pinch
+
+
+def thumb_chain(bones, turn, proximal, distal):
+    """The thumb's joints, armature space, after the metacarpal turns by `turn` (rest axes, about
+    its head) and the proximal and distal joints curl about the rest pose's z, each after its
+    parent, as Blender composes a pose: the metacarpal's head to the tip."""
+    rest = [bones[THUMB[0]].head_local.copy()] + [bones[n].tail_local.copy() for n in THUMB]
+    out = [rest[0]]
+    rot = turn
+    out.append(out[0] + rot @ (rest[1] - rest[0]))
+    rot = turn @ Matrix.Rotation(proximal, 3, "Z")
+    out.append(out[1] + rot @ (rest[2] - rest[1]))
+    rot = rot @ Matrix.Rotation(distal, 3, "Z")
+    out.append(out[2] + rot @ (rest[3] - rest[2]))
+    out.append(out[3] + rot @ (rest[4] - rest[3]))
+    return out
+
+
+def closest_on_segment(p, a, b):
+    ab = b - a
+    u = max(0.0, min(1.0, (p - a).dot(ab) / ab.length_squared))
+    return a + ab * u, u
+
+
+def solve_pinch(arm):
+    """Lays the thumb's pad against the thumb side of the posed index's middle bone with a blade's
+    gap between the skins: searched over the metacarpal's turn and the two curls. Poses the thumb
+    and returns the pad and the nearest point of the index's bone line (armature space)."""
+    bones = arm.data.bones
+    index = arm.pose.bones["Index_Intermediate_R"]
+    a, b = index.head.copy(), index.tail.copy()
+    target = THUMB_RADIUS + PINCH_GAP + INDEX_RADIUS
+    best = None
+    rad = math.radians
+    for mz in range(-30, 61, 10):
+        for mx in range(-40, 41, 10):
+            for my in range(-40, 41, 10):
+                turn = Matrix.Rotation(rad(mz), 3, "Z") @ Matrix.Rotation(rad(mx), 3, "X") @ Matrix.Rotation(rad(my), 3, "Y")
+                for curl in (0, 15, 30, 45, 60):
+                    chain = thumb_chain(bones, turn, rad(curl * 0.4), rad(curl * 0.6))
+                    pad = chain[3].lerp(chain[4], THUMB_PAD)
+                    near, u = closest_on_segment(pad, a, b)
+                    # The pad must sit beside the index (its thumb side is +z in the source
+                    # hand), not under the palm or over the back of the finger.
+                    side = (pad - near).normalized().z
+                    score = abs((pad - near).length - target) * 100 + abs(u - 0.55) + max(0.0, 0.8 - side) * 3
+                    score += (abs(mz) + abs(mx) + abs(my) + curl) * 0.0005
+                    if best is None or score < best[0]:
+                        best = (score, turn, curl, pad, near, dict(gap_mm=round(((pad - near).length - target) * 1000, 2), along=round(u, 2), side=round(side, 3), metacarpal_deg=(mz, mx, my), curl_deg=curl))
+    _, turn, curl, pad, near, report = best
+    meta = arm.pose.bones[THUMB[0]]
+    rest = meta.bone.matrix_local.to_3x3()
+    meta.rotation_mode = "QUATERNION"
+    meta.rotation_quaternion = (rest.inverted() @ turn @ rest).to_quaternion()
+    for name, angle in ((THUMB[1], curl * 0.4), (THUMB[2], curl * 0.6)):
+        bone = arm.pose.bones[name]
+        axis = (bone.bone.matrix_local.to_3x3().inverted() @ Vector((0, 0, 1))).normalized()
+        bone.rotation_mode = "QUATERNION"
+        bone.rotation_quaternion = Quaternion(axis, math.radians(angle))
+    print("pinch:", report)
+    return pad, near, report
 
 
 def palm_centre(hand):
@@ -170,13 +261,13 @@ def main(args):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     meshes = {}
     for shape in SHAPES:
-        hand, tip = posed(hand_path, shape)
-        meshes[shape] = (hand, tip, palm_centre(hand))
+        hand, tip, pinch = posed(hand_path, shape)
+        meshes[shape] = (hand, tip, palm_centre(hand), pinch)
     along, back, width = Vector((0, 0, 1)), Vector((0, 1, 0)), Vector((1, 0, 0))
     # Where hand_grip.py centres its cuff on the wrist, in this frame.
     cuff = cuff_mesh(Vector((0.002, -0.004, 0)), along, width, back, "Cuff")
     checks = []
-    for shape, (hand, tip, palm) in meshes.items():
+    for shape, (hand, tip, palm, pinch) in meshes.items():
         sides = {}
         for side, mirror in (("R", 1), ("L", -1)):
             piece = hand if mirror > 0 else mirrored(hand)
@@ -187,8 +278,13 @@ def main(args):
                 "fingertip": studs(tip * flip),
                 "palm": studs(palm * flip),
             }
+            if pinch is not None:
+                sides[side]["pinch"] = studs(pinch["point"] * flip)
+                sides[side]["pinchAxis"] = [round(c, 4) for c in pinch["axis"] * flip]
             if mirror < 0:
                 bpy.data.objects.remove(piece)
+        if pinch is not None:
+            sides["solve"] = pinch["report"]
         report["shapes"][shape] = sides
         checks.append(hand)
     left_cuff = mirrored(cuff)
@@ -198,10 +294,11 @@ def main(args):
     bpy.data.objects.remove(left_cuff)
     json.dump(report, open(os.path.join(out, "poses.json"), "w"), indent=1)
     print(json.dumps(report, indent=1))
-    # Side by side for the renders: Point at the origin, Rest beside it.
+    # Side by side for the renders: Point at the origin, Rest beside it, then Pinch.
     checks[1].location = (0.14, 0, 0)
+    checks[2].location = (0.28, 0, 0)
     skin, cloth = (0.85, 0.62, 0.5, 1), (0.08, 0.08, 0.09, 1)
-    render_checks(out, [(checks[0], skin), (checks[1], skin), (cuff, cloth)])
+    render_checks(out, [(checks[0], skin), (checks[1], skin), (checks[2], skin), (cuff, cloth)])
 
 
 if __name__ == "__main__":

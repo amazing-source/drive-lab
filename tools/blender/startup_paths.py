@@ -20,6 +20,10 @@ the flap opens (keyed every 0.05 s along the edge's arc), forward onto the butto
 PRESS_DEPTH, back out from under the flap before it falls, then onto the wheel. The left hand:
 off the thigh onto the wheel early, so the driver holds the wheel while starting. Poses are keyed
 on an Empty with Blender's Bezier easing and baked every BAKE_STEP seconds.
+
+An inputs file with a "sequence" (a car's list of controls the hand works, and the game's own
+times and hinges) is keyed by tools/blender/startup_sequence.py instead (DRIVER_HANDS.md,
+section 10); the SVJ's flap stays on the path below.
 """
 
 import json
@@ -91,20 +95,22 @@ def shoulder_point(sign, seat_weld):
     return Vector((sign * (abs(joint.x) - SHOULDER_INSET * DRIVER_SCALE), joint.y, joint.z))
 
 
-def elbow(shoulder, wrist, along, sign):
+def elbow(shoulder, wrist, along, sign, arm=None):
     """Controllers/DriverArms' elbow: bent toward where the forearm would lie straight down the
-    hand's axis, nudged out and down."""
-    upper, lower = UPPER * DRIVER_SCALE, LOWER * DRIVER_SCALE
+    hand's axis, nudged out and down. `arm` (upper, lower, bias) is a car's driver; the SVJ's
+    otherwise."""
+    upper, lower = (UPPER * DRIVER_SCALE, LOWER * DRIVER_SCALE) if arm is None else arm[:2]
+    bias = ELBOW_BIAS if arm is None else arm[2]
     to_wrist = wrist - shoulder
     distance = min(max(to_wrist.length, abs(upper - lower) + 1e-6), upper + lower - 1e-6)
     bend = math.acos(max(-1, min(1, (upper * upper + distance * distance - lower * lower) / (2 * upper * distance))))
-    pole = (wrist + along * lower - shoulder).normalized() + Vector((sign * ELBOW_BIAS.x, ELBOW_BIAS.y, ELBOW_BIAS.z))
+    pole = (wrist + along * lower - shoulder).normalized() + Vector((sign * bias.x, bias.y, bias.z))
     unit = to_wrist.normalized()
     out = (pole - unit * pole.dot(unit)).normalized()
     return shoulder + unit * (upper * math.cos(bend)) + out * (upper * math.sin(bend)), distance
 
 
-def aimed(tip_target, tip_offset, shoulder, sign, roll, up=Vector((0, 1, 0))):
+def aimed(tip_target, tip_offset, shoulder, sign, roll, up=Vector((0, 1, 0)), arm=None):
     """A wrist frame whose index tip lands on `tip_target` with the hand in line with the forearm
     the arm controller would draw: the hand's axis set from the elbow, three passes."""
     z = (shoulder - tip_target).normalized()
@@ -113,7 +119,7 @@ def aimed(tip_target, tip_offset, shoulder, sign, roll, up=Vector((0, 1, 0))):
         m = look_frame(Vector(), z, up)
         m = m @ Matrix.Rotation(roll, 4, "Z")
         wrist = tip_target - m.to_3x3() @ tip_offset
-        joint, _ = elbow(shoulder, wrist, z, sign)
+        joint, _ = elbow(shoulder, wrist, z, sign, arm)
         z = (z + (joint - wrist).normalized()).normalized()
     m.translation = tip_target - m.to_3x3() @ tip_offset
     return m
@@ -325,6 +331,11 @@ def main(args):
     inputs_path, config_path, out = args[:3]
     inputs = json.load(open(inputs_path))
     os.makedirs(out, exist_ok=True)
+    if "sequence" in inputs:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import startup_sequence
+
+        return startup_sequence.main(inputs, config_path, out)
     seat = Seat(inputs["seat"])
     seat_weld = json.load(open(inputs["seatWeld"]))
     rest = json.load(open(inputs["restPose"]))

@@ -8,6 +8,7 @@ local CarSwitches = require("../src/shared/Config/CarSwitches")
 local Catalog = require("../src/shared/Config/Cars/Catalog")
 local Config = require("../src/shared/Config/ControlsHelp")
 local Contract = require("../src/shared/Config/Cars/Contract")
+local Drift = require("../src/shared/Config/Drift")
 local ControlsHelp = require("../src/shared/Rules/ControlsHelp")
 local DR458 = require("../src/shared/Config/Cars/DR458/Physics")
 local DR458Assists = require("../src/shared/Config/Cars/DR458/Assists")
@@ -216,6 +217,12 @@ describe("ControlsHelp", function()
 		expect(string.find(text, `Hold {ControlsHelp.number(CarEntry.EXIT_HOLD_SECONDS)} s`, 1, true) ~= nil).toBe(
 			true
 		)
+		local handbrake = ControlsHelp.fill(
+			firstRow(Config.HELP, "HANDBRAKE").text,
+			ControlsHelp.formatted(Config.HELP.values)
+		)
+		local kmh = ControlsHelp.number(math.round(Drift.MIN_SPEED * 3.6))
+		expect(string.find(handbrake, `above {kmh} km/h`, 1, true) ~= nil).toBe(true)
 		expect(ControlsHelp.number(3)).toBe("3")
 		expect(ControlsHelp.number(0.6)).toBe("0.6")
 		expect(ControlsHelp.number(0.35)).toBe("0.35")

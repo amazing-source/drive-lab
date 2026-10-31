@@ -1,0 +1,127 @@
+Offline: tools/audio_timeline.luau (60 Hz, seeded) on three commits, compared with tldiff.py.
+main = origin/main 7f51219; before = 1123f39 (the rule extracted, the bug kept); after = 91da3aa.
+Tool calls: lune run games/drive-lab/tools/audio_timeline.luau SVJ | DR458 | DR458 1 fallback
+(the fallback option exists from 1123f39 on, so it has no main run).
+
+=== SVJ: main vs after
+dt: same
+car: same
+mode: same
+files: same
+startupSound: same
+shots: same (29 vs 29)
+frames: 1740 vs 1740
+no frame differs
+largest absolute difference: 0
+
+=== DR458: main vs after
+dt: same
+car: same
+mode: same
+files: same
+startupSound: same
+shots: same (28 vs 28)
+frames: 2370 vs 2370
+no frame differs
+largest absolute difference: 0
+
+=== SVJ: before vs after
+dt: same
+car: same
+mode: same
+files: same
+startupSound: same
+shots: same (29 vs 29)
+frames: 1740 vs 1740
+differs t=11.0000..11.5167 s (32 frames): volumes[1], volumes[2], volumes[3]
+largest absolute difference: 0.217413
+
+=== DR458: before vs after
+dt: same
+car: same
+mode: same
+files: same
+startupSound: same
+shots: same (28 vs 28)
+frames: 2370 vs 2370
+no frame differs
+largest absolute difference: 0
+
+=== DR458_fallback: before vs after
+dt: same
+car: same
+mode: same
+files: same
+startupSound: same
+shots: same (29 vs 29)
+frames: 2370 vs 2370
+differs t=4.3500..4.8667 s (32 frames): volumes[1], volumes[2], volumes[8]
+largest absolute difference: 0.217172
+
+=== The SVJ's idle loop (layer 1) at its region's end, before and after
+== prefix/SVJ.json
+t=10.9500 rpm=948.1 idle=0.2510
+t=10.9667 rpm=948.1 idle=0.2511
+t=10.9833 rpm=948.1 idle=0.2512
+t=11.0000 rpm=948.1 idle=0.0338
+t=11.0167 rpm=948.1 idle=0.0630
+t=11.0333 rpm=948.1 idle=0.0883
+t=11.0500 rpm=948.1 idle=0.1102
+t=11.0667 rpm=948.1 idle=0.1292
+== head/SVJ.json
+t=10.9500 rpm=948.1 idle=0.2510
+t=10.9667 rpm=948.1 idle=0.2511
+t=10.9833 rpm=948.1 idle=0.2512
+t=11.0000 rpm=948.1 idle=0.2512
+t=11.0167 rpm=948.1 idle=0.2512
+t=11.0333 rpm=948.1 idle=0.2512
+t=11.0500 rpm=948.1 idle=0.2512
+t=11.0667 rpm=948.1 idle=0.2512
+
+=== The DR458 fallback's idle loop at its region's end (4.35 s), before and after
+== prefix/DR458_fallback.json
+t=4.3000 rpm=1001.0 idle=0.2497
+t=4.3167 rpm=1001.0 idle=0.2504
+t=4.3333 rpm=1001.0 idle=0.2508
+t=4.3500 rpm=1001.0 idle=0.0337
+t=4.3667 rpm=1001.0 idle=0.0629
+t=4.3833 rpm=1001.0 idle=0.0882
+t=4.4000 rpm=1001.0 idle=0.1101
+t=4.4167 rpm=1001.0 idle=0.1290
+== head/DR458_fallback.json
+t=4.3000 rpm=1001.0 idle=0.2497
+t=4.3167 rpm=1001.0 idle=0.2504
+t=4.3333 rpm=1001.0 idle=0.2508
+t=4.3500 rpm=1001.0 idle=0.2509
+t=4.3667 rpm=1001.0 idle=0.2509
+t=4.3833 rpm=1001.0 idle=0.2509
+t=4.4000 rpm=1001.0 idle=0.2509
+t=4.4167 rpm=1001.0 idle=0.2509
+
+=== The DR458's own sound at its end (3.0 s): main and after
+== main2/DR458.json
+t=2.9500 rpm=1001.0 idle=0.2495
+t=2.9667 rpm=1001.0 idle=0.2506
+t=2.9833 rpm=1001.0 idle=0.2509
+t=3.0000 rpm=1001.0 idle=0.2509
+t=3.0167 rpm=1001.0 idle=0.2509
+t=3.0333 rpm=1001.0 idle=0.2509
+t=3.0500 rpm=1001.0 idle=0.2509
+== head/DR458.json
+t=2.9500 rpm=1001.0 idle=0.2495
+t=2.9667 rpm=1001.0 idle=0.2506
+t=2.9833 rpm=1001.0 idle=0.2509
+t=3.0000 rpm=1001.0 idle=0.2509
+t=3.0167 rpm=1001.0 idle=0.2509
+t=3.0333 rpm=1001.0 idle=0.2509
+t=3.0500 rpm=1001.0 idle=0.2509
+
+=== Base check: 1123f39 sits on main 9840f2e; main's own timelines on 9840f2e and 7f51219
+-- SVJ
+frames: 1740 vs 1740
+no frame differs
+largest absolute difference: 0
+-- DR458
+frames: 2370 vs 2370
+no frame differs
+largest absolute difference: 0

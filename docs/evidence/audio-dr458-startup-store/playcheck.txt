@@ -1,0 +1,55 @@
+Play check of the car's own start-up sound, 2026-10-30, Studio solo Play started and stopped by the
+audio agent.
+
+Probe (session only, restored by syncing main afterwards): the place's SVJ entry module was edited so
+the SVJ used the DR458's pack (its SVJ pop keys kept, which its modes need) and the DR458's start-up
+timing. The server sat the player in the SVJ's DriverSeat and set the car's Engine and EngineAt
+attributes, as the server's own start does; Controllers/CarAudio ran unchanged from the branch. Every
+SoundGroup in the client session was held at volume 0, so nothing was audible; the PC's volume was not
+touched. The SVJ physics idles at 950 rpm, so the idle loop played at 1.187x, not the DR458's 1.25x.
+
+Columns: seconds since the start key (server time); the idle loop's Sound.Volume; the start-up Sound
+(asset id, IsLoaded, Playing, TimePosition, Volume). The press is at 1.5 s.
+
+Run 1, commit 07d67c0 (sampled at 10 Hz):
+1.56 | IDLE 0.0000 | 126032464409866 loaded=false playing=true tp=0.471 vol=0.9997 region=0.47-3.45
+1.97 | IDLE 0.0000 | loaded=true tp=0.471
+2.07 | IDLE 0.0000 | tp=0.577
+4.42 | IDLE 0.0000 | tp=2.924 vol=0.9997
+4.52 | IDLE 0.0271 | tp=3.031 vol=0.9939
+4.63 | IDLE 0.1156 | tp=3.137 vol=0.8876
+4.73 | IDLE 0.1764 | tp=3.244 vol=0.7118
+4.83 | IDLE 0.2291 | tp=3.351 vol=0.4098
+4.93 | IDLE 0.2509 | tp=3.436 vol=0.0488
+5.04 | IDLE 0.1391 | (start-up sound removed)
+5.14 | IDLE 0.2073
+5.56 | IDLE 0.2512
+Shown: the store sound plays under its own id at 0.9997 in region 0.47-3.45; the engine is silent
+until the hand-over and the hand-over is equal power (at tp 3.244: engine 0.1764/0.2512 = 0.702,
+start-up 0.7118/0.9997 = 0.712, squares sum 1.00). Faults: (1) loaded 0.41 s after it was created and
+the TimePosition set before loading was dropped, so it ran 0.465 s behind the press (since minus tp
+1.495 s, intended 1.03 s); (2) the idle dipped to 0.1391 after the sound ended.
+
+Run 2, commit 271fbdc (catch-up once loaded, a seat preload; every frame traced near the end):
+1.505 | IDLE 0.0000 | L=0 P=1 tp=0.000 v=0.9997   (created)
+1.954 | IDLE 0.0000 | L=0 P=1 tp=0.000
+1.981 | IDLE 0.0000 | L=1 P=1 tp=0.941           (loaded; caught up: 0.47 + 1.981 - 1.5 = 0.951)
+2.230 | IDLE 0.0000 | L=1 P=1 tp=1.175           (the catch at 1.18 lands 0.73 s after the press)
+3.003 | IDLE 0.0000 | L=1 P=1 tp=1.965
+4.028 | IDLE 0.0000 | tp=2.989 v=0.9997
+4.052 | IDLE 0.0088 | tp=3.010 v=0.9991
+4.276 | IDLE 0.1764 | tp=3.223 v=0.7118
+4.477 | IDLE 0.2509 | tp=3.437 v=0.0454
+4.490 | IDLE 0.2509 | (start-up sound gone; no playhead wrap in any frame)
+4.494 | IDLE 0.0000
+4.537 | IDLE 0.0698
+4.602 | IDLE 0.1469
+5.035 | IDLE 0.2487
+5.039 | IDLE 0.2512
+Shown: the catch-up works; the seat preload did not shorten the load (0.47 s). The end dip is the
+abort path's shape (from 0 with the 0.08 s half-life to 0.99, then full): the removed sound fails the
+3 s load timeout, which is checked before "ended". Fixed in a04e07e (ended first, own sound only) and
+the preload removed; that commit has not run in Studio.
+
+Not run: the fallback (the own sound failing to load and the events region taking over), and the
+a04e07e fix. Studio was closed on the owner's decision before either; both are on the PR's list.

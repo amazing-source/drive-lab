@@ -32,6 +32,21 @@ export type ViewProfile = {
 	far: number,
 }
 
+-- A start-up recording uploaded on its own, for one that cannot be cut into the events file (an
+-- upload by another creator). Seconds into it: the starter's first sound, played at the START
+-- press; the starter's last; the engine catching; and the hand-over, from `handOver` to `to`,
+-- in which it fades out while the engine loops fade in.
+export type StartupSound = {
+	id: string,
+	-- Linear, over the idle loop's level at idle, as `boostDb` is for the region.
+	volume: number,
+	from: number,
+	starterEnds: number,
+	catchAt: number,
+	handOver: number,
+	to: number,
+}
+
 -- One car's sound pack (its entry's audio).
 export type Pack = {
 	engineLayers: { EngineLayer },
@@ -40,7 +55,16 @@ export type Pack = {
 	limiter: { soundId: string, rpm: number, volume: number, onDuck: number, halfLife: number },
 	far: { soundId: string, speed: number, volume: number, fromDistance: number, toDistance: number },
 	eventsSoundId: string,
-	startup: { region: Region, boostDb: number, handOver: number, abortRpm: number, abortHalfLife: number },
+	-- `sound`, when set, plays instead of the events file's region, which stays as its fallback
+	-- should it fail to load: the two never play together.
+	startup: {
+		region: Region,
+		boostDb: number,
+		handOver: number,
+		abortRpm: number,
+		abortHalfLife: number,
+		sound: StartupSound?,
+	},
 	gear: { region: Region, volume: number, upSpeed: number, downSpeed: number },
 	shiftDip: { gain: number, downHalfLife: number, upHalfLife: number },
 	pops: { regions: { Region }, volume: Region, speed: Region },
@@ -62,12 +86,16 @@ export type CarAudio = {
 	VIEW_ATTRIBUTE: string,
 	COCKPIT_VIEW: string,
 	VIEW_HALF_LIFE: number,
+	-- Published on the driven car: what its engine plays, as one linear amplitude, before the
+	-- shift dip and the start-up (the tyres' ceiling reads it, Config/TyreAudio).
+	ENGINE_LEVEL_ATTRIBUTE: string,
 }
 
 local CarAudio: CarAudio = table.freeze({
 	VIEW_ATTRIBUTE = "DriveLabView",
 	COCKPIT_VIEW = "Cockpit",
 	VIEW_HALF_LIFE = 0.06,
+	ENGINE_LEVEL_ATTRIBUTE = "EngineLevel",
 })
 
 return CarAudio

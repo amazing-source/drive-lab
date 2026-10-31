@@ -17,6 +17,7 @@ local DriverArms = require("../DriverArms")
 local DriverLegs = require("../DriverLegs")
 local DriverAssists = require("../../Rules/DriverAssists")
 local DriverStartup = require("../DriverStartup")
+local Driving = require("../Driving")
 local RimBlur = require("../RimBlur")
 local Types = require("./Types")
 
@@ -25,6 +26,12 @@ export type Driver = {
 	footwell: DriverLegs.Footwell,
 	-- Both hands through the start-up, keyed against this car's cabin.
 	startupPaths: DriverStartup.Paths,
+	-- The character's scale from the door mark to the seat and back, when this car's seat needs
+	-- another than Driving.DRIVER_SCALE; its clips and seated pose are authored for it.
+	scale: number?,
+	-- The drawn arms' lengths (studs at character scale 1), when this car's wheel needs other
+	-- than Config/DriverArms'.
+	arms: { upper: number, lower: number }?,
 }
 
 export type Entry = {
@@ -48,6 +55,9 @@ export type Entry = {
 
 -- What a car has of the controls not every car has (Config/CarSwitches.NEEDS), by name.
 export type Features = { [string]: boolean }
+
+-- Seconds two readings of one start-up's timing may differ by: about a frame.
+local TIMING_TOLERANCE = 0.02
 
 local Contract = {}
 
@@ -90,6 +100,17 @@ local function checkFootwell(entry: Entry)
 	for _, pedal in { footwell.throttle, footwell.brake } do
 		assert(hinged[pedal.part], `the footwell's "{pedal.part}" is not a pedal the model binding hinges`)
 	end
+	for _, problem in Contract.footwellMismatches(entry.model, footwell) do
+		error(problem)
+	end
+end
+
+-- The driver's scale and arm lengths need to be usable sizes.
+local function checkDriverSize(entry: Entry)
+	local driver = entry.driver
+	assert(driver.scale == nil or driver.scale > 0, "the driver's scale must be positive")
+	local arms = driver.arms
+	assert(arms == nil or (arms.upper > 0 and arms.lower > 0), "the driver's arms need positive lengths")
 end
 
 -- Every key of a table keyed by drive mode is one of the car's modes.
@@ -198,12 +219,53 @@ local function checkSwitches(entry: Entry)
 	assert(pages == nil or (pages >= 2 and pages % 1 == 0), "a display with pages has two or more")
 end
 
+-- Seconds after the press at which a start-up's revs leave the starter's.
+local function crankingEnds(curve: CarEntry.Curve): number
+	local index = 1
+	while curve.values[index + 1] == curve.values[1] do
+		index += 1
+	end
+	return curve.times[index]
+end
+
+-- A start-up played from its own sound keeps to the start-up's timing: it is an uploaded asset
+-- with a level, its times run in order, the engine catches in it when the start-up says, and the
+-- instruments hold the starter's revs from the starter's end to the catch.
+function Contract.checkStartupSound(startup: CarEntry.Startup, pack: CarAudio.Pack)
+	local sound = pack.startup.sound
+	if sound == nil then
+		return
+	end
+	assert(string.match(sound.id, "^rbxassetid://%d+$") ~= nil, "the start-up sound is not an uploaded asset")
+	assert(sound.volume > 0, "the start-up sound has no level")
+	assert(
+		0 <= sound.from
+			and sound.from < sound.starterEnds
+			and sound.starterEnds <= sound.catchAt
+			and sound.catchAt < sound.handOver
+			and sound.handOver < sound.to,
+		"the start-up sound's times are out of order"
+	)
+	assert(
+		math.abs(startup.catchAfter - (sound.catchAt - sound.from)) <= TIMING_TOLERANCE,
+		"the engine catches in the start-up sound at another time than the start-up says"
+	)
+	local cranking = crankingEnds(startup.rpm)
+	assert(
+		cranking >= sound.starterEnds - sound.from - TIMING_TOLERANCE
+			and cranking <= startup.catchAfter + TIMING_TOLERANCE,
+		"the instruments leave the starter's revs before the start-up sound's starter stops or after it catches"
+	)
+end
+
 function Contract.define(entry: Entry): Entry
 	checkStartup(entry)
 	checkFootwell(entry)
+	checkDriverSize(entry)
 	checkModes(entry)
 	checkDisplay(entry)
 	checkSwitches(entry)
+	Contract.checkStartupSound(entry.startup, entry.audio)
 	return deepFreeze(entry)
 end
 
@@ -215,6 +277,68 @@ function Contract.redline(entry: Entry): number
 	end
 	assert(screen, "a car has a display")
 	return screen.redlineRpm
+end
+
+-- The character's scale while it uses this car.
+function Contract.driverScale(entry: Entry): number
+	return entry.driver.scale or Driving.DRIVER_SCALE
+end
+
+-- The drawn arms' upper and lower lengths, studs at character scale 1.
+function Contract.armLengths(entry: Entry): (number, number)
+	local arms = entry.driver.arms
+	if arms then
+		return arms.upper, arms.lower
+	end
+	return DriverArms.UPPER_LENGTH, DriverArms.LOWER_LENGTH
+end
+
+-- Metres a footwell hinge may sit off the binding's pivot for the same pedal.
+local HINGE_TOLERANCE = 0.01
+
+-- Where the footwell disagrees with the binding: Rules/DriverLegs turns each pedal's sole points
+-- about the seat's x (the car's right) by the footwell's travel, while the rig turns the pedal's
+-- weld about the binding's axis by the binding's travel, so the hinge, the axis and the signed
+-- travel have to be the same or the foot and the pedal move apart.
+function Contract.footwellMismatches(model: Binding.CarModel, footwell: DriverLegs.Footwell): { string }
+	local problems = {}
+	local seat = model.seat
+	local byPart: { [string]: Binding.Hinge } = {}
+	local pedals = model.pedals
+	if pedals then
+		for _, pedal in pedals do
+			byPart[pedal.part] = pedal
+		end
+	end
+	for _, pedal in { footwell.throttle, footwell.brake } do
+		local bound = byPart[pedal.part]
+		if bound then
+			local hinge = {
+				x = bound.pivot.right - seat.right,
+				y = bound.pivot.up - seat.up,
+				z = -(bound.pivot.forward - seat.forward),
+			}
+			local off = math.sqrt(
+				(hinge.x - pedal.hinge.x) ^ 2 + (hinge.y - pedal.hinge.y) ^ 2 + (hinge.z - pedal.hinge.z) ^ 2
+			)
+			if off > HINGE_TOLERANCE then
+				table.insert(problems, `the footwell's {pedal.part} hinge is {off} m off the binding's pivot`)
+			end
+			if bound.axis.right < 0.999 then
+				table.insert(
+					problems,
+					`the binding turns {pedal.part} about another axis than the car's right`
+				)
+			end
+			if bound.travel and math.abs(bound.travel - pedal.travel) > 1e-4 then
+				table.insert(
+					problems,
+					`the footwell turns {pedal.part} by {pedal.travel} rad, the binding by {bound.travel}`
+				)
+			end
+		end
+	end
+	return problems
 end
 
 function Contract.features(entry: Entry): Features

@@ -74,10 +74,10 @@ Decisions the engine facts put on the owner's table (for the phase 1-2 package):
 
 ## The chosen model (owner, 2026-10-27): ddiaz-design SVJ
 
-- Files: `C:\Users\bfhdh\Downloads\drive-lab-assets\svj_ddiaz\` (original FBX in
+- Files: `%USERPROFILE%\Downloads\drive-lab-assets\svj_ddiaz\` (original FBX in
   `fbx/source/final_model/FINAL_MODEL.fbx` with its textures; glTF in `gltf/`). Downloaded through
   the owner's Chrome after they signed in to Sketchfab.
-- Blender: `C:\Users\bfhdh\tools\blender-5.2.2-windows-x64\blender.exe` (stable; a 5.2.3 candidate
+- Blender: `%USERPROFILE%\tools\blender-5.2.2-windows-x64\blender.exe` (stable; a 5.2.3 candidate
   also sits in Downloads). Run headless with `-b --factory-startup --python`.
 - Measured in Blender (FBX is in centimetres, scaled x100): 4.945 x 2.274 x 1.071 m (real car
   4.943 m long, 2.273 m with mirrors). FBX axes: long axis Y, **front at -Y**, Z up. Left-hand
@@ -101,7 +101,7 @@ Decisions the engine facts put on the owner's table (for the phase 1-2 package):
 
 ## Import into Roblox (2026-10-27)
 
-- Branch `feat/drive-lab`, worktree `C:\Users\bfhdh\Downloads\rbx-game-kit-drivelab` (from
+- Branch `feat/drive-lab`, worktree `%USERPROFILE%\Downloads\rbx-game-kit-drivelab` (from
   `origin/speed-redesign`). Scripts: `tools/blender/hero_car_pilot.py`,
   `tools/blender/hero_car_export.py`; upload with `tools/assets/upload_images.py <user id> <glb>`
   (key owner rencoolbro = 2746107833; `unset ROBLOX_OPEN_CLOUD_API_KEY` first in an old shell).
@@ -131,7 +131,7 @@ Decisions the engine facts put on the owner's table (for the phase 1-2 package):
 - Captures from Studio show the owner's own viewport when they move the camera; setting
   workspace.CurrentCamera from a script does not hold while they inspect.
 - Real-ESRGAN v0.2.5.0 (official GitHub build, 45.5 MB, owner's go 2026-10-27) installed at
-  `C:\Users\bfhdh\tools\realesrgan\`. The 4x upscale sharpens edges but shows the source cockpit
+  `%USERPROFILE%\tools\realesrgan\`. The 4x upscale sharpens edges but shows the source cockpit
   texture is nearly flat colour: realism needs added material detail. An agent bakes per-zone
   detail (Alcantara, perforated leather, clear-coated carbon, satin plastic, metal) in object space
   into UVChannel_1 at 2048, guided by the real SVJ photos (references R01, R02); output in

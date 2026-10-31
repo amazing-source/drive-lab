@@ -242,11 +242,17 @@ local function update()
 end
 
 local function startFrame(): (Vector3, Vector3, number)
-	local spawn = CollectionService:GetTagged(Driving.SPAWN_TAG)[1]
+	local spawns = CollectionService:GetTagged(Driving.SPAWN_TAG)
+	local names = table.create(#spawns)
+	for index, candidate in spawns do
+		names[index] = candidate:GetFullName()
+	end
+	local index = TrackPath.startIndex(names)
+	local spawn = if index then spawns[index] else nil
 	local at = if spawn and spawn:IsA("Model") then spawn:GetPivot() else CFrame.new()
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = if spawn then { spawn } else {}
+	params.FilterDescendantsInstances = spawns
 	local floor = Workspace:Raycast(at.Position + Vector3.new(0, 20, 0), Vector3.new(0, -200, 0), params)
 	local ground = if floor then floor.Position.Y else 0
 	local look = Vector3.new(at.LookVector.X, 0, at.LookVector.Z)

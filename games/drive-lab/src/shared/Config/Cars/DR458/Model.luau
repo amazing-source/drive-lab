@@ -29,7 +29,12 @@ local Model: Binding.CarModel = {
 		"Door_L_Glass",
 		"Door_R_Glass",
 	},
-	windshield = {},
+	windshield = {
+		{ forward = 0.6802, right = -0.5353, up = 0.6385 },
+		{ forward = 0.6807, right = 0.5346, up = 0.6385 },
+		{ forward = 1.3177, right = 0.5732, up = 0.3308 },
+		{ forward = 1.3171, right = -0.5746, up = 0.3308 },
+	},
 	door = {
 		pivot = { forward = 1.1001, right = -0.9205, up = -0.028 },
 		axis = { forward = -0.0853, right = 0.0035, up = -0.99635 },
@@ -52,6 +57,13 @@ local Model: Binding.CarModel = {
 		PanelSwitch_Ignition = {
 			part = "PanelSwitch_Ignition",
 			pivot = { forward = 0.83102, right = -0.06064, up = 0.04273 },
+			axis = { forward = 0, right = 1, up = 0 },
+			rest = 0.35,
+			travel = -0.7,
+		},
+		PanelSwitch_RainLight = {
+			part = "PanelSwitch_RainLight",
+			pivot = { forward = 0.82338, right = 0.0158, up = -0.0116 },
 			axis = { forward = 0, right = 1, up = 0 },
 			rest = 0.35,
 			travel = -0.7,
