@@ -432,6 +432,8 @@ CLOSE_PULL = GO_END + 57  # the walk out behind the door (three pairs of side st
 CLOSE_RELEASE = CLOSE_PULL + 10
 CLOSE_AT = np.array([2.08, -1.38])  # behind the open door, outside its sweep, facing the nose
 CARD_REAR = np.array([0.725, -1.20, 0.70])  # the door card's inner face near its rear upper corner, door shut
+EXIT_OUT = 1.3  # studs out from the mark of the stance where getting out ends (1.5 game studs at 1.15)
+EXIT_HOLD = 8  # frames that stance is held
 # GetOut is GetIn's solved path played backwards: (exit frame, entry frame) at each shared beat, from
 # the seated pose to upright at the stance (car_entry_mirror.py writes its table from the entry's).
 MIRROR = ((IO_END + 4, SEATED), (GO_D2, D2), (GO_D1, D1), (GO_C, OVER), (GO_T2, T2), (GO_T1, T1), (GO_B, SIT), (GO_STAND, HOP0), (GO_UP, LEAN0))
@@ -553,7 +555,13 @@ def exit_timeline(car, rest_path):
     both(b, f - 1, rest_at + 1)
     b.torso.at(rest_at, (0, yaw_close, 0))
     b.neck.at(pull, (-12, 0, 0)).at(release + 12, (-5, 15, 0)).at(rest_at, (0, 0, 0))
-    f = walk(b, rest_at + 2, close_feet, {k: IDLE[k] for k in close_feet}, yaw_close, 0.0, "left_leg", pairs=3)
+    # Back toward the mark, turning to its heading, and a still stance far enough out for the body
+    # to turn clear of the car (where getting out ends, exitEnd); then the last steps in to the mark.
+    stance = {k: IDLE[k] + np.array([0.0, 0.0, EXIT_OUT]) for k in close_feet}
+    f = walk(b, rest_at + 2, close_feet, stance, yaw_close, 0.0, "left_leg", pairs=3)
+    both(b, f - 1, f + EXIT_HOLD)
+    b.torso.at(f - 1, (0, 0, 0)).at(f + EXIT_HOLD, (0, 0, 0))
+    f = walk(b, f + EXIT_HOLD, stance, {k: IDLE[k] for k in close_feet}, 0.0, 0.0, "left_leg", pairs=1)
     both(b, f - 1, OC_END + 1)
     for track, value in ((b.pelvis, IDLE_PELVIS), (b.torso, (0, 0, 0)), (b.neck, (0, 0, 0))):
         track.at(OC_END, value)
@@ -568,7 +576,7 @@ def exit_timeline(car, rest_path):
     return b, clips
 
 
-OC_END = GO_END + 172
+OC_END = GO_END + 186
 
 
 def car_point_at_door(car, point, openness):
@@ -727,30 +735,57 @@ def close_contacts():
     return allow, []
 
 
+SEATED_END = FPS  # SeatedPose: one second, looped
+
+
+def seated_timeline(car, rest_path):
+    """SeatedPose: the seated hand-over pose held, door shut: what GetIn ends on and InsideClose,
+    InsideOpen and GetOut start from, so CarEntry's loop between them shows no change."""
+    s = car.seated()
+    ends, _ = seated_ends(car, s, rest_path)
+    b = Body(SEATED_END + 1, FPS)
+    for track, value in ((b.pelvis, s["pelvis"]), (b.torso, s["torso"]), (b.neck, s["neck"]), (b.neck_loc, s["neck_loc"])):
+        track.at(0, value).at(SEATED_END, value)
+    for limb, t in ends.items():
+        b.targets[limb].at(0, t).at(SEATED_END, t)
+        b.twist[limb].at(0, (0,))
+    hold_hand_over(b, 0, SEATED_END)
+    b.door.at(0, (0.0,)).at(SEATED_END, (0.0,))
+    return b, [{"name": "SeatedPose", "start": 0, "end": SEATED_END}]
+
+
+def seated_contacts():
+    """SeatedPose's named contacts: InsideClose's, decided, the door shut throughout."""
+    allow = [{**e, "to": SEATED_END} for e in close_contacts()[0]]
+    return allow, []
+
+
 def timeline(car, rest, which):
-    """(body, clips) of the entry, the exit or the inside close timeline."""
+    """(body, clips) of the entry, the exit, the inside close or the seated pose timeline."""
     if which == "exit":
         return exit_timeline(car, rest)
     if which == "close":
         return close_timeline(car, rest)
+    if which == "seated":
+        return seated_timeline(car, rest)
     b, s, yaw_out, yaw_seat, (o0, o1, total) = entry(car, rest)
     return b, [{"name": "OutsideOpen", "start": o0, "end": o1}, {"name": "GetIn", "start": o1, "end": total - 1}]
 
 
 def build(argv):
-    """For car_entry_clear.py: <scene> <seated pose> <rest pose> [--timeline entry|exit]
+    """For car_entry_clear.py: <scene> <seated pose> <rest pose> [--timeline entry|exit|close|seated]
     [--clear table.json]."""
     scene, pose, rest = argv[:3]
     which = argv[argv.index("--timeline") + 1] if "--timeline" in argv else "entry"
     b, _ = timeline(Car(scene, pose), rest, which)
     if "--clear" in argv:
         apply_table(b, argv[argv.index("--clear") + 1])
-    allow, holds = {"exit": exit_contacts, "close": close_contacts}.get(which, entry_contacts)()
+    allow, holds = {"exit": exit_contacts, "close": close_contacts, "seated": seated_contacts}.get(which, entry_contacts)()
     return b, allow, holds
 
 
 def main(argv):
-    """<scene> <seated pose> <rest pose> <out dir> [--timeline entry|exit] [--clear table.json]"""
+    """<scene> <seated pose> <rest pose> <out dir> [--timeline entry|exit|close|seated] [--clear table.json]"""
     scene, pose, rest, out_dir = argv[:4]
     which = argv[argv.index("--timeline") + 1] if "--timeline" in argv else "entry"
     os.makedirs(out_dir, exist_ok=True)
