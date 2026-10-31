@@ -32,6 +32,10 @@ export type State = {
 	turned: { [string]: { weld: Weld, rest: CFrame, angles: { [string]: number } } },
 	-- The latch state each turned control shows, so it is written only when it changes.
 	written: { [string]: number },
+	-- Gives back the controls this state claimed on the car (Rig/ControlPresses).
+	unclaim: () -> (),
+	-- Controls whose press the hands could not take: they act at their key, held while it is.
+	atKey: { [string]: true },
 }
 
 local STUDS_PER_METRE = 1 / Units.METRES_PER_STUD
@@ -121,6 +125,10 @@ function WheelGestures.new(entry: Catalog.Entry, model: Model, chassis: BasePart
 			return HandGestures.after(gesture, entry.physics.modeOrder, from)
 		end,
 	}
+	local controls: { string } = {}
+	for _, gesture in gestures.list do
+		table.insert(controls, gesture.control)
+	end
 	state = {
 		entry = entry,
 		model = model,
@@ -130,6 +138,8 @@ function WheelGestures.new(entry: Catalog.Entry, model: Model, chassis: BasePart
 		inputs = inputs,
 		turned = {},
 		written = {},
+		unclaim = ControlPresses.claim(model, controls),
+		atKey = {},
 	}
 	table.clear(pressed)
 	return state
@@ -152,29 +162,44 @@ local function findTurned(state: State)
 	end
 end
 
--- One frame: presses since the last, then each hand moved on, each control a hand works told to
--- Rig/ControlPresses. `ready[side]` says whether that hand is on the wheel (the start-up done); a
--- hand that is not drops its gestures.
+-- Fires each control's owed presses at once (Rig/ControlPresses); a held control then acts while
+-- its key is held.
+local function settle(state: State, owed: { [string]: number })
+	for control, presses in owed do
+		state.atKey[control] = true
+		ControlPresses.fire(state.model, control, presses)
+	end
+end
+
+-- One frame: presses since the last, then each hand moved on. Every press of a control the
+-- gestures play is told to Rig/ControlPresses once: when the hand works it, or at once when the
+-- hand cannot take it (not on the wheel, its queue full, no track to play). `ready[side]` says
+-- whether that hand is on the wheel (the start-up done); a hand that is not drops its gestures and
+-- gives back what it owed. The buttons the hands hold down are published too.
 function WheelGestures.step(state: State, ready: { [number]: boolean }, now: number, dt: number)
 	for _, control in pressed do
 		for _, gesture in state.gestures.list do
-			if gesture.control == control and ready[gesture.side] then
-				HandGestures.press(state.hands[gesture.side], gesture, now)
+			if gesture.control == control then
+				local hand = state.hands[gesture.side]
+				if not (ready[gesture.side] and HandGestures.press(hand, gesture, now)) then
+					settle(state, { [control] = 1 })
+				end
 			end
 		end
 	end
 	table.clear(pressed)
 	for side, hand in state.hands do
 		if ready[side] then
-			local worked = HandGestures.step(hand, state.inputs, state.gestures.HOLD_MIN, now, dt)
+			local worked, presses = HandGestures.step(hand, state.inputs, state.gestures.HOLD_MIN, now, dt)
 			if worked then
-				ControlPresses.fire(state.model, worked)
+				ControlPresses.fire(state.model, worked, presses)
 			end
+			settle(state, HandGestures.unplayed(hand))
 		else
-			hand.playing = nil
-			table.clear(hand.queue)
+			settle(state, HandGestures.drop(hand))
 		end
 	end
+	ControlPresses.hold(state.model, HandGestures.heldButtons(state.hands, state.atKey, state.inputs.held))
 	-- A latching control with nothing playing or waiting on its hand shows the car's state.
 	for _, gesture in state.gestures.list do
 		if gesture.latch and HandGestures.idle(state.hands[gesture.side]) then
@@ -245,6 +270,7 @@ end
 function WheelGestures.release(state: State)
 	active = math.max(0, active - 1)
 	table.clear(pressed)
+	state.unclaim()
 	for _, found in state.turned do
 		if found.weld.Parent then
 			found.weld.C0 = found.rest

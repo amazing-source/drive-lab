@@ -257,3 +257,67 @@ describe("Hand gestures: the instant the hand works its control", function()
 		expect(found[1].at > KNOB_TURN.finish and found[1].at <= KNOB_TURN.finish + 2 * DT + 1e-9).toBe(true)
 	end)
 end)
+
+describe("Hand gestures: every press owed once", function()
+	it("refuses a press when the hand's queue is full: it is the caller's at once", function()
+		local r = rig()
+		expect(HandGestures.press(r.hand, BUTTON, r.now)).toBe(true)
+		step(r, DT)
+		for _ = 1, 3 do
+			expect(HandGestures.press(r.hand, OTHER, r.now)).toBe(true)
+		end
+		expect(HandGestures.press(r.hand, OTHER, r.now)).toBe(false)
+	end)
+
+	it("gives back what a hand leaving the wheel still owed, and nothing it has already settled", function()
+		local r = rig()
+		HandGestures.press(r.hand, BUTTON, r.now)
+		step(r, DT)
+		HandGestures.press(r.hand, BUTTON, r.now)
+		HandGestures.press(r.hand, OTHER, r.now)
+		local owed = HandGestures.drop(r.hand)
+		expect(owed.PIT_LIMITER).toBe(2)
+		expect(owed.HIGH_BEAM).toBe(1)
+		expect(HandGestures.idle(r.hand)).toBe(true)
+		local settled = rig()
+		HandGestures.press(settled.hand, BUTTON, settled.now)
+		local found = worked(settled, 0.3)
+		expect(#found).toBe(1)
+		expect(HandGestures.drop(settled.hand).PIT_LIMITER).toBe(nil)
+	end)
+
+	it("owes at once a press whose gesture has no track from the control's state", function()
+		local r = rig({})
+		HandGestures.press(r.hand, KNOB, r.now)
+		step(r, DT)
+		expect(r.hand.playing).toBe(nil)
+		expect(HandGestures.unplayed(r.hand).DRIVING_MODE).toBe(1)
+		expect(next(HandGestures.unplayed(r.hand))).toBe(nil)
+	end)
+end)
+
+describe("Hand gestures: held buttons", function()
+	it("holds a button the hands could not take for as long as its key is held, then lets it go", function()
+		local hands = { [1] = HandGestures.newHand(), [-1] = HandGestures.newHand() }
+		local atKey: { [string]: true } = { WASHER = true }
+		local down: { [string]: boolean } = { WASHER = true }
+		local function held(control: string): boolean
+			return down[control] == true
+		end
+		expect(HandGestures.heldButtons(hands, atKey, held).WASHER).toBe(true)
+		down.WASHER = false
+		expect(HandGestures.heldButtons(hands, atKey, held).WASHER).toBe(nil)
+		expect(atKey.WASHER).toBe(nil)
+	end)
+
+	it("holds the button a thumb holds, whatever its key", function()
+		local r = rig()
+		r.down.PIT_LIMITER = true
+		HandGestures.press(r.hand, BUTTON, r.now)
+		step(r, 0.3)
+		local buttons = HandGestures.heldButtons({ [-1] = r.hand }, {}, function()
+			return false
+		end)
+		expect(buttons.PIT_LIMITER).toBe(true)
+	end)
+end)
