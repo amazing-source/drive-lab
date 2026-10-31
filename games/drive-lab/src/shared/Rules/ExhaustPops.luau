@@ -13,6 +13,8 @@ local Types = require("../Config/Cars/Types")
 -- Keyed by every one of the car's drive modes (Config/Cars/Contract checks it).
 export type ByMode = { [string]: number }
 export type Range = { from: number, to: number }
+-- What made a pop: a train after a lift or a downshift, or the crack of an upshift.
+export type Kind = "Lift" | "Downshift" | "Upshift"
 
 export type Tuning = {
 	-- Chance that each event pops.
@@ -35,6 +37,9 @@ export type State = {
 	tuning: Tuning,
 	trainUntil: number,
 	nextPop: number,
+	trainKind: Kind,
+	-- What made the pop `step` last reported; nil on a frame without one.
+	kind: Kind?,
 }
 
 local ExhaustPops = {}
@@ -44,7 +49,7 @@ local function forMode(values: ByMode, mode: Types.DrivingMode): number
 end
 
 function ExhaustPops.new(tuning: Tuning): State
-	return { tuning = tuning, trainUntil = 0, nextPop = 0 }
+	return { tuning = tuning, trainUntil = 0, nextPop = 0, trainKind = "Lift", kind = nil }
 end
 
 local function between(range: Range, draw: () -> number): number
@@ -65,6 +70,7 @@ function ExhaustPops.step(
 		and car.rpm >= tuning.upshiftMinRpm
 		and car.throttle >= tuning.upshiftMinThrottle
 		and draw() < forMode(tuning.upshiftChance, mode)
+	state.kind = if crack then "Upshift" else nil
 	if car.throttle > tuning.closedThrottle or car.rpm < tuning.minRpm then
 		state.trainUntil = 0
 		return crack
@@ -72,8 +78,10 @@ function ExhaustPops.step(
 	local train: Range? = nil
 	if events.lift and draw() < forMode(tuning.liftChance, mode) then
 		train = tuning.liftTrain
+		state.trainKind = "Lift"
 	elseif events.gear == "Down" and draw() < forMode(tuning.downshiftChance, mode) then
 		train = tuning.downshiftTrain
+		state.trainKind = "Downshift"
 	end
 	if train then
 		state.trainUntil = now + between(train, draw)
@@ -81,6 +89,7 @@ function ExhaustPops.step(
 	end
 	if now < state.trainUntil and now >= state.nextPop then
 		state.nextPop = now + between(tuning.gap, draw)
+		state.kind = state.trainKind
 		return true
 	end
 	return crack
