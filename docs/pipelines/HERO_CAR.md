@@ -374,6 +374,89 @@ eye inventory ─► material map (+ photo per rule) ─► map check ─► app
   5, identical maps written once) and `surface_appearances.json` with the SurfaceAppearance and
   MeshPart properties; the upload step swaps file names for asset ids.
 
+## 13. The cockpit from the driver's seat (the DR458 way)
+
+Rank every cockpit job by what the driver sees, in that order: the eye point, the cage, the wheel,
+the dash, then the rest of the seat's view. A check result matters where a game camera sees it.
+The DR458's build scripts, its contract file (eye, H-point, wheel, control rest states) and its notes
+live outside the repo (`drive-lab-assets/dr458/work/cockpit/`, `NOTES_cockpit.md`); what follows is
+the method.
+
+### Eye point (`cockpit_eye_point.py`)
+
+The eye comes from the race seat's surface and two anthropometric rules, no photo solve: rays on the
+seat's centre plane give the cushion and backrest lines, the H-point sits 0.13 m off the backrest and
+0.095 m above the cushion, and a 50th-percentile torso and upright head put the eye 0.62-0.64 m above
+it (SAE J941's centroid height at a 25-degree back angle is 0.635 m). The script also measures the
+helmet's clearance to the roof and exits 1 on an implausible result; `--break` tilts the seat and
+must fail. The points go into the manifest's `points` section (`Driver_HPoint`, `Driver_Eye`). The
+game's camera eye is an offset from the seated avatar's head, so the real-driver eye is the reference
+the avatar fit and the renders are checked against, not the camera's value. A seat's own placement
+note is not an H-point: the DR458's sat 5 cm above its cushion surface.
+
+### Roll cage
+
+- Pin the A-pillar bar's top junction at the windscreen's top corner (inset by the padding's radius
+  plus clearance), and fit the bar in two runs (floor to the junction, junction along the roof rail)
+  so the fit cannot drag the junction down. Check the bar's shape against a photo through the door:
+  the DR458's runs near-straight from the floor up the windscreen pillar (a knee at the dash pushed
+  the door bars outboard and was reverted).
+- The header bar is one smooth bend (a parabola in plan and height) between the pillar tops, its
+  centre behind the windscreen's top edge, lowered as a whole until it clears the roof and the
+  windscreen's black band. Pushing single samples off that band made it wavy.
+- The roof X runs from each pillar top to the main hoop's top bar on the far side, under the roof all
+  the way; the second diagonal runs a few millimetres lower through the crossing, or the two tubes'
+  tops lie in one surface there and depth-fight.
+- Sweep every tube along a smoothed centreline (key points, Chaikin corner cutting, a ring only where
+  the line turns). Sweeping a fitted polyline with filleted corners bulges and twists wherever its
+  segments are shorter than the fillet. A padding sleeve is cut from the very centreline its tube is
+  swept on.
+- Render the driver view over the camera's whole eye range (Config/CarCamera EYE_RANGE): the
+  windscreen should be clear from the normal eye, with the tubes framing it.
+
+### Door cards
+
+A race card runs up to the window's bottom seal. If the source's card stops short, the door skin shows
+from behind through the gap from the seat: close it with a ledge from each column's top straight
+outboard to the glass or the shell, its outer edge smoothed over a few columns, and fan the step
+wedges under it closed.
+
+### Race dash from the road dash
+
+When the race car keeps the road car's dash shell under Alcantara (the 458 Challenge does), copy the
+road dash objects into the cockpit file, keep their UVs and sets, and cut what the race car does not
+have: the road binnacle's insides between its gauge face and the race panel (below the hood's lip), the
+climate controls, the badges. A plate under the hood's arch closes the binnacle opening behind the
+race panel. Faces behind the eye go to trim objects, so the master's originals can be retired whole
+with nothing lost; read the sources from the master by name, so the build gives the same dash before
+and after the retirement. Plot the binnacle's faces front and side, by object, before choosing a cut:
+the first cut took the hood's own lip. bmesh round trips drop the material list; carry it over.
+
+### Soft parts against the game's own driver
+
+Route the harness against the seated avatar's primitives (boxes and capsules from the animator), not
+an anthropometric guess: push the strap centrelines and then every ribbon vertex outside the body by a
+few millimetres, iterating where two shapes overlap, and give a strap the normal of the surface it
+lies on. Keep two sets, worn (over the avatar, hidden) and stowed (lying on the empty seat, shown), and
+carry `shown` into the manifest, as for a window net. A check that measures webbing inside the body
+must fail when the webbing is moved into it.
+
+### Freeze what a contract depends on
+
+A parts script that measures the master (rays on the road hood) changes its output when the master
+changes. The DR458's binnacle face, which also sets the screen size agreed with the display, grew
+5 cm into the windscreen after a master update; its outline is now frozen to a file.
+
+### Checks used
+
+- Holes from the eye: `render_ids` frames drawn single-sided with each glass mesh given a reversed
+  twin. Outward-facing glass is culled from inside, so without the twin the windscreen counts as a
+  hole and any change that uncovers it "fails".
+- Depth fights a game camera sees (the scan's same-facing test, then each sample looked at from the
+  eye range and the chase orbit). Layers within one part need dense area samples to find: probing
+  face centres and corners missed the seat's cloth cover lying over its shell.
+- Clearance from the seated avatar to the cage, and intersections between the cockpit parts.
+
 ## Open items on the SVJ
 
 | Item | Plan |
