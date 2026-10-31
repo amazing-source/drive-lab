@@ -269,19 +269,40 @@ function DriveSim.launch(car: Types.CarConfig, dt: number, options: InputOptions
 end
 
 -- Full brake from `speed` in a straight line, gearbox in auto. Distance is from the frame the
--- pedal goes down to the stop; deceleration is the peak of a 0.1 s average.
-export type BrakeResult = { distance: number, time: number, peakDeceleration: number }
+-- pedal goes down to the stop; deceleration is the peak of a 0.1 s average; `pedalSpeed` (m/s) is
+-- the speed when the pedal goes down.
+export type BrakeResult = { distance: number, time: number, peakDeceleration: number, pedalSpeed: number }
 
-function DriveSim.brake(car: Types.CarConfig, speed: number, dt: number, options: InputOptions?): BrakeResult
+-- The 0.5 s coast in 3rd that settles the car before the pedal, from `start` (m/s).
+local function settle(
+	car: Types.CarConfig,
+	start: number,
+	mode: Types.DrivingMode,
+	esc: boolean?,
+	dt: number
+): Sim
 	local sim = DriveSim.new(car)
-	local o: InputOptions = options or {}
-	DriveSim.setSpeed(sim, speed, 3)
-	local mode = o.drivingMode or defaultMode(car)
-	local coast = DriveSim.input({ drivingMode = mode, esc = o.esc })
+	DriveSim.setSpeed(sim, start, 3)
+	local coast = DriveSim.input({ drivingMode = mode, esc = esc })
 	while sim.time < 0.5 do
 		DriveSim.frame(sim, coast, dt)
 	end
+	return sim
+end
+
+function DriveSim.brake(car: Types.CarConfig, speed: number, dt: number, options: InputOptions?): BrakeResult
+	local o: InputOptions = options or {}
+	local mode = o.drivingMode or defaultMode(car)
+	-- The coast loses speed in gear, so it starts faster by its own loss, corrected twice, and the
+	-- pedal goes down at `speed`.
+	local start = speed
+	local sim = settle(car, start, mode, o.esc, dt)
+	for _ = 1, 2 do
+		start += speed - DriveSim.forwardSpeed(sim)
+		sim = settle(car, start, mode, o.esc, dt)
+	end
 	local stop = DriveSim.input({ brake = 1, drivingMode = mode, abs = o.abs, esc = o.esc })
+	local pedalSpeed = DriveSim.forwardSpeed(sim)
 	local startX, start = sim.body.x, sim.time
 	local window = math.max(1, math.floor(0.1 / dt + 0.5))
 	local history: { number } = {}
@@ -297,7 +318,12 @@ function DriveSim.brake(car: Types.CarConfig, speed: number, dt: number, options
 			break
 		end
 	end
-	return { distance = sim.body.x - startX, time = sim.time - start, peakDeceleration = peak }
+	return {
+		distance = sim.body.x - startX,
+		time = sim.time - start,
+		peakDeceleration = peak,
+		pedalSpeed = pedalSpeed,
+	}
 end
 
 -- Full throttle held in `gear` (manual) until the limiter has bounced for two seconds. Returns

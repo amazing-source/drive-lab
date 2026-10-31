@@ -1,0 +1,21 @@
+BEFORE the fix (DriveSim.brake as on main ffa73c9, with only the pedalSpeed readout added):
+car | asked km/h | fps | pedal km/h | distance m
+Lamborghini Aventador SVJ | 100 | 30 | 96.21 | 29.43
+Lamborghini Aventador SVJ | 100 | 60 | 96.33 | 29.38
+Ferrari 458 Challenge Evo | 100 | 30 | 95.22 | 24.63
+Ferrari 458 Challenge Evo | 100 | 60 | 95.37 | 24.41
+
+The new spec on that code:
+FAIL DriveSim > presses the brake at the speed asked for, after its settling coast in gear (#128): tests\DriveSim.spec:20: expected 100 within 0.05, got 96.20776838247376
+
+AFTER the fix (the coast starts faster by its own loss, corrected twice):
+car | asked km/h | fps | pedal km/h | distance m
+Lamborghini Aventador SVJ | 100 | 30 | 100.00 | 31.65
+Lamborghini Aventador SVJ | 100 | 60 | 100.00 | 31.84
+Ferrari 458 Challenge Evo | 100 | 30 | 100.00 | 26.92
+Ferrari 458 Challenge Evo | 100 | 60 | 100.00 | 26.81
+
+The new spec passes; the full suite:
+FAIL SVJ calibration > stops from 100 km/h in 30 m ± 1.5 with ABS (OEM, 02 P7): tests\Calibration.spec:29: expected 30 within 1.5, got 31.8352156986246
+FAIL DR458 calibration > stops from 100 km/h in 24.5 m ± 2 with ABS (EST: about 1.6 g on slicks): tests\CalibrationDR458.spec:54: expected 24.5 within 2, got 26.807966361810156
+75 spec files, 678 passed, 2 failed
