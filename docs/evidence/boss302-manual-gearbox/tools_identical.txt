@@ -1,0 +1,26 @@
+Every game tool (games/drive-lab/tools/*.luau) run with its default arguments on the base (61f6d7a, a detached
+worktree) and on agent/car-manual-gearbox, stdout compared line by line. The two trees ran side by side, so
+calibrate's wall-clock step cost differs run to run; every other line of every tool is identical.
+
+SAME DR458Binding.luau: exit 0/0, 0 lines
+SAME DriftTurn.luau: exit 0/0, 0 lines
+SAME DriveSim.luau: exit 0/0, 0 lines
+SAME ManifestBinding.luau: exit 0/0, 0 lines
+SAME assists.luau: exit 0/0, 31 lines
+SAME audio_timeline.luau: exit 0/0, 1 lines
+DIFF calibrate.luau: exit 0/0, 21 lines, 1 differing lines
+    line 1:
+      base: Model.step cost: 129 us per frame at 60 FPS, 249 us at 30 FPS
+      head: Model.step cost: 155 us per frame at 60 FPS, 296 us at 30 FPS
+SAME chase_camera.luau: exit 0/0, 33 lines
+SAME control_sounds.luau: exit 0/0, 1 lines
+SAME downshift_pops.luau: exit 0/0, 1 lines
+SAME dr458_binding.luau: exit 0/0, 1 lines
+SAME dr458_review.luau: exit 0/0, 39 lines
+SAME drift_baseline.luau: exit 0/0, 25 lines
+SAME drift_candidate.luau: exit 0/0, 52 lines
+SAME drift_turn.luau: exit 0/0, 30 lines
+SAME gesture_config.luau: exit 0/0, 134 lines
+SAME road_timeline.luau: exit 0/0, 1 lines
+SAME startup_config.luau: exit 0/0, 95 lines
+SAME weather_timeline.luau: exit 0/0, 1 lines
