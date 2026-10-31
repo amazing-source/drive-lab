@@ -3,9 +3,17 @@
 	The DR458's sound pack (Config/CarAudio Pack), made by tools/audio/cut_dr458.py from two Assetto
 	Corsa 458 Italia banks and shaped toward the Challenge's race exhaust (manifest.json beside the
 	files). The loops are cabin recordings at the rpm their 4th engine order gives; every file is
-	loudness-matched (loops at -18 LUFS, pops at -20 LUFS on their loudest 400 ms).
+	loudness-matched (loops at -18 LUFS, pops at -20 LUFS on their loudest 400 ms). Its pops, their
+	timing and its flames are the SVJ's.
 ]]
 local CarAudio = require("../../CarAudio")
+local SVJ = require("../SVJ/Audio")
+
+local corsa = SVJ.popTriggers
+
+local function everyPosition(chances: { [string]: number }): { [string]: number }
+	return { ["1"] = chances.Corsa, ["2"] = chances.Corsa, OFF = chances.Corsa }
+end
 
 local Audio: CarAudio.Pack = {
 	engineLayers = {
@@ -119,33 +127,23 @@ local Audio: CarAudio.Pack = {
 	gear = { region = { from = 5.35, to = 5.5705 }, volume = 0.38, upSpeed = 1, downSpeed = 0.92 },
 	shiftDip = { gain = 0.5, downHalfLife = 0.012, upHalfLife = 0.05 },
 	pops = {
-		regions = {
-			{ from = 6.0705, to = 6.6924 },
-			{ from = 7.1924, to = 7.6287 },
-			{ from = 8.1287, to = 9.0143 },
-			{ from = 9.5143, to = 9.9099 },
-			{ from = 10.4099, to = 10.6303 },
-			{ from = 11.1303, to = 11.5997 },
-			{ from = 12.0997, to = 12.4125 },
-			{ from = 12.9125, to = 13.4718 },
-			{ from = 13.9718, to = 14.1917 },
-		},
-		volume = { from = 1, to = 1.8 },
-		speed = { from = 0.92, to = 1.08 },
+		soundId = SVJ.eventsSoundId,
+		regions = SVJ.pops.regions,
+		volume = SVJ.pops.volume,
+		speed = SVJ.pops.speed,
 	},
-	-- Keyed by the manettino's positions. A race exhaust has no valve, so they all pop alike; when
-	-- and how often is our choice: no source on the 458 Challenge gives it.
+	-- The SVJ's Corsa timing in every manettino position: a race exhaust has no valve to close.
 	popTriggers = {
-		liftChance = { ["1"] = 0.7, ["2"] = 0.7, OFF = 0.7 },
-		upshiftChance = { ["1"] = 0.3, ["2"] = 0.3, OFF = 0.3 },
-		downshiftChance = { ["1"] = 0.8, ["2"] = 0.8, OFF = 0.8 },
-		liftTrain = { from = 0.35, to = 1.1 },
-		downshiftTrain = { from = 0.3, to = 0.8 },
-		gap = { from = 0.06, to = 0.22 },
-		upshiftMinRpm = 5000,
-		upshiftMinThrottle = 0.6,
-		minRpm = 3000,
-		closedThrottle = 0.1,
+		liftChance = everyPosition(corsa.liftChance),
+		upshiftChance = everyPosition(corsa.upshiftChance),
+		downshiftChance = everyPosition(corsa.downshiftChance),
+		liftTrain = corsa.liftTrain,
+		downshiftTrain = corsa.downshiftTrain,
+		gap = corsa.gap,
+		upshiftMinRpm = corsa.upshiftMinRpm,
+		upshiftMinThrottle = corsa.upshiftMinThrottle,
+		minRpm = corsa.minRpm,
+		closedThrottle = corsa.closedThrottle,
 	},
 	events = { liftFrom = 0.6, liftTo = 0.1, liftMinRpm = 4000, limiterHold = 0.15 },
 	-- The loops are already shaped toward the exhaust; a stripped race cabin keeps its boom.

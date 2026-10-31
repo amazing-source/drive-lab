@@ -3,8 +3,8 @@
 	Drives a car offline through a scripted run and prints, frame by frame, what the car's audio
 	controller would play: each engine loop's volume and speed, the shift dip, the limiter, the
 	start-up's hand-over, and every one-shot (gear clunks, pops) with its region, volume and
-	speed. tools/audio/render_preview.py turns it into a listening file, so the sound can be
-	judged without Studio. A start-up played from the car's own sound is named in `startupSound`,
+	speed (and its file, when not the events file). tools/audio/render_preview.py turns it into a
+	listening file, so the sound can be judged without Studio. A start-up played from the car's own sound is named in `startupSound`,
 	not among the one-shots.
 
 	    lune run games/drive-lab/tools/audio_timeline.luau [SVJ|DR458] [mode] [fallback] > timeline.json
@@ -69,6 +69,8 @@ local FILES = {
 		},
 		limiter = "limiter.ogg",
 		events = "events.ogg",
+		-- The SVJ's events.ogg, which its pops are cut from.
+		pops = "svj_events.ogg",
 	},
 }
 
@@ -120,6 +122,9 @@ end
 local engine = EngineSound.new(mixerLayers, pack.engineTuning)
 local events = CarAudioEvents.new(pack.events)
 local pops = ExhaustPops.new(pack.popTriggers)
+-- A pack whose pops are cut from another file than its events file names that file.
+local popsFile = if car == "DR458" then FILES.DR458.pops else nil
+assert(pack.pops.soundId == nil or popsFile, `the {car}'s pops come from a file the timeline does not name`)
 local frames, shots = {}, {}
 local dip, limiterShare = 1, 0
 local startup = pack.startup
@@ -214,6 +219,7 @@ for index, readout in readouts do
 		table.insert(shots, {
 			t = time,
 			kind = "pop",
+			file = if pack.pops.soundId then popsFile else nil,
 			from = region.from,
 			to = region.to,
 			volume = between(pack.pops.volume),
