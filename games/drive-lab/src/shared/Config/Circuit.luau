@@ -56,9 +56,9 @@ export type Config = {
 local PARAPET_WIDTH = 0.5
 
 local SEGMENTS: { Circuit.Segment } = {
-	-- The main straight's second half: a full-throttle run to over 200 km/h, then hard braking.
+	-- The main straight's second half.
 	{ kind = "Straight", length = Track.START_STRAIGHT },
-	-- Hairpin, about 60 km/h.
+	-- Hairpin: heavy braking from top speed into the slowest corner.
 	{ kind = "Arc", radius = 25, turn = 180 },
 	{ kind = "Straight", length = 150 },
 	{ kind = "Arc", radius = 60, turn = -90 },
@@ -66,7 +66,7 @@ local SEGMENTS: { Circuit.Segment } = {
 	{ kind = "Straight", length = 400 },
 	{ kind = "Arc", radius = 120, turn = 90 },
 	{ kind = "Straight", length = 320 },
-	-- Fast sweeper, about 190 km/h.
+	-- Fast sweeper.
 	{ kind = "Arc", radius = 250, turn = 90 },
 	-- The back straight, across the river again.
 	{ kind = "Closing", minimum = 150 },
