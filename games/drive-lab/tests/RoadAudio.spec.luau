@@ -95,6 +95,23 @@ describe("RoadAudio", function()
 		end
 	)
 
+	it("plays the wind and the roar at the driven car's level, 1 when it has none", function()
+		local function at(gain: number?): RoadAudio.Mix
+			local state = RoadAudio.new(TUNING)
+			local scene = input({ speedKmh = 180, carGain = gain })
+			local mix = RoadAudio.step(state, scene, 1 / 60)
+			for _ = 1, 600 do
+				mix = RoadAudio.step(state, scene, 1 / 60)
+			end
+			return mix
+		end
+		local base, louder, unity = at(nil), at(2.5), at(1)
+		expect(louder.wind / base.wind).toBeNear(2.5, 1e-9)
+		expect(louder.road / base.road).toBeNear(2.5, 1e-9)
+		expect(unity.wind).toBe(base.wind)
+		expect(louder.windCutoff).toBe(base.windCutoff)
+	end)
+
 	it("grows the wind faster than the roar, so the roar leads when slow", function()
 		expect(RoadAudio.road(TUNING, 60) > 2 * RoadAudio.wind(TUNING, 60)).toBeTruthy()
 		local previous = 0
@@ -249,8 +266,14 @@ local function engineLufs(entry: Car, kmh: number, onShare: number): number
 	return ENGINE_LUFS + db(pack.engineVolume * EngineSound.level(mix))
 end
 
-local function windLufs(kmh: number, view: { wind: RoadAudio.Shaping, road: RoadAudio.Shaping }): number
-	return PACK_LUFS + db(RoadAudio.wind(Config.TUNING, kmh) * 10 ^ (view.wind.gain / 20) + 1e-30)
+-- The wind heard in `entry`, which plays it at the car's level (Rules/RoadAudio's carGain).
+local function windLufs(
+	entry: Car,
+	kmh: number,
+	view: { wind: RoadAudio.Shaping, road: RoadAudio.Shaping }
+): number
+	local gain = CarAudio.carGain(entry.pack)
+	return PACK_LUFS + db(RoadAudio.wind(Config.TUNING, kmh) * 10 ^ (view.wind.gain / 20) * gain + 1e-30)
 end
 
 -- dB the speed sounds sit under the engine at `kmh`.
@@ -262,8 +285,9 @@ local function margin(
 	surface: RoadAudio.Shaping
 ): number
 	local tuning = Config.TUNING
-	local wind = RoadAudio.wind(tuning, kmh) * 10 ^ (view.wind.gain / 20)
-	local road = RoadAudio.road(tuning, kmh) * 10 ^ ((view.road.gain + surface.gain) / 20)
+	local gain = CarAudio.carGain(entry.pack)
+	local wind = RoadAudio.wind(tuning, kmh) * 10 ^ (view.wind.gain / 20) * gain
+	local road = RoadAudio.road(tuning, kmh) * 10 ^ ((view.road.gain + surface.gain) / 20) * gain
 	local noise = PACK_LUFS + 10 * math.log10(wind ^ 2 + road ^ 2 + 1e-30)
 	return engineLufs(entry, kmh, onShare) - noise
 end
@@ -316,11 +340,30 @@ describe("RoadAudio config", function()
 		for _, entry in CARS do
 			for _, view in { tuning.outside, tuning.cockpit } do
 				for kmh = AUDIBLE_KMH, math.floor(entry.topKmh) do
-					expect(engineLufs(entry, kmh, 1) - windLufs(kmh, view) <= AUDIBLE_DB).toBeTruthy()
+					expect(engineLufs(entry, kmh, 1) - windLufs(entry, kmh, view) <= AUDIBLE_DB).toBeTruthy()
 				end
 			end
 		end
 		expect(RoadAudio.cutoff(tuning, AUDIBLE_KMH) >= AUDIBLE_CUTOFF_HZ).toBeTruthy()
+	end)
+
+	-- Roblox's engine reference, AudioPlayer.Volume: "Ranges from 0 to 10".
+	it("keeps the wind and the roar within AudioPlayer's 0 to 10 in every car, view and surface", function()
+		local tuning = Config.TUNING
+		local surfaceGain = tuning.otherSurface.gain
+		for _, surface in tuning.surfaces do
+			surfaceGain = math.max(surfaceGain, surface.gain)
+		end
+		for _, entry in CARS do
+			local gain = CarAudio.carGain(entry.pack)
+			for _, view in { tuning.outside, tuning.cockpit } do
+				local wind = RoadAudio.wind(tuning, entry.topKmh) * 10 ^ (view.wind.gain / 20) * gain
+				local road = RoadAudio.road(tuning, entry.topKmh)
+					* 10 ^ ((view.road.gain + surfaceGain) / 20)
+					* gain
+				expect(wind <= 10 and road <= 10).toBeTruthy()
+			end
+		end
 	end)
 
 	it("follows the SVJ's own top speed and plays the roar near as recorded at 90 km/h", function()
