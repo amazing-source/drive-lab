@@ -61,6 +61,7 @@ export type InputOptions = {
 	abs: boolean?,
 	tc: boolean?,
 	esc: boolean?,
+	drift: boolean?,
 }
 
 local DriveSim = {}
@@ -118,6 +119,7 @@ function DriveSim.input(options: InputOptions?): Model.DriverInput
 			tc = if o.tc == nil then true else o.tc,
 			esc = if o.esc == nil then true else o.esc,
 		},
+		drift = o.drift,
 	}
 end
 
