@@ -16,6 +16,10 @@ local Units = require(ReplicatedStorage.Shared.Units)
 
 local StartupLean = {}
 
+-- The lean last put on each humanoid's root (the seat and the turn in its space), so the camera
+-- takes out exactly what this frame's body carries.
+local applied: { [Humanoid]: { seat: BasePart, lean: CFrame } } = setmetatable({}, { __mode = "k" }) :: any
+
 -- The seat the humanoid sits in and its lean now, in the seat's space (studs), or nil.
 local function active(humanoid: Humanoid): (BasePart?, CFrame)
 	local seat = humanoid.SeatPart
@@ -53,19 +57,22 @@ end
 function StartupLean.rootTurn(humanoid: Humanoid, root: BasePart, jointPivot: Vector3): CFrame?
 	local seat, lean = active(humanoid)
 	if seat == nil then
+		applied[humanoid] = nil
 		return nil
 	end
+	applied[humanoid] = { seat = seat, lean = lean }
 	local seatInRoot = root.CFrame:ToObjectSpace(seat.CFrame)
 	local inRoot = seatInRoot * lean * seatInRoot:Inverse()
 	return CFrame.new(-jointPivot) * inRoot * CFrame.new(jointPivot)
 end
 
--- `point` (world) with the humanoid's start-up lean undone.
+-- `point` (world) with the start-up lean last put on the humanoid's root undone.
 function StartupLean.unlean(humanoid: Humanoid, point: Vector3): Vector3
-	local seat, lean = active(humanoid)
-	if seat == nil then
+	local last = applied[humanoid]
+	if last == nil or humanoid.SeatPart ~= last.seat then
 		return point
 	end
+	local seat, lean = last.seat, last.lean
 	return seat.CFrame:PointToWorldSpace(
 		lean:Inverse():PointToWorldSpace(seat.CFrame:PointToObjectSpace(point))
 	)
