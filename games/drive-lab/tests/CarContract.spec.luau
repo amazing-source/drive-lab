@@ -360,3 +360,71 @@ describe("Car contract: a binnacle display", function()
 		end
 	end)
 end)
+
+describe("Car contract: flames", function()
+	local function chances(lift: number, downshift: number, upshift: number)
+		return { Lift = lift, Downshift = downshift, Upshift = upshift }
+	end
+
+	local function flames(): any
+		return {
+			chance = { Strada = chances(0, 0.2, 0), Sport = chances(0.3, 0.6, 0.4), Corsa = chances(1, 1, 1) },
+			minStrength = 0.25,
+			fireballFrom = 0.75,
+			rise = 0,
+			dayShare = 0.35,
+		}
+	end
+
+	it("accepts a car without flames of its own, and flames for each of its drive modes", function()
+		expect(Catalog.cars.SVJ.flames).toBe(nil)
+		local entry = Contract.define(svjWith(function(entry)
+			entry.flames = flames()
+		end))
+		expect(entry.flames and entry.flames.chance.Corsa.Downshift).toBe(1)
+	end)
+
+	it("refuses flames that leave a drive mode out or name one the car does not have", function()
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				entry.flames = flames()
+				entry.flames.chance.Sport = nil
+			end))
+		end).toThrow()
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				entry.flames = flames()
+				entry.flames.chance.OFF = chances(1, 1, 1)
+			end))
+		end).toThrow()
+	end)
+
+	it("refuses a chance, a floor, a fireball threshold or a day share outside 0 to 1", function()
+		local breaks: { (any) -> () } = {
+			function(set)
+				set.chance.Corsa.Upshift = 1.2
+			end,
+			function(set)
+				set.chance.Strada.Lift = -0.1
+			end,
+			function(set)
+				set.minStrength = 1.5
+			end,
+			function(set)
+				set.fireballFrom = -0.2
+			end,
+			function(set)
+				set.dayShare = 2
+			end,
+		}
+		for _, change in breaks do
+			expect(function()
+				Contract.define(svjWith(function(entry)
+					local set = flames()
+					change(set)
+					entry.flames = set
+				end))
+			end).toThrow()
+		end
+	end)
+end)
