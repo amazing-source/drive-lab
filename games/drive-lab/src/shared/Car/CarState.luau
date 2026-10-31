@@ -68,6 +68,10 @@ function CarState.write(model: Model, state: Rules.State)
 	model:SetAttribute(ATTRIBUTE.DOOR_AT, state.doorAt)
 	model:SetAttribute(ATTRIBUTE.ENGINE, state.engine)
 	model:SetAttribute(ATTRIBUTE.ENGINE_AT, state.engineAt)
+	if state.engine == "Off" then
+		-- The key a running engine was started with (Services/CarEntry) goes with it.
+		model:SetAttribute(ATTRIBUTE.START_KEY, nil)
+	end
 end
 
 return table.freeze(CarState)
