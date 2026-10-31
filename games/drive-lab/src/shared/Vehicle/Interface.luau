@@ -26,6 +26,8 @@ export type DriverInput = {
 	assists: Assists,
 	-- The drift button (Vehicle/Drift), held. Absent or false, the car drives exactly as without it.
 	drift: boolean?,
+	-- The clutch pedal (0 up, 1 down), which an H box reads in "manualClutch". Absent, it is up.
+	clutchPedal: number?,
 }
 
 export type WheelContact = {
@@ -95,6 +97,18 @@ export type Telemetry = {
 	-- 0 to 1: how far a drift is engaged; and the body slip (rad) it aims for.
 	drift: number,
 	driftTarget: number,
+	-- The H box (Vehicle/HBox), 0 or false on the ISR. The clutch pedal in effect (0 up, 1 down);
+	-- the driver's right hand from the wheel to the knob and left foot from the floor to the pedal
+	-- (0 to 1); the running shift's gears and seconds (Vehicle/ShiftPlan), the gear and 0 when none;
+	-- a stalled engine; and a shift refused this frame.
+	clutchPedal: number,
+	handAt: number,
+	footAt: number,
+	shiftFrom: number,
+	shiftTo: number,
+	shiftElapsed: number,
+	stalled: boolean,
+	shiftRefused: boolean,
 }
 
 -- The drift's own force (N, car frame) and yaw torque (N·m, positive turning right), at the centre

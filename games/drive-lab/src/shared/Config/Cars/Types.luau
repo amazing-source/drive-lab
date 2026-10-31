@@ -118,6 +118,9 @@ export type ManualGearboxConfig = {
 	stallRpm: number,
 	-- Whether a downshift blips the throttle to the new gear's speed.
 	revMatch: boolean,
+	-- Whether the player may take the clutch ("manualClutch"); without it that mode drives as
+	-- "manual", with the automatic clutch and no stall.
+	playerClutch: boolean,
 }
 
 export type GearboxConfig = {
