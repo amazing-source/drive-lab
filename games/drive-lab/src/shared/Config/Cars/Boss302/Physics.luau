@@ -9,7 +9,8 @@
 local Types = require("../Types")
 
 -- Shift points of the automatic for the H box (`gearboxMode = "auto"`); the human shift itself
--- comes from `gearbox.manual.timing`, so the ISR times below only fill the shared shape.
+-- comes from `gearbox.manual.timing`, so the ISR times below only fill the shared shape. At full
+-- throttle it shifts 100 rpm under the limiter, as the other cars do.
 local function mode(settings: {
 	upshiftRpm: Types.ShiftPoints,
 	downshiftRpm: Types.ShiftPoints,
@@ -32,8 +33,9 @@ local function mode(settings: {
 		frontShareDrive = 0,
 		frontShareCoast = 0,
 		-- EST: the dampers are set by screwdriver (5 positions, 2 from the factory, likely), never
-		-- from the seat, so every mode has the same.
-		damperRatio = 0.45,
+		-- from the seat, so every mode has the same. Firm, as a track car's: at 0.45 the soft springs
+		-- pitched enough at 30 FPS to stop 4 % longer from 100 km/h than at 240 FPS.
+		damperRatio = 0.6,
 		tcSlipRatio = settings.tcSlipRatio,
 		escOversteer = settings.escOversteer,
 		escUndersteer = settings.escUndersteer,
@@ -118,10 +120,13 @@ return Types.define({
 	},
 
 	suspension = {
-		-- EST: no travel figure is published.
-		travel = 0.120,
-		staticCompression = 0.055,
-		bumpStopStart = 0.100,
+		-- EST: no travel figure is published. The soft LS springs need room both ways, as the model
+		-- has no anti-dive or anti-squat: 1.2 g of braking on a 0.51 m CG moves 1.9 kN per corner,
+		-- 8.5 cm of rear droop on its 22 N/mm wheel rate and 7.9 cm of front dive on its 24 N/mm,
+		-- onto the bump stop.
+		travel = 0.190,
+		staticCompression = 0.100,
+		bumpStopStart = 0.170,
 		bumpStopRate = 30000,
 		-- Capped as the SVJ's is (ω·dt about 1 at 30 FPS), on a 473 kg front corner.
 		bumpStopMaxRate = 400000,
@@ -169,8 +174,8 @@ return Types.define({
 		-- Documented (TracKey sheet): Ford suggests about 2,600 rpm for its launch control.
 		launchRpm = 2600,
 		-- Documented: 155 mph top speed, a limit rather than the gearing's (inferred: 5th reaches it
-		-- at the redline). EST: the throttle fades over the last 5 km/h.
-		governor = { speed = 155 * 1.609344 / 3.6, band = 5 / 3.6 },
+		-- at the redline). EST: the throttle fades over the last 2 km/h.
+		governor = { speed = 155 * 1.609344 / 3.6, band = 2 / 3.6 },
 	},
 
 	gearbox = {
@@ -211,6 +216,8 @@ return Types.define({
 			stallRpm = 450,
 			-- The 2012 car has no rev-matching.
 			revMatch = false,
+			-- The clutch on a key is offered for the owner to try; false takes it out of the modes.
+			playerClutch = true,
 		},
 		-- Documented: 3.66, 2.43, 1.69, 1.32, 1.00, 0.65.
 		ratios = { 3.66, 2.43, 1.69, 1.32, 1.00, 0.65 },
@@ -320,7 +327,7 @@ return Types.define({
 	-- thresholds as on a track day. All thresholds are EST; only their order is sourced.
 	modes = {
 		Normal = mode({
-			upshiftRpm = { light = 2200, full = 7300 },
+			upshiftRpm = { light = 2200, full = 7400 },
 			downshiftRpm = { light = 1100, full = 3500 },
 			brakeDownshiftRpm = 2800,
 			holdOnLift = false,
@@ -330,7 +337,7 @@ return Types.define({
 			escSideslip = math.rad(5),
 		}),
 		Sport = mode({
-			upshiftRpm = { light = 3200, full = 7300 },
+			upshiftRpm = { light = 3200, full = 7400 },
 			downshiftRpm = { light = 1800, full = 4500 },
 			brakeDownshiftRpm = 3800,
 			holdOnLift = true,
@@ -340,7 +347,7 @@ return Types.define({
 			escSideslip = math.rad(12),
 		}),
 		TracKey = mode({
-			upshiftRpm = { light = 3500, full = 7300 },
+			upshiftRpm = { light = 3500, full = 7400 },
 			downshiftRpm = { light = 2200, full = 4500 },
 			brakeDownshiftRpm = 4200,
 			holdOnLift = true,
