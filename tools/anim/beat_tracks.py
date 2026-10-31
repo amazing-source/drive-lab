@@ -78,9 +78,6 @@ class Body:
         self.pelvis = Track(3)
         self.torso = Track(3)
         self.neck = Track(3)
-        # Optional: the head moved on the neck (a Neck translation, torso axes, studs at scale 1);
-        # keyed only when it has beats.
-        self.neck_loc = Track(3)
         self.door = Track(1)
         self.targets = {limb: Track(3) for limb in self.LIMB_POINT}
         self.twist = {limb: Track(1) for limb in self.LIMB_POINT}
@@ -181,7 +178,6 @@ class Body:
             cache[int(i)] = m
         self._frames_cache = cache
         nek = self.neck.sample(frames)
-        nek_loc = self.neck_loc.sample(frames) if self.neck_loc.beats else np.zeros((len(frames), 3))
         door = self.door.sample(frames)[:, 0]
         tgt = {k: t.sample(frames) for k, t in self.targets.items()}
         tw = {k: t.sample(frames)[:, 0] for k, t in self.twist.items()}
@@ -190,7 +186,7 @@ class Body:
             # Torso angles are body-relative (lean, yaw, roll); RootJoint gets the matrix.
             rot = r6_fk.body_turn(*tor[i])
             pelvis = np.array(solved[i])
-            pose = {"Neck": (tuple(nek[i]), tuple(nek_loc[i]))}
+            pose = {"Neck": (tuple(nek[i]), (0, 0, 0))}
             # Root part sits at (0, 3, 0): its frame is the authoring frame shifted up 3.
             loc = r6_fk.torso_root_offset(rot, pelvis - np.array([0.0, r6_fk.ROOT_HEIGHT, 0.0]))
             pose["RootJoint"] = (rot, tuple(loc))
@@ -253,8 +249,6 @@ class Body:
                 if name == "RootJoint":
                     entry["loc"] = [round(float(v), 5) for v in loc]
                     entry["quat"] = [round(float(v), 6) for v in quat[f]]
-                elif name == "Neck" and self.neck_loc.beats:
-                    entry["loc"] = [round(float(v), 5) for v in loc]
                 joints[name].append(entry)
         door = [{"frame": int(f), "value": round(float(self.door_values[f]), 5)} for f in keyed]
         return {
