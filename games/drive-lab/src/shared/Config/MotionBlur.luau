@@ -42,6 +42,7 @@ local Config: MotionBlurConfig = table.freeze({
 		exponent = 1,
 		rise = 0.08,
 		fall = 0.35,
+		off = 0.02,
 		near = 0.5,
 		far = 0.3,
 		cabin = 0.15,

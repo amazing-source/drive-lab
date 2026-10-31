@@ -16,6 +16,7 @@ local ACCELERATION: MotionBlur.Acceleration = {
 	exponent = 1,
 	rise = 0.1,
 	fall = 0.4,
+	off = 0.02,
 	near = 0.5,
 	far = 0.4,
 	cabin = 0.2,
@@ -130,6 +131,21 @@ describe("MotionBlur", function()
 		near, far = MotionBlur.depth("Cockpit", 50, 0.5, SPEED, with({ intensity = 2 }))
 		expect(far).toBeNear(0.2, 1e-12)
 		near, far = MotionBlur.depth("Cockpit", 50, 0 / 0, SPEED, ACCELERATION)
+		expect(far).toBe(0)
+	end)
+
+	it("counts a pull under its floor as none, so the blur switches off after a pull", function()
+		local near, far = MotionBlur.depth("Chase", 50, 0.01, SPEED, ACCELERATION)
+		expect(near).toBe(0)
+		expect(far).toBe(0)
+		expect(MotionBlur.pulseSize(0.01, with({ style = "FullScreen" }))).toBe(0)
+		local pull = 1
+		for _ = 1, 3 * 60 do
+			pull = MotionBlur.follow(pull, MotionBlur.pullShare(0, ACCELERATION), 1 / 60, ACCELERATION)
+		end
+		expect(pull > 0).toBe(true)
+		near, far = MotionBlur.depth("Cockpit", 50, pull, SPEED, ACCELERATION)
+		expect(near).toBe(0)
 		expect(far).toBe(0)
 	end)
 

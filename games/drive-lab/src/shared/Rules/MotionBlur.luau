@@ -42,6 +42,9 @@ export type Acceleration = {
 	exponent: number,
 	rise: number,
 	fall: number,
+	-- The eased pull only nears 0: under this share it counts as none, so the depth of field
+	-- is switched off rather than drawn for nothing once the car stops pulling.
+	off: number,
 	-- Depth of field at a full pull: `near` on the road between the chase camera and the car,
 	-- `far` on the world past the car, `cabin` on the world past the cabin in the cockpit and
 	-- hood views.
@@ -95,6 +98,11 @@ function MotionBlur.speedFar(speedKmh: number, speed: Speed): number
 end
 
 -- The share of the acceleration blur a pull of `g` asks for, 0 to 1: none braking or coasting.
+local function pullStrength(pull: number, acceleration: Acceleration): number
+	local share = if pull == pull then math.clamp(pull, 0, 1) else 0
+	return if share < acceleration.off then 0 else share * math.max(acceleration.intensity, 0)
+end
+
 function MotionBlur.pullShare(g: number, acceleration: Acceleration): number
 	if g ~= g then
 		return 0
@@ -112,9 +120,7 @@ function MotionBlur.depth(
 	speed: Speed,
 	acceleration: Acceleration
 ): (number, number)
-	local strength = if acceleration.style == "DepthOfField"
-		then math.max(acceleration.intensity, 0) * (if pull == pull then math.clamp(pull, 0, 1) else 0)
-		else 0
+	local strength = if acceleration.style == "DepthOfField" then pullStrength(pull, acceleration) else 0
 	if view == "Chase" then
 		local near = MotionBlur.speedNear(speedKmh, speed) + acceleration.near * strength
 		return math.min(near, 1), math.min(acceleration.far * strength, 1)
@@ -126,10 +132,10 @@ end
 
 -- The full-screen style's blur (pixels) at an eased pull share; none in the other style.
 function MotionBlur.pulseSize(pull: number, acceleration: Acceleration): number
-	if acceleration.style ~= "FullScreen" or pull ~= pull then
+	if acceleration.style ~= "FullScreen" then
 		return 0
 	end
-	return acceleration.fullScreen * math.max(acceleration.intensity, 0) * math.clamp(pull, 0, 1)
+	return acceleration.fullScreen * pullStrength(pull, acceleration)
 end
 
 return table.freeze(MotionBlur)
