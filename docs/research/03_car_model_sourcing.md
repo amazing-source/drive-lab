@@ -369,6 +369,9 @@ them.**
   [Meshes](https://create.roblox.com/docs/parts/meshes) page says a MeshPart takes up to four PBR
   maps through SurfaceAppearance or MaterialVariant. How MaterialVariant tiles on a mesh is
   unverified, so test it.
+  - **Contradicted by a measurement** (2026-10-30, Studio edit mode): UVs outside 0–1 do repeat on
+    a MeshPart's SurfaceAppearance (research 10, section 3.1). The quote above is the import
+    guidance, not the renderer's behaviour.
 - Memory: "the number of pixels in the texture determines memory usage"; "Unless an image is
   occupying a large amount of physical space on the screen, it usually needs at most 512x512
   pixels" ([Improve performance](https://create.roblox.com/docs/performance-optimization/improve)).

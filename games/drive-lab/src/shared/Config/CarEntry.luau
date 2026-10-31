@@ -69,6 +69,10 @@ export type DoorSound = {
 
 -- One car's door: the clips that get the driver in and out through it, and its sounds.
 export type Door = {
+	-- A stand-in while the car's entry and exit clips are not made: the prompt seats the driver
+	-- straight in the seat, with no walk to the mark and no clips, and getting out stands them at
+	-- `exitEnd`. The door itself still moves by its clips. The car's real entry drops it.
+	direct: boolean?,
 	clips: { [ClipName]: Clip },
 	-- The looped seated pose the entry ends in and the exit starts from.
 	seatedPose: string,

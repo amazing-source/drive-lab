@@ -3,8 +3,8 @@
 	The live binnacle display of the car the local player drives, on a car whose display is one
 	(its entry's binnacle; Controllers/Cluster draws a dial face): the shift lights, the page the
 	display switch has stepped to (DisplayPage, Controllers/CarSwitches) and its readouts, on the
-	screen the rig mounts in the binnacle. Dark until START is pressed. Built once per drive, then
-	updated from the car's readouts a few dozen times a second.
+	screen the rig mounts in the binnacle and on the strip's lenses. Dark until START is pressed.
+	Built once per drive, then updated from the car's readouts a few dozen times a second.
 ]]
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -68,7 +68,7 @@ local function update(dt: number)
 	local model = drivenModel()
 	local current = drive
 	if current and current.model ~= model then
-		current.view.gui:Destroy()
+		BinnacleView.destroy(current.view)
 		drive, current = nil, nil
 	end
 	if model == nil then
@@ -81,7 +81,7 @@ local function update(dt: number)
 		if screen == nil or not screen:IsA("BasePart") or entry == nil or spec == nil then
 			return
 		end
-		current = { model = model, entry = entry, view = BinnacleView.build(screen, spec) }
+		current = { model = model, entry = entry, view = BinnacleView.build(screen, model, spec) }
 		drive = current
 	end
 	elapsed += dt
