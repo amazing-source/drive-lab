@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
+local ControlPresses = require(script.Parent.ControlPresses)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local DriveModes = require(ReplicatedStorage.Shared.Rules.DriveModes)
 local DriverGestures = require(ReplicatedStorage.Shared.Config.DriverGestures)
@@ -151,8 +152,9 @@ local function findTurned(state: State)
 	end
 end
 
--- One frame: presses since the last, then each hand moved on. `ready[side]` says whether that
--- hand is on the wheel (the start-up done); a hand that is not drops its gestures.
+-- One frame: presses since the last, then each hand moved on, each control a hand works told to
+-- Rig/ControlPresses. `ready[side]` says whether that hand is on the wheel (the start-up done); a
+-- hand that is not drops its gestures.
 function WheelGestures.step(state: State, ready: { [number]: boolean }, now: number, dt: number)
 	for _, control in pressed do
 		for _, gesture in state.gestures.list do
@@ -164,7 +166,10 @@ function WheelGestures.step(state: State, ready: { [number]: boolean }, now: num
 	table.clear(pressed)
 	for side, hand in state.hands do
 		if ready[side] then
-			HandGestures.step(hand, state.inputs, state.gestures.HOLD_MIN, now, dt)
+			local worked = HandGestures.step(hand, state.inputs, state.gestures.HOLD_MIN, now, dt)
+			if worked then
+				ControlPresses.fire(state.model, worked)
+			end
 		else
 			hand.playing = nil
 			table.clear(hand.queue)

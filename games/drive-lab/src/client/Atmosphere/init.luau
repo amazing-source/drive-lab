@@ -5,7 +5,7 @@
 	contact blur, a light far depth of field) and, in the cockpit, on the windscreen. The only writer of Workspace's RainIntensity and Wetness
 	attributes, which the car's grip reads on the driver's client; set here they are local, so a
 	reader on the server would see nothing. Reads the camera's DriveLabView and the car's
-	SpeedKmh, and never writes the camera or the car.
+	SpeedKmh and LongitudinalG, and never writes the camera or the car.
 ]]
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -51,9 +51,10 @@ type State = {
 	lens: Lens.Lens?,
 	weatherLabel: WeatherLabel.WeatherLabel?,
 	cars: { [Model]: Car },
-	-- The nearest car to the camera this frame, and its speed (km/h, never negative).
+	-- The nearest car to the camera this frame, its speed (km/h, never negative) and its pull (g).
 	nearest: Car?,
 	speedKmh: number,
+	longitudinalG: number,
 	camera: Camera?,
 	lastPosition: Vector3?,
 	-- One frame record and one car box, rewritten each frame rather than rebuilt.
@@ -165,7 +166,7 @@ local function trackCar(current: State, car: Car?)
 	local frame = current.frame
 	current.nearest = car
 	if car == nil then
-		frame.car, current.speedKmh = nil, 0
+		frame.car, current.speedKmh, current.longitudinalG = nil, 0, 0
 		return
 	end
 	local box = current.carBox
@@ -174,6 +175,8 @@ local function trackCar(current: State, car: Car?)
 	local kmh = car.model:GetAttribute("SpeedKmh")
 	local valid = typeof(kmh) == "number" and kmh == kmh and math.abs(kmh) < math.huge
 	current.speedKmh = if valid then math.abs(kmh :: number) else 0
+	local g = car.model:GetAttribute("LongitudinalG")
+	current.longitudinalG = if typeof(g) == "number" and g == g and math.abs(g) < math.huge then g else 0
 end
 
 -- The rain on the camera and on the car, after the rain itself has sampled the sky.
@@ -207,7 +210,8 @@ local function wetCameraAndCar(
 		landed,
 		distance,
 		if car then car.size.Z else 0,
-		current.speedKmh
+		current.speedKmh,
+		current.longitudinalG
 	)
 	local nearest = current.nearest
 	CarWater.update(
@@ -381,6 +385,7 @@ function Atmosphere.start()
 		cars = {},
 		nearest = nil,
 		speedKmh = 0,
+		longitudinalG = 0,
 		camera = nil,
 		lastPosition = nil,
 		frame = {

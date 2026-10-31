@@ -68,3 +68,22 @@ describe("StreetLamps", function()
 		expect(high - low > 1.5).toBe(true)
 	end)
 end)
+
+describe("StreetLamps keep-out zones", function()
+	it("leaves no lamp in a zone and every lamp outside it", function()
+		local zone = { from = 1000, to = 1600 }
+		local all = StreetLamps.spots(0, 3000, 2026, LAYOUT)
+		local kept = StreetLamps.spots(0, 3000, 2026, LAYOUT, { zone })
+		local outside = 0
+		for _, spot in all do
+			if spot.s < zone.from or spot.s >= zone.to then
+				outside += 1
+			end
+		end
+		expect(#kept).toBe(outside)
+		expect(#kept < #all).toBe(true)
+		for _, spot in kept do
+			expect(spot.s < zone.from or spot.s >= zone.to).toBe(true)
+		end
+	end)
+end)
