@@ -95,6 +95,16 @@ describe("Shift hand: the lever", function()
 			expect(distance(wrist.position, knob.position)).toBeNear(math.sqrt(0.07 ^ 2 + 0.06 ^ 2), 1e-9)
 			local held = StartupArms.multiply(knob.rotation, { w = HALF, x = HALF, y = 0, z = 0 })
 			expect(turnBetween(wrist.rotation, held)).toBeNear(0, 1e-6)
+			-- 7 cm up the lever, whichever way it leans: the lever's axis from its pivot to the knob.
+			local offset = {
+				x = wrist.position.x - knob.position.x,
+				y = wrist.position.y - knob.position.y,
+				z = wrist.position.z - knob.position.z,
+			}
+			local p = SHIFTER.pivot
+			local axis = { x = knob.position.x - p.x, y = knob.position.y - p.y, z = knob.position.z - p.z }
+			local along = (offset.x * axis.x + offset.y * axis.y + offset.z * axis.z) / SHIFTER.length
+			expect(along).toBeNear(0.07, 1e-9)
 		end
 		local upright = ShiftHand.lever(SHIFTER, 1, 0, 0)
 		local wrist = ShiftHand.knobWrist(upright, GRIP)
