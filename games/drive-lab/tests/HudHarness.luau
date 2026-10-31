@@ -323,8 +323,9 @@ export type Frame = {
 }
 
 -- A drive through the HUD's states: the chase view in automatic with TC acting and the dipped
--- beam, the cockpit in manual past the redline with the assists off and the high beam (the flash
--- lit, then dark, then launch armed), the minimal mode in neutral at rest, then out of the seat.
+-- beam, the game-feel notch published then changed (its name flashes in the mode's place), the
+-- cockpit in manual past the redline with the assists off and the high beam (the flash lit, then
+-- dark, then launch armed), the minimal mode in neutral at rest, then out of the seat.
 Harness.SCENARIO = table.freeze({
 	{
 		view = "Chase",
@@ -340,9 +341,11 @@ Harness.SCENARIO = table.freeze({
 			IndicatorLeft = true,
 		},
 	},
+	{ view = "Chase", clock = 0.05, attributes = { GameFeel = "Realistic" } },
+	{ view = "Chase", clock = 0.2, attributes = { GameFeel = "Balanced" } },
 	{
 		view = "Cockpit",
-		clock = 0.1,
+		clock = 2.1,
 		attributes = {
 			GearboxMode = "manual",
 			Gear = 4,
@@ -355,14 +358,14 @@ Harness.SCENARIO = table.freeze({
 			IndicatorRight = true,
 		},
 	},
-	{ view = "Cockpit", clock = 0.3, attributes = { Launch = "Armed", DrivingMode = "Corsa" } },
+	{ view = "Cockpit", clock = 2.3, attributes = { Launch = "Armed", DrivingMode = "Corsa" } },
 	{
 		view = "Chase",
-		clock = 0.5,
+		clock = 2.5,
 		pressHudKey = true,
 		attributes = { Launch = false, Gear = 0, Rpm = 900, SpeedKmh = 0, EscOff = false, HighBeamOn = false },
 	},
-	{ view = "Chase", clock = 0.6, seated = false, attributes = {} },
+	{ view = "Chase", clock = 2.6, seated = false, attributes = {} },
 } :: { Frame })
 
 -- Sets the frame's readouts on the car and view, then runs one Heartbeat.

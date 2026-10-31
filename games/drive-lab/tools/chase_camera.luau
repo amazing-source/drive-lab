@@ -54,6 +54,7 @@ local function run(seconds: number): { Sample }
 	local sim = DriveSim.new(SVJ)
 	local input = DriveSim.input({ throttle = 1, drivingMode = mode })
 	local kick = Rules.newKick()
+	local widen = 0
 	local old = 0
 	local g = 0
 	local samples: { Sample } = {}
@@ -66,13 +67,14 @@ local function run(seconds: number): { Sample }
 		Rules.stepKick(kick, Rules.kickTarget(g), dt)
 		old = beforeKick(old, g, dt)
 		local kmh = DriveSim.forwardSpeed(sim) * 3.6
+		widen = Rules.stepSpeedWiden(widen, Rules.speedTarget(kmh), dt)
 		table.insert(samples, {
 			time = sim.time,
 			gear = result.telemetry.gear,
 			shifting = result.telemetry.shifting,
 			kmh = kmh,
 			g = g,
-			after = Rules.fieldOfView("Chase", kick.degrees),
+			after = Rules.fieldOfView("Chase", kick.degrees, widen),
 			before = beforeFov(kmh, old),
 		})
 	end
@@ -214,7 +216,7 @@ end
 
 local function aspects()
 	print("\n(d) Horizontal field of view (Roblox holds the vertical one)")
-	print("aspect | chase cruising | chase +10 | cockpit")
+	print("aspect | chase cruising | chase widest | cockpit")
 	for _, aspect in { { "16:9", 16 / 9 }, { "19.5:9", 19.5 / 9 } } do
 		local function horizontal(vertical: number): number
 			return math.deg(2 * math.atan(math.tan(math.rad(vertical / 2)) * aspect[2]))
@@ -224,7 +226,7 @@ local function aspects()
 			("%s | %.1f | %.1f | %.1f"):format(
 				aspect[1],
 				horizontal(chase),
-				horizontal(chase + CarCamera.FOV_KICK.max),
+				horizontal(chase + CarCamera.FOV_KICK.max + CarCamera.FOV_SPEED.max),
 				horizontal(CarCamera.FOV.Cockpit.base)
 			)
 		)

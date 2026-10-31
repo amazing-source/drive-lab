@@ -8,13 +8,23 @@
 
 	For an even density in the air, a slab must emit what the car sweeps through it: density
 	times the slab's cross-section times the speed. Every rate is capped.
+
+	At high speed some of the air is drawn as streaks: a speck at rest smeared along the car's
+	path over a camera's exposure, as the rain's streaks are (Rules/RainStreaks), so its length
+	is the distance the car covers in that time.
 ]]
+local RainStreaks = require("./RainStreaks")
+
 export type Speeds = {
 	-- km/h: no debris below `from`, its full density from `to`, eased by `exponent`.
 	from: number,
 	to: number,
 	exponent: number,
 }
+
+-- A streak: metres long at most and wide, the exposure (s) its length is the car's travel over,
+-- and the share of its sprite's height and width the drawn streak spans.
+export type Streak = { maxLength: number, width: number, exposure: number, along: number, across: number }
 
 local AirDebris = {}
 
@@ -63,6 +73,12 @@ function AirDebris.ahead(speed: number, turnRate: number, seconds: number): (num
 		return v * t, 0, heading
 	end
 	return v * math.sin(heading) / omega, v * (1 - math.cos(heading)) / omega, heading
+end
+
+-- The particle Size and Squash (metres) that draw a streak for a car at `speed` m/s.
+function AirDebris.streak(speed: number, streak: Streak): RainStreaks.Fit
+	local length = RainStreaks.length(math.abs(finite(speed)), streak.exposure, streak.maxLength)
+	return RainStreaks.fit(length, streak.width, streak.along, streak.across)
 end
 
 -- Scales `rates` (any keys) in place so they sum to at most `cap`; returns the scale used.

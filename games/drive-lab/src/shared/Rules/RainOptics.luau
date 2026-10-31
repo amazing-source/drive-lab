@@ -4,8 +4,8 @@
 	blurs the car too). A brief blur of at most a third of a pixel when drops hit the lens,
 	fading in a fraction of a second, and a very light far depth of field in the rain: a broad
 	sharp range, focused on the car in the chase view. Neither in the cockpit, which looks
-	through the windscreen rather than a lens. The same depth of field carries the speed's near
-	blur in the chase view (Rules/MotionBlur).
+	through the windscreen rather than a lens. The same depth of field carries the motion blur
+	(Rules/MotionBlur).
 ]]
 export type View = "OnFoot" | "Chase" | "Hood" | "Cockpit"
 
@@ -26,9 +26,12 @@ export type Focus = {
 	hood: number,
 	onFoot: number,
 	-- Studs kept sharp beyond the car's own half-length in the chase view; `nearMargin` while
-	-- the speed blurs the road before the car, so the blur reaches close to its tail.
+	-- the motion blurs the road before the car, so the blur reaches close to its tail.
 	margin: number,
 	nearMargin: number,
+	-- Focus distance (studs) in the cockpit and hood views while the motion blurs: the car's own
+	-- body, from the eye out to twice this, stays sharp.
+	body: number,
 }
 
 export type DepthOfField = { enabled: boolean, distance: number, radius: number, far: number, near: number }
@@ -64,39 +67,51 @@ function RainOptics.blurSize(view: View, pulse: number, blur: Blur): number
 	return math.clamp(pulse, 0, blur.max)
 end
 
--- The one depth of field for a view: the rain's light far blur, and the speed's near blur
--- (`near`, from Rules/MotionBlur), which only the chase view takes: it blurs the road between
--- the camera and the car, so the sharp range then hugs the car. carDistance is the camera's
--- distance to the car's centre and carLength its length (studs); both matter only in the
--- chase view.
+-- The one depth of field for a view: the rain's light far blur, and the motion blur's `near`
+-- and `far` (Rules/MotionBlur). The near blur is the chase view's road between the camera and
+-- the car, so the sharp range then hugs the car; the far blur is the world past the car, or past
+-- the car's own body in the cockpit and hood views. In the cockpit it fades out with the rain:
+-- the drops on the windscreen would blur with what lies behind them. carDistance is the
+-- camera's distance to the car's centre and carLength its length (studs); both matter only in
+-- the chase view.
 function RainOptics.depthOfField(
 	view: View,
 	intensity: number,
 	near: number,
+	far: number,
 	carDistance: number?,
 	carLength: number,
 	focus: Focus
 ): DepthOfField
-	local far = focus.far * unit(intensity)
+	local rain = if view == "Cockpit" then 0 else focus.far * unit(intensity)
 	local chase = view == "Chase" and carDistance ~= nil and carDistance == carDistance
-	local speed = if chase then unit(near) else 0
-	if view == "Cockpit" or (far <= 0 and speed <= 0) then
+	local motionNear = if chase then unit(near) else 0
+	local motionFar = if chase or view == "Hood"
+		then unit(far)
+		elseif view == "Cockpit" then unit(far) * (1 - unit(intensity))
+		else 0
+	local blurFar = math.max(rain, motionFar)
+	if blurFar <= 0 and motionNear <= 0 then
 		return { enabled = false, distance = 0, radius = 0, far = 0, near = 0 }
 	end
 	if chase then
-		local radius = if speed > 0
+		local moving = motionNear > 0 or motionFar > 0
+		local radius = if moving
 			then carLength / 2 + focus.nearMargin
 			else math.max(focus.radius, carLength / 2 + focus.margin)
 		return {
 			enabled = true,
 			distance = math.max(carDistance :: number, 0),
 			radius = radius,
-			far = far,
-			near = speed,
+			far = blurFar,
+			near = motionNear,
 		}
 	end
+	if motionFar > 0 then
+		return { enabled = true, distance = focus.body, radius = focus.body, far = blurFar, near = 0 }
+	end
 	local distance = if view == "Hood" then focus.hood else focus.onFoot
-	return { enabled = true, distance = distance, radius = focus.radius, far = far, near = 0 }
+	return { enabled = true, distance = distance, radius = focus.radius, far = rain, near = 0 }
 end
 
 return table.freeze(RainOptics)

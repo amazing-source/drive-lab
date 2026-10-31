@@ -96,13 +96,25 @@ local function stretchIn(slot: number, sideIndex: number, seed: number, layout: 
 	return { from = from, to = from + length, side = if sideIndex == 1 then -1 else 1, slot = slot }
 end
 
--- Every guardrail stretch whose span, terminals included, overlaps [from, to).
-function Roadside.guardrails(from: number, to: number, seed: number, layout: GuardrailLayout): { Stretch }
+-- Every guardrail stretch whose span, terminals included, overlaps [from, to) and keeps clear of
+-- the keep-out zones.
+function Roadside.guardrails(
+	from: number,
+	to: number,
+	seed: number,
+	layout: GuardrailLayout,
+	keepOut: { Scatter.Zone }?
+): { Stretch }
 	local stretches = {}
 	for sideIndex = 1, 2 do
 		for slot = math.floor(from / layout.spacing) - 1, math.floor(to / layout.spacing) + 1 do
 			local stretch = stretchIn(slot, sideIndex, seed, layout)
-			if stretch and stretch.to + layout.terminal > from and stretch.from - layout.terminal < to then
+			if
+				stretch
+				and stretch.to + layout.terminal > from
+				and stretch.from - layout.terminal < to
+				and Scatter.outside(keepOut, stretch.from - layout.terminal, stretch.to + layout.terminal)
+			then
 				table.insert(stretches, stretch)
 			end
 		end
@@ -112,14 +124,20 @@ end
 
 -- The guardrail pieces a stretch of road [from, to) lays: each piece belongs to the stretch of
 -- road holding its own arc length s (a section's start, a terminal's end of the beam).
-function Roadside.guardrailPieces(from: number, to: number, seed: number, layout: GuardrailLayout): { Piece }
+function Roadside.guardrailPieces(
+	from: number,
+	to: number,
+	seed: number,
+	layout: GuardrailLayout,
+	keepOut: { Scatter.Zone }?
+): { Piece }
 	local pieces = {}
 	local function add(s: number, side: number, kind: PieceKind, variant: number)
 		if s >= from and s < to then
 			table.insert(pieces, { s = s, side = side, kind = kind, variant = variant })
 		end
 	end
-	for _, stretch in Roadside.guardrails(from, to, seed, layout) do
+	for _, stretch in Roadside.guardrails(from, to, seed, layout, keepOut) do
 		add(stretch.from, stretch.side, "Start", 1)
 		local sections = math.floor((stretch.to - stretch.from) / layout.section + 0.5)
 		for index = 0, sections - 1 do
@@ -134,13 +152,18 @@ function Roadside.guardrailPieces(from: number, to: number, seed: number, layout
 		end
 		add(stretch.to, stretch.side, "End", 1)
 	end
+	Roadside.sortPieces(pieces)
+	return pieces
+end
+
+-- In order of arc length, then kind, then side.
+function Roadside.sortPieces(pieces: { Piece })
 	table.sort(pieces, function(a, b)
 		if a.s ~= b.s then
 			return a.s < b.s
 		end
 		return if a.kind ~= b.kind then a.kind < b.kind else a.side < b.side
 	end)
-	return pieces
 end
 
 -- Whether a guardrail stretch, its terminals and a clearance (metres) cover s on that side.
@@ -153,20 +176,25 @@ function Roadside.guarded(stretches: { Stretch }, s: number, side: number, reach
 	return false
 end
 
--- Delineator posts in [from, to): the lattice's spots, less those a guardrail stands at.
+-- Delineator posts in [from, to): the lattice's spots, less those a guardrail stands at and those
+-- in a keep-out zone.
 function Roadside.delineators(
 	from: number,
 	to: number,
 	seed: number,
 	posts: Scatter.Layout,
 	guardrails: GuardrailLayout,
-	clearance: number
+	clearance: number,
+	keepOut: { Scatter.Zone }?
 ): { Scatter.Spot }
 	local reach = guardrails.terminal + clearance
-	local stretches = Roadside.guardrails(from - reach, to + reach, seed, guardrails)
+	local stretches = Roadside.guardrails(from - reach, to + reach, seed, guardrails, keepOut)
 	local kept = {}
 	for _, spot in Scatter.spots(from, to, seed + DELINEATOR_SALT, posts) do
-		if not Roadside.guarded(stretches, spot.s, spot.side, reach) then
+		if
+			not Roadside.guarded(stretches, spot.s, spot.side, reach)
+			and Scatter.outside(keepOut, spot.s, spot.s)
+		then
 			table.insert(kept, spot)
 		end
 	end
@@ -186,11 +214,18 @@ function Roadside.roadEnd(width: number, section: number): { number }
 	return lefts
 end
 
--- Sign gantries in [from, to), by arc length: one lattice side only, as a gantry spans both.
-function Roadside.gantries(from: number, to: number, seed: number, layout: Scatter.Layout): { number }
+-- Sign gantries in [from, to), by arc length, outside the keep-out zones: one lattice side only, as
+-- a gantry spans both.
+function Roadside.gantries(
+	from: number,
+	to: number,
+	seed: number,
+	layout: Scatter.Layout,
+	keepOut: { Scatter.Zone }?
+): { number }
 	local found = {}
 	for _, spot in Scatter.spots(from, to, seed + GANTRY_SALT, layout) do
-		if spot.side > 0 then
+		if spot.side > 0 and Scatter.outside(keepOut, spot.s, spot.s) then
 			table.insert(found, spot.s)
 		end
 	end

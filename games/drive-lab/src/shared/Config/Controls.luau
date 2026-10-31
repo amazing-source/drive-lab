@@ -25,6 +25,8 @@ export type Controls = {
 	WASHER: { Enum.KeyCode },
 	RAIN_LIGHT: { Enum.KeyCode },
 	HUD_MODE: { Enum.KeyCode },
+	-- Steps the game-feel level (Config/GameFeel).
+	GAME_FEEL: { Enum.KeyCode },
 	-- Seated: open or shut the driver's door, start the engine, and (held) get out.
 	DOOR: { Enum.KeyCode },
 	START_ENGINE: { Enum.KeyCode },
@@ -74,6 +76,9 @@ local Controls: Controls = table.freeze({
 	RAIN_LIGHT = { Enum.KeyCode.One },
 	-- The driving HUD: full, minimal, off.
 	HUD_MODE = { Enum.KeyCode.U },
+	-- The key beside the rain light's; AZERTY prints it é, and the controls screen shows it so.
+	-- Keyboard only: no pad button is free while driving.
+	GAME_FEEL = { Enum.KeyCode.Two },
 	-- F and R sit in the same place on QWERTY and AZERTY. E is also the upshift paddle: a tap
 	-- shifts, holding it (CarEntry.EXIT_HOLD_SECONDS, near a standstill) gets out. L3 is the
 	-- sprint on foot, free while seated.
