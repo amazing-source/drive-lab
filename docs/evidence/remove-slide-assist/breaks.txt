@@ -1,0 +1,14 @@
+Deliberate breaks (one-spec runner, each file restored from git after its run).
+
+== B1 a stale game-feel step back in the HUD scenario (HudHarness.luau): 10 passed, 2 failed
+   FAIL Car HUDs > builds and draws the SVJ's HUD exactly as before a car could carry its own: games/drive-lab/tests/CarHud.spec:298: expected 7, got 6
+   FAIL Car HUDs > draws the DR458's own HUD: slanted digits, its red zone, its pictograms; the SVJ's hidden: games/drive-lab/tests/CarHud.spec:395: expected 1, 1, got 0.5, 1
+== B2 the level flash back in the HUD's mode label (Hud.luau): 10 passed, 2 failed
+   FAIL Car HUDs > builds and draws the SVJ's HUD exactly as before a car could carry its own: games/drive-lab/tests/CarHud.spec:303: expected nil, got line 29: got DriveHud/1/14 TextLabel AnchorPoint=0, 0.5 BackgroundTransparency=1 FontFace=r
+   FAIL Car HUDs > draws the DR458's own HUD: slanted digits, its red zone, its pictograms; the SVJ's hidden: games/drive-lab/tests/CarHud.spec:388: attempt to index nil with 'props'
+== B3 one remaining fixture frame altered (hud_svj_dump.txt): 11 passed, 1 failed
+   FAIL Car HUDs > builds and draws the SVJ's HUD exactly as before a car could carry its own: games/drive-lab/tests/CarHud.spec:303: expected nil, got line 1: got DriveHud ScreenGui DisplayOrder=5 Enabled=true Name="DriveHud" ResetOnSpawn=fal
+== B4 keyboard steering lock time 1.3 -> 1.31 s (Config/InputHelp.luau): spec InputFilter: 13 passed, 1 failed
+   FAIL Input filter steering > returns slowly at rest and quickly on the move: games/drive-lab/tests/InputFilter.spec:69: expected true, got false
+   The game tools print the same with this break: they drive through DriveSim's direct input, not the keyboard filter.
+== B5 SVJ front tyre peakMuY 1.22 -> 1.23 (Config/Cars/SVJ/Physics.luau): tools/assists differs from the pre-#168 run on 14 lines, tools/drift on 30
