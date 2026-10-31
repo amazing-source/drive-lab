@@ -81,8 +81,9 @@ function StartupHandOver.step(
 		return 1, nil, nil
 	end
 	local settings = state.settings
-	local ended = not playback.playing
-	if state.own and state.handedOver == nil and ended then
+	-- Before the load timeout: a start-up removed at its end no longer reads as loaded, and the
+	-- timeout would hand the loops back from silence.
+	if state.handedOver == nil and not playback.playing then
 		state.done = true
 		return 1, nil, nil
 	end
@@ -103,10 +104,6 @@ function StartupHandOver.step(
 	end
 	if not playback.loaded then
 		return 0, nil, nil
-	end
-	if ended then
-		state.done = true
-		return 1, nil, nil
 	end
 	local own = state.own
 	if own then
