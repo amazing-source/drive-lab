@@ -6,8 +6,9 @@ press hand against the wheel it grips, and against the rest of the cabin with th
 
 For every button thumbs.json reports reached:
 - the hand mesh against the wheel's own parts, in the wheel's frame: a vertex is inside when most
-  of its eight nearest surface samples face away from it, within MAX_DEPTH of them (as
-  tools/anim/startup_check.py). Allowed: the pressed button up to PRESS_LIMIT (the pad pushes it
+  of its eight nearest surface samples face away from it, within MAX_DEPTH of them, and on a
+  closed object a ray's parity agrees (as tools/anim/startup_check.py, samples fixed per
+  triangle). Allowed: the pressed button up to PRESS_LIMIT (the pad pushes it
   2 mm), the rim up to GRIP_LIMIT (the grip's own fit); anything else fails above HAND_LIMIT;
 - the pad must touch: some vertex within TOUCH_GAP of the button's face;
 - the hand turned with the wheel to each steering angle (default 0 and +-90 degrees: the hands
@@ -34,7 +35,7 @@ import numpy as np
 from scipy.spatial import cKDTree
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from startup_check import inside_depth, read_glb, surface_samples  # noqa: E402
+from startup_check import inside_depth, parity_inside, read_glb, surface_samples  # noqa: E402
 
 HAND_LIMIT = 0.002
 PRESS_LIMIT = 0.003
@@ -77,18 +78,36 @@ def main(argv):
     turning = np.array([names[o].startswith(WHEEL_PARTS) for o in owner])
     near_wheel = np.all(np.abs(wheel_local[tris].mean(1)) < 0.35, 1)
 
-    p, n, tri = surface_samples(wheel_local, tris[turning], 0.0015)
+    # Samples fixed per triangle, and ray parity on closed objects, as tools/anim/startup_check.py.
+    p, n, tri = surface_samples(wheel_local, tris[turning], 0.0015, np.flatnonzero(turning))
     wheel_obj = owner[turning][tri]
     wheel_tree = cKDTree(p)
-    q, m, tri2 = surface_samples(wheel_local, tris[~turning & near_wheel], 0.002)
-    fixed_obj = owner[~turning & near_wheel][tri2]
+    fixed = ~turning & near_wheel
+    q, m, tri2 = surface_samples(wheel_local, tris[fixed], 0.0015, np.flatnonzero(fixed))
+    fixed_obj = owner[fixed][tri2]
     fixed_tree = cKDTree(q)
+    closed = {}
+
+    def confirmed(points, depth, idx, objects):
+        """Keep a vote only where the object's surface is open, or a ray's parity agrees."""
+        flagged = np.flatnonzero(depth > 0)
+        for obj in np.unique(objects[idx[flagged]]):
+            if obj not in closed:
+                faces = tris[owner == obj]
+                edges = np.sort(np.concatenate([faces[:, [0, 1]], faces[:, [1, 2]], faces[:, [2, 0]]]), axis=1)
+                _, counts = np.unique(edges, axis=0, return_counts=True)
+                closed[obj] = wheel_local[faces] if np.all(counts == 2) else None
+            if closed[obj] is not None:
+                mine = flagged[objects[idx[flagged]] == obj]
+                depth[mine[~parity_inside(points[mine], closed[obj])]] = 0.0
+        return depth
 
     def check(name, entry, path):
         found = []
         hand = read_glb(path)
         hand = hand + np.array([0, 0, -push])
         depth, idx = inside_depth(wheel_tree, p, n, hand)
+        depth = confirmed(hand, depth, idx, wheel_obj)
         worst = {}
         for k in np.flatnonzero(depth > 0):
             obj = names[wheel_obj[idx[k]]]
@@ -111,6 +130,7 @@ def main(argv):
         for angle in steer:
             turned = hand @ rotation_z(angle).T
             d2, idx2 = inside_depth(fixed_tree, q, m, turned)
+            d2 = confirmed(turned, d2, idx2, fixed_obj)
             hit = {}
             for k in np.flatnonzero(d2 > 0):
                 obj = names[fixed_obj[idx2[k]]]
