@@ -2,7 +2,7 @@
   "parts": [
     {
       "axis": {
-        "forward": -0.0,
+        "forward": 0,
         "right": 1,
         "up": 0
       },
@@ -10,12 +10,12 @@
       "motion": "hinge",
       "name": "Pedal_Throttle",
       "pivot": {
-        "forward": 2.1952,
-        "right": -0.2654,
-        "up": 0.6156
+        "forward": 2.1435,
+        "right": -0.2745,
+        "up": 0.649
       },
       "positive": "pressed: the pad moves forward (right-hand rule about the axis, Blender frame)",
-      "range": 0.26
+      "range": 0.205
     },
     {
       "axis": {
@@ -104,6 +104,48 @@
           "up": 0.685
         },
         "radius_m": 0.0246
+      },
+      "knob_offset_m": {
+        "1": {
+          "forward": 0.03,
+          "right": -0.0216,
+          "up": -0.0004
+        },
+        "2": {
+          "forward": -0.0293,
+          "right": -0.0216,
+          "up": -0.0071
+        },
+        "3": {
+          "forward": 0.0301,
+          "right": -0.0,
+          "up": 0.0001
+        },
+        "4": {
+          "forward": -0.0294,
+          "right": -0.0,
+          "up": -0.0066
+        },
+        "5": {
+          "forward": 0.0295,
+          "right": 0.0214,
+          "up": -0.0028
+        },
+        "6": {
+          "forward": -0.0287,
+          "right": 0.0214,
+          "up": -0.0094
+        },
+        "N": {
+          "forward": -0.0,
+          "right": -0.0,
+          "up": 0
+        },
+        "R": {
+          "forward": 0.0292,
+          "right": -0.0428,
+          "up": -0.0042
+        }
       },
       "motion": "gate",
       "name": "Shifter_Lever",
@@ -246,5 +288,11 @@
       "positive": "clockwise as the driver sees it (the value rising)"
     }
   ],
-  "points": {}
+  "points": {
+    "Driver_HPoint": {
+      "forward": 1.1562,
+      "right": -0.3746,
+      "up": 0.5757
+    }
+  }
 }
