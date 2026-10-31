@@ -169,6 +169,30 @@ function HandGestures.holding(hand: Hand): string?
 	return nil
 end
 
+-- The buttons held down this instant: each a thumb holds, and each whose press the hands could not
+-- take (`atKey`), for as long as its key stays held; one let go of leaves `atKey`.
+function HandGestures.heldButtons(
+	hands: { [number]: Hand },
+	atKey: { [string]: true },
+	held: (control: string) -> boolean
+): { [string]: true }
+	local buttons: { [string]: true } = {}
+	for _, hand in hands do
+		local button = HandGestures.holding(hand)
+		if button then
+			buttons[button] = true
+		end
+	end
+	for control in atKey do
+		if held(control) then
+			buttons[control] = true
+		else
+			atKey[control] = nil
+		end
+	end
+	return buttons
+end
+
 -- The presses whose gesture could not play, by control, which are the caller's at once.
 function HandGestures.unplayed(hand: Hand): { [string]: number }
 	local owed: { [string]: number } = {}

@@ -295,3 +295,29 @@ describe("Hand gestures: every press owed once", function()
 		expect(next(HandGestures.unplayed(r.hand))).toBe(nil)
 	end)
 end)
+
+describe("Hand gestures: held buttons", function()
+	it("holds a button the hands could not take for as long as its key is held, then lets it go", function()
+		local hands = { [1] = HandGestures.newHand(), [-1] = HandGestures.newHand() }
+		local atKey: { [string]: true } = { WASHER = true }
+		local down: { [string]: boolean } = { WASHER = true }
+		local function held(control: string): boolean
+			return down[control] == true
+		end
+		expect(HandGestures.heldButtons(hands, atKey, held).WASHER).toBe(true)
+		down.WASHER = false
+		expect(HandGestures.heldButtons(hands, atKey, held).WASHER).toBe(nil)
+		expect(atKey.WASHER).toBe(nil)
+	end)
+
+	it("holds the button a thumb holds, whatever its key", function()
+		local r = rig()
+		r.down.PIT_LIMITER = true
+		HandGestures.press(r.hand, BUTTON, r.now)
+		step(r, 0.3)
+		local buttons = HandGestures.heldButtons({ [-1] = r.hand }, {}, function()
+			return false
+		end)
+		expect(buttons.PIT_LIMITER).toBe(true)
+	end)
+end)
