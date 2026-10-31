@@ -7,6 +7,7 @@ local DR458Startup = require("../src/shared/Config/Cars/DR458/Startup")
 local DR458Switches = require("../src/shared/Config/Cars/DR458/Switches")
 local EngineSound = require("../src/shared/Rules/EngineSound")
 local SVJ = require("../src/shared/Config/Cars/SVJ/Audio")
+local SVJStartup = require("../src/shared/Config/Cars/SVJ/Startup")
 local T = require("../../../tools/test/T")
 local fs = require("@lune/fs")
 local serde = require("@lune/serde")
@@ -209,9 +210,9 @@ describe("CarAudio config", function()
 		end
 	end)
 
-	it("DR458: plays its start-up 6 dB over its idle, about as the SVJ's (5.4)", function()
-		expect(DR458.startup.boostDb).toBe(6)
-		expect(math.abs(DR458.startup.boostDb - SVJ.startup.boostDb) <= 1).toBeTruthy()
+	it("plays the DR458's start-up 12 dB over its idle, the SVJ's 2 dB under its match (3.4)", function()
+		expect(DR458.startup.boostDb).toBe(12)
+		expect(SVJ.startup.boostDb).toBe(3.4)
 	end)
 
 	it("DR458: pops on the SVJ's Corsa timing in every manettino position", function()
@@ -277,14 +278,10 @@ describe("CarAudio config", function()
 		expect(values[#values]).toBe(DR458Physics.engine.idleRpm)
 	end)
 
-	it("SVJ: has no cockpit control sounds", function()
-		expect(SVJ.controls).toBe(nil)
-	end)
-
-	-- The DR458's control sounds, each with its name, for the checks below.
-	local function controlSounds(): { { name: string, sound: CarAudio.ControlSound } }
-		local controls = DR458.controls
-		assert(controls, "the DR458 has its control sounds")
+	-- A car's control sounds, each with its name, for the checks below.
+	local function controlSounds(pack: CarAudio.Pack): { { name: string, sound: CarAudio.ControlSound } }
+		local controls = pack.controls
+		assert(controls, "the car has its control sounds")
 		local list = {}
 		for name, sound in controls.press do
 			table.insert(list, { name = name, sound = sound })
@@ -328,24 +325,52 @@ describe("CarAudio config", function()
 		table.sort(names)
 		expect(table.concat(names, ",")).toBe(table.concat(listed, ","))
 		expect(controls.radio ~= nil and controls.wiperMotor ~= nil and controls.washerPump ~= nil).toBeTruthy()
-		for _, entry in controlSounds() do
+		for _, entry in controlSounds(DR458) do
 			expect(uploaded(entry.sound.soundId)).toBeTruthy()
 		end
 	end)
 
-	it("DR458: plays every control sound under the idle engine, by its measured loudness", function()
-		-- The bank's loops, its idle among them, are matched to this loudness.
+	it("SVJ: has a sound for its start-up's flap and START, and no other", function()
+		local controls = SVJ.controls
+		assert(controls, "the SVJ has its start-up's sounds")
+		local names = {}
+		for name in controls.press do
+			table.insert(names, name)
+		end
+		table.sort(names)
+		expect(table.concat(names, ",")).toBe("ENGINE_START,StartFlap")
+		expect(controls.radio == nil and controls.wiperMotor == nil and controls.washerPump == nil).toBeTruthy()
+		for _, entry in controlSounds(SVJ) do
+			expect(uploaded(entry.sound.soundId)).toBeTruthy()
+		end
+	end)
+
+	it("gives every start-up move and the START press a sound, in each car with control sounds", function()
+		for _, car in { { pack = SVJ, startup = SVJStartup }, { pack = DR458, startup = DR458Startup } } do
+			local controls = car.pack.controls
+			assert(controls, "the car has its control sounds")
+			for _, move in car.startup.moves do
+				expect(controls.press[move.control] ~= nil).toBeTruthy()
+			end
+			expect(controls.press.ENGINE_START ~= nil).toBeTruthy()
+		end
+	end)
+
+	it("plays every car's control sounds under its idle engine, by their measured loudness", function()
+		-- Each car's loops, its idle among them, are matched to this loudness.
 		local LOOP_LUFS = -18
 		local measured =
-			serde.decode("json", fs.readFile("games/drive-lab/tests/fixtures/dr458_control_sounds.json"))
-		for _, entry in controlSounds() do
-			local sound = entry.sound
-			local region = sound.region
-			assert(region, `{entry.name} plays a measured region`)
-			local key = string.format("%s@%g-%g", sound.soundId, region.from, region.to)
-			local lufs = measured[key]
-			assert(lufs, `{entry.name}'s sound has been measured ({key})`)
-			expect(lufs + sound.db - LOOP_LUFS < 0).toBeTruthy()
+			serde.decode("json", fs.readFile("games/drive-lab/tests/fixtures/control_sounds.json"))
+		for _, pack in { SVJ, DR458 } do
+			for _, entry in controlSounds(pack) do
+				local sound = entry.sound
+				local region = sound.region
+				assert(region, `{entry.name} plays a measured region`)
+				local key = string.format("%s@%g-%g", sound.soundId, region.from, region.to)
+				local lufs = measured[key]
+				assert(lufs, `{entry.name}'s sound has been measured ({key})`)
+				expect(lufs + sound.db - LOOP_LUFS < 0).toBeTruthy()
+			end
 		end
 	end)
 
