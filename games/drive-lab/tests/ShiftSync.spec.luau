@@ -99,6 +99,8 @@ describe("ShiftSync", function()
 		expect(ShiftSync.engaged(2, telemetry({ gear = 2, shiftFrom = 2, shiftTo = 3 }))).toBe(false)
 		expect(ShiftSync.engaged(2, telemetry({ gear = 3, shiftFrom = 2, shiftTo = 3 }))).toBe(true)
 		expect(ShiftSync.engaged(3, telemetry({ gear = 3, shiftFrom = 2, shiftTo = 3 }))).toBe(false)
+		-- The lever leaving its gate drops the box to neutral mid-shift: not the target's gate.
+		expect(ShiftSync.engaged(2, telemetry({ gear = 0, shiftFrom = 2, shiftTo = 3 }))).toBe(false)
 		-- A gear change with no shift running (the selector at a standstill) is not a shift's gate.
 		expect(ShiftSync.engaged(0, telemetry({ gear = 1, shiftFrom = 1, shiftTo = 1 }))).toBe(false)
 	end)
