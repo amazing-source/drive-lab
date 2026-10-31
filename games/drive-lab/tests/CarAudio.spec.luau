@@ -7,6 +7,7 @@ local DR458Startup = require("../src/shared/Config/Cars/DR458/Startup")
 local DR458Switches = require("../src/shared/Config/Cars/DR458/Switches")
 local EngineSound = require("../src/shared/Rules/EngineSound")
 local SVJ = require("../src/shared/Config/Cars/SVJ/Audio")
+local SVJPhysics = require("../src/shared/Config/Cars/SVJ/Physics")
 local T = require("../../../tools/test/T")
 local fs = require("@lune/fs")
 local serde = require("@lune/serde")
@@ -214,31 +215,36 @@ describe("CarAudio config", function()
 		expect(math.abs(DR458.startup.boostDb - SVJ.startup.boostDb) <= 1).toBeTruthy()
 	end)
 
-	it("DR458: pops on the SVJ's Corsa timing in every manettino position", function()
-		local mine, svj = DR458.popTriggers, SVJ.popTriggers
-		for _, mode in DR458Physics.modeOrder do
-			expect(mine.liftChance[mode]).toBe(svj.liftChance.Corsa)
-			expect(mine.upshiftChance[mode]).toBe(svj.upshiftChance.Corsa)
-			expect(mine.downshiftChance[mode]).toBe(svj.downshiftChance.Corsa)
-			expect(mine.liftChance[mode]).toBe(1)
-			expect(mine.downshiftChance[mode]).toBe(1)
-			expect(mine.upshiftChance[mode]).toBe(1)
+	it(
+		"DR458: pops on the SVJ's timing mode by mode, its default position as the SVJ's default mode",
+		function()
+			local mine, svj = DR458.popTriggers, SVJ.popTriggers
+			local positions, modes = DR458Physics.modeOrder, SVJPhysics.modeOrder
+			expect(#positions).toBe(#modes)
+			for index, position in positions do
+				local mode = modes[index]
+				expect(mine.liftChance[position]).toBe(svj.liftChance[mode])
+				expect(mine.upshiftChance[position]).toBe(svj.upshiftChance[mode])
+				expect(mine.downshiftChance[position]).toBe(svj.downshiftChance[mode])
+			end
+			-- Each car starts in its first mode (Services/Cars).
+			expect(mine.downshiftChance[positions[1]] < 1).toBeTruthy()
+			expect(mine.upshiftMinRpm).toBe(svj.upshiftMinRpm)
+			expect(mine.upshiftMinThrottle).toBe(svj.upshiftMinThrottle)
+			expect(mine.minRpm).toBe(svj.minRpm)
+			expect(mine.closedThrottle).toBe(svj.closedThrottle)
+			local ranges = {
+				{ mine.liftTrain, svj.liftTrain },
+				{ mine.downshiftTrain, svj.downshiftTrain },
+				{ mine.gap, svj.gap },
+			}
+			for _, pair in ranges do
+				expect(pair[1].from).toBe(pair[2].from)
+				expect(pair[1].to).toBe(pair[2].to)
+			end
+			expect(mine.upshiftMinRpm).toBe(4000)
 		end
-		expect(mine.upshiftMinRpm).toBe(svj.upshiftMinRpm)
-		expect(mine.upshiftMinThrottle).toBe(svj.upshiftMinThrottle)
-		expect(mine.minRpm).toBe(svj.minRpm)
-		expect(mine.closedThrottle).toBe(svj.closedThrottle)
-		local ranges = {
-			{ mine.liftTrain, svj.liftTrain },
-			{ mine.downshiftTrain, svj.downshiftTrain },
-			{ mine.gap, svj.gap },
-		}
-		for _, pair in ranges do
-			expect(pair[1].from).toBe(pair[2].from)
-			expect(pair[1].to).toBe(pair[2].to)
-		end
-		expect(mine.upshiftMinRpm).toBe(4000)
-	end)
+	)
 
 	it("DR458: plays its start-up from its own events file, with no outside recording", function()
 		expect(DR458.startup.sound).toBe(nil)
