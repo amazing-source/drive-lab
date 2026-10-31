@@ -1,0 +1,27 @@
+tools/boss302_calibrate on this branch, after this change. DriveSim, 60 FPS unless the table says otherwise.
+
+Model.step cost: 165 us per frame at 60 FPS, 311 us at 30 FPS
+
+Target | Source | Result
+0-60 mph 4.0-4.3 s with rollout, 4.6 from rest | MT, Edmunds | 4.13 s with rollout, 4.56 from rest (TracKey, launch control)
+1/4 mile 12.3-12.7 s @ 112.9-115.8 mph, with rollout | MT, Edmunds | 12.72 s with rollout, 13.15 from rest @ 113.2 mph
+  shifts: 2 at 2.80 s, 62 km/h; 3 at 4.97 s, 97 km/h; 4 at 8.60 s, 142 km/h
+0-60 mph 4.0-4.3 s with rollout, 4.6 from rest | MT, Edmunds | 4.17 s with rollout, 4.70 from rest (Normal, no launch control)
+1/4 mile 12.3-12.7 s @ 112.9-115.8 mph, with rollout | MT, Edmunds | 12.75 s with rollout, 13.28 from rest @ 113.2 mph
+  shifts: 2 at 2.93 s, 62 km/h; 3 at 5.10 s, 97 km/h; 4 at 8.73 s, 142 km/h
+Top speed 155 mph (249.4 km/h), a limit | Ford | 247.6 km/h in 6th
+Gear 1 at 7,500 rpm 68.3 km/h | ratios | 67.7 km/h (-0.96 %)
+Gear 2 at 7,500 rpm 102.9 km/h | ratios | 101.6 km/h (-1.26 %)
+Gear 3 at 7,500 rpm 148.0 km/h | ratios | 145.9 km/h (-1.46 %)
+Gear 4 at 7,500 rpm 189.5 km/h | ratios | 186.5 km/h (-1.59 %)
+Gear 5 at 7,500 rpm 250.1 km/h | ratios | 246.6 km/h (-1.41 %)
+Skidpad 200 ft 0.98 g | Edmunds | 1.004 g
+60-0 mph 32.0 m (105 ft) | Edmunds | 30.9 m (peak 1.35 g)
+100-0 km/h 33.3 m | Sport Auto | 33.0 m
+Parked 30 s | 01 §3.3 | drift 0.37 mm, speed 2.9e-17 m/s
+
+FPS | 0-100 km/h s (launch) | 0-200 km/h s | 100-0 km/h m
+30 | 5.205 | 16.773 | 32.61
+60 | 5.225 | 16.795 | 32.34
+120 | 5.264 | 16.835 | 32.37
+240 | 5.250 | 16.821 | 32.22

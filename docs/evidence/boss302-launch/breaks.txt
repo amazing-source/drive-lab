@@ -1,0 +1,15 @@
+Each of this change's config rules broken on purpose, one at a time, against ShiftPlan.spec, HBox.spec,
+Boss302.spec and PitLimiter.spec (a 240 s timeout per run; none hung), then restored byte-exact.
+
+BREAK the quick shift (back to the 0.5 s 1-2) -> 48 passed, 1 failed
+    Boss 302 against the data > runs 0-60 mph and the quarter mile in the road tests' range, timed as they time them  [Boss302.spec:131: expected true, got false]
+BREAK the automatic clutch closing in 0.12 s (back to 0.25) -> 46 passed, 3 failed
+    Boss 302 against the data > runs 0-60 mph and the quarter mile in the road tests' range, timed as they time them  [Boss302.spec:130: expected true, got false]
+    Boss 302 against the data > starts the same with the launch rpm 200 either way: 0-100 km/h within 3 %  [Boss302.spec:145: expected 1 within 0.03, got 0.9566961697878137]
+    Boss 302's H box in the car > launches and brakes within 2 % of 240 FPS at 30, 60 and 120 FPS, as the SVJ must  [Boss302.spec:292: expected 1 within 0.02, got 0.9717723855751732]
+BREAK the rear's longitudinal grip (back to the front's 1.30) -> 47 passed, 2 failed
+    Boss 302 against the data > grips at the rear as the front's compound on a wider, lighter-loaded tyre, in both directions  [Boss302.spec:100: expected 1.3620693233863297 within 0.005, got 1.3]
+    Boss 302 against the data > runs 0-60 mph and the quarter mile in the road tests' range, timed as they time them  [Boss302.spec:131: expected true, got false]
+BREAK the rear's lateral grip (back to the front's 1.12) -> 48 passed, 1 failed
+    Boss 302 against the data > grips at the rear as the front's compound on a wider, lighter-loaded tyre, in both directions  [Boss302.spec:101: expected 1.173475109378992 within 0.005, got 1.12]
+every file restored byte-exact
