@@ -6,7 +6,8 @@
 	view and the cabin moves with the eye, so only looking around blurs, never the car's own
 	yaw. On foot it is the camera's turn in the world. The speed's and the pull's blur are on the
 	depth of field, in Atmosphere/Optics, which owns the one DepthOfFieldEffect; only when the
-	pull's blur is set to the full-screen style does it come here, on the same BlurEffect.
+	pull's blur is set to the full-screen style does it come here, on the same BlurEffect. The
+	player's motion-blur setting scales it every frame; at Off the BlurEffect is switched off.
 ]]
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
@@ -19,8 +20,7 @@ local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local Config = require(ReplicatedStorage.Shared.Config.MotionBlur)
 local Rules = require(ReplicatedStorage.Shared.Rules.MotionBlur)
 
--- Under this many pixels the blur is switched off rather than drawn for nothing.
-local OFF_BELOW = 0.05
+local Settings = require(script.Parent.Parent.Settings)
 
 local localPlayer = Players.LocalPlayer
 local blur: BlurEffect? = nil
@@ -62,8 +62,9 @@ local function update(dt: number)
 	local rate = if previous
 		then Rules.turnRate(degreesBetween(previous, frame), dt, Config.ROTATION.cut)
 		else nil
-	local target = if rate then Rules.rotationSize(rate, Config.ROTATION) else 0
-	size = Rules.follow(size, target, dt, Config.ROTATION)
+	local scale = Rules.level(Config.LEVELS, Settings.get(Config.SETTING))
+	local target = if rate then Rules.rotationSize(rate, Config.ROTATION, scale) else 0
+	size = if scale > 0 then Rules.follow(size, target, dt, Config.ROTATION) else 0
 	local acceleration = Config.ACCELERATION
 	local car = chassis and chassis.Parent
 	local g = if car and acceleration.style == "FullScreen" then car:GetAttribute("LongitudinalG") else 0
@@ -73,8 +74,8 @@ local function update(dt: number)
 		dt,
 		acceleration
 	)
-	local shown = math.max(size, Rules.pulseSize(pull, acceleration))
-	local on = shown >= OFF_BELOW
+	local shown = math.max(size, Rules.pulseSize(pull, acceleration, scale))
+	local on = Rules.blurOn(shown, Config.ROTATION)
 	if effect.Enabled ~= on then
 		effect.Enabled = on
 	end

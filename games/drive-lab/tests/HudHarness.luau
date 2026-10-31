@@ -323,9 +323,8 @@ export type Frame = {
 }
 
 -- A drive through the HUD's states: the chase view in automatic with TC acting and the dipped
--- beam, the game-feel notch published then changed (its name flashes in the mode's place), the
--- cockpit in manual past the redline with the assists off and the high beam (the flash lit, then
--- dark, then launch armed), the minimal mode in neutral at rest, then out of the seat.
+-- beam, the cockpit in manual past the redline with the assists off and the high beam (the flash
+-- lit, then dark, then launch armed), the minimal mode in neutral at rest, then out of the seat.
 Harness.SCENARIO = table.freeze({
 	{
 		view = "Chase",
@@ -341,8 +340,6 @@ Harness.SCENARIO = table.freeze({
 			IndicatorLeft = true,
 		},
 	},
-	{ view = "Chase", clock = 0.05, attributes = { GameFeel = "Realistic" } },
-	{ view = "Chase", clock = 0.2, attributes = { GameFeel = "Balanced" } },
 	{
 		view = "Cockpit",
 		clock = 2.1,

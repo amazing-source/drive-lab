@@ -7,7 +7,6 @@
 	458's, the downforce, the springs and the tyre curves are unknown, and every one of them is a
 	tunable.
 ]]
-local Handling = require("./Handling")
 local Types = require("../Types")
 
 -- The manettino changes intervention only (12 §1.9: traction control, and the ABS and E-Diff
@@ -318,9 +317,6 @@ return Types.define({
 		tcSlip = 0.3,
 		frontShare = 0,
 	},
-
-	-- Game help, not car data (Config/GameFeel).
-	slideAssist = Handling,
 
 	simulation = {
 		maxSubstep = 0.001,

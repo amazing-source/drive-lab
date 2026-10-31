@@ -4,7 +4,6 @@
 	offline harness in tests. SI units. Car frame: forward, right, up. Wheels are ordered front
 	left, front right, rear left, rear right (Vehicle/Geometry).
 ]]
-local GameFeel = require("../Config/GameFeel")
 local Gearbox = require("./Gearbox")
 local Types = require("../Config/Cars/Types")
 
@@ -27,8 +26,6 @@ export type DriverInput = {
 	assists: Assists,
 	-- The drift button (Vehicle/Drift), held. Absent or false, the car drives exactly as without it.
 	drift: boolean?,
-	-- The player's game-feel notch (Config/GameFeel). Absent, the car drives as at Realistic.
-	gameFeel: GameFeel.Notch?,
 }
 
 export type WheelContact = {
@@ -98,8 +95,6 @@ export type Telemetry = {
 	-- 0 to 1: how far a drift is engaged; and the body slip (rad) it aims for.
 	drift: number,
 	driftTarget: number,
-	-- 0 to 1: the share of the steering the slide assist holds (Vehicle/SlideAssist).
-	slideAssist: number,
 }
 
 export type StepResult = {
