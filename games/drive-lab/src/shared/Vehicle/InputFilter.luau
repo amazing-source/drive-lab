@@ -5,12 +5,15 @@
 	slip, then moved there as a hand turns a wheel: it speeds up, holds a capped rate and slows
 	into the target, never past it (a trapezoid in time). Turning in takes longer as speed
 	rises; the return to centre is slow at rest and quick on the move; turning toward the other
-	side is quicker than turning in. Pedals ramp. Nothing here changes the car. The steering
+	side is quicker than turning in. At a game-feel notch above Realistic the slide assist
+	(Vehicle/SlideAssist) takes the target over while the car slides, at its own quicker pace.
+	Pedals ramp. Nothing here changes the car. The steering
 	runs in internal steps of at most STEER_STEP, so every frame rate follows the same path and
 	lands within a frame of the same time; the pedal ramps are exact in dt.
 ]]
 local Geometry = require("./Geometry")
 local InputHelp = require("../Config/InputHelp")
+local SlideAssist = require("./SlideAssist")
 local Steering = require("./Steering")
 local Types = require("../Config/Cars/Types")
 
@@ -18,6 +21,8 @@ export type Controls = {
 	steer: number,
 	-- Rate of `steer` (per second), carried between frames so the steering eases.
 	steerVelocity: number,
+	-- Share of the steering the slide assist holds, 0 to 1.
+	slide: number,
 	throttle: number,
 	brake: number,
 	handbrake: number,
@@ -37,7 +42,7 @@ local InputFilter = {}
 local STEER_STEP = 1 / 240
 
 function InputFilter.newState(): Controls
-	return { steer = 0, steerVelocity = 0, throttle = 0, brake = 0, handbrake = 0 }
+	return { steer = 0, steerVelocity = 0, slide = 0, throttle = 0, brake = 0, handbrake = 0 }
 end
 
 function InputFilter.shape(help: InputHelp.InputHelp, value: number): number
@@ -131,6 +136,30 @@ local function steerStep(
 	return nextValue, nextVelocity
 end
 
+-- The share the slide assist holds this frame, and the target it blends the player's toward.
+local function assist(
+	car: Types.CarConfig,
+	state: Controls,
+	slide: SlideAssist.Context?,
+	target: number,
+	forwardSpeed: number,
+	rightSpeed: number,
+	yawRate: number,
+	dt: number
+): (number, number)
+	if slide == nil or forwardSpeed < slide.profile.minSpeed then
+		return 0, target
+	end
+	local profile = slide.profile
+	local share = SlideAssist.measure(car, slide, state.steer, forwardSpeed, rightSpeed, yawRate)
+	local held = SlideAssist.hold(share, state.slide, profile.holdTime, dt)
+	if held <= 0 then
+		return 0, target
+	end
+	local wanted = SlideAssist.target(car, profile, forwardSpeed, rightSpeed, yawRate)
+	return held, math.clamp(target + held * (wanted - target), -1, 1)
+end
+
 local function ramp(current: number, target: number, riseTime: number, fallTime: number, dt: number): number
 	if target > current then
 		return if riseTime <= 0 then target else math.min(target, current + dt / riseTime)
@@ -146,7 +175,8 @@ function InputFilter.update(
 	forwardSpeed: number,
 	rightSpeed: number,
 	yawRate: number,
-	dt: number
+	dt: number,
+	slide: SlideAssist.Context?
 )
 	local target = InputFilter.shape(help, math.clamp(raw.steer, -1, 1))
 	local low, high = InputFilter.steerBounds(help, car, forwardSpeed, rightSpeed, yawRate)
@@ -156,11 +186,20 @@ function InputFilter.update(
 	elseif target < 0 then
 		target = math.max(target, math.min(0, low))
 	end
-	local easeShare = if help.lockTime > 0 then math.min(help.easeTime / help.lockTime, 0.5) else 0
+	local held
+	held, target = assist(car, state, slide, target, forwardSpeed, rightSpeed, yawRate, dt)
+	state.slide = held
+	local assisted = if held > 0 then slide else nil
+	local easeShare = if assisted
+		then assisted.profile.steerEaseShare
+		elseif help.lockTime > 0 then math.min(help.easeTime / help.lockTime, 0.5)
+		else 0
 	local remaining = dt
 	repeat
 		local step = math.min(remaining, STEER_STEP)
-		local time = InputFilter.moveTime(help, state.steer, target, forwardSpeed)
+		local time = if assisted
+			then assisted.profile.steerTime
+			else InputFilter.moveTime(help, state.steer, target, forwardSpeed)
 		state.steer, state.steerVelocity =
 			steerStep(state.steer, state.steerVelocity, target, time, easeShare, step)
 		remaining -= step

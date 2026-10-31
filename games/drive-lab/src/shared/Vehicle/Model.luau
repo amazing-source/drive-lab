@@ -25,6 +25,7 @@ local InputHelp = require("../Config/InputHelp")
 local Interface = require("./Interface")
 local Launch = require("./Launch")
 local Selector = require("./Selector")
+local SlideAssist = require("./SlideAssist")
 local Steering = require("./Steering")
 local Suspension = require("./Suspension")
 local Tyre = require("./Tyre")
@@ -82,6 +83,8 @@ export type VehicleState = {
 	basePeakX: { number },
 	basePeakY: { number },
 	drift: Drift.DriftState,
+	-- The slide assist's inputs, made on its first frame (nil on a car without a profile until then).
+	slideContext: SlideAssist.Context?,
 	-- The handbrake the brakes get (the drift releases it), the steering the wheels get, and the
 	-- engine torque's share the drift allows this substep.
 	handbrake: number,
@@ -148,6 +151,7 @@ function Model.new(car: CarConfig, help: InputHelp.InputHelp?): VehicleState
 		basePeakX = table.create(Geometry.WHEELS, 0),
 		basePeakY = table.create(Geometry.WHEELS, 0),
 		drift = Drift.newState(),
+		slideContext = nil,
 		handbrake = 0,
 		wheelSteer = 0,
 		driftTorque = 1,
@@ -166,6 +170,26 @@ function Model.new(car: CarConfig, help: InputHelp.InputHelp?): VehicleState
 		},
 		motion = { forwardSpeed = 0, rightSpeed = 0, yawRate = 0, frontSteer = 0, rearSteer = 0, grip = 1 },
 	}
+end
+
+-- The slide assist's inputs this frame, or nil while it stands aside: at Realistic, on a car
+-- without a profile, and while the drift button or the handbrake is held or a drift fades, since
+-- those slides are the player's.
+local function slideContext(state: VehicleState, input: DriverInput): SlideAssist.Context?
+	local profile, notch = state.car.slideAssist, input.gameFeel
+	if profile == nil or notch == nil or input.drift == true or input.handbrake > 0 then
+		return nil
+	end
+	local values = profile.notches[notch]
+	if values == nil or Drift.engaged(state.drift) then
+		return nil
+	end
+	local context = state.slideContext or SlideAssist.newContext(profile, values)
+	state.slideContext = context
+	context.notch = values
+	context.rearAngle = state.steering.rearAngle
+	context.grip = state.meanGrip
+	return context
 end
 
 local function gearboxContext(
@@ -467,6 +491,7 @@ local function buildResult(state: VehicleState, chassis: ChassisMotion, dt: numb
 			driftTarget = state.drift.target,
 			steer = if Drift.engaged(state.drift) then state.wheelSteer else state.controls.steer,
 			rearSteerAngle = state.steering.rearAngle,
+			slideAssist = state.controls.slide,
 		},
 	}
 end
@@ -498,7 +523,17 @@ function Model.step(
 	Selector.update(state.help, car.gearbox, gearbox, state.selector, input, groundSpeed, launchReady, dt)
 	local pedals = Selector.pedals(state.help, gearbox, input, state.pedals)
 	local steerBefore = state.controls.steer
-	InputFilter.update(state.help, car, state.controls, pedals, forward, right, yaw, dt)
+	InputFilter.update(
+		state.help,
+		car,
+		state.controls,
+		pedals,
+		forward,
+		right,
+		yaw,
+		dt,
+		slideContext(state, input)
+	)
 	local controls = state.controls
 	Launch.update(
 		car.launch,
