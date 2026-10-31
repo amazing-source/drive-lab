@@ -335,9 +335,10 @@ def left_keys(sequence, rest, grip_frame, wheel):
     approach = approach_frame(grip_frame, wheel, -1, sequence.get("rimApproach", {}).get("L", RIM_APPROACH))
     behind = approach.copy()
     behind.translation = approach.translation + vec(sequence.get("behindRim", {}).get("L", (-0.02, -0.02, 0.1))) * STUDS
-    # Straight up off the thigh first, so the way to the rim cannot swing the palm into a strap.
+    # Off the thigh along "leftClear" first (forward, away from the lap belt by default), so the
+    # way to the rim cannot swing the palm into a strap.
     clear = start_m.copy()
-    clear.translation = start_m.translation + Vector((0, 0.03, 0)) * STUDS
+    clear.translation = start_m.translation + vec(sequence.get("leftClear", (0, 0.015, -0.03))) * STUDS
     keys = [
         (0.0, start_m),
         (0.1, clear),
