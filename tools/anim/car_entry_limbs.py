@@ -145,7 +145,7 @@ def main(argv):
         part = LIMB_PART[limb]
         grid = Grid(limb, a.cell)
         n = len(grid.angles)
-        costs, forced = [], []
+        costs, forced, past = [], [], []
         guess = np.array(body.poses[max(frames[0] - 1, 0)][r6_fk.LIMB_JOINT[limb]][0])[[0, 2]]
         for i, f in enumerate(frames):
             held = any(h["limb"] == limb and h["from"] <= f <= h["to"] for h in holds)
@@ -172,6 +172,7 @@ def main(argv):
                 guess = fixed
                 forced.append((grid.nearest(fixed), fixed))
                 costs.append(None)
+                past.append(None)
                 continue
             forced.append(None)
             if limb in table.get(str(f), {}).get("angles", {}):
@@ -193,6 +194,9 @@ def main(argv):
             cost = np.full(n, np.inf)
             cost[cells] = EXCESS_COST * excess + np.sum((end - targets[limb][i]) ** 2, axis=1) / TARGET_SCALE ** 2
             costs.append(cost)
+            over = np.zeros(n)
+            over[cells] = excess
+            past.append(over)
             guess = centres[0]
             print(f"{limb} f{f}: {len(cells)} cells, {int(np.sum(excess <= 0))} clear", flush=True)
         # Toward a held or fixed frame ahead, the limb is drawn to its angles there over GOAL_SPAN
@@ -245,7 +249,7 @@ def main(argv):
                 row.setdefault("angles", {})[limb] = [round(float(angles[0]), 3), round(float(angles[1]), 3)]
                 rot, pos, end = grid.frames(torsos[i])
                 row.setdefault("targets", {})[limb] = [round(float(v), 4) for v in end[chosen[i]]]
-                if not costs[i][chosen[i]] < EXCESS_COST * 0.002:
+                if past[i][chosen[i]] > 0.002:
                     bad += 1
         print(f"{limb}: path cost {total:.1f}, {bad} frames past an allowance on the {a.spacing} cloud, {jumps} steps past --turn", flush=True)
     json.dump(out, open(a.out, "w", encoding="utf-8", newline="\n"), indent=0)
