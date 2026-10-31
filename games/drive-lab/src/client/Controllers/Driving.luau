@@ -90,6 +90,9 @@ local function readInput(entry: Catalog.Entry, mode: Types.DrivingMode): Interfa
 		brake = math.max(if held(Controls.BRAKE) then 1 else 0, padBrake),
 		steer = if keySteer ~= 0 then keySteer else padSteer,
 		handbrake = if held(Controls.HANDBRAKE) then 1 else 0,
+		-- The same key: held through a bend fast enough it drifts the car, otherwise it is the
+		-- handbrake (Vehicle/Drift).
+		drift = held(Controls.HANDBRAKE),
 		shiftUp = pressed.shiftUp,
 		shiftDown = pressed.shiftDown,
 		gearboxMode = gearboxMode,
@@ -157,6 +160,8 @@ local function publish(
 	model:SetAttribute("EscActive", telemetry.escActive)
 	model:SetAttribute("EscOff", escSwitch.off)
 	model:SetAttribute("Launch", telemetry.launch)
+	model:SetAttribute("Drift", telemetry.drift)
+	model:SetAttribute("DriftTarget", math.deg(telemetry.driftTarget))
 	model:SetAttribute("PitLimiter", pitLimiter.armed)
 	-- Per tyre, for the smoke: read from the model, never written back.
 	for wheel, reading in TyreSmoke.measure(current.state, result.wheels, tyreReadings) do

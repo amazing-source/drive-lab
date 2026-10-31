@@ -58,6 +58,27 @@ local function wrap(angle: number): number
 	return (angle + math.pi) % (2 * math.pi) - math.pi
 end
 
+-- The chase camera's turn toward a drifting car's path (rad, in the yaw's sense): `share` of the
+-- angle from the heading's yaw to the path's yaw, times the drift's engagement `drift` (0 to 1).
+-- None while the drift is not engaged or the car is slower than `minSpeed`.
+function Rules.driftYawTarget(
+	drift: number,
+	headingYaw: number,
+	pathYaw: number,
+	speed: number,
+	blend: CarCamera.DriftBlend
+): number
+	if drift <= 0 or speed < blend.minSpeed then
+		return 0
+	end
+	return math.clamp(drift, 0, 1) * blend.share * wrap(pathYaw - headingYaw)
+end
+
+-- `current` moved toward `target`, half the gap every `halfLife` s.
+function Rules.stepDriftYaw(current: number, target: number, dt: number, halfLife: number): number
+	return current + (target - current) * Rules.blend(dt, halfLife)
+end
+
 function Rules.newSpring(angle: number): Spring
 	return { angle = angle, velocity = 0, target = angle }
 end

@@ -75,7 +75,7 @@ judgements and open gaps are in the commit that added it.
 | Start the engine | R (seated, door shut) | A |
 | Throttle / brake | W / S | RT / LT |
 | Steer | A / D | left stick |
-| Handbrake | Space | X |
+| Handbrake; held through a bend above 30 km/h, drift | Space | X |
 | Reverse (automatic) | at a standstill hold S 0.3 s for R; in R, S drives backwards (up to 40 km/h) and W brakes; hold W at a standstill for D | hold LT; in R, LT backwards and RT brakes; hold RT for D |
 | Paddles | E up, Q down (at a standstill Q goes to neutral, then reverse; the way to reverse in manual) | RB / LB |
 | Auto / manual | T | Y |

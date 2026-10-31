@@ -86,12 +86,16 @@ export type CarAudio = {
 	VIEW_ATTRIBUTE: string,
 	COCKPIT_VIEW: string,
 	VIEW_HALF_LIFE: number,
+	-- Published on the driven car: what its engine plays, as one linear amplitude, before the
+	-- shift dip and the start-up (the tyres' ceiling reads it, Config/TyreAudio).
+	ENGINE_LEVEL_ATTRIBUTE: string,
 }
 
 local CarAudio: CarAudio = table.freeze({
 	VIEW_ATTRIBUTE = "DriveLabView",
 	COCKPIT_VIEW = "Cockpit",
 	VIEW_HALF_LIFE = 0.06,
+	ENGINE_LEVEL_ATTRIBUTE = "EngineLevel",
 })
 
 return CarAudio
