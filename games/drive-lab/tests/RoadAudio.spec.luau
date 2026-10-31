@@ -1,10 +1,15 @@
 --!strict
-local Pack = require("../src/shared/Config/Cars/SVJ/Audio")
+local CarAudio = require("../src/shared/Config/CarAudio")
 local Config = require("../src/shared/Config/RoadAudio")
+local DR458 = require("../src/shared/Config/Cars/DR458/Physics")
+local DR458Audio = require("../src/shared/Config/Cars/DR458/Audio")
+local DriveSim = require("../tools/DriveSim")
 local EngineSound = require("../src/shared/Rules/EngineSound")
 local RoadAudio = require("../src/shared/Rules/RoadAudio")
 local SVJ = require("../src/shared/Config/Cars/SVJ/Physics")
+local SVJAudio = require("../src/shared/Config/Cars/SVJ/Audio")
 local T = require("../../../tools/test/T")
+local Types = require("../src/shared/Config/Cars/Types")
 
 local describe, it, expect = T.describe, T.it, T.expect
 
@@ -13,6 +18,11 @@ local PACK_LENGTH = 74.0
 -- Loudness the loops are matched at: road_audio.ogg's, and the engine loops' (Config/CarAudio).
 local PACK_LUFS = -20
 local ENGINE_LUFS = -18
+-- From this speed (km/h) the wind sits at most this many dB under the engine, its low-pass open
+-- at least this far (Hz): under that it reads as absent.
+local AUDIBLE_KMH = 100
+local AUDIBLE_DB = 20
+local AUDIBLE_CUTOFF_HZ = 1500
 
 local FLAT: RoadAudio.Shaping = { gain = 0, low = 0, mid = 0, high = 0 }
 
@@ -210,31 +220,51 @@ describe("RoadAudio", function()
 	end)
 end)
 
--- The engine's quietest gear at `kmh` is the highest one it can turn in: its rpm, idle at least.
-local function topGearRpm(kmh: number): number
-	local ratios = SVJ.gearbox.ratios
-	local radius = SVJ.rear.tyre.radius
-	local wheel = kmh / 3.6 / radius
+-- Every car, its sound pack and its top speed (km/h) flat out in DriveSim.
+type Car = { physics: Types.CarConfig, pack: CarAudio.Pack, topKmh: number }
+
+local function car(physics: Types.CarConfig, pack: CarAudio.Pack): Car
+	local speed = DriveSim.topSpeed(physics, 200 / 3.6, 1 / 60)
+	return { physics = physics, pack = pack, topKmh = speed * 3.6 }
+end
+
+local CARS: { [string]: Car } = { SVJ = car(SVJ, SVJAudio), DR458 = car(DR458, DR458Audio) }
+
+-- The engine is quietest in its highest gear: its rpm at `kmh` there, idle at least.
+local function topGearRpm(physics: Types.CarConfig, kmh: number): number
+	local ratios = physics.gearbox.ratios
+	local wheel = kmh / 3.6 / physics.rear.tyre.radius
 	return math.max(
-		SVJ.engine.idleRpm,
-		wheel * ratios[#ratios] * SVJ.driveline.rearReduction * 60 / (2 * math.pi)
+		physics.engine.idleRpm,
+		wheel * ratios[#ratios] * physics.driveline.rearReduction * 60 / (2 * math.pi)
 	)
 end
 
--- dB the speed sounds sit under the engine at `kmh`, by the loops' matched loudness; the
--- equalisers' band gains are left out.
+-- The engine's loudness at `kmh` in its highest gear, on throttle (1) or coasting (0), by the
+-- loops' matched loudness; the equalisers' band gains are left out.
+local function engineLufs(entry: Car, kmh: number, onShare: number): number
+	local pack = entry.pack
+	local mix = EngineSound.target(pack.engineLayers, pack.engineTuning, topGearRpm(entry.physics, kmh), onShare)
+	return ENGINE_LUFS + db(pack.engineVolume * EngineSound.level(mix))
+end
+
+local function windLufs(kmh: number, view: { wind: RoadAudio.Shaping, road: RoadAudio.Shaping }): number
+	return PACK_LUFS + db(RoadAudio.wind(Config.TUNING, kmh) * 10 ^ (view.wind.gain / 20) + 1e-30)
+end
+
+-- dB the speed sounds sit under the engine at `kmh`.
 local function margin(
+	entry: Car,
 	kmh: number,
+	onShare: number,
 	view: { wind: RoadAudio.Shaping, road: RoadAudio.Shaping },
 	surface: RoadAudio.Shaping
 ): number
 	local tuning = Config.TUNING
-	local engine = ENGINE_LUFS
-		+ db(Pack.engineVolume * EngineSound.loudness(Pack.engineTuning, topGearRpm(kmh)))
 	local wind = RoadAudio.wind(tuning, kmh) * 10 ^ (view.wind.gain / 20)
 	local road = RoadAudio.road(tuning, kmh) * 10 ^ ((view.road.gain + surface.gain) / 20)
 	local noise = PACK_LUFS + 10 * math.log10(wind ^ 2 + road ^ 2 + 1e-30)
-	return engine - noise
+	return engineLufs(entry, kmh, onShare) - noise
 end
 
 describe("RoadAudio config", function()
@@ -254,20 +284,42 @@ describe("RoadAudio config", function()
 		expect(previousEnd <= PACK_LENGTH + 1e-6).toBeTruthy()
 	end)
 
-	it("keeps the engine on top at every speed: 6 dB on asphalt, 3 dB on any surface", function()
+	it(
+		"keeps every car's engine on top up to its top speed, on throttle and coasting: 6 dB on asphalt, 3 dB on any surface",
+		function()
+			local tuning = Config.TUNING
+			local loudest = tuning.otherSurface
+			for _, surface in tuning.surfaces do
+				if surface.gain > loudest.gain then
+					loudest = surface
+				end
+			end
+			for _, entry in CARS do
+				expect(entry.topKmh > 250).toBeTruthy()
+				for _, onShare in { 1, 0 } do
+					for _, view in { tuning.outside, tuning.cockpit } do
+						for kmh = 1, math.floor(entry.topKmh) do
+							expect(margin(entry, kmh, onShare, view, tuning.surfaces.Asphalt) >= 6).toBeTruthy()
+							expect(margin(entry, kmh, onShare, view, loudest) >= 3).toBeTruthy()
+						end
+					end
+				end
+			end
+		end
+	)
+
+	-- The wind must be heard while driving, not only near top speed: within AUDIBLE_DB of the
+	-- engine on throttle from AUDIBLE_KMH, in both views, and brighter than a rumble by then.
+	it("makes the wind heard from everyday speeds in both views, for every car", function()
 		local tuning = Config.TUNING
-		local loudest = tuning.otherSurface
-		for _, surface in tuning.surfaces do
-			if surface.gain > loudest.gain then
-				loudest = surface
+		for _, entry in CARS do
+			for _, view in { tuning.outside, tuning.cockpit } do
+				for kmh = AUDIBLE_KMH, math.floor(entry.topKmh) do
+					expect(engineLufs(entry, kmh, 1) - windLufs(kmh, view) <= AUDIBLE_DB).toBeTruthy()
+				end
 			end
 		end
-		for _, view in { tuning.outside, tuning.cockpit } do
-			for kmh = 1, tuning.topKmh do
-				expect(margin(kmh, view, tuning.surfaces.Asphalt) >= 6).toBeTruthy()
-				expect(margin(kmh, view, loudest) >= 3).toBeTruthy()
-			end
-		end
+		expect(RoadAudio.cutoff(tuning, AUDIBLE_KMH) >= AUDIBLE_CUTOFF_HZ).toBeTruthy()
 	end)
 
 	it("follows the SVJ's own top speed and plays the roar near as recorded at 90 km/h", function()
