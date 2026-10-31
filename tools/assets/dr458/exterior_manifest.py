@@ -3,8 +3,10 @@
     DR458_WORK=<drive-lab-assets/dr458/work> python -I exterior_manifest.py <inventory.json> <out.json>
 
 inventory.json is assembly/inventory.py's output for the master being described (triangles and
-collections per object). Wheel centres come from assembly/wheels_report.json, the Door_L hinge from
-assembly/hinge_report.json; Blender (x, y, z) becomes {forward = -y, right = -x, up = z}.
+collections per object); each part's "file" is that master. Wheel centres come from
+assembly/wheels_report.json, the Door_L hinge from assembly/hinge_report.json; Blender (x, y, z)
+becomes {forward = -y, right = -x, up = z}. Exterior lamps are the emissive objects the source
+already separates, under the lamp names the game's lamp code looks up (Light_<Corner>_<Role>).
 """
 import json
 import os
@@ -16,7 +18,7 @@ WORK = Path(os.environ["DR458_WORK"])  # drive-lab-assets/dr458/work: the files 
 inv = {o["name"]: o for o in json.load(open(sys.argv[1]))["objects"]}
 wheels = json.load(open(WORK / "assembly" / "wheels_report.json"))
 hinge = json.load(open(WORK / "assembly" / "hinge_report.json"))["door_L_hinge"]
-FILE = "work/assembly/dr458_master_v11_final.blend"
+FILE = "work/assembly/" + Path(json.load(open(sys.argv[1]))["file"].replace("\\", "/")).name
 
 
 def m(v):
@@ -91,6 +93,24 @@ for side, obj in (("L", "Rolled titanium exhaust barrel.001"), ("R", "Rolled tit
                   "note": "outlet centre on the barrel's rear face; axis points out of the pipe (rearward)",
                   "measured_from": "the fitted Evo exhaust barrel's bounds", "source": "codex_evo_src (Evo exhaust, fitted)",
                   "file": FILE, "objects": [obj]})
+NOT_SPLIT = ("not split: the source has no separate object for the front daytime running light, the front "
+             "indicator or a rear indicator, so they have no lamp piece yet")
+LAMPS = (("Light_FrontLeft_Projector", "headlightL_head_light_", "projector (main beam) behind the clear lens"),
+         ("Light_FrontRight_Projector", "headlightR_head_light_", "projector (main beam) behind the clear lens"),
+         ("Light_RearLeft_Tail", "taillightL_tail_light_", "round tail lamp ring: tail and brake"),
+         ("Light_RearRight_Tail", "taillightR_tail_light_", "round tail lamp ring: tail and brake"),
+         ("Light_RearLeft_Fog", "taillightL_head_light_", "inner disc of the left tail lamp: the road 458's rear fog lamp; "
+          "whether the Challenge wires it as the rain light is unknown (research: rain light position unknown)"),
+         ("Light_RearRight_Reverse", "taillightR_reverse_light_", "inner disc of the right tail lamp: reversing light"))
+for name, sub, what in LAMPS:
+    objs = like(sub)
+    if len(objs) != 1:
+        raise SystemExit(f"EXTERIOR lamp {name}: expected one object containing {sub!r}, found {objs}")
+    o = inv[objs[0]]
+    parts.append({"name": name, "group": "Chassis", "motion": "emissive", "materials": sorted({m for m in o["materials"] if m}),
+                  "triangles": o["tris"], "note": f"{what}; {NOT_SPLIT}",
+                  "measured_from": "the source's own lamp object, named after its role on the real 458 (exterior/005, 033, 011)",
+                  "source": "Forza 458 Italia lamp", "file": FILE, "objects": objs})
 for e in parts:
     if e["triangles"] > 10000:
         e["note_export"] = "split into several MeshParts at export (over 10,000 triangles)"

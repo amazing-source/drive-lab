@@ -155,7 +155,15 @@ def fallback_uv(o):
 
 
 def split_material(o):
-    if len({p.material_index for p in o.data.polygons}) <= 1:
+    """One object per material: slots holding the same material (several sources mapped to one set) merge first."""
+    first = {}
+    remap = [first.setdefault(s.material.name if s.material else None, i) for i, s in enumerate(o.material_slots)]
+    idx = [0] * len(o.data.polygons)
+    o.data.polygons.foreach_get("material_index", idx)
+    idx = [remap[i] if i < len(remap) else i for i in idx]
+    o.data.polygons.foreach_set("material_index", idx)
+    o.data.update()
+    if len(set(idx)) <= 1:
         return [o]
     select_only([o])
     bpy.ops.mesh.separate(type="MATERIAL")
