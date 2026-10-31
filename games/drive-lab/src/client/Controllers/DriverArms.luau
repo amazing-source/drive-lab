@@ -63,6 +63,9 @@ type Driver = {
 	rest: CFrame,
 	maxTurn: number,
 	scale: number,
+	-- The drawn arms' bone lengths in studs at this character's scale (Contract.armLengths).
+	upperLength: number,
+	lowerLength: number,
 	sides: { Side },
 	-- Whether the upper arms, elbows and forearms are drawn (Rules/ArmPieces).
 	sleevesShown: boolean,
@@ -225,6 +228,8 @@ local function build(model: Model, character: Model): Driver?
 		rest = rest,
 		maxTurn = Steering.maxWheelAngle(entry.physics.steering),
 		scale = scale,
+		upperLength = upperLength * scale,
+		lowerLength = lowerLength * scale,
 		sides = sides,
 		sleevesShown = true,
 	}
@@ -277,8 +282,7 @@ local function pose(driver: Driver, state: CarEntry.State, now: number)
 	local wheel = driver.chassis.CFrame * driver.rest * CFrame.Angles(0, 0, -turn)
 	local torso = driver.torso.CFrame
 	local scale = driver.scale
-	local upperLength, lowerLength = Contract.armLengths(driver.entry)
-	local upper, lower = upperLength * scale, lowerLength * scale
+	local upper, lower = driver.upperLength, driver.lowerLength
 	local bias, overhang = DriverArms.ELBOW_BIAS, DriverArms.CUFF_OVERHANG
 	-- The hands rest while the engine is off and reach through the start-up after the key.
 	local sinceKey = if state.engine == "On" then now - state.engineAt else nil
