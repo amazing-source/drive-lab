@@ -5,6 +5,8 @@
 	where the source data is in rpm. `define` checks the invariants the physics relies on and
 	freezes the whole tree, so a module can never tune a car at run time.
 ]]
+local GameFeel = require("../GameFeel")
+
 -- One of the names in the car's `modeOrder`.
 export type DrivingMode = string
 
@@ -231,6 +233,34 @@ export type DriftProfile = {
 	frontShare: number,
 }
 
+-- When the slide assist (Vehicle/SlideAssist) takes the steering at one game-feel notch.
+export type SlideAssistNotch = {
+	-- Rear axle slip angle, as a share of the rear tyres' peak, past which a rear sliding more than
+	-- the front starts the assist.
+	rearSlipStart: number,
+	-- Yaw rate (rad/s) off ESC's reference past which the assist starts.
+	yawErrorStart: number,
+}
+
+-- The car's own numbers for the slide assist; each notch above Realistic has its entry.
+export type SlideAssistProfile = {
+	-- How much further past each start the assist reaches its full share.
+	rearSlipBand: number,
+	yawErrorBand: number,
+	-- Steering (rad at the road wheels) taken off per rad/s of yaw rate, so a catch eases off as
+	-- the rotation stops instead of whipping the car the other way.
+	yawDamping: number,
+	-- Seconds per full lock the wheel moves while the assist acts, and the share of it spent
+	-- speeding up and slowing down: a driver's quick hands, not the filter's turn-in pace.
+	steerTime: number,
+	steerEaseShare: number,
+	-- Seconds the assist takes to hand the steering back once the slide has gone.
+	holdTime: number,
+	-- Below this forward speed (m/s) there is no slide to catch.
+	minSpeed: number,
+	notches: { [string]: SlideAssistNotch },
+}
+
 export type SimulationConfig = {
 	maxSubstep: number,
 	solverIterations: number,
@@ -267,6 +297,8 @@ export type CarConfig = {
 	launch: LaunchConfig?,
 	-- A car without a profile never drifts: its drift button stays the handbrake.
 	drift: DriftProfile?,
+	-- A car without a profile drives at every game-feel notch as at Realistic.
+	slideAssist: SlideAssistProfile?,
 	simulation: SimulationConfig,
 }
 
@@ -311,6 +343,35 @@ local function checkModes(car: CarConfig)
 	end
 end
 
+-- Every notch above Realistic has its values, and nothing else does.
+local function checkSlideAssist(profile: SlideAssistProfile)
+	assert(profile.rearSlipBand > 0 and profile.yawErrorBand > 0, "slide assist bands must be positive")
+	assert(profile.yawDamping >= 0, "slide assist damping must not be negative")
+	assert(profile.steerTime > 0 and profile.holdTime > 0, "slide assist times must be positive")
+	assert(
+		profile.steerEaseShare >= 0 and profile.steerEaseShare <= 0.5,
+		"slide assist ease share must be in [0, 0.5]"
+	)
+	for _, notch in GameFeel.ORDER do
+		local values = profile.notches[notch]
+		if notch == "Realistic" then
+			assert(values == nil, "the Realistic notch has no slide assist")
+		else
+			assert(values, `the slide assist has no values for the {notch} notch`)
+			assert(
+				values.rearSlipStart > 0 and values.yawErrorStart > 0,
+				`{notch}: slide assist starts must be positive`
+			)
+		end
+	end
+	for name in profile.notches do
+		assert(
+			table.find(GameFeel.ORDER, name),
+			`the slide assist names "{name}", which is no game-feel notch`
+		)
+	end
+end
+
 -- Validates a car and freezes it. Errors name the field, so a bad config fails at load time.
 function Types.define(car: CarConfig): CarConfig
 	assert(car.mass > 0, "mass must be positive")
@@ -350,6 +411,10 @@ function Types.define(car: CarConfig): CarConfig
 		assert(drift.maxAngle > 0, "a drift needs a maximum angle")
 		assert(drift.holdShare > 0 and drift.holdShare <= 1, "a drift's hold share must be in (0, 1]")
 		assert(drift.frontShare >= 0 and drift.frontShare <= 1, "a drift's front share must be in [0, 1]")
+	end
+	local slideAssist = car.slideAssist
+	if slideAssist then
+		checkSlideAssist(slideAssist)
 	end
 	return deepFreeze(car)
 end

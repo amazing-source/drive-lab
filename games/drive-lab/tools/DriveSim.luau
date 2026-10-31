@@ -12,6 +12,7 @@
 	at 30 FPS; a quasi-static transfer would skip exactly the part worth testing. Wheels are
 	massless and the ground is a plane, so a wheel's compression comes from the body's pose.
 ]]
+local GameFeel = require("../src/shared/Config/GameFeel")
 local Geometry = require("../src/shared/Vehicle/Geometry")
 local InputHelp = require("../src/shared/Config/InputHelp")
 local Model = require("../src/shared/Vehicle/Model")
@@ -65,6 +66,7 @@ export type InputOptions = {
 	tc: boolean?,
 	esc: boolean?,
 	drift: boolean?,
+	gameFeel: GameFeel.Notch?,
 }
 
 local DriveSim = {}
@@ -124,6 +126,7 @@ function DriveSim.input(options: InputOptions?): Model.DriverInput
 			esc = if o.esc == nil then true else o.esc,
 		},
 		drift = o.drift,
+		gameFeel = o.gameFeel,
 	}
 end
 

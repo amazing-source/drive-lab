@@ -67,6 +67,9 @@ export type Entry = {
 -- What a car has of the controls not every car has (Config/CarSwitches.NEEDS), by name.
 export type Features = { [string]: boolean }
 
+-- One of a pack's loops, for the region check.
+type Loop = { soundId: string, region: CarAudio.Region?, what: string }
+
 -- Seconds two readings of one start-up's timing may differ by: about a frame.
 local TIMING_TOLERANCE = 0.02
 
@@ -360,6 +363,52 @@ function Contract.checkStartupSound(startup: CarEntry.Startup, pack: CarAudio.Pa
 	)
 end
 
+-- A pack's loops (its engine layers, limiter and far loop) may share one uploaded file, each
+-- looping its own region of it: every region runs forward from 0 or later, and loops that share a
+-- file each have a region, none overlapping another's.
+function Contract.checkLoopRegions(pack: CarAudio.Pack)
+	local loops: { Loop } = {}
+	for _, layer in pack.engineLayers do
+		table.insert(
+			loops,
+			{ soundId = layer.soundId, region = layer.region, what = `the {layer.name} loop` }
+		)
+	end
+	table.insert(
+		loops,
+		{ soundId = pack.limiter.soundId, region = pack.limiter.region, what = "the limiter" }
+	)
+	table.insert(loops, { soundId = pack.far.soundId, region = pack.far.region, what = "the far loop" })
+	local byFile: { [string]: { Loop } } = {}
+	for _, loop in loops do
+		local region = loop.region
+		assert(
+			region == nil or (region.from >= 0 and region.to > region.from),
+			`{loop.what}'s region does not run forward from 0 or later`
+		)
+		local shared = byFile[loop.soundId] or {}
+		table.insert(shared, loop)
+		byFile[loop.soundId] = shared
+	end
+	for _, shared in byFile do
+		if #shared < 2 then
+			continue
+		end
+		for index, loop in shared do
+			local region = loop.region
+			assert(region, `{loop.what} shares its file with another loop but has no region`)
+			for later = index + 1, #shared do
+				local other = shared[later]
+				local otherRegion = other.region
+				assert(
+					otherRegion == nil or region.to <= otherRegion.from or otherRegion.to <= region.from,
+					`{loop.what} and {other.what} overlap in their file`
+				)
+			end
+		end
+	end
+end
+
 function Contract.define(entry: Entry): Entry
 	checkStartup(entry)
 	checkFootwell(entry)
@@ -370,6 +419,7 @@ function Contract.define(entry: Entry): Entry
 	checkGestures(entry)
 	checkFlames(entry)
 	Contract.checkStartupSound(entry.startup, entry.audio)
+	Contract.checkLoopRegions(entry.audio)
 	return deepFreeze(entry)
 end
 

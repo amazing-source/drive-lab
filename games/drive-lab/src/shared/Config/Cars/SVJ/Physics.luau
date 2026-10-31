@@ -6,6 +6,7 @@
 	its table row or section. EST values are starting points for calibration, not data, and stay
 	marked as such. Tyre grip, aero and CG/inertia are the least certain inputs (02 §2.15).
 ]]
+local Handling = require("./Handling")
 local Types = require("../Types")
 
 return Types.define({
@@ -357,6 +358,9 @@ return Types.define({
 		tcSlip = 0.3,
 		frontShare = 0.10,
 	},
+
+	-- Game help, not car data (Config/GameFeel).
+	slideAssist = Handling,
 
 	simulation = {
 		maxSubstep = 0.001,
