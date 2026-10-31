@@ -10,9 +10,9 @@
 	are the cockpit's tell-tales. The car has no cabin lamp: its bare roof shows none
 	(interior/021, 023), and its binding has no cabinLight, so `cabin` lights nothing.
 
-	The model has pieces for the projectors, the tail rings, one reversing disc and one fog piece
-	so far; the running lights, indicators, markers and stop bar glow once pieces with their names
-	exist. Glow strengths follow the SVJ's until the edit-mode captures.
+	The model has pieces for the projectors, the tail rings, the reversing discs and the fog lamps;
+	the running lights, indicators, markers and stop bar glow once pieces with their names exist.
+	Glow strengths follow the SVJ's until the edit-mode captures.
 ]]
 local CarLights = require("../../CarLights")
 
@@ -25,6 +25,9 @@ end
 local WHITE = rgb(255, 255, 255)
 local AMBER = rgb(255, 112, 0)
 local RED = rgb(255, 10, 0)
+-- The tail rings sit behind red glass: Roblox Glass blends with what is behind it rather than
+-- filtering it, so the ring's face takes the lens colour itself (as the SVJ's).
+local RED_LENS = rgb(214, 36, 30)
 local LED_GREEN = rgb(60, 255, 90)
 
 local Lights: CarLights.Lights = table.freeze({
@@ -39,7 +42,7 @@ local Lights: CarLights.Lights = table.freeze({
 		projector = table.freeze({ tint = rgb(240, 244, 255), day = 6, night = 2.4 }),
 		frontIndicator = table.freeze({ tint = AMBER, day = 14, night = 6 }),
 		frontMarker = table.freeze({ tint = AMBER, day = 3, night = 1.4 }),
-		tail = table.freeze({ tint = RED, day = 7, night = 10 }),
+		tail = table.freeze({ tint = RED, day = 7, night = 10, filter = RED_LENS }),
 		rearIndicator = table.freeze({ tint = AMBER, day = 14, night = 6 }),
 		reverse = table.freeze({ tint = WHITE, day = 8, night = 3 }),
 		-- The rain light. A rear fog lamp is the brightest red lamp on a car (UN R38: up to 300 cd,
