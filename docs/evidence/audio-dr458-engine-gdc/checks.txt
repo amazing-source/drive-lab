@@ -1,0 +1,52 @@
+Issue #175: the DR458's engine bank B3 and F40 start-up (the owner's picks), packed into one file.
+
+Sources (free, no login): Pole Position Production, "Ferrari 458 2013", in the Sonniss GDC bundles,
+archive.org mirrors sonniss-gdc-<year>-game-audio-bundle-normalized:
+  GDC 2024  Ferrari 458 Straight Pipes - t5 - ONBRD - RAMPS - Drive Stop Off - EXHAUST - Left - DPA4062 (96 kHz, 24-bit)
+  GDC 2020  ferrari_458_t8_onbrd_drive_ramps_stop_off_intake_left_DPA4062 (96 kHz, 24-bit)
+  GDC 2019  Ferrari_F40_LM_t5_Onbrd_Start_Fast_Drive_Various_Stop_Off_Turbo_Wastegate_DPA4061 (start-up)
+  Freesound 425395, Soundholder, CC BY 4.0 (wiper motor loop; credited in games/drive-lab/README.md)
+
+Bake (python -I tools/audio/cut_dr458_gdc.py ..., manifest.json beside the files):
+- Each loop's 4th-order line measured after cutting: within 2 % of its rpm (worst: off 1,500 at 1,470).
+- Seams after Vorbis: at most 0.57 of the loop's 99.9th-percentile sample step (idle 0.568, the rest
+  0.013-0.42). The packed bank peaks under -1 dBFS (asserted by the tool).
+- bank.ogg 108.333 s, events.ogg 14.692 s, mono 48 kHz Vorbis q6. Uploaded by the coordinator:
+  bank 134452098270493, events 79771227703971.
+- Re-baking with the off-volume floor reproduces the uploaded audio: the pre-encode WAVs are
+  byte-identical and the decoded OGGs identical sample for sample (the OGG bytes differ only by the
+  Ogg stream serial number).
+- Regions are written in microseconds, each start rounded up and each end rounded down, so a loop
+  can lose a sample but never play the silence after it.
+
+Deviation (accepted by the coordinator): tests/RoadAudio.spec's 6 dB rule failed with the mix's
+off-throttle volumes. DR458 coasting, outside view, minimum engine lead over wind plus road:
+  main's pack 6.21 dB; B3 as previewed 5.36 dB at 166 km/h (4,527 rpm); floor 0.45: 6.27 dB;
+  floor 0.47 (the previous bank's quietest coast loop; chosen): 6.64 dB.
+  Off 3,500: 0.459 -> 0.47 (+0.2 dB); off 4,500: 0.405 -> 0.47 (+1.3 dB). The test is unchanged.
+
+Offline render of the wired config (lune run games/drive-lab/tools/audio_timeline.luau DR458 1,
+python -I tools/audio/render_preview.py with bank.ogg, events.ogg and the SVJ's events.ogg):
+  starter 0.2-1.3 s -52.8 LUFS, after the catch -31.8, settled before the hand-over -31.7, during
+  the hand-over -31.5, idle after it -31.6; largest 0.2 s step from 4 to 9 s 1.70 dB; largest sample
+  step 1.56 x its 99.99th percentile. Preview: drive-lab-assets/dr458/audio/preview/round2/engine/
+  engine_C_wired_b3_f40_start.mp3.
+SVJ: its offline timeline in Strada, Sport and Corsa is byte-identical to main.
+
+Gates at the branch head: stylua, selene (0/0/0), luau-lsp (src), lune run tools/test/run (89 spec
+files, 898 passed), lune run tools/test/tools (19 tools, 19 run, 0 failed), rojo build.
+
+Deliberate breaks, each restored with `git checkout -- games` (898 passed after):
+M1  a store start-up sound restored on the DR458
+    FAIL CarAudio config > DR458: plays its start-up from its own events file, with no outside recording
+M2  catchAfter 1.2, before the starter's revs end
+    FAIL CarAudio config > DR458: holds the starter's revs until its start-up catches, and shows the idle by the hand-over
+M3  the revs' last point at 5.2 s, after the hand-over (5.07 s)
+    FAIL the same spec
+M4  the limiter's region ending at 108.5 s, past the bank
+    FAIL CarAudio config > DR458: loops every engine layer and its limiter inside its packed bank
+M5  off 4,500 back at the mix's 0.4051
+    FAIL RoadAudio config > keeps every car's engine on top up to its top speed, on throttle and coasting
+
+Fallback (1), on disk only (not uploaded): 13 loops and the limiter as separate files cut from the
+same bank, drive-lab-assets/dr458/audio/upload_fallback_13/ (14 files, 749,961 bytes).

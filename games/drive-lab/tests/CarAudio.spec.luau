@@ -1,7 +1,6 @@
 --!strict
 local CarAudio = require("../src/shared/Config/CarAudio")
 local Catalog = require("../src/shared/Config/Cars/Catalog")
-local Contract = require("../src/shared/Config/Cars/Contract")
 local DR458 = require("../src/shared/Config/Cars/DR458/Audio")
 local DR458Physics = require("../src/shared/Config/Cars/DR458/Physics")
 local DR458Startup = require("../src/shared/Config/Cars/DR458/Startup")
@@ -11,19 +10,18 @@ local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect
 
--- The length of each uploaded events file, seconds, by asset (manifest.json beside the files).
+-- The length of each uploaded events file and packed bank, seconds, by asset (manifest.json
+-- beside the files).
 local FILE_LENGTHS: { [string]: number } = {
 	[SVJ.eventsSoundId] = 18.6001,
 	[DR458.eventsSoundId] = 14.6917,
+	[DR458.limiter.soundId] = 108.333,
 }
 
 local PACKS: { { name: string, pack: CarAudio.Pack } } = {
 	{ name = "SVJ", pack = SVJ },
 	{ name = "DR458", pack = DR458 },
 }
-
--- The DR458's own start-up sound's length, seconds (its Sound.TimeLength, read in Studio).
-local DR458_STARTUP_LENGTH = 3.9231
 
 local function uploaded(soundId: string): boolean
 	return string.match(soundId, "^rbxassetid://%d+$") ~= nil
@@ -164,14 +162,36 @@ describe("CarAudio config", function()
 		expect(mine.upshiftMinRpm).toBe(4000)
 	end)
 
-	it("DR458: keeps its start-up timing to its own start-up sound", function()
-		Contract.checkStartupSound(DR458Startup, DR458)
+	it("DR458: plays its start-up from its own events file, with no outside recording", function()
+		expect(DR458.startup.sound).toBe(nil)
+		expect(DR458.startup.region.from).toBe(0)
 	end)
 
-	it("DR458: hands its own start-up sound over before the recording ends", function()
-		local own = DR458.startup.sound
-		expect(own ~= nil).toBeTruthy()
-		expect((own :: CarAudio.StartupSound).to <= DR458_STARTUP_LENGTH).toBeTruthy()
+	it(
+		"DR458: holds the starter's revs until its start-up catches, and shows the idle by the hand-over",
+		function()
+			local times, values = DR458Startup.rpm.times, DR458Startup.rpm.values
+			local cranking = 1
+			while values[cranking + 1] == values[1] do
+				cranking += 1
+			end
+			expect(times[cranking] <= DR458Startup.catchAfter).toBeTruthy()
+			expect(times[cranking + 1] >= DR458Startup.catchAfter).toBeTruthy()
+			expect(times[#times] <= DR458.startup.handOver).toBeTruthy()
+		end
+	)
+
+	it("DR458: loops every engine layer and its limiter inside its packed bank", function()
+		local length = FILE_LENGTHS[DR458.limiter.soundId]
+		local regions = { DR458.limiter.region }
+		for _, layer in DR458.engineLayers do
+			expect(layer.soundId).toBe(DR458.limiter.soundId)
+			table.insert(regions, layer.region)
+		end
+		for _, region in regions do
+			assert(region, "every loop of the packed bank has its region")
+			expect(region.from >= 0 and region.to <= length).toBeTruthy()
+		end
 	end)
 
 	it("DR458: settles the start-up's revs at the car's idle", function()
