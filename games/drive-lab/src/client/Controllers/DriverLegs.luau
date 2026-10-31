@@ -56,7 +56,12 @@ type Driver = {
 	over: number,
 	throttle: Pedal?,
 	brake: Pedal?,
+	clutch: Pedal?,
 }
+
+-- In a car with a clutch, its driver's client publishes how far the clutch is down (0 up to 1 down) and
+-- how far the left foot has come from its rest onto it (0 to 1).
+local CLUTCH_PEDAL, CLUTCH_FOOT = "ClutchPedal", "ClutchFoot"
 
 local LIMBS: { { sign: number, leg: string, shoe: string } } = {
 	{ sign = 1, leg = "Right Leg", shoe = "Shoe_R" },
@@ -151,6 +156,7 @@ local function release(driver: Driver)
 	driver.pelvis:Destroy()
 	turn(driver.throttle, 0)
 	turn(driver.brake, 0)
+	turn(driver.clutch, 0)
 end
 
 local function build(model: Model, entry: Catalog.Entry, character: Model): Driver?
@@ -201,6 +207,9 @@ local function build(model: Model, entry: Catalog.Entry, character: Model): Driv
 		over = 0,
 		throttle = hinged(model, entry.driver.footwell.throttle.part),
 		brake = hinged(model, entry.driver.footwell.brake.part),
+		clutch = if entry.driver.footwell.clutch
+			then hinged(model, entry.driver.footwell.clutch.part)
+			else nil,
 	}
 end
 
@@ -246,6 +255,9 @@ local function pose(driver: Driver, state: CarEntry.State, now: number, dt: numb
 	local throttleAngle, brakeAngle = Legs.pedalAngles(footwell, driver.over, throttle, brake)
 	turn(driver.throttle, throttleAngle)
 	turn(driver.brake, brakeAngle)
+	local onClutch = readout(model, CLUTCH_FOOT)
+	local clutchAngle = Legs.clutchAngle(footwell, onClutch, readout(model, CLUTCH_PEDAL))
+	turn(driver.clutch, clutchAngle)
 	local seat = driver.seat.CFrame
 	local hip, centre = DriverLegs.HIP, DriverLegs.PELVIS_CENTRE
 	table.insert(parts, driver.pelvis)
@@ -260,7 +272,7 @@ local function pose(driver: Driver, state: CarEntry.State, now: number, dt: numb
 		local hipPoint = { x = at.X, y = at.Y, z = at.Z }
 		local leg = if side.sign > 0
 			then Legs.right(footwell, hipPoint, driver.over, throttleAngle, brakeAngle)
-			else Legs.left(footwell, hipPoint)
+			else Legs.left(footwell, hipPoint, onClutch, clutchAngle)
 		draw(side, seat, leg)
 	end
 end

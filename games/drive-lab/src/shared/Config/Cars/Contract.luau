@@ -114,7 +114,7 @@ local function checkFootwell(entry: Entry)
 		end
 	end
 	local footwell = entry.driver.footwell
-	for _, pedal in { footwell.throttle, footwell.brake } do
+	for _, pedal in Contract.footwellPedals(footwell) do
 		assert(hinged[pedal.part], `the footwell's "{pedal.part}" is not a pedal the model binding hinges`)
 	end
 	for _, problem in Contract.footwellMismatches(entry.model, footwell) do
@@ -462,6 +462,15 @@ function Contract.armLengths(entry: Entry): (number, number)
 	return DriverArms.UPPER_LENGTH, DriverArms.LOWER_LENGTH
 end
 
+-- The pedals a footwell's feet work: the throttle and the brake, and the clutch in a car that has one.
+function Contract.footwellPedals(footwell: DriverLegs.Footwell): { DriverLegs.Pedal }
+	local pedals = { footwell.throttle, footwell.brake }
+	if footwell.clutch then
+		table.insert(pedals, footwell.clutch)
+	end
+	return pedals
+end
+
 -- Metres a footwell hinge may sit off the binding's pivot for the same pedal.
 local HINGE_TOLERANCE = 0.01
 
@@ -479,7 +488,7 @@ function Contract.footwellMismatches(model: Binding.CarModel, footwell: DriverLe
 			byPart[pedal.part] = pedal
 		end
 	end
-	for _, pedal in { footwell.throttle, footwell.brake } do
+	for _, pedal in Contract.footwellPedals(footwell) do
 		local bound = byPart[pedal.part]
 		if bound then
 			local hinge = {

@@ -191,6 +191,38 @@ describe("Car contract: the driver", function()
 		end))
 		expect(#Contract.footwellMismatches(same.model, same.driver.footwell)).toBe(0)
 	end)
+	it("checks a footwell's clutch as it checks the throttle and the brake", function()
+		-- A clutch on the brake's hinge, which the binding also has to hinge.
+		local function withClutch(entry: any, bound: boolean)
+			local clutch = table.clone(entry.driver.footwell.brake)
+			clutch.part = "Pedal_Clutch"
+			entry.driver.footwell.clutch = clutch
+			if bound then
+				local pedal = table.clone(entry.model.pedals[2])
+				pedal.part = "Pedal_Clutch"
+				table.insert(entry.model.pedals, pedal)
+			end
+			return clutch
+		end
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				withClutch(entry, false)
+			end))
+		end).toThrow()
+		local accepted = Contract.define(svjWith(function(entry)
+			withClutch(entry, true)
+		end))
+		expect(accepted.driver.footwell.clutch ~= nil).toBe(true)
+		expect(#Contract.footwellMismatches(accepted.model, accepted.driver.footwell)).toBe(0)
+		expect(#Contract.footwellPedals(accepted.driver.footwell)).toBe(3)
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				local clutch = withClutch(entry, true)
+				clutch.hinge = { x = clutch.hinge.x, y = clutch.hinge.y, z = clutch.hinge.z + 0.03 }
+			end))
+		end).toThrow()
+		expect(#Contract.footwellPedals(Catalog.cars.SVJ.driver.footwell)).toBe(2)
+	end)
 end)
 
 describe("Car contract: the display", function()
