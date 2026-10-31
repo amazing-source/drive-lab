@@ -1,0 +1,35 @@
+Deliberate breaks for #194, each applied alone to the committed tree, the Lune suite run
+(lune run tools/test/run), the file restored.
+
+### chase anchor back to bottom centre (games/drive-lab/src/shared/Config/Hud.luau) -> exit 1 ['92 spec files, 961 passed, 3 failed']
+    FAIL Car HUDs > keeps the global HUD the SVJ falls back to, value for value: games/drive-lab/tests/CarHud.spec:77: expected {1=1,2=1,3=1,4=1}, got {1=0.5,2=1,3=1,4=1}
+    FAIL Car HUDs > builds and draws the SVJ's HUD exactly as before a car could carry its own: games/drive-lab/tests/CarHud.spec:322: expected nil, got line 2: got DriveHud/1 ImageLabel AnchorPoint=0.5, 1 BackgroundTransparency=1 Image="rbxassetid://136575325662647" Name="Frame" Pos
+    FAIL Car HUDs > holds every car's HUD to the bottom right, its margin in, in every view and mode: games/drive-lab/tests/CarHud.spec:539: expected true, got false
+### cockpit anchor bottom centre (games/drive-lab/src/shared/Config/Hud.luau) -> exit 1 ['92 spec files, 960 passed, 4 failed']
+    FAIL Car HUDs > keeps the global HUD the SVJ falls back to, value for value: games/drive-lab/tests/CarHud.spec:77: expected {1=1,2=1,3=1,4=1}, got {1=1,2=1,3=0.5,4=1}
+    FAIL Car HUDs > builds and draws the SVJ's HUD exactly as before a car could carry its own: games/drive-lab/tests/CarHud.spec:322: expected nil, got line 2: got DriveHud/1 ImageLabel AnchorPoint=0.5, 1 BackgroundTransparency=1 Image="rbxassetid://136575325662647" Name="Frame" Pos
+    FAIL Car HUDs > draws the DR458's own HUD: slanted digits, its red zone, its pictograms; the SVJ's hidden: games/drive-lab/tests/CarHud.spec:414: expected 1, 1, got 0.5, 1
+    FAIL Car HUDs > holds every car's HUD to the bottom right, its margin in, in every view and mode: games/drive-lab/tests/CarHud.spec:539: expected true, got false
+### chase anchor at the top right (over the touch button) (games/drive-lab/src/shared/Config/Hud.luau) -> exit 1 ['92 spec files, 960 passed, 4 failed']
+    FAIL Car HUDs > keeps the global HUD the SVJ falls back to, value for value: games/drive-lab/tests/CarHud.spec:77: expected {1=1,2=1,3=1,4=1}, got {1=1,2=0,3=1,4=1}
+    FAIL Car HUDs > builds and draws the SVJ's HUD exactly as before a car could carry its own: games/drive-lab/tests/CarHud.spec:322: expected nil, got line 2: got DriveHud/1 ImageLabel AnchorPoint=1, 0 BackgroundTransparency=1 Image="rbxassetid://136575325662647" Name="Frame" Posit
+    FAIL Car HUDs > holds every car's HUD to the bottom right, its margin in, in every view and mode: games/drive-lab/tests/CarHud.spec:540: expected true, got false
+    FAIL Car HUDs > keeps every car's HUD clear of the controls screen's touch button, landscape or portrait: games/drive-lab/tests/CarHud.spec:564: expected true, got false
+### chase height back to 0.17 (games/drive-lab/src/shared/Config/Hud.luau) -> exit 1 ['92 spec files, 960 passed, 4 failed']
+    FAIL Car HUDs > keeps the global HUD the SVJ falls back to, value for value: games/drive-lab/tests/CarHud.spec:77: expected {1=0.13,10=0.12,11=LAUNCH,2=0.11,3=0.9,4=14,5=0.72,6=1000,7=2.5,8=0.59,9=0.03333333333}, got {1=0.17,10=0.12,11=LAUNCH,2=0.11,3=0.9,4=14,5=0.72,6=1000,7=2.5
+    FAIL Car HUDs > builds and draws the SVJ's HUD exactly as before a car could carry its own: games/drive-lab/tests/CarHud.spec:322: expected nil, got line 2: got DriveHud/1 ImageLabel AnchorPoint=1, 1 BackgroundTransparency=1 Image="rbxassetid://136575325662647" Name="Frame" Posit
+    FAIL Car HUDs > lays the DR458's HUD out as wide as the SVJ's in every view, mode and screen: games/drive-lab/tests/CarHud.spec:464: expected true, got false
+    FAIL Car HUDs > holds every car's HUD to the bottom right, its margin in, in every view and mode: games/drive-lab/tests/CarHud.spec:545: expected true, got false
+### cockpit height back to 0.13 (games/drive-lab/src/shared/Config/Hud.luau) -> exit 1 ['92 spec files, 960 passed, 4 failed']
+    FAIL Car HUDs > keeps the global HUD the SVJ falls back to, value for value: games/drive-lab/tests/CarHud.spec:77: expected {1=0.13,10=0.12,11=LAUNCH,2=0.11,3=0.9,4=14,5=0.72,6=1000,7=2.5,8=0.59,9=0.03333333333}, got {1=0.13,10=0.12,11=LAUNCH,2=0.13,3=0.9,4=14,5=0.72,6=1000,7=2.5
+    FAIL Car HUDs > builds and draws the SVJ's HUD exactly as before a car could carry its own: games/drive-lab/tests/CarHud.spec:322: expected nil, got line 2: got DriveHud/1 ImageLabel AnchorPoint=1, 1 BackgroundTransparency=1 Image="rbxassetid://136575325662647" Name="Frame" Posit
+    FAIL Car HUDs > lays the DR458's HUD out as wide as the SVJ's in every view, mode and screen: games/drive-lab/tests/CarHud.spec:465: expected true, got false
+    FAIL Car HUDs > holds every car's HUD to the bottom right, its margin in, in every view and mode: games/drive-lab/tests/CarHud.spec:545: expected true, got false
+### inset sign flipped (games/drive-lab/src/shared/Rules/Hud.luau) -> exit 1 ['92 spec files, 961 passed, 3 failed']
+    FAIL Car HUDs > builds and draws the SVJ's HUD exactly as before a car could carry its own: games/drive-lab/tests/CarHud.spec:322: expected nil, got line 2: got DriveHud/1 ImageLabel AnchorPoint=1, 1 BackgroundTransparency=1 Image="rbxassetid://136575325662647" Name="Frame" Posit
+    FAIL Car HUDs > holds every car's HUD to the bottom right, its margin in, in every view and mode: games/drive-lab/tests/CarHud.spec:539: expected true, got false
+    FAIL Hud > insets a frame its margin from the edge it is anchored to, and none at the centre: games/drive-lab/tests/Hud.spec:49: expected -14, got 14
+### place ignores the configured anchor (old bottom centre in chase) (games/drive-lab/src/client/Ui/HudView.luau) -> exit 1 ['92 spec files, 962 passed, 2 failed']
+    FAIL Car HUDs > builds and draws the SVJ's HUD exactly as before a car could carry its own: games/drive-lab/tests/CarHud.spec:322: expected nil, got line 2: got DriveHud/1 ImageLabel AnchorPoint=0.5, 1 BackgroundTransparency=1 Image="rbxassetid://136575325662647" Name="Frame" Pos
+    FAIL Car HUDs > holds every car's HUD to the bottom right, its margin in, in every view and mode: games/drive-lab/tests/CarHud.spec:539: expected true, got false
+### restored -> 0 ['92 spec files, 964 passed, 0 failed']

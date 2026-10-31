@@ -1,0 +1,19 @@
+Where the HUD sits after #194, offline (no Studio for agents): both frame images laid at the
+placement on an earlier chase capture of the SVJ (1721 x 865, horizon at row 340), alpha-weighted;
+"the car's box" is the rectangle the car fills in that capture (x 600-1115, y 395-725).
+
+before (bottom centre 0.17)  SVJ    panel 641x147  ground  8.45%  over the car's box  4.39%
+before (bottom centre 0.17)  DR458  panel 641x214  ground 15.11%  over the car's box 26.67%
+now (bottom right 0.13)      SVJ    panel 490x112  ground  4.92%  over the car's box  0.00%
+now (bottom right 0.13)      DR458  panel 490x163  ground  8.80%  over the car's box  0.00%
+
+Readouts at 1080p (from the frames' boxes): SVJ speed digits 37 px in chase (were 48.5), 31 px in
+the cockpit; its TC 7.4 px and 6.2 px. DR458 speed 57 px in chase, 48 px in the cockpit, its TC 10 px
+in the cockpit. On an 844 x 390 phone in the cockpit the SVJ's TC is about 2 px (2.6 px before).
+
+Touch controls (code read, no device): the controls screen's "?" button is at the top right
+(Config/ControlsHelp MARGIN 16, TOUCH_SIZE 40), clear of the HUD (spec). Roblox's TouchJump enables
+its button only while the Humanoid's Jumping state is enabled (PlayerModule shipped with Studio);
+Controllers/CarEntry disables Jumping in the car, so it is hidden whenever the HUD shows. The
+default thumbstick takes the left half; in portrait the HUD spans nearly the full width at the
+bottom (the place's ScreenOrientation is not in the project and was not checked).

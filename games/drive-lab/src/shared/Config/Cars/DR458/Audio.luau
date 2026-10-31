@@ -13,7 +13,7 @@ local SVJ = require("../SVJ/Audio")
 local BANK = "rbxassetid://134452098270493"
 local EVENTS = "rbxassetid://79771227703971"
 
-local corsa = SVJ.popTriggers
+local svjTriggers = SVJ.popTriggers
 
 -- dB over its loops' matched level that the car plays at: its engine, and everything that follows its
 -- level (Config/CarAudio carGain).
@@ -31,8 +31,10 @@ local WHEEL_BUTTON: CarAudio.ControlSound =
 local PANEL_TOGGLE: CarAudio.ControlSound =
 	{ soundId = "rbxassetid://9117028855", region = { from = 0, to = 0.25 }, db = -4.5 }
 
-local function everyPosition(chances: { [string]: number }): { [string]: number }
-	return { ["1"] = chances.Corsa, ["2"] = chances.Corsa, OFF = chances.Corsa }
+-- The SVJ's drive modes in order onto the manettino's positions: the car starts in its first, so its
+-- default position pops as the SVJ's default mode does.
+local function byPosition(chances: { [string]: number }): { [string]: number }
+	return { ["1"] = chances.Strada, ["2"] = chances.Sport, OFF = chances.Corsa }
 end
 
 local Audio: CarAudio.Pack = {
@@ -250,18 +252,18 @@ local Audio: CarAudio.Pack = {
 		volume = { from = SVJ.pops.volume.from * popsGain, to = SVJ.pops.volume.to * popsGain },
 		speed = SVJ.pops.speed,
 	},
-	-- The SVJ's Corsa timing in every manettino position: a race exhaust has no valve to close.
+	-- The SVJ's timing, mode by mode across the manettino (byPosition).
 	popTriggers = {
-		liftChance = everyPosition(corsa.liftChance),
-		upshiftChance = everyPosition(corsa.upshiftChance),
-		downshiftChance = everyPosition(corsa.downshiftChance),
-		liftTrain = corsa.liftTrain,
-		downshiftTrain = corsa.downshiftTrain,
-		gap = corsa.gap,
-		upshiftMinRpm = corsa.upshiftMinRpm,
-		upshiftMinThrottle = corsa.upshiftMinThrottle,
-		minRpm = corsa.minRpm,
-		closedThrottle = corsa.closedThrottle,
+		liftChance = byPosition(svjTriggers.liftChance),
+		upshiftChance = byPosition(svjTriggers.upshiftChance),
+		downshiftChance = byPosition(svjTriggers.downshiftChance),
+		liftTrain = svjTriggers.liftTrain,
+		downshiftTrain = svjTriggers.downshiftTrain,
+		gap = svjTriggers.gap,
+		upshiftMinRpm = svjTriggers.upshiftMinRpm,
+		upshiftMinThrottle = svjTriggers.upshiftMinThrottle,
+		minRpm = svjTriggers.minRpm,
+		closedThrottle = svjTriggers.closedThrottle,
 	},
 	events = { liftFrom = 0.6, liftTo = 0.1, liftMinRpm = 4000, limiterHold = 0.15 },
 	-- The loops are already shaped toward the exhaust; a stripped race cabin keeps its boom.

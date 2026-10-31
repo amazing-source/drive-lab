@@ -6,7 +6,8 @@
 
 	The driver of a car: H cycles the headlights (automatic, on, off; automatic means at night or
 	in heavy rain), J switches the high beam, or flashes it while held on a car whose switch flashes
-	(Config/CarSwitches), even with the headlights off, X and C toggle the left and right
+	(Config/CarSwitches), even with the headlights off (while the hand holds its button, on a car
+	whose hand gestures play it: Rig/ControlPresses), X and C toggle the left and right
 	indicators, L the cabin light; on a pad, D-pad left and right are the indicators and D-pad down steps the
 	headlights Auto, On, high beam, Off on a tap and switches the cabin light on a hold. The car this player drives also shows its brakes and
 	reverse from its readouts, its rain light from its switch (RainLightOn, Controllers/
@@ -152,7 +153,11 @@ local function update(dt: number)
 		local flashing = mine
 			and entry ~= nil
 			and entry.switches.highBeam == "Flash"
-			and held(Controls.HIGH_BEAM)
+			and (
+				if ControlPresses.claimed(model, "HIGH_BEAM")
+					then ControlPresses.holding(model, "HIGH_BEAM")
+					else held(Controls.HIGH_BEAM)
+			)
 		local rainLight = entry and entry.lights.rain
 		local lit = Rules.decide({
 			running = entry ~= nil
@@ -184,6 +189,17 @@ local function update(dt: number)
 	end
 end
 
+-- `presses` presses of the high beam switch, on a car whose switch toggles it (a flasher acts while
+-- held instead).
+local function toggleHighBeam(model: Model, presses: number)
+	local entry = Catalog.of(model)
+	if entry and entry.switches.highBeam == "Toggle" then
+		for _ = 1, presses do
+			highBeam = not highBeam
+		end
+	end
+end
+
 local Controller = {}
 
 function Controller.start()
@@ -196,6 +212,11 @@ function Controller.start()
 			waiting[model] = nil
 		end
 	end)
+	ControlPresses.connect(function(model: Model, name: string, presses: number)
+		if name == "HIGH_BEAM" and model == drivenModel() and ControlPresses.claimed(model, name) then
+			toggleHighBeam(model, presses)
+		end
+	end)
 	UserInputService.InputBegan:Connect(function(input, processed)
 		local driven = drivenModel()
 		if processed or driven == nil then
@@ -206,10 +227,8 @@ function Controller.start()
 			mode = Rules.nextMode(mode)
 			ControlPresses.fire(driven, "HEADLIGHTS")
 		elseif table.find(Controls.HIGH_BEAM, key) then
-			local driving = drivenModel()
-			local entry = driving and Catalog.of(driving)
-			if entry and entry.switches.highBeam == "Toggle" then
-				highBeam = not highBeam
+			if not ControlPresses.claimed(driven, "HIGH_BEAM") then
+				toggleHighBeam(driven, 1)
 			end
 		elseif table.find(Controls.CABIN_LIGHT, key) and hasCabinLight(drivenModel()) then
 			cabin = not cabin
