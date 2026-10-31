@@ -191,7 +191,7 @@ local function pop(current: Session, mode: Types.DrivingMode)
 		pops.regions[random:NextInteger(1, #pops.regions)],
 		current.eventsGroup,
 		current.exhaustPoint,
-		volume,
+		volume * CarAudio.carGain(current.pack),
 		between(pops.speed)
 	)
 	-- The flame goes with the bang: a louder pop throws more of it.
@@ -344,7 +344,7 @@ local function update(current: Session, dt: number)
 			gear.region,
 			current.eventsGroup,
 			current.enginePoint,
-			gear.volume,
+			gear.volume * CarAudio.carGain(pack),
 			speed
 		)
 	end

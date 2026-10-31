@@ -12,7 +12,9 @@ local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 local Workspace = game:GetService("Workspace")
 
+local CarAudio = require(ReplicatedStorage.Shared.Config.CarAudio)
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
+local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local Config = require(ReplicatedStorage.Shared.Config.TyreAudio)
 local Rules = require(ReplicatedStorage.Shared.Rules.TyreAudio)
 
@@ -97,6 +99,8 @@ local function update(audio: Audio, dt: number)
 		readAxle(current, input.front, 1)
 		readAxle(current, input.rear, 3)
 		input.engineLevel = readNumber(current, Config.ENGINE_LEVEL_ATTRIBUTE)
+		local entry = Catalog.of(current)
+		input.carGain = if entry then CarAudio.carGain(entry.audio) else nil
 	end
 	input.wetness = readNumber(Workspace, "Wetness")
 	input.cockpit = camera ~= nil and camera:GetAttribute(Config.VIEW_ATTRIBUTE) == Config.COCKPIT_VIEW

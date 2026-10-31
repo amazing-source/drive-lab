@@ -148,6 +148,16 @@ describe("Tyre audio mix", function()
 		expect(20 * math.log10(ratio)).toBeNear(-6.02, 0.01)
 	end)
 
+	it("plays the tyres at the driven car's level, under a ceiling that follows its engine", function()
+		local base = input(axle(4, 12))
+		local louder = input(axle(4, 12))
+		louder.engineLevel = base.engineLevel * 2.5
+		louder.carGain = 2.5
+		local quiet, loud = settled(base), settled(louder)
+		expect(loud.rear.squeal / quiet.rear.squeal).toBeNear(2.5, 1e-6)
+		expect(loud.rear.skid / quiet.rear.skid).toBeNear(2.5, 1e-6)
+	end)
+
 	it("is silent while nobody drives", function()
 		local given = input(axle(5, 15))
 		given.driving = false

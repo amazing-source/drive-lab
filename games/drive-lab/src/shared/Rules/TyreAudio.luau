@@ -62,6 +62,9 @@ export type Input = {
 	engineLevel: number,
 	cockpit: boolean,
 	driving: boolean,
+	-- The driven car's level (Config/CarAudio carGain): the tyres follow it, as the ceiling follows
+	-- its engine. 1 when nil.
+	carGain: number?,
 }
 
 export type AxleMix = { squeal: number, squealSpeed: number, skid: number, skidSpeed: number }
@@ -220,8 +223,9 @@ function TyreAudio.step(state: State, input: Input, dt: number): Mix
 	state.primed = true
 	mixShaping(mix.squealEq, tuning.outside.squeal, tuning.cockpit.squeal, state.inside)
 	mixShaping(mix.skidEq, tuning.outside.skid, tuning.cockpit.skid, state.inside)
-	local gainSqueal = math.min(1, 10 ^ (mix.squealEq.gain / 20))
-	local gainSkid = math.min(1, 10 ^ (mix.skidEq.gain / 20))
+	local car = input.carGain or 1
+	local gainSqueal = math.min(1, 10 ^ (mix.squealEq.gain / 20)) * car
+	local gainSkid = math.min(1, 10 ^ (mix.skidEq.gain / 20)) * car
 	local cap = TyreAudio.ceiling(tuning, input.engineLevel)
 	local wetness = finite(input.wetness)
 	local front = if input.driving then TyreAudio.axle(tuning, input.front, wetness) else quietAxle(tuning)

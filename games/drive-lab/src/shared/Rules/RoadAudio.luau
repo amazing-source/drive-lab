@@ -50,6 +50,9 @@ export type Input = {
 	driving: boolean,
 	-- Material name under the car, or nil while nothing is under it.
 	surface: string?,
+	-- The driven car's level (Config/CarAudio carGain): the wind and the roar heard in it follow
+	-- it, so they keep their balance with its engine. 1 when nil.
+	carGain: number?,
 }
 
 export type Mix = {
@@ -178,8 +181,9 @@ function RoadAudio.step(state: State, input: Input, dt: number): Mix
 	mixShaping(mix.windEq, tuning.outside.wind, tuning.cockpit.wind, state.inside, nil)
 	mixShaping(mix.roadEq, tuning.outside.road, tuning.cockpit.road, state.inside, state.surface)
 	-- The view's and the surface's whole-sound gains go into the volumes, not the equaliser.
-	mix.wind = RoadAudio.wind(tuning, speed) * 10 ^ (mix.windEq.gain / 20)
-	mix.road = RoadAudio.road(tuning, speed) * 10 ^ (mix.roadEq.gain / 20)
+	local car = input.carGain or 1
+	mix.wind = RoadAudio.wind(tuning, speed) * 10 ^ (mix.windEq.gain / 20) * car
+	mix.road = RoadAudio.road(tuning, speed) * 10 ^ (mix.roadEq.gain / 20) * car
 	mix.windSpeed = lerp(tuning.windSpeed, t)
 	mix.roadSpeed = lerp(tuning.roadSpeed, t)
 	mix.windCutoff = RoadAudio.cutoff(tuning, speed)

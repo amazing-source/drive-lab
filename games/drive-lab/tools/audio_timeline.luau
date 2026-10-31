@@ -220,7 +220,7 @@ for index, readout in readouts do
 			kind = "gear" .. happened.gear,
 			from = gear.region.from,
 			to = gear.region.to,
-			volume = gear.volume,
+			volume = gear.volume * CarAudio.carGain(pack),
 			speed = if happened.gear == "Up" then gear.upSpeed else gear.downSpeed,
 		})
 	end
@@ -232,7 +232,7 @@ for index, readout in readouts do
 			file = if pack.pops.soundId then popsFile else nil,
 			from = region.from,
 			to = region.to,
-			volume = between(pack.pops.volume),
+			volume = between(pack.pops.volume) * CarAudio.carGain(pack),
 			speed = between(pack.pops.speed),
 		})
 	end
