@@ -1,0 +1,32 @@
+Baseline: exit 0; 78 spec files, 742 passed, 0 failed
+M1 (the fix reverted: the ended check before the load timeout for the car's own sound only) in games/drive-lab/src/shared/Rules/StartupHandOver.luau
+  exit 1; 78 spec files, 740 passed, 2 failed
+  FAIL StartupHandOver > holds the loops in full once the region has played to its end and its Sound is gone: games/drive-lab/tests/StartupHandOver.spec:92: expected 1 within 0.000001, got 0.13446343899385693
+  FAIL StartupHandOver > holds the idle loop's level at the SVJ's and the DR458's region ends: games/drive-lab/tests/StartupHandOver.spec:102: expected 1 within 0.000001, got 0.13446343899385693
+M2 (the ended check removed, for both start-ups) in games/drive-lab/src/shared/Rules/StartupHandOver.luau
+  exit 1; 78 spec files, 739 passed, 3 failed
+  FAIL StartupHandOver > holds the loops in full once the region has played to its end and its Sound is gone: games/drive-lab/tests/StartupHandOver.spec:92: expected 1 within 0.000001, got 0.13446343899385693
+  FAIL StartupHandOver > holds the idle loop's level at the SVJ's and the DR458's region ends: games/drive-lab/tests/StartupHandOver.spec:102: expected 1 within 0.000001, got 0.13446343899385693
+  FAIL StartupHandOver > holds the loops in full once the car's own sound has played to its end and is gone: games/drive-lab/tests/StartupHandOver.spec:109: expected 1 within 0.000001, got 0.13446343899385693
+M3 (the load timeout never fires) in games/drive-lab/src/shared/Rules/StartupHandOver.luau
+  exit 1; 78 spec files, 741 passed, 1 failed
+  FAIL StartupHandOver > hands over from silence with the abort half-life when the start-up never loads: games/drive-lab/tests/StartupHandOver.spec:143: expected 0.13446343899385693 within 1e-09, got 0
+M4 (revving past abortRpm ignored) in games/drive-lab/src/shared/Rules/StartupHandOver.luau
+  exit 1; 78 spec files, 741 passed, 1 failed
+  FAIL StartupHandOver > hands over quickly once the revs pass abortRpm, the start-up fading as the loops rise: games/drive-lab/tests/StartupHandOver.spec:162: expected 1, got 0
+M5 (the early hand-over does not fade the start-up) in games/drive-lab/src/shared/Rules/StartupHandOver.luau
+  exit 1; 78 spec files, 740 passed, 2 failed
+  FAIL StartupHandOver > hands over from silence with the abort half-life when the start-up never loads: games/drive-lab/tests/StartupHandOver.spec:144: expected 0.8655365610061431 within 1e-09, got 1
+  FAIL StartupHandOver > hands over quickly once the revs pass abortRpm, the start-up fading as the loops rise: games/drive-lab/tests/StartupHandOver.spec:159: expected a truthy value, got false
+M6 (the early hand-over never completes) in games/drive-lab/src/shared/Rules/StartupHandOver.luau
+  exit 1; 78 spec files, 740 passed, 2 failed
+  FAIL StartupHandOver > hands over from silence with the abort half-life when the start-up never loads: games/drive-lab/tests/StartupHandOver.spec:145: expected true, got false
+  FAIL StartupHandOver > hands over quickly once the revs pass abortRpm, the start-up fading as the loops rise: games/drive-lab/tests/StartupHandOver.spec:165: expected true, got false
+M7 (the car's own sound not caught up with the press) in games/drive-lab/src/shared/Rules/StartupHandOver.luau
+  exit 1; 78 spec files, 741 passed, 1 failed
+  FAIL StartupHandOver > catches the car's own sound up with the press on its first loaded frame, then hands over: games/drive-lab/tests/StartupHandOver.spec:126: expected 1, got 0
+M8 (the region's hand-over made linear) in games/drive-lab/src/shared/Rules/StartupHandOver.luau
+  exit 1; 78 spec files, 741 passed, 1 failed
+  FAIL StartupHandOver > keeps the loops silent, then hands over at equal power through the region's fade-out: games/drive-lab/tests/StartupHandOver.spec:83: expected 0.02617694830787306 within 1e-09, got 0.016666666666652397
+Restored: exit 0; 78 spec files, 742 passed, 0 failed
+Rule file identical to HEAD after restore: yes

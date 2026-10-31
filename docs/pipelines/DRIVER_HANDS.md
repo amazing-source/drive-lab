@@ -274,6 +274,48 @@ measured on the cockpit dump c6 with the v9_a10 grip):
 | The open right hand closing onto the rim | last 0.15 s before its grip | about 1.5 mm (3) | as above | coordinator |
 | The left hand brushing the A-pillar's cage padding | taking the rim | 3.5 mm (5) | the left grip itself rests 1.7 mm into that padding, so there is no clean way in; tighten if the padding is opened | coordinator |
 
+## 11. Thumb presses on the wheel's buttons
+
+The grip hand of section 3 with only its thumb moved onto a button (the hand may also slide round
+the rim or roll over it, keeping the rim in its fingers), one more grip mesh per button, all in the
+wheel's frame, so a press follows the wheel at any steering angle:
+
+    blender -b --factory-startup --python-exit-code 1 -P tools/blender/thumb_press.py -- <inputs.json> <out dir>
+    python tools/anim/thumb_check.py <inputs.json> <out dir> --pick --json <out dir>/check.json
+
+- **The grip is rebuilt, not re-solved.** Its fingers come from hands.json's `fingerAngles` and
+  its placement from its wrist, forearm and back. The rebuild is measured against the exported
+  `hand_R.glb` before anything else runs (0.011 mm at most on the DR458's v9_a10). So the
+  presses share the grip's fingers exactly, and `hand_grip.py` needs no change.
+- **Aim with the skin, never a bone point.** The thumb's end bone runs past the skin and off its
+  axis. A point 35 % along it sat on the buttons while the exported skin stayed 14 to 17 mm off.
+  The solver poses the thumb's skin vertices through the chain (each carried by the bone that
+  weighs most on it) and wants the pad's skin on the face, at most 2 mm in, within 4.5 mm of the
+  centre, with the rest of the thumb at least 1 mm off the wheel.
+- Per button, `slidesDeg` (about the wheel's axis) and `rollsDeg` (about the rim tube's tangent
+  through its centre at the grip) list where the hand may go, in order of preference. Every pose
+  that reaches is exported as a candidate (`hand_{side}_{name}_s{slide}_r{roll}.glb`). The left
+  hand is solved as the right one on the mirrored wheel.
+- `thumb_check.py` judges the exported meshes: inside the wheel (the rim up to 3 mm, the grip's
+  own fit; the pressed button up to 3 mm; anything else 2 mm), the pad within 1 mm of its button,
+  and the hand turned with the wheel to 0 and ±90 degrees against what does not turn (column,
+  paddles, dash, cage). `--pick` keeps each button's first candidate that passes. `--break 0.01`
+  pushes every hand 1 cm into the wheel and fails.
+
+DR458, v9_a10 grip, measured on the exported meshes (all pass, also at ±90 degrees of steering):
+
+| Button | Thumb | Hand | Pad to button | Rim |
+|---|---|---|---|---|
+| FLASH | left | where it grips | 0.46 mm | 2.82 mm (the grip's own) |
+| PIT | left | 10 degrees up the rim, rolled 10 | 0.14 mm | 2.67 mm |
+| SCROLL | right | 10 degrees up the rim, rolled 15 | 0.36 mm | 2.81 mm |
+| WATER | left | below the spoke (-45 degrees), rolled 10 | 0.43 mm | 2.28 mm |
+| WIPER | left | below the spoke (-50 degrees), rolled 20 | 0.48 mm | 2.44 mm |
+
+For WATER and WIPER the hand leaves the rim to pass the spoke (the coordinator's decision). The
+manettino is turned by a finger (also decided); that pose and the RAIN LIGHT reach on the panel
+are still to make.
+
 ## Owner decisions
 
 | Date | Decision |

@@ -346,6 +346,19 @@ describe("DR458 binding: which way each part turns, as the rig turns it", functi
 		end
 	)
 
+	it("flicks the RAIN LIGHT toggle from down to up through its travel", function()
+		local controls = Model.controls
+		local hinge = controls and controls.PanelSwitch_RainLight
+		assert(hinge and hinge.travel, "the DR458's binding has the RAIN LIGHT toggle")
+		local modelled = hingeRest(hinge.pivot, hinge.axis)
+		local rest = modelled * CFrame.Angles(hinge.rest or 0, 0, 0)
+		local on = rest * CFrame.Angles(hinge.travel, 0, 0)
+		local tip = beside(modelled, -0.02, 0, 0)
+		local pivot = metres(modelled.Position)
+		expect(carried(tip, modelled, rest).up < pivot.up).toBe(true)
+		expect(carried(tip, modelled, on).up > pivot.up).toBe(true)
+	end)
+
 	it(
 		"presses each pedal through its travel (Controllers/DriverLegs): the hanging brake pad and the throttle pad move toward the nose, the throttle's down",
 		function()

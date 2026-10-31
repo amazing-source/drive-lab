@@ -1,0 +1,9 @@
+tests/StartupHandOver.spec.luau as committed on this branch, copied onto a detached worktree at
+1123f39 (the rule extracted with main's order of checks), then
+    lune run tools/test/run
+from that worktree root. Output, paths made repo-relative:
+
+FAIL StartupHandOver > holds the loops in full once the region has played to its end and its Sound is gone: games/drive-lab/tests/StartupHandOver.spec:92: expected 1 within 0.000001, got 0.13446343899385693
+FAIL StartupHandOver > holds the idle loop's level at the SVJ's and the DR458's region ends: games/drive-lab/tests/StartupHandOver.spec:102: expected 1 within 0.000001, got 0.13446343899385693
+77 spec files, 725 passed, 2 failed
+exit 1

@@ -1,0 +1,49 @@
+The synthetic cases (car_entry_check_spec.py --keep DIR) through the checker before this change
+(origin/main's tools/anim/car_entry_check.py, unmodified) and through the new one with no flag.
+
+== masked_cage: OLD checker
+FAILURES 0
+   exit 0
+== masked_cage: NEW checker (default for this scene)
+contacts tested: every group a part touches
+FAILURES 1
+  f0     Right Leg  cage       0.2000  limit 0.0400  (not the deepest group)
+SPANS 1
+  f0-f0 Right Leg  cage       max 0.2000 at f0  limit 0.0400  (1 frames, 1 not the deepest group)
+   exit 1
+
+== masked_door: OLD checker
+FAILURES 0
+   exit 0
+== masked_door: NEW checker (default for this scene)
+contacts tested: every group a part touches
+FAILURES 1
+  f0     Right Leg  door       0.2000  limit 0.0400  (not the deepest group)
+SPANS 1
+  f0-f0 Right Leg  door       max 0.2000 at f0  limit 0.0400  (1 frames, 1 not the deepest group)
+   exit 1
+
+== masked_ground: OLD checker
+FAILURES 0
+   exit 0
+== masked_ground: NEW checker (default for this scene)
+contacts tested: every group a part touches
+FAILURES 1
+  f0     Right Leg  ground     0.1000  limit 0.0400  (not the deepest group)
+SPANS 1
+  f0-f0 Right Leg  ground     max 0.1000 at f0  limit 0.0400  (1 frames, 1 not the deepest group)
+   exit 1
+
+== deepest_over: OLD checker
+FAILURES 1
+  f0    Right Leg  seat       0.2200
+   exit 1
+== deepest_over: NEW checker (default for this scene)
+contacts tested: every group a part touches
+FAILURES 2
+  f0     Right Leg  cage       0.2000  limit 0.0400  (not the deepest group)
+  f0     Right Leg  seat       0.2200  limit 0.0400
+SPANS 2
+  f0-f0 Right Leg  cage       max 0.2000 at f0  limit 0.0400  (1 frames, 1 not the deepest group)
+  f0-f0 Right Leg  seat       max 0.2200 at f0  limit 0.0400  (1 frames)
+   exit 1

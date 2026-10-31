@@ -1,0 +1,119 @@
+Play check of the start-up hand-over, 2026-10-31 03:08-03:19, four Studio solo Play sessions
+started and stopped by the audio agent under .studio-lock, after the drift systems agent released
+it. Before each Studio action: get_studio_mode "stop" and get_connected_instances edit peer only;
+solo_playtest status "running: false" before the first start. The Test menu ribbon itself could not
+be seen with the tools available.
+
+Muting (session only, in the Play client): every SoundGroup re-parented under a SoundGroup at
+volume 0 and every SoundGroup's Volume held at 0 on Heartbeat and at RenderPriority.Last; every
+Sound without a group put in it; the two AudioDeviceOutputs (road, tyres) detached. Sound.Volume,
+which the probe reads, is not affected by any of this. The PC's volume was not touched.
+
+Start (session only, on the server): the player sat in the car's DriverSeat with Seat:Sit, then
+the car's Engine attribute set "On" and EngineAt set to the server time, as the server's own start
+does. Controllers/CarAudio ran unchanged from the synced commit.
+
+Probe: a client Heartbeat connection made after the controllers', so each row is what CarAudio
+set that frame. Columns: seconds since the START press (server time minus EngineAt minus the
+car's pressAt); the frame's dt; the idle loop's Sound.Volume; each start-up Sound seen on the
+engine attachment, held by reference after it is removed (asset id, Parent ~= nil, IsLoaded,
+Playing, TimePosition, Volume).
+
+Restored after: a sync of main 7f51219 (5 written, 1 removed: Rules/StartupHandOver), then a
+second sync writing 0 (0 written, 221 unchanged, 0 removed). SoundService has no probe group and
+no car is spawned in edit mode. Nothing was saved.
+
+What the runs show:
+- The cause, on main (run A): at the region's end the Sound is removed and then reads
+  Parent nil, IsLoaded false, Playing false. The next frame the idle loop falls 0.2512 -> 0.0339
+  and the removed Sound's Volume starts to fall (0.4677 -> 0.4046): that is the early hand-over
+  path (share from 0, the start-up faded), entered because "not IsLoaded" plus more than 3 s since
+  the Sound was made passed the load timeout. It is back within 1% of 0.2512 0.526 s later.
+- The fix (runs B, C, D): the same removal, and the idle loop holds its level on every frame:
+  SVJ 0.2512, DR458 0.2509, from the removal to the end of each trace (5 to 7 s).
+- The DR458's own store sound (run C) ran through the extracted rule: loaded 0.49 s late, caught
+  up with the press on its first loaded frame, equal-power hand-over, no dip at its end, as the
+  import agent's check of #109 found (02:24-02:33).
+- The DR458 fallback (run D): with its own sound's id forced to an asset that is not audio, the
+  preload failed 0.37 s after the press, the events region replaced it, played to its end and
+  handed over with no dip.
+
+Seen on the way, not changed here (outside this issue): the region start-up runs behind the press
+by its load time, because only the car's own sound is caught up once loaded. SVJ run A: loaded
+0.52 s after the press, TimePosition 0.53 s behind it at the end; run B 0.36 s. DR458 fallback
+run D: the playhead set before load (0.855) was kept, but waited 0.39 s while loading.
+
+Run A, main 94e1406, SVJ (region start-up), every SoundGroup held at 0, flat outputs detached.
+Columns: seconds since the START press (server time); the frame's dt; the idle loop's Sound.Volume; the start-up Sound (asset, parented, IsLoaded, Playing, TimePosition, Volume). Rows every 30th frame before 10.85 s, every frame after.
+  0.013 dt=0.0121 IDLE 0.0000 | 104848480098013 par=true L=false P=true tp=0.003 v=0.4677
+  0.533 dt=0.0099 IDLE 0.0000 | 104848480098013 par=true L=true P=true tp=0.024 v=0.4677
+  9.437 dt=0.0156 IDLE 0.0000 | 104848480098013 par=true L=true P=true tp=8.920 v=0.4677
+  9.831 dt=0.0127 IDLE 0.0594 | 104848480098013 par=true L=true P=true tp=9.325 v=0.4677
+ 10.643 dt=0.0090 IDLE 0.1929 | 104848480098013 par=true L=true P=true tp=10.115 v=0.4677
+ 11.456 dt=0.0110 IDLE 0.2508 | 104848480098013 par=true L=true P=true tp=10.947 v=0.4677
+ 11.505 dt=0.0110 IDLE 0.2511 | 104848480098013 par=true L=true P=true tp=10.968 v=0.4677
+ 11.519 dt=0.0130 IDLE 0.2511 | 104848480098013 par=true L=true P=true tp=10.989 v=0.4677
+ 11.535 dt=0.0167 IDLE 0.2512 | 104848480098013 par=false L=false P=false tp=0.000 v=0.4677
+ 11.547 dt=0.0110 IDLE 0.0339 | 104848480098013 par=false L=false P=false tp=0.000 v=0.4046
+ 11.560 dt=0.0130 IDLE 0.0536 | 104848480098013 par=false L=false P=false tp=0.000 v=0.3679
+ 11.596 dt=0.0140 IDLE 0.1065 | 104848480098013 par=false L=false P=false tp=0.000 v=0.2695
+ 11.650 dt=0.0150 IDLE 0.1593 | 104848480098013 par=false L=false P=false tp=0.000 v=0.1712
+ 11.750 dt=0.0101 IDLE 0.2144 | 104848480098013 par=false L=false P=false tp=0.000 v=0.0686
+idle minimum after first reaching 0.25: 0.0339 at t=11.547
+dip at 11.547, back to 0.99 of 0.2512 at 12.073 (0.526 s), last idle 0.2512
+
+Run B, branch 5a19869 (the fix merged with main e35615c), SVJ (region start-up). Same probe as run A.
+  0.032 dt=0.0160 IDLE 0.0000 | 104848480098013 par=true L=false P=true tp=0.015 v=0.4677
+  0.390 dt=0.0170 IDLE 0.0000 | 104848480098013 par=true L=true P=true tp=0.037 v=0.4677
+  9.222 dt=0.0130 IDLE 0.0000 | 104848480098013 par=true L=true P=true tp=8.869 v=0.4677
+  9.776 dt=0.0110 IDLE 0.0780 | 104848480098013 par=true L=true P=true tp=9.423 v=0.4677
+ 10.322 dt=0.0160 IDLE 0.1715 | 104848480098013 par=true L=true P=true tp=9.957 v=0.4677
+ 10.879 dt=0.0120 IDLE 0.2329 | 104848480098013 par=true L=true P=true tp=10.533 v=0.4677
+ 11.305 dt=0.0150 IDLE 0.2509 | 104848480098013 par=true L=true P=true tp=10.938 v=0.4677
+ 11.318 dt=0.0130 IDLE 0.2509 | 104848480098013 par=true L=true P=true tp=10.959 v=0.4677
+ 11.335 dt=0.0170 IDLE 0.2511 | 104848480098013 par=true L=true P=true tp=10.981 v=0.4677
+ 11.350 dt=0.0159 IDLE 0.2512 | 104848480098013 par=false L=false P=false tp=0.000 v=0.4677
+ 11.364 dt=0.0151 IDLE 0.2512 | 104848480098013 par=false L=false P=false tp=0.000 v=0.4677
+ 11.378 dt=0.0131 IDLE 0.2512 | 104848480098013 par=false L=false P=false tp=0.000 v=0.4677
+ 11.393 dt=0.0161 IDLE 0.2512 | (and 0.2512 on every frame to 11.745, every frame traced)
+ 12.084 dt=0.0208 IDLE 0.2512 | (sampled every 40th frame from here)
+ 13.782 dt=0.0140 IDLE 0.2512
+ 15.948 dt=0.0112 IDLE 0.2512
+rows 1169; idle peak 0.2512; minimum from the first frame at or above 0.25: 0.2503 at t=11.262 (the hand-over's last rise, before the region ended); last idle 0.2512 at t=16.055
+
+Run C, branch 5a19869, DR458 (its own store start-up sound, 126032464409866). Same probe.
+  0.026 dt=0.0161 IDLE 0.0000 | 126032464409866 par=true L=false P=true tp=0.000 v=0.9997
+  0.267 dt=0.0157 IDLE 0.0000 | 126032464409866 par=true L=false P=true tp=0.000 v=0.9997
+  0.512 dt=0.0200 IDLE 0.0000 | 126032464409866 par=true L=true P=true tp=0.470 v=0.9997   (loaded)
+  0.647 dt=0.0130 IDLE 0.0000 | 126032464409866 par=true L=true P=true tp=1.108 v=0.9997   (caught up: 0.47 + 0.647 = 1.117)
+  2.536 dt=0.0140 IDLE 0.0000 | 126032464409866 par=true L=true P=true tp=2.986 v=0.9997
+  2.857 dt=0.0131 IDLE 0.2199 | 126032464409866 par=true L=true P=true tp=3.306 v=0.4816
+  2.898 dt=0.0129 IDLE 0.2352 | 126032464409866 par=true L=true P=true tp=3.348 v=0.3485
+  2.944 dt=0.0149 IDLE 0.2456 | 126032464409866 par=true L=true P=true tp=3.412 v=0.2044
+  2.975 dt=0.0146 IDLE 0.2487 | 126032464409866 par=true L=true P=true tp=3.434 v=0.1322
+  2.990 dt=0.0151 IDLE 0.2505 | 126032464409866 par=false L=false P=false tp=0.000 v=0.0558   (removed at its end)
+  3.000 dt=0.0101 IDLE 0.2509 | (0.2509 on every frame to 3.287, every frame traced)
+  3.583 dt=0.0150 IDLE 0.2509 | (sampled every 25th frame from here)
+ 10.017 dt=0.0170 IDLE 0.2509
+rows 843; idle peak 0.2509; minimum from the first frame at or above 0.25: 0.2505 at t=2.990; last idle 0.2509 at t=10.253
+
+Run D, branch 5a19869, DR458 fallback. Session-only probe: before the start, the client's loaded
+Catalog entry had its start-up sound id set to rbxassetid://1 (not an audio asset), so its preload
+fails; restored to rbxassetid://126032464409866 in the same session before the playtest stopped.
+Nothing in the place was edited for this. Same probe; both start-up Sounds traced (the forced id 1,
+then the events file 94561113743905 played from its region 0.5-4.85 s).
+  0.025 | IDLE 0.0000 | 1 par=true L=false P=true tp=0.000 v=0.9997
+  0.369 | IDLE 0.0000 | 1 par=false (removed: preload failed) ; 94561113743905 par=true L=false P=true tp=0.855 v=0.2802   (region made, playhead set to 0.5 + 0.355 s)
+  0.759 | IDLE 0.0000 | 94561113743905 par=true L=true P=true tp=0.855   (loaded; the playhead kept 0.855 but waited 0.39 s)
+  1.039 | IDLE 0.0000 | 94561113743905 L=true tp=1.132
+  3.971 | IDLE 0.0025 | 94561113743905 L=true tp=4.076   (the region's fade-out, and the hand-over, begins at tp 4.05)
+  4.368 | IDLE 0.1809 | 94561113743905 L=true tp=4.482
+  4.620 dt=0.0150 IDLE 0.2423 | 94561113743905 par=true L=true P=true tp=4.738 v=0.2802
+  4.659 dt=0.0159 IDLE 0.2469 | 94561113743905 par=true L=true P=true tp=4.780 v=0.2802
+  4.700 dt=0.0140 IDLE 0.2498 | 94561113743905 par=true L=true P=true tp=4.823 v=0.2802
+  4.711 dt=0.0120 IDLE 0.2506 | 94561113743905 par=true L=true P=true tp=4.823 v=0.2802
+  4.735 dt=0.0120 IDLE 0.2506 | 94561113743905 par=true L=true P=true tp=4.844 v=0.2802
+  4.752 dt=0.0160 IDLE 0.2509 | 94561113743905 par=false L=false P=false tp=0.000 v=0.2802   (removed at its end)
+  4.765 dt=0.0130 IDLE 0.2509 | (0.2509 on every frame to 4.855, every frame traced)
+ 11.129 dt=0.0140 IDLE 0.2509 | (sampled every 15th frame from 4.855)
+rows 929; idle peak 0.2509; minimum from the first frame at or above 0.25: 0.2506 at t=4.711 (the hand-over's last rise); last idle 0.2509 at t=11.310
