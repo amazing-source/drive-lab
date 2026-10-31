@@ -1,0 +1,54 @@
+Each new rule broken on purpose (mutate.py in this folder), the unit tests run, the file restored
+from its saved bytes. Paths are repo-relative. Run 2026-10-30 on commit 07d67c0.
+
+M1 (the id check accepts a bare number) in games/drive-lab/src/shared/Config/Cars/Contract.luau
+  exit 1; 73 spec files, 660 passed, 1 failed
+  FAIL Car contract: the start-up sound > refuses a start-up sound that is not an uploaded asset, or has no level: games/drive-lab/tests/CarContract.spec:374: expected the function to throw
+M2 (the level check accepts volume 0) in games/drive-lab/src/shared/Config/Cars/Contract.luau
+  exit 1; 73 spec files, 660 passed, 1 failed
+  FAIL Car contract: the start-up sound > refuses a start-up sound that is not an uploaded asset, or has no level: games/drive-lab/tests/CarContract.spec:374: expected the function to throw
+M3 (order: a negative `from` allowed) in games/drive-lab/src/shared/Config/Cars/Contract.luau
+  exit 1; 73 spec files, 660 passed, 1 failed
+  FAIL Car contract: the start-up sound > refuses a start-up sound whose times run out of order: games/drive-lab/tests/CarContract.spec:395: expected the function to throw
+M4 (order: handOver may equal `to`) in games/drive-lab/src/shared/Config/Cars/Contract.luau
+  exit 1; 73 spec files, 660 passed, 1 failed
+  FAIL Car contract: the start-up sound > refuses a start-up sound whose times run out of order: games/drive-lab/tests/CarContract.spec:395: expected the function to throw
+M5 (order: the catch may equal handOver) in games/drive-lab/src/shared/Config/Cars/Contract.luau
+  exit 1; 73 spec files, 660 passed, 1 failed
+  FAIL Car contract: the start-up sound > refuses a start-up sound whose times run out of order: games/drive-lab/tests/CarContract.spec:395: expected the function to throw
+M6 (timing tolerance 0.02 -> 0.2 s) in games/drive-lab/src/shared/Config/Cars/Contract.luau
+  exit 1; 73 spec files, 659 passed, 2 failed
+  FAIL Car contract: the start-up sound > refuses a start-up sound that catches at another time than the start-up: games/drive-lab/tests/CarContract.spec:404: expected the function to throw
+  FAIL Car contract: the start-up sound > refuses instruments that leave the starter's revs before its starter stops or after the catch: games/drive-lab/tests/CarContract.spec:419: expected the function to throw
+M7 (hold check: the lower bound (starter's end) removed) in games/drive-lab/src/shared/Config/Cars/Contract.luau
+  exit 1; 73 spec files, 660 passed, 1 failed
+  FAIL Car contract: the start-up sound > refuses instruments that leave the starter's revs before its starter stops or after the catch: games/drive-lab/tests/CarContract.spec:419: expected the function to throw
+M8 (hold check: the upper bound (the catch) removed) in games/drive-lab/src/shared/Config/Cars/Contract.luau
+  exit 1; 73 spec files, 660 passed, 1 failed
+  FAIL Car contract: the start-up sound > refuses instruments that leave the starter's revs before its starter stops or after the catch: games/drive-lab/tests/CarContract.spec:424: expected the function to throw
+M9 (define no longer runs the check) in games/drive-lab/src/shared/Config/Cars/Contract.luau
+  exit 1; 73 spec files, 657 passed, 4 failed
+  FAIL Car contract: the start-up sound > refuses a start-up sound that is not an uploaded asset, or has no level: games/drive-lab/tests/CarContract.spec:374: expected the function to throw
+  FAIL Car contract: the start-up sound > refuses a start-up sound whose times run out of order: games/drive-lab/tests/CarContract.spec:395: expected the function to throw
+  FAIL Car contract: the start-up sound > refuses a start-up sound that catches at another time than the start-up: games/drive-lab/tests/CarContract.spec:404: expected the function to throw
+  FAIL Car contract: the start-up sound > refuses instruments that leave the starter's revs before its starter stops or after the catch: games/drive-lab/tests/CarContract.spec:419: expected the function to throw
+M10 (hand-over law made linear) in games/drive-lab/src/shared/Rules/EngineSound.luau
+  exit 1; 73 spec files, 660 passed, 1 failed
+  FAIL EngineSound > hands a one-shot over to the loops at equal power: none before, all after, never back: games/drive-lab/tests/EngineSound.spec:148: expected 1 within 1e-09, got 0.9608000000000008
+M11 (hand-over not clamped) in games/drive-lab/src/shared/Rules/EngineSound.luau
+  exit 1; 73 spec files, 660 passed, 1 failed
+  FAIL EngineSound > hands a one-shot over to the loops at equal power: none before, all after, never back: games/drive-lab/tests/EngineSound.spec:140: expected 0, got -0.3090169943749477
+M12 (DR458 start-up catches 0.1 s late) in games/drive-lab/src/shared/Config/Cars/DR458/Startup.luau
+  exit 1; 73 spec files, 660 passed, 1 failed
+  FAIL CarAudio config > DR458: keeps its start-up timing to its own start-up sound: games/drive-lab/src/shared/Config/Cars/Contract:215: the engine catches in the start-up sound at another time than the start-up says
+M13 (DR458 hand-over runs past the recording's end) in games/drive-lab/src/shared/Config/Cars/DR458/Audio.luau
+  exit 1; 73 spec files, 660 passed, 1 failed
+  FAIL CarAudio config > DR458: hands its own start-up sound over before the recording ends: games/drive-lab/tests/CarAudio.spec:115: expected a truthy value, got false
+M14 (DR458 start-up revs settle at 950, not the idle) in games/drive-lab/src/shared/Config/Cars/DR458/Startup.luau
+  exit 1; 73 spec files, 660 passed, 1 failed
+  FAIL CarAudio config > DR458: settles the start-up's revs at the car's idle: games/drive-lab/tests/CarAudio.spec:120: expected 1000, got 950
+M15 (DR458 pack without its own sound) in games/drive-lab/src/shared/Config/Cars/DR458/Audio.luau
+  exit 1; 73 spec files, 660 passed, 1 failed
+  FAIL CarAudio config > DR458: hands its own start-up sound over before the recording ends: games/drive-lab/tests/CarAudio.spec:114: expected a truthy value, got false
+
+Restored: tree clean = True; exit 0; 73 spec files, 661 passed, 0 failed

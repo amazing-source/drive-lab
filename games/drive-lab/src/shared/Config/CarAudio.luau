@@ -32,6 +32,21 @@ export type ViewProfile = {
 	far: number,
 }
 
+-- A start-up recording uploaded on its own, for one that cannot be cut into the events file (an
+-- upload by another creator). Seconds into it: the starter's first sound, played at the START
+-- press; the starter's last; the engine catching; and the hand-over, from `handOver` to `to`,
+-- in which it fades out while the engine loops fade in.
+export type StartupSound = {
+	id: string,
+	-- Linear, over the idle loop's level at idle, as `boostDb` is for the region.
+	volume: number,
+	from: number,
+	starterEnds: number,
+	catchAt: number,
+	handOver: number,
+	to: number,
+}
+
 -- One car's sound pack (its entry's audio).
 export type Pack = {
 	engineLayers: { EngineLayer },
@@ -40,7 +55,16 @@ export type Pack = {
 	limiter: { soundId: string, rpm: number, volume: number, onDuck: number, halfLife: number },
 	far: { soundId: string, speed: number, volume: number, fromDistance: number, toDistance: number },
 	eventsSoundId: string,
-	startup: { region: Region, boostDb: number, handOver: number, abortRpm: number, abortHalfLife: number },
+	-- `sound`, when set, plays instead of the events file's region, which stays as its fallback
+	-- should it fail to load: the two never play together.
+	startup: {
+		region: Region,
+		boostDb: number,
+		handOver: number,
+		abortRpm: number,
+		abortHalfLife: number,
+		sound: StartupSound?,
+	},
 	gear: { region: Region, volume: number, upSpeed: number, downSpeed: number },
 	shiftDip: { gain: number, downHalfLife: number, upHalfLife: number },
 	pops: { regions: { Region }, volume: Region, speed: Region },
