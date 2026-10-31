@@ -50,7 +50,6 @@ local Cars: { [string]: Car } = {
 		-- What the Boss's entry still needs beyond the parts the manifest lacks (#209).
 		notes = {
 			"the 3D model: the promoted manifest and the import (this binding is from the cockpit parts draft)",
-			"the shifter's knob: the hand's grip point on the lever",
 			"gauges: the six Needle_* dials are not bound yet (the cluster's needles are a later field)",
 			"the driver's shift animation (Shift.luau: the reach, release and foot timings)",
 			"the remaining car entry: audio, camera, HUD, lights and the start-up",

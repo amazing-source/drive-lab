@@ -33,6 +33,9 @@ export type Part = {
 	axis_fore: Point?,
 	axis_side: Point?,
 	gates_rad: { [string]: { number } }?,
+	-- The knob's ball with the lever in neutral, and how far it goes down into reverse's lockout.
+	knob: { centre: Point, radius_m: number }?,
+	push_m: number?,
 }
 
 -- Named points with no part, such as the driver's hip point.
@@ -455,12 +458,18 @@ function ManifestBinding.binding(
 		for gear, angles in need(part.gates_rad, `{lever} has no gates`) do
 			gates[gear] = { side = round(angles[1]), fore = round(angles[2]) }
 		end
+		local push = part.push_m
+		if push == nil then
+			table.insert(pending, `gear lever: the manifest has no push_m on {lever} (reverse's push-down)`)
+		end
 		shifter = {
 			part = lever,
 			pivot = ManifestBinding.toRig(need(part.pivot, `{lever} has no pivot`), centre),
 			axisFore = direction(need(part.axis_fore, `{lever} has no fore axis`)),
 			axisSide = direction(need(part.axis_side, `{lever} has no side axis`)),
 			gates = gates,
+			knob = ManifestBinding.toRig(need(part.knob, `{lever} has no knob`).centre, centre),
+			push = round(push or 0),
 		}
 	end
 	table.sort(pending)
@@ -508,6 +517,8 @@ local ORDER = {
 	"gates",
 	"side",
 	"fore",
+	"knob",
+	"push",
 	"rest",
 	"travel",
 	"diameter",

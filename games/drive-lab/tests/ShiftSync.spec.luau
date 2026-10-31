@@ -5,11 +5,17 @@
 ]]
 local Boss302 = require("../src/shared/Config/Cars/Boss302/Physics")
 local DriveSim = require("../tools/DriveSim")
+local HBox = require("../src/shared/Vehicle/HBox")
 local Interface = require("../src/shared/Vehicle/Interface")
+local ShiftPlan = require("../src/shared/Vehicle/ShiftPlan")
 local ShiftSync = require("../src/shared/Rules/ShiftSync")
+local Types = require("../src/shared/Config/Cars/Types")
 local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect
+
+local MANUAL = Boss302.gearbox.manual :: Types.ManualGearboxConfig
+local GATES = MANUAL.gates
 
 local function telemetry(overrides: { [string]: any }): Interface.Telemetry
 	local base: { [string]: any } = {
@@ -29,21 +35,64 @@ end
 
 describe("ShiftSync", function()
 	it("publishes the clutch in effect, the foot and hand shares and the shift running", function()
-		local readout = ShiftSync.readout(telemetry({
-			clutchPedal = 0.8,
-			footAt = 1,
-			handAt = 0.6,
-			shiftFrom = 2,
-			shiftTo = 3,
-			shiftElapsed = 0.12,
-		}))
+		local readout = ShiftSync.readout(
+			telemetry({
+				clutchPedal = 0.8,
+				footAt = 1,
+				handAt = 0.6,
+				shiftFrom = 2,
+				shiftTo = 3,
+				shiftElapsed = 0.12,
+			}),
+			HBox.newState(),
+			GATES
+		)
 		expect(readout.ClutchPedal).toBe(0.8)
 		expect(readout.ClutchFoot).toBe(1)
 		expect(readout.ShiftHand).toBe(0.6)
 		expect(readout.ShiftFrom).toBe(2)
 		expect(readout.ShiftTo).toBe(3)
 		expect(readout.ShiftElapsed).toBe(0.12)
+		expect(readout.LeverColumn).toBe(GATES[2].column)
+		expect(readout.LeverRow).toBe(GATES[2].row)
+		expect(readout.KnobDown).toBe(0)
 	end)
+
+	it("rests the lever in its gear's gate with no shift running", function()
+		for gear = -1, 6 do
+			local column, row, knob = ShiftSync.lever(HBox.newState(), GATES, gear)
+			expect(column).toBe(GATES[gear].column)
+			expect(row).toBe(GATES[gear].row)
+			expect(knob).toBe(0)
+		end
+	end)
+
+	it(
+		"moves the lever along the shift running and pushes the knob down only on the way into reverse",
+		function()
+			for _, shift in { { 1, 2 }, { 2, 3 }, { 0, -1 }, { 1, -1 }, { -1, 1 } } do
+				local hbox = HBox.newState()
+				local plan = ShiftPlan.plan(GATES, MANUAL.timing, shift[1], shift[2], 0, 0)
+				hbox.plan = plan
+				local pushed = 0
+				local step = plan.clutchUp / 50
+				for index = 0, 50 do
+					hbox.time = index * step
+					local column, row, knob = ShiftSync.lever(hbox, GATES, shift[1])
+					local planColumn, planRow = ShiftPlan.lever(plan, GATES, hbox.time)
+					expect(column).toBe(planColumn)
+					expect(row).toBe(planRow)
+					expect(knob).toBe(ShiftPlan.knob(plan, hbox.time))
+					pushed = math.max(pushed, knob)
+				end
+				expect(pushed).toBe(if shift[2] == -1 then 1 else 0)
+				hbox.time = plan.gateIn
+				local column, row = ShiftSync.lever(hbox, GATES, shift[1])
+				expect(column).toBe(GATES[shift[2]].column)
+				expect(row).toBe(GATES[shift[2]].row)
+			end
+		end
+	)
 
 	it("says a shift engaged only on the frame its gear flips onto the shift's target", function()
 		expect(ShiftSync.engaged(nil, telemetry({ gear = 3, shiftFrom = 2, shiftTo = 3 }))).toBe(false)
@@ -73,6 +122,9 @@ describe("ShiftSync", function()
 					local plan = assert(hbox.plan, "a plan runs as its gear engages")
 					expect(hbox.time >= plan.gateIn).toBe(true)
 					expect(reading.gear).toBe(plan.to)
+					local column, row = ShiftSync.lever(hbox, GATES, reading.gear)
+					expect(column).toBe(GATES[plan.to].column)
+					expect(row).toBe(GATES[plan.to].row)
 				end
 				previous = reading.gear
 			end

@@ -45,6 +45,10 @@ export type Rig = {
 	-- The wiper's arm, turned about its C0's X from parked; nil on a model without one or before
 	-- it has streamed in.
 	wiper: Hinged?,
+	-- The gear lever: its weld's C0 at rest is its pivot with the chassis's axes, which
+	-- Controllers/CarShifter turns and slides; nil on a model without one or before it has
+	-- streamed in.
+	shifter: Hinged?,
 	-- The door's pull strap (Rules/DoorStrap) on its own weld from the chassis, posed by its C0
 	-- (the strap's centre, its -Y down the strap) and its part's Size.Y; nil on a model without
 	-- one or before it has streamed in.
@@ -495,6 +499,11 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: Binding.CarMo
 			hinged[part] = true
 		end
 	end
+	local lever = binding.shifter and model:FindFirstChild(binding.shifter.part, true)
+	local leverPart = if lever and lever:IsA("BasePart") then lever else nil
+	if leverPart then
+		hinged[leverPart] = true
+	end
 	local wheelPart = if steeringWheel and steeringWheel:IsA("BasePart") then steeringWheel else nil
 	local knob = knobPart(model, binding, wheelPart)
 	if knob then
@@ -527,6 +536,11 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: Binding.CarMo
 	end
 	if knob and wheelPart then
 		knobWeld(chassis, wheelPart, knob.part, knob.frame, knob.rest)
+	end
+	local shifter = binding.shifter
+	if shifter and leverPart then
+		local pivot = carSpace(shifter.pivot, shifter.pivot.up + binding.bodyRaise)
+		hingeWeld(leverPart.Name, chassis, leverPart, CFrame.new(pivot), 0)
 	end
 	addHull(model, chassis, ground, binding.hullClearance)
 	addSeat(model, chassis, binding)
@@ -607,6 +621,10 @@ function CarRig.find(model: Model, binding: Binding.CarModel): Rig?
 	if binding.wiper then
 		wiperWeld, wiperRest = hingeOf(chassis, binding.wiper.hinge.part)
 	end
+	local shifterWeld, shifterRest = nil, CFrame.identity
+	if binding.shifter then
+		shifterWeld, shifterRest = hingeOf(chassis, binding.shifter.part)
+	end
 	local strap = hingeOf(chassis, DOOR_STRAP)
 	local steeringWeld = chassis:FindFirstChild(binding.steeringWheel)
 	local steeringRest = steeringWeld and steeringWeld:GetAttribute("RestC0")
@@ -630,6 +648,7 @@ function CarRig.find(model: Model, binding: Binding.CarModel): Rig?
 		doorRest = doorRest,
 		controls = controls,
 		wiper = if wiperWeld then { weld = wiperWeld, rest = wiperRest } else nil,
+		shifter = if shifterWeld then { weld = shifterWeld, rest = shifterRest } else nil,
 		strap = strap,
 		seat = seat,
 		prompt = prompt,

@@ -170,14 +170,18 @@ local function publish(
 	model:SetAttribute("DriftTarget", math.deg(telemetry.driftTarget))
 	model:SetAttribute("PitLimiter", pitLimiter.armed)
 	local entry = driven
-	if entry and entry.physics.gearbox.kind == "manual" then
-		local readout = ShiftSync.readout(telemetry)
+	local manual = if entry then entry.physics.gearbox.manual else nil
+	if entry and manual and entry.physics.gearbox.kind == "manual" then
+		local readout = ShiftSync.readout(telemetry, current.state.gearbox.hbox, manual.gates)
 		model:SetAttribute("ClutchPedal", readout.ClutchPedal)
 		model:SetAttribute("ClutchFoot", readout.ClutchFoot)
 		model:SetAttribute("ShiftHand", readout.ShiftHand)
 		model:SetAttribute("ShiftFrom", readout.ShiftFrom)
 		model:SetAttribute("ShiftTo", readout.ShiftTo)
 		model:SetAttribute("ShiftElapsed", readout.ShiftElapsed)
+		model:SetAttribute("LeverColumn", readout.LeverColumn)
+		model:SetAttribute("LeverRow", readout.LeverRow)
+		model:SetAttribute("KnobDown", readout.KnobDown)
 		if ShiftSync.engaged(lastGear, telemetry) then
 			ControlPresses.fire(model, "SHIFT")
 		end

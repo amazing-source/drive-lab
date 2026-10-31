@@ -110,6 +110,35 @@ describe("Boss 302 binding", function()
 		end
 	)
 
+	it(
+		"binds the knob's centre from the rig's centre, and lists reverse's push depth until the manifest has it",
+		function()
+			local shifter = assert(Model.shifter, "the lever is bound")
+			local lever = part("Shifter_Lever")
+			local knob = ManifestBinding.toRig(assert(lever.knob, "the fixture has the knob").centre, CENTRE)
+			expect(shifter.knob.forward).toBeNear(knob.forward, 1e-4)
+			expect(shifter.knob.right).toBeNear(knob.right, 1e-4)
+			expect(shifter.knob.up).toBeNear(knob.up, 1e-4)
+			expect(shifter.knob.up > shifter.pivot.up).toBe(true)
+			expect(shifter.push).toBe(0)
+			expect(string.find(table.concat(ModelPending, "\n"), "push_m", 1, true) ~= nil).toBe(true)
+
+			local parts = table.clone(MANIFEST.parts)
+			for index, entry in parts do
+				if entry.name == "Shifter_Lever" then
+					local pushed = table.clone(entry)
+					pushed.push_m = 0.012
+					parts[index] = pushed
+				end
+			end
+			local manifest = table.clone(MANIFEST)
+			manifest.parts = parts
+			local written, pending = ManifestBinding.binding(manifest, CAR.physics, CAR.settings)
+			expect(assert(written.shifter, "the lever is bound").push).toBe(0.012)
+			expect(string.find(table.concat(pending, "\n"), "push_m", 1, true)).toBe(nil)
+		end
+	)
+
 	it("lists what the draft lacks, so the car stays out of the catalog until it has it", function()
 		local listed = table.concat(ModelPending, "\n")
 		for _, lacking in
