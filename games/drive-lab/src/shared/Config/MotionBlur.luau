@@ -2,8 +2,9 @@
 --[[
 	Motion blur with Roblox's post-processing (Rules/MotionBlur): a blur that grows with how fast
 	the camera turns, and a depth of field that softens the world moving past the car with its
-	speed and, more, while it pulls. Seeds, for the owner's eye in a playtest; ACCELERATION's
-	intensity turns the pull's blur up or down in one place.
+	speed and, more, while it pulls. The values here are the Full level of the player's
+	motion-blur setting (Config/Settings); LEVELS scales all of them. ACCELERATION's intensity
+	turns the pull's blur up or down in one place.
 ]]
 local MotionBlur = require("../Rules/MotionBlur")
 
@@ -11,6 +12,9 @@ export type MotionBlurConfig = {
 	ROTATION: MotionBlur.Rotation,
 	SPEED: MotionBlur.Speed,
 	ACCELERATION: MotionBlur.Acceleration,
+	-- The id of the setting that picks a level, and each of its options' scale.
+	SETTING: string,
+	LEVELS: { [string]: number },
 }
 
 local Config: MotionBlurConfig = table.freeze({
@@ -25,6 +29,7 @@ local Config: MotionBlurConfig = table.freeze({
 		rise = 0.03,
 		fall = 0.08,
 		cut = 45,
+		off = 0.05,
 	}),
 	-- km/h: the depth of field's intensity, 0 under `from`, full from `to`. In the cockpit and hood
 	-- views a far blur over about 0.2 smears the bright sky over the road and reads as fog, not
@@ -48,6 +53,9 @@ local Config: MotionBlurConfig = table.freeze({
 		cabin = 0.15,
 		fullScreen = 3,
 	}),
+	SETTING = "MotionBlur",
+	-- Light, the default, is a third of every blur; Off draws none.
+	LEVELS = table.freeze({ Off = 0, Light = 1 / 3, Full = 1 }),
 })
 
 return Config

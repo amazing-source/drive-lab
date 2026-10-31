@@ -5,7 +5,8 @@
 	easing in quicker than out, and a depth of field that softens the world moving past while
 	what rides with the camera stays sharp (the car in the chase view, the cabin in the cockpit),
 	growing with the car's speed and with how hard it pulls. The pull's blur can be drawn as a
-	full-screen blur instead, to compare: it blurs the car and the cabin too.
+	full-screen blur instead, to compare: it blurs the car and the cabin too. Every blur is
+	multiplied by the player's level (the motion-blur setting): 0 draws none of them.
 ]]
 local MotionBlur = {}
 
@@ -23,6 +24,8 @@ export type Rotation = {
 	fall: number,
 	-- Degrees in one frame past which the turn is a camera cut, not a motion.
 	cut: number,
+	-- Pixels under which the blur is switched off rather than drawn for nothing.
+	off: number,
 }
 
 -- km/h: the chase view's near blur and the cockpit's and hood's far blur grow from `from` to
@@ -68,12 +71,24 @@ function MotionBlur.turnRate(degrees: number, dt: number, cut: number): number?
 	return math.abs(degrees) / dt
 end
 
--- The blur size (pixels) a turn rate asks for.
-function MotionBlur.rotationSize(rate: number, rotation: Rotation): number
+-- The scale a level of the motion-blur setting gives every blur; a choice with no level gives
+-- the full blur.
+function MotionBlur.level(levels: { [string]: number }, choice: string?): number
+	local scale = if choice then levels[choice] else nil
+	return if scale and scale == scale then math.max(scale, 0) else 1
+end
+
+-- The blur size (pixels) a turn rate asks for, at the player's level `scale`.
+function MotionBlur.rotationSize(rate: number, rotation: Rotation, scale: number): number
 	if rate ~= rate then
 		return 0
 	end
-	return rotation.max * share(rate, rotation.from, rotation.to) ^ rotation.exponent
+	return rotation.max * share(rate, rotation.from, rotation.to) ^ rotation.exponent * scale
+end
+
+-- Whether the turn blur's BlurEffect is drawn at `size` pixels.
+function MotionBlur.blurOn(size: number, rotation: Rotation): boolean
+	return size == size and size >= rotation.off
 end
 
 -- The blur moved toward `target` over `dt`, quicker rising than falling, at any frame rate.
@@ -111,31 +126,34 @@ function MotionBlur.pullShare(g: number, acceleration: Acceleration): number
 end
 
 -- The depth of field's near and far intensities, 0 to 1, in a view at a speed and an eased pull
--- share: the chase view blurs the road before the car and the world past it, the cockpit and
--- hood views the world past the cabin; on foot nothing.
+-- share, at the player's level `scale`: the chase view blurs the road before the car and the
+-- world past it, the cockpit and hood views the world past the cabin; on foot nothing.
 function MotionBlur.depth(
 	view: string,
 	speedKmh: number,
 	pull: number,
 	speed: Speed,
-	acceleration: Acceleration
+	acceleration: Acceleration,
+	scale: number
 ): (number, number)
 	local strength = if acceleration.style == "DepthOfField" then pullStrength(pull, acceleration) else 0
 	if view == "Chase" then
 		local near = MotionBlur.speedNear(speedKmh, speed) + acceleration.near * strength
-		return math.min(near, 1), math.min(acceleration.far * strength, 1)
+		return math.min(near * scale, 1), math.min(acceleration.far * strength * scale, 1)
 	elseif view == "Cockpit" or view == "Hood" then
-		return 0, math.min(MotionBlur.speedFar(speedKmh, speed) + acceleration.cabin * strength, 1)
+		local far = MotionBlur.speedFar(speedKmh, speed) + acceleration.cabin * strength
+		return 0, math.min(far * scale, 1)
 	end
 	return 0, 0
 end
 
--- The full-screen style's blur (pixels) at an eased pull share; none in the other style.
-function MotionBlur.pulseSize(pull: number, acceleration: Acceleration): number
+-- The full-screen style's blur (pixels) at an eased pull share and the player's level `scale`;
+-- none in the other style.
+function MotionBlur.pulseSize(pull: number, acceleration: Acceleration, scale: number): number
 	if acceleration.style ~= "FullScreen" then
 		return 0
 	end
-	return acceleration.fullScreen * pullStrength(pull, acceleration)
+	return acceleration.fullScreen * pullStrength(pull, acceleration) * scale
 end
 
 return table.freeze(MotionBlur)

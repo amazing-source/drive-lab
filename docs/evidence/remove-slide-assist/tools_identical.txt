@@ -1,0 +1,15 @@
+Every game tool run on main before #168 (2d0740f^1 = 9b99a51) and on this branch:
+identical  assists
+identical  audio_timeline
+differs    calibrate: < Model.step cost: 445 us per frame at 60 FPS, 847 us at 30 FPS > Model.step cost: 247 us per frame at 60 FPS, 452 us at 30 FPS 
+identical  chase_camera
+identical  dr458_binding
+identical  dr458_review
+identical  drift
+identical  drift_baseline
+identical  drift_candidate
+identical  gesture_config
+identical  road_timeline
+identical  startup_config
+identical  weather_timeline
+control_sounds: added by #179 after #168, so it has no reference run.

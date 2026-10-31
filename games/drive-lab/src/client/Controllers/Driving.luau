@@ -17,8 +17,6 @@ local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local DriveModes = require(ReplicatedStorage.Shared.Rules.DriveModes)
 local DriverAssists = require(ReplicatedStorage.Shared.Rules.DriverAssists)
-local GameFeel = require(ReplicatedStorage.Shared.Rules.GameFeel)
-local GameFeelConfig = require(ReplicatedStorage.Shared.Config.GameFeel)
 local InputHelp = require(ReplicatedStorage.Shared.Config.InputHelp)
 local Interface = require(ReplicatedStorage.Shared.Vehicle.Interface)
 local PitLimiter = require(ReplicatedStorage.Shared.Rules.PitLimiter)
@@ -37,8 +35,6 @@ local driven: Catalog.Entry? = nil
 local drivenModel: Model? = nil
 -- The drive mode each car was left in, by its name, so a car keeps it from one drive to the next.
 local chosenMode: { [string]: Types.DrivingMode } = {}
--- The player's game-feel notch, kept from one drive to the next for the session.
-local gameFeel: GameFeelConfig.Notch = GameFeelConfig.DEFAULT
 local escSwitch = DriverAssists.newSwitch()
 local pitLimiter = PitLimiter.newState()
 local tyreReadings: { TyreSmoke.Wheel } = {}
@@ -102,7 +98,6 @@ local function readInput(entry: Catalog.Entry, mode: Types.DrivingMode): Interfa
 		gearboxMode = gearboxMode,
 		drivingMode = mode,
 		assists = DriverAssists.assists(escSwitch.off, mode, tuning),
-		gameFeel = gameFeel,
 	}
 	pressed.shiftUp, pressed.shiftDown = false, false
 	return input
@@ -167,7 +162,6 @@ local function publish(
 	model:SetAttribute("Launch", telemetry.launch)
 	model:SetAttribute("Drift", telemetry.drift)
 	model:SetAttribute("DriftTarget", math.deg(telemetry.driftTarget))
-	model:SetAttribute("GameFeel", gameFeel)
 	model:SetAttribute("PitLimiter", pitLimiter.armed)
 	-- Per tyre, for the smoke: read from the model, never written back.
 	for wheel, reading in TyreSmoke.measure(current.state, result.wheels, tyreReadings) do
@@ -246,8 +240,6 @@ function Controller.start()
 			pressed.shiftUp = true
 		elseif contains(Controls.SHIFT_DOWN, key) then
 			pressed.shiftDown = true
-		elseif contains(Controls.GAME_FEEL, key) then
-			gameFeel = GameFeel.after(gameFeel)
 		elseif contains(Controls.GEARBOX_MODE, key) then
 			gearboxMode = if gearboxMode == "auto" then "manual" else "auto"
 		elseif contains(Controls.DRIVING_MODE, key) then
