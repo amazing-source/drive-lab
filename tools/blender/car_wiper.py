@@ -1,7 +1,7 @@
 """Fit, build and check a windscreen wiper: arm and blade as one hinged part, modelled parked, plus its spindle boss.
 
 blender -b <car.blend> --factory-startup --python-exit-code 1 -P tools/blender/car_wiper.py --
-        <spec.json> --out <out.blend> [--report <report.json>] [--break clear|edge|sign]
+        <spec.json> --out <out.blend> [--report <report.json>] [--break clear|edge|sign|collapse]
 
 Spec (Blender frame, metres): `pane` / `band` (the clear glass and its printed band: both are glass the
 blade may ride), `scuttle` (the boss stands on it), `pivot_xy`, `boss_height_m`, the parked blade from the
@@ -23,10 +23,12 @@ Build, parked: the boss (static), the arm's head with its nut on the spindle, th
 `min_clear_m` over everything it passes, the blade's frame and rubber edge and the clip. UVs at
 metres / 0.1 (the tiled sets), one material slot per set; shaded smooth, edges sharper than `sharp_deg` kept.
 
-Checks over `steps` + 1 angles from park to the range (exit 1): no triangle of the arm crosses the glass,
+Checks (exit 1): the range is at least `min_sweep_deg` (it cannot quietly collapse to where the part first
+meets the car); over `steps` + 1 angles from park to the range, no triangle of the arm crosses the glass,
 the scuttle, the bonnet or the body (BVH overlap); every arm vertex at least `min_clear_m` from them; every
 rubber-edge sample over the glass. `--break clear` lowers the blade 6 mm, `--break edge` sweeps 25 degrees
-past the range, `--break sign` turns the axis round (the blade sweeps down into the scuttle).
+past the range, `--break sign` turns the axis round (the blade sweeps down into the scuttle), `--break
+collapse` makes the range search demand 10 mm (the range falls to 0 while every pose still passes).
 Report: pivot, axis (positive = the right-hand rule, lifting the blade off its park line), range, the
 parked rubber edge's ends, the clear-pane and quad shares per step, gaps, triangles, and every value in the
 manifest frame (forward = -y, right = -x, up = z).
@@ -485,13 +487,16 @@ body_limit = None
 if not S.get("range_deg"):
     for deg in range(0, int(fit["end_deg"]) + 1):
         _, pairs, dmin, _, _ = pose(deg, AXIS)
-        if pairs or dmin < S["min_clear_m"] + 0.0005:
+        if pairs or dmin < (0.01 if BREAK == "collapse" else S["min_clear_m"] + 0.0005):
             body_limit = deg
             break
     if body_limit is not None:
         RANGE_DEG = max(0, body_limit - 2)
 report["fit"]["body_limit_deg"] = body_limit
 report["fit"]["range_deg"] = RANGE_DEG
+if RANGE_DEG < S["min_sweep_deg"]:
+    problems.append(f"range {RANGE_DEG} deg is under min_sweep_deg {S['min_sweep_deg']}: the part meets the car at "
+                    f"{body_limit} deg")
 end_deg = RANGE_DEG + (25 if BREAK == "edge" else 0)
 steps = S["steps"]
 rows = []
