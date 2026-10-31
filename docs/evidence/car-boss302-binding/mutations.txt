@@ -24,3 +24,8 @@ The DR458 through the generic writer (lune run games/drive-lab/tools/car_binding
 == 8 calipers not checked: 1 failing; 95 spec files, 991 passed, 1 failed
    FAIL Boss 302 binding > is the writer's output for the manifest and its notes, not a hand edit: games/drive-lab/tests/Boss302Binding.spec:62: expected centre of mas
 clean
+
+-- After merging main (#218): break 7 (the borrowed centre-of-mass note) no longer exists, since the Boss
+-- now reads its real physics. Its replacement, baseline 98 spec files, 1031 passed:
+== 7b a note of the car entry dropped from the pending list: 1 failing; 98 spec files, 1030 passed, 1 failed
+   FAIL Boss 302 binding > is the writer's output for the manifest and its notes, not a hand edit
