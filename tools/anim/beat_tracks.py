@@ -88,6 +88,9 @@ class Body:
         self.guess = {"right_arm": (0, 0), "left_arm": (0, 0), "right_leg": (0, 0), "left_leg": (0, 0)}
         self.contact = []  # (start, end) spans keyed every frame
         self.support = []  # (start, end, [legs]): the pelvis height follows these planted legs
+        # Optional: {limb: {frame: (x, z)}}, joint angles a search already chose (car_entry_track.py),
+        # applied as they are instead of aimed, so the bake keeps the branch that was checked.
+        self.fixed = {}
 
     def _standing_height(self, pelvis, rot, legs, targets, guess):
         """The pelvis height at which each supporting straight leg just reaches its sole spot on
@@ -197,6 +200,16 @@ class Body:
             miss = {}
             for limb in ("right_arm", "left_arm", "right_leg", "left_leg"):
                 target = np.array(tgt[limb][i])
+                if i in self.fixed.get(limb, {}):
+                    x, z = self.fixed[limb][i]
+                    angles = (float(x), float(tw[limb][i]), float(z))
+                    trial = dict(pose)
+                    trial[r6_fk.LIMB_JOINT[limb]] = (angles, (0, 0, 0))
+                    end = r6_fk.point(r6_fk.pose_parts(trial)[r6_fk.JOINTS[r6_fk.LIMB_JOINT[limb]][1]], self.points[limb])
+                    guess[limb] = np.array([angles[0], angles[2]])
+                    pose[r6_fk.LIMB_JOINT[limb]] = (angles, (0, 0, 0))
+                    miss[limb] = float(np.linalg.norm(end - target))
+                    continue
                 angles, err = r6_fk.aim(
                     pose, limb, target, self.points[limb], twist=float(tw[limb][i]), guess=guess[limb]
                 )
