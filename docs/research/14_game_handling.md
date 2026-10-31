@@ -1,5 +1,11 @@
 # 14 · Game-friendly handling: how racing games help, what Drive Lab did, and the slide assist
 
+> **Removed (#182).** The slide assist and its game-feel levels were built in #158 (PR #168) and
+> removed at the owner's request after playing them: the assisted steering did not work as
+> intended, and turning felt very hard. Both cars drive as before #158. The research and the
+> measurements below stay as a record of what was tried; the code, specs and tools they name no
+> longer exist.
+
 Systems agent, issue #158, 2026-10-31. The web research was done by the researcher agent the same
 day (web search and fetch only; no game was run). Measurements are offline on `tools/DriveSim`.
 

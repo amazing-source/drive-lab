@@ -86,92 +86,6 @@ DriveHud/1/21 TextLabel BackgroundTransparency=1 Name="TextLabel" Position=0.821
 DriveHud/1/22 TextLabel BackgroundTransparency=1 Name="TextLabel" Position=0.8869105, 0, 0.78826, 0 Size=0.016843118, 0, 0.109014675, 0 Text="▶" TextColor3=0, 0.84705883, 0.21568628 TextScaled=true Visible=false
 --- frame 2
 DriveHud ScreenGui DisplayOrder=5 Enabled=true Name="DriveHud" ResetOnSpawn=false ZIndexBehavior=Enum.ZIndexBehavior.Sibling
-DriveHud/1 ImageLabel AnchorPoint=0.5, 1 BackgroundTransparency=1 Image="rbxassetid://136575325662647" Name="Frame" Position=0.5, 0, 1, -14 Size=0.9, 0, 0.17, 0
-DriveHud/1/1 UIAspectRatioConstraint AspectRatio=4.35639413 Name="UIAspectRatioConstraint"
-DriveHud/1/2 ImageLabel BackgroundTransparency=1 Image="rbxassetid://122022683037511" ImageRectOffset=0, 0 ImageRectSize=185, 36 Name="ImageLabel" Position=0.15110683, 0, 0.13626835, 0 Size=0.08902791, 0, 0.0754717, 0 Visible=true
-DriveHud/1/2/1 UIGradient Color=0 > 0.99215686, 0.8156863, 0.007843138, 1 > 0.99215686, 0.8156863, 0.007843138 Name="UIGradient" Transparency=0 > 0, 1 > 0
-DriveHud/1/3 ImageLabel BackgroundTransparency=1 Image="rbxassetid://122022683037511" ImageRectOffset=189, 0 ImageRectSize=168, 39 Name="ImageLabel" Position=0.2305101, 0, 0.12997903, 0 Size=0.080846965, 0, 0.08176101, 0 Visible=true
-DriveHud/1/3/1 UIGradient Color=0 > 0.99215686, 0.8156863, 0.007843138, 1 > 0.99215686, 0.8156863, 0.007843138 Name="UIGradient" Transparency=0 > 0, 1 > 0
-DriveHud/1/4 ImageLabel BackgroundTransparency=1 Image="rbxassetid://122022683037511" ImageRectOffset=189, 0 ImageRectSize=168, 39 Name="ImageLabel" Position=0.30076998, 0, 0.12997903, 0 Size=0.07844081, 0, 0.08176101, 0 Visible=true
-DriveHud/1/4/1 UIGradient Color=0 > 0.99215686, 0.8156863, 0.007843138, 1 > 0.99215686, 0.8156863, 0.007843138 Name="UIGradient" Transparency=0 > 0, 1 > 0
-DriveHud/1/5 ImageLabel BackgroundTransparency=1 Image="rbxassetid://122022683037511" ImageRectOffset=189, 0 ImageRectSize=168, 39 Name="ImageLabel" Position=0.36910492, 0, 0.12997903, 0 Size=0.077959575, 0, 0.08176101, 0 Visible=true
-DriveHud/1/5/1 UIGradient Color=0 > 0.99215686, 0.8156863, 0.007843138, 1 > 0.99215686, 0.8156863, 0.007843138 Name="UIGradient" Transparency=0 > 0, 1 > 0
-DriveHud/1/6 ImageLabel BackgroundTransparency=1 Image="rbxassetid://122022683037511" ImageRectOffset=189, 0 ImageRectSize=168, 39 Name="ImageLabel" Position=0.4369586, 0, 0.12997903, 0 Size=0.07844081, 0, 0.08176101, 0 Visible=true
-DriveHud/1/6/1 UIGradient Color=0 > 0.99215686, 0.8156863, 0.007843138, 1 > 0.99215686, 0.8156863, 0.007843138 Name="UIGradient" Transparency=0 > 0, 1 > 0
-DriveHud/1/7 ImageLabel BackgroundTransparency=1 Image="rbxassetid://122022683037511" ImageRectOffset=189, 0 ImageRectSize=168, 39 Name="ImageLabel" Position=0.50529355, 0, 0.12997903, 0 Size=0.07747834, 0, 0.08176101, 0 Visible=true
-DriveHud/1/7/1 UIGradient Color=0 > 0.99215686, 0.8156863, 0.007843138, 1 > 0.99215686, 0.8156863, 0.007843138 Name="UIGradient" Transparency=0 > 0, 1 > 0
-DriveHud/1/8 ImageLabel BackgroundTransparency=1 Image="rbxassetid://122022683037511" ImageRectOffset=189, 0 ImageRectSize=168, 39 Name="ImageLabel" Position=0.57266605, 0, 0.12997903, 0 Size=0.076997116, 0, 0.08176101, 0 Visible=true
-DriveHud/1/8/1 UIGradient Color=0 > 0.99215686, 0.8156863, 0.007843138, 1 > 0.99215686, 0.8156863, 0.007843138 Name="UIGradient" Transparency=0 > 0, 0.4 > 0, 0.402 > 1, 1 > 1
-DriveHud/1/9 ImageLabel BackgroundTransparency=1 Image="rbxassetid://122022683037511" ImageRectOffset=189, 0 ImageRectSize=168, 39 Name="ImageLabel" Position=0.641001, 0, 0.12997903, 0 Size=0.080846965, 0, 0.08176101, 0 Visible=false
-DriveHud/1/9/1 UIGradient Color=0 > 0.99215686, 0.8156863, 0.007843138, 1 > 0.99215686, 0.8156863, 0.007843138 Name="UIGradient"
-DriveHud/1/10 ImageLabel BackgroundTransparency=1 Image="rbxassetid://122022683037511" ImageRectOffset=189, 0 ImageRectSize=168, 39 Name="ImageLabel" Position=0.7093359, 0, 0.12997903, 0 Size=0.080846965, 0, 0.08176101, 0 Visible=false
-DriveHud/1/10/1 UIGradient Color=0 > 0.99215686, 0.8156863, 0.007843138, 0.5 > 0.99215686, 0.8156863, 0.007843138, 0.502 > 0.9411765, 0.078431375, 0.09411765, 1 > 0.9411765, 0.078431375, 0.09411765 Name="UIGradient"
-DriveHud/1/11 ImageLabel BackgroundTransparency=1 Image="rbxassetid://122022683037511" ImageRectOffset=361, 0 ImageRectSize=132, 31 Name="ImageLabel" Position=0.7786333, 0, 0.12997903, 0 Size=0.063522615, 0, 0.064989515, 0 Visible=false
-DriveHud/1/11/1 UIGradient Color=0 > 0.9411765, 0.078431375, 0.09411765, 1 > 0.9411765, 0.078431375, 0.09411765 Name="UIGradient"
-DriveHud/1/12 Frame AnchorPoint=0.48724735, 0.7106918 BackgroundTransparency=1 Name="Frame" Position=0.48724735, 0, 0.7106918, 0 Size=1, 0, 1, 0
-DriveHud/1/12/1 UIScale Name="UIScale" Scale=1
-DriveHud/1/12/2 TextLabel AnchorPoint=0.5, 0.5 BackgroundTransparency=1 FontFace=rbxasset://fonts/families/Montserrat.json, Heavy, Italic Name="TextLabel" Position=0.48724735, 0, 0.7106918, 0 Size=0, 61, 0, 58 Text="3" TextColor3=0.9490196, 0.9490196, 0.9490196 TextSize=100 TextXAlignment=Enum.TextXAlignment.Center
-DriveHud/1/12/2/1 UIScale Name="UIScale" Scale=1.2945315
-DriveHud/1/13 ImageLabel BackgroundTransparency=1 Image="rbxassetid://122022683037511" ImageColor3=0, 0.84705883, 0.21568628 ImageRectOffset=497, 0 ImageRectSize=80, 62 Name="ImageLabel" Position=0.8484119, 0, 0.7924528, 0 Size=0.02983638, 0, 0.0985325, 0
-DriveHud/1/14 TextLabel AnchorPoint=0, 0.5 BackgroundTransparency=1 FontFace=rbxasset://fonts/families/Montserrat.json, SemiBold, Normal Name="TextLabel" Position=0.13041386, 0, 0.5492662, 0 Size=0, 84, 0, 13 Text="SPORT" TextColor3=0.99215686, 0.8156863, 0.007843138 TextSize=23.53693636 TextXAlignment=Enum.TextXAlignment.Left
-DriveHud/1/14/1 UIScale Name="UIScale" Scale=1
-DriveHud/1/15 TextLabel AnchorPoint=0.5, 0.5 BackgroundTransparency=1 FontFace=rbxasset://fonts/families/Montserrat.json, SemiBold, Normal Name="TextLabel" Position=0.15880655, 0, 0.7410901, 0 Size=0, 19, 0, 9 Text="TC" TextColor3=0.99215686, 0.8156863, 0.007843138 TextSize=16.34509469 TextXAlignment=Enum.TextXAlignment.Center
-DriveHud/1/15/1 UIScale Name="UIScale" Scale=1
-DriveHud/1/16 Frame BackgroundColor3=0.99215686, 0.8156863, 0.007843138 BorderSizePixel=0 Name="Frame" Position=0.13666987, 0, 0.8155136, 0 Size=0.04427334, 0, 0.014675053, 0
-DriveHud/1/17 TextLabel AnchorPoint=0.5, 0.5 BackgroundTransparency=1 FontFace=rbxasset://fonts/families/Montserrat.json, SemiBold, Normal Name="TextLabel" Position=0.26876804, 0, 0.7421384, 0 Size=0, 31, 0, 9 Text="ABS" TextColor3=0.32156864, 0.32156864, 0.3254902 TextSize=15.69129091 TextXAlignment=Enum.TextXAlignment.Center
-DriveHud/1/17/1 UIScale Name="UIScale" Scale=1
-DriveHud/1/18 Frame BackgroundColor3=0.23921569, 0.23921569, 0.23529412 BorderSizePixel=0 Name="Frame" Position=0.2454283, 0, 0.8176101, 0 Size=0.047641963, 0, 0.01048218, 0
-DriveHud/1/19 TextLabel AnchorPoint=0.5, 0.5 BackgroundTransparency=1 FontFace=rbxasset://fonts/families/Montserrat.json, SemiBold, Normal Name="TextLabel" Position=0.5002406, 0, 0.43291405, 0 Size=0, 14, 0, 9 Text="A" TextColor3=0.9490196, 0.9490196, 0.9490196 TextSize=16.34509469 TextXAlignment=Enum.TextXAlignment.Center
-DriveHud/1/19/1 UIScale Name="UIScale" Scale=1
-DriveHud/1/20 TextLabel AnchorPoint=1, 0.5 BackgroundTransparency=1 FontFace=rbxasset://fonts/families/Montserrat.json, Heavy, Italic Name="TextLabel" Position=0.8493744, 0, 0.591195, 0 Size=0, 161, 0, 48 Text="148" TextColor3=0.9490196, 0.9490196, 0.9490196 TextSize=82.37927726 TextXAlignment=Enum.TextXAlignment.Right
-DriveHud/1/20/1 UIScale Name="UIScale" Scale=1
-DriveHud/1/21 TextLabel BackgroundTransparency=1 Name="TextLabel" Position=0.8219442, 0, 0.78826, 0 Size=0.016843118, 0, 0.109014675, 0 Text="◀" TextColor3=0, 0.84705883, 0.21568628 TextScaled=true Visible=true
-DriveHud/1/22 TextLabel BackgroundTransparency=1 Name="TextLabel" Position=0.8869105, 0, 0.78826, 0 Size=0.016843118, 0, 0.109014675, 0 Text="▶" TextColor3=0, 0.84705883, 0.21568628 TextScaled=true Visible=false
---- frame 3
-DriveHud ScreenGui DisplayOrder=5 Enabled=true Name="DriveHud" ResetOnSpawn=false ZIndexBehavior=Enum.ZIndexBehavior.Sibling
-DriveHud/1 ImageLabel AnchorPoint=0.5, 1 BackgroundTransparency=1 Image="rbxassetid://136575325662647" Name="Frame" Position=0.5, 0, 1, -14 Size=0.9, 0, 0.17, 0
-DriveHud/1/1 UIAspectRatioConstraint AspectRatio=4.35639413 Name="UIAspectRatioConstraint"
-DriveHud/1/2 ImageLabel BackgroundTransparency=1 Image="rbxassetid://122022683037511" ImageRectOffset=0, 0 ImageRectSize=185, 36 Name="ImageLabel" Position=0.15110683, 0, 0.13626835, 0 Size=0.08902791, 0, 0.0754717, 0 Visible=true
-DriveHud/1/2/1 UIGradient Color=0 > 0.99215686, 0.8156863, 0.007843138, 1 > 0.99215686, 0.8156863, 0.007843138 Name="UIGradient" Transparency=0 > 0, 1 > 0
-DriveHud/1/3 ImageLabel BackgroundTransparency=1 Image="rbxassetid://122022683037511" ImageRectOffset=189, 0 ImageRectSize=168, 39 Name="ImageLabel" Position=0.2305101, 0, 0.12997903, 0 Size=0.080846965, 0, 0.08176101, 0 Visible=true
-DriveHud/1/3/1 UIGradient Color=0 > 0.99215686, 0.8156863, 0.007843138, 1 > 0.99215686, 0.8156863, 0.007843138 Name="UIGradient" Transparency=0 > 0, 1 > 0
-DriveHud/1/4 ImageLabel BackgroundTransparency=1 Image="rbxassetid://122022683037511" ImageRectOffset=189, 0 ImageRectSize=168, 39 Name="ImageLabel" Position=0.30076998, 0, 0.12997903, 0 Size=0.07844081, 0, 0.08176101, 0 Visible=true
-DriveHud/1/4/1 UIGradient Color=0 > 0.99215686, 0.8156863, 0.007843138, 1 > 0.99215686, 0.8156863, 0.007843138 Name="UIGradient" Transparency=0 > 0, 1 > 0
-DriveHud/1/5 ImageLabel BackgroundTransparency=1 Image="rbxassetid://122022683037511" ImageRectOffset=189, 0 ImageRectSize=168, 39 Name="ImageLabel" Position=0.36910492, 0, 0.12997903, 0 Size=0.077959575, 0, 0.08176101, 0 Visible=true
-DriveHud/1/5/1 UIGradient Color=0 > 0.99215686, 0.8156863, 0.007843138, 1 > 0.99215686, 0.8156863, 0.007843138 Name="UIGradient" Transparency=0 > 0, 1 > 0
-DriveHud/1/6 ImageLabel BackgroundTransparency=1 Image="rbxassetid://122022683037511" ImageRectOffset=189, 0 ImageRectSize=168, 39 Name="ImageLabel" Position=0.4369586, 0, 0.12997903, 0 Size=0.07844081, 0, 0.08176101, 0 Visible=true
-DriveHud/1/6/1 UIGradient Color=0 > 0.99215686, 0.8156863, 0.007843138, 1 > 0.99215686, 0.8156863, 0.007843138 Name="UIGradient" Transparency=0 > 0, 1 > 0
-DriveHud/1/7 ImageLabel BackgroundTransparency=1 Image="rbxassetid://122022683037511" ImageRectOffset=189, 0 ImageRectSize=168, 39 Name="ImageLabel" Position=0.50529355, 0, 0.12997903, 0 Size=0.07747834, 0, 0.08176101, 0 Visible=true
-DriveHud/1/7/1 UIGradient Color=0 > 0.99215686, 0.8156863, 0.007843138, 1 > 0.99215686, 0.8156863, 0.007843138 Name="UIGradient" Transparency=0 > 0, 1 > 0
-DriveHud/1/8 ImageLabel BackgroundTransparency=1 Image="rbxassetid://122022683037511" ImageRectOffset=189, 0 ImageRectSize=168, 39 Name="ImageLabel" Position=0.57266605, 0, 0.12997903, 0 Size=0.076997116, 0, 0.08176101, 0 Visible=true
-DriveHud/1/8/1 UIGradient Color=0 > 0.99215686, 0.8156863, 0.007843138, 1 > 0.99215686, 0.8156863, 0.007843138 Name="UIGradient" Transparency=0 > 0, 0.4 > 0, 0.402 > 1, 1 > 1
-DriveHud/1/9 ImageLabel BackgroundTransparency=1 Image="rbxassetid://122022683037511" ImageRectOffset=189, 0 ImageRectSize=168, 39 Name="ImageLabel" Position=0.641001, 0, 0.12997903, 0 Size=0.080846965, 0, 0.08176101, 0 Visible=false
-DriveHud/1/9/1 UIGradient Color=0 > 0.99215686, 0.8156863, 0.007843138, 1 > 0.99215686, 0.8156863, 0.007843138 Name="UIGradient"
-DriveHud/1/10 ImageLabel BackgroundTransparency=1 Image="rbxassetid://122022683037511" ImageRectOffset=189, 0 ImageRectSize=168, 39 Name="ImageLabel" Position=0.7093359, 0, 0.12997903, 0 Size=0.080846965, 0, 0.08176101, 0 Visible=false
-DriveHud/1/10/1 UIGradient Color=0 > 0.99215686, 0.8156863, 0.007843138, 0.5 > 0.99215686, 0.8156863, 0.007843138, 0.502 > 0.9411765, 0.078431375, 0.09411765, 1 > 0.9411765, 0.078431375, 0.09411765 Name="UIGradient"
-DriveHud/1/11 ImageLabel BackgroundTransparency=1 Image="rbxassetid://122022683037511" ImageRectOffset=361, 0 ImageRectSize=132, 31 Name="ImageLabel" Position=0.7786333, 0, 0.12997903, 0 Size=0.063522615, 0, 0.064989515, 0 Visible=false
-DriveHud/1/11/1 UIGradient Color=0 > 0.9411765, 0.078431375, 0.09411765, 1 > 0.9411765, 0.078431375, 0.09411765 Name="UIGradient"
-DriveHud/1/12 Frame AnchorPoint=0.48724735, 0.7106918 BackgroundTransparency=1 Name="Frame" Position=0.48724735, 0, 0.7106918, 0 Size=1, 0, 1, 0
-DriveHud/1/12/1 UIScale Name="UIScale" Scale=1
-DriveHud/1/12/2 TextLabel AnchorPoint=0.5, 0.5 BackgroundTransparency=1 FontFace=rbxasset://fonts/families/Montserrat.json, Heavy, Italic Name="TextLabel" Position=0.48724735, 0, 0.7106918, 0 Size=0, 61, 0, 58 Text="3" TextColor3=0.9490196, 0.9490196, 0.9490196 TextSize=100 TextXAlignment=Enum.TextXAlignment.Center
-DriveHud/1/12/2/1 UIScale Name="UIScale" Scale=1.2945315
-DriveHud/1/13 ImageLabel BackgroundTransparency=1 Image="rbxassetid://122022683037511" ImageColor3=0, 0.84705883, 0.21568628 ImageRectOffset=497, 0 ImageRectSize=80, 62 Name="ImageLabel" Position=0.8484119, 0, 0.7924528, 0 Size=0.02983638, 0, 0.0985325, 0
-DriveHud/1/14 TextLabel AnchorPoint=0, 0.5 BackgroundTransparency=1 FontFace=rbxasset://fonts/families/Montserrat.json, SemiBold, Normal Name="TextLabel" Position=0.13041386, 0, 0.5492662, 0 Size=0, 84, 0, 13 Text="BALANCED" TextColor3=0.99215686, 0.8156863, 0.007843138 TextSize=23.53693636 TextXAlignment=Enum.TextXAlignment.Left
-DriveHud/1/14/1 UIScale Name="UIScale" Scale=1
-DriveHud/1/15 TextLabel AnchorPoint=0.5, 0.5 BackgroundTransparency=1 FontFace=rbxasset://fonts/families/Montserrat.json, SemiBold, Normal Name="TextLabel" Position=0.15880655, 0, 0.7410901, 0 Size=0, 19, 0, 9 Text="TC" TextColor3=0.99215686, 0.8156863, 0.007843138 TextSize=16.34509469 TextXAlignment=Enum.TextXAlignment.Center
-DriveHud/1/15/1 UIScale Name="UIScale" Scale=1
-DriveHud/1/16 Frame BackgroundColor3=0.99215686, 0.8156863, 0.007843138 BorderSizePixel=0 Name="Frame" Position=0.13666987, 0, 0.8155136, 0 Size=0.04427334, 0, 0.014675053, 0
-DriveHud/1/17 TextLabel AnchorPoint=0.5, 0.5 BackgroundTransparency=1 FontFace=rbxasset://fonts/families/Montserrat.json, SemiBold, Normal Name="TextLabel" Position=0.26876804, 0, 0.7421384, 0 Size=0, 31, 0, 9 Text="ABS" TextColor3=0.32156864, 0.32156864, 0.3254902 TextSize=15.69129091 TextXAlignment=Enum.TextXAlignment.Center
-DriveHud/1/17/1 UIScale Name="UIScale" Scale=1
-DriveHud/1/18 Frame BackgroundColor3=0.23921569, 0.23921569, 0.23529412 BorderSizePixel=0 Name="Frame" Position=0.2454283, 0, 0.8176101, 0 Size=0.047641963, 0, 0.01048218, 0
-DriveHud/1/19 TextLabel AnchorPoint=0.5, 0.5 BackgroundTransparency=1 FontFace=rbxasset://fonts/families/Montserrat.json, SemiBold, Normal Name="TextLabel" Position=0.5002406, 0, 0.43291405, 0 Size=0, 14, 0, 9 Text="A" TextColor3=0.9490196, 0.9490196, 0.9490196 TextSize=16.34509469 TextXAlignment=Enum.TextXAlignment.Center
-DriveHud/1/19/1 UIScale Name="UIScale" Scale=1
-DriveHud/1/20 TextLabel AnchorPoint=1, 0.5 BackgroundTransparency=1 FontFace=rbxasset://fonts/families/Montserrat.json, Heavy, Italic Name="TextLabel" Position=0.8493744, 0, 0.591195, 0 Size=0, 161, 0, 48 Text="148" TextColor3=0.9490196, 0.9490196, 0.9490196 TextSize=82.37927726 TextXAlignment=Enum.TextXAlignment.Right
-DriveHud/1/20/1 UIScale Name="UIScale" Scale=1
-DriveHud/1/21 TextLabel BackgroundTransparency=1 Name="TextLabel" Position=0.8219442, 0, 0.78826, 0 Size=0.016843118, 0, 0.109014675, 0 Text="◀" TextColor3=0, 0.84705883, 0.21568628 TextScaled=true Visible=true
-DriveHud/1/22 TextLabel BackgroundTransparency=1 Name="TextLabel" Position=0.8869105, 0, 0.78826, 0 Size=0.016843118, 0, 0.109014675, 0 Text="▶" TextColor3=0, 0.84705883, 0.21568628 TextScaled=true Visible=false
---- frame 4
-DriveHud ScreenGui DisplayOrder=5 Enabled=true Name="DriveHud" ResetOnSpawn=false ZIndexBehavior=Enum.ZIndexBehavior.Sibling
 DriveHud/1 ImageLabel AnchorPoint=1, 1 BackgroundTransparency=1 Image="rbxassetid://136575325662647" Name="Frame" Position=1, -14, 1, -14 Size=0.9, 0, 0.13, 0
 DriveHud/1/1 UIAspectRatioConstraint AspectRatio=4.35639413 Name="UIAspectRatioConstraint"
 DriveHud/1/2 ImageLabel BackgroundTransparency=1 Image="rbxassetid://122022683037511" ImageRectOffset=0, 0 ImageRectSize=185, 36 Name="ImageLabel" Position=0.15110683, 0, 0.13626835, 0 Size=0.08902791, 0, 0.0754717, 0 Visible=true
@@ -213,7 +127,7 @@ DriveHud/1/20 TextLabel AnchorPoint=1, 0.5 BackgroundTransparency=1 FontFace=rbx
 DriveHud/1/20/1 UIScale Name="UIScale" Scale=1
 DriveHud/1/21 TextLabel BackgroundTransparency=1 Name="TextLabel" Position=0.8219442, 0, 0.78826, 0 Size=0.016843118, 0, 0.109014675, 0 Text="◀" TextColor3=0, 0.84705883, 0.21568628 TextScaled=true Visible=false
 DriveHud/1/22 TextLabel BackgroundTransparency=1 Name="TextLabel" Position=0.8869105, 0, 0.78826, 0 Size=0.016843118, 0, 0.109014675, 0 Text="▶" TextColor3=0, 0.84705883, 0.21568628 TextScaled=true Visible=true
---- frame 5
+--- frame 3
 DriveHud ScreenGui DisplayOrder=5 Enabled=true Name="DriveHud" ResetOnSpawn=false ZIndexBehavior=Enum.ZIndexBehavior.Sibling
 DriveHud/1 ImageLabel AnchorPoint=1, 1 BackgroundTransparency=1 Image="rbxassetid://136575325662647" Name="Frame" Position=1, -14, 1, -14 Size=0.9, 0, 0.13, 0
 DriveHud/1/1 UIAspectRatioConstraint AspectRatio=4.35639413 Name="UIAspectRatioConstraint"
@@ -256,7 +170,7 @@ DriveHud/1/20 TextLabel AnchorPoint=1, 0.5 BackgroundTransparency=1 FontFace=rbx
 DriveHud/1/20/1 UIScale Name="UIScale" Scale=1
 DriveHud/1/21 TextLabel BackgroundTransparency=1 Name="TextLabel" Position=0.8219442, 0, 0.78826, 0 Size=0.016843118, 0, 0.109014675, 0 Text="◀" TextColor3=0, 0.84705883, 0.21568628 TextScaled=true Visible=false
 DriveHud/1/22 TextLabel BackgroundTransparency=1 Name="TextLabel" Position=0.8869105, 0, 0.78826, 0 Size=0.016843118, 0, 0.109014675, 0 Text="▶" TextColor3=0, 0.84705883, 0.21568628 TextScaled=true Visible=true
---- frame 6
+--- frame 4
 DriveHud ScreenGui DisplayOrder=5 Enabled=true Name="DriveHud" ResetOnSpawn=false ZIndexBehavior=Enum.ZIndexBehavior.Sibling
 DriveHud/1 ImageLabel AnchorPoint=0.5, 1 BackgroundTransparency=1 Image="rbxassetid://136575325662647" Name="Frame" Position=0.5, 0, 1, -14 Size=0.9, 0, 0.1224, 0
 DriveHud/1/1 UIAspectRatioConstraint AspectRatio=4.35639413 Name="UIAspectRatioConstraint"
@@ -299,7 +213,7 @@ DriveHud/1/20 TextLabel AnchorPoint=1, 0.5 BackgroundTransparency=1 FontFace=rbx
 DriveHud/1/20/1 UIScale Name="UIScale" Scale=1
 DriveHud/1/21 TextLabel BackgroundTransparency=1 Name="TextLabel" Position=0.8219442, 0, 0.78826, 0 Size=0.016843118, 0, 0.109014675, 0 Text="◀" TextColor3=0, 0.84705883, 0.21568628 TextScaled=true Visible=false
 DriveHud/1/22 TextLabel BackgroundTransparency=1 Name="TextLabel" Position=0.8869105, 0, 0.78826, 0 Size=0.016843118, 0, 0.109014675, 0 Text="▶" TextColor3=0, 0.84705883, 0.21568628 TextScaled=true Visible=true
---- frame 7
+--- frame 5
 DriveHud ScreenGui DisplayOrder=5 Enabled=false Name="DriveHud" ResetOnSpawn=false ZIndexBehavior=Enum.ZIndexBehavior.Sibling
 DriveHud/1 ImageLabel AnchorPoint=0.5, 1 BackgroundTransparency=1 Image="rbxassetid://136575325662647" Name="Frame" Position=0.5, 0, 1, -14 Size=0.9, 0, 0.1224, 0
 DriveHud/1/1 UIAspectRatioConstraint AspectRatio=4.35639413 Name="UIAspectRatioConstraint"
