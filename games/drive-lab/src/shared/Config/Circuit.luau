@@ -44,9 +44,11 @@ export type Config = {
 	RADII: { min: number, max: number },
 	CLEARANCE: number,
 	NEIGHBOURS: number,
-	-- The grass field reaches this far past the centre line all round, laid in square tiles.
+	-- The grass field reaches this far past the centre line all round, laid in square tiles that
+	-- overlap their neighbours by more than a terrain voxel (0.75 m), so no seam leaves a groove.
 	FIELD_MARGIN: number,
 	FIELD_TILE: number,
+	TILE_OVERLAP: number,
 	RIVER: River,
 	BRIDGE: Bridge,
 }
@@ -84,6 +86,7 @@ local Config: Config = table.freeze({
 	NEIGHBOURS = 150,
 	FIELD_MARGIN = 100,
 	FIELD_TILE = 200,
+	TILE_OVERLAP = 2,
 	RIVER = table.freeze({
 		offset = 255,
 		width = 24,

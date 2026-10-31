@@ -29,6 +29,9 @@ export type Course = { start: TrackPath.Point, pieces: { Piece }, length: number
 -- Metres along the start direction and to its right, from the start point.
 export type Bounds = { alongMin: number, alongMax: number, acrossMin: number, acrossMax: number }
 
+-- A stretch of one axis, metres.
+export type Extent = { from: number, to: number }
+
 -- Where the road crosses a line parallel to the start direction: arc length, the piece's index,
 -- and the sine of the crossing angle (1 square across).
 export type Crossing = { s: number, piece: number, sine: number }
@@ -192,6 +195,23 @@ function Circuit.bounds(course: Course, margin: number, step: number): Bounds
 		end
 		s += step
 	end
+end
+
+-- [from, to] cut into tiles about `size` long, each reaching `overlap` into its neighbours but
+-- never past the ends: terrain only part-fills the voxels at a fill's edges, so tiles that merely
+-- met would leave a groove along every seam.
+function Circuit.tiles(from: number, to: number, size: number, overlap: number): { Extent }
+	local count = math.max(1, math.ceil((to - from) / size - 1e-9))
+	local length = (to - from) / count
+	local tiles = table.create(count)
+	for index = 1, count do
+		local start = from + (index - 1) * length
+		tiles[index] = {
+			from = math.max(from, start - overlap),
+			to = math.min(to, start + length + overlap),
+		}
+	end
+	return tiles
 end
 
 -- Every place the centre line crosses the line `offset` metres right of the start and parallel

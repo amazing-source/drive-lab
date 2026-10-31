@@ -59,14 +59,11 @@ local function strip(
 	bottom: number,
 	material: Enum.Material
 )
-	local tile = Config.FIELD_TILE
-	local alongAt = bounds.alongMin
-	while alongAt < bounds.alongMax do
-		local length = math.min(tile, bounds.alongMax - alongAt)
+	for _, tile in Rules.tiles(bounds.alongMin, bounds.alongMax, Config.FIELD_TILE, Config.TILE_OVERLAP) do
+		local length = tile.to - tile.from
 		local cframe, size =
-			block(site, alongAt + length / 2, across, Vector2.new(width, length), top, bottom)
+			block(site, tile.from + length / 2, across, Vector2.new(width, length), top, bottom)
 		Workspace.Terrain:FillBlock(cframe, size, material)
-		alongAt += length
 	end
 end
 
@@ -74,12 +71,9 @@ local Circuit = {}
 
 -- The grass under the whole lap, a tile at a time.
 function Circuit.layField(site: Site, bounds: Rules.Bounds)
-	local tile = Config.FIELD_TILE
-	local acrossAt = bounds.acrossMin
-	while acrossAt < bounds.acrossMax do
-		local width = math.min(tile, bounds.acrossMax - acrossAt)
-		strip(site, bounds, acrossAt + width / 2, width, 0, -Track.GROUND_DEPTH, Enum.Material.Grass)
-		acrossAt += width
+	for _, tile in Rules.tiles(bounds.acrossMin, bounds.acrossMax, Config.FIELD_TILE, Config.TILE_OVERLAP) do
+		local width = tile.to - tile.from
+		strip(site, bounds, tile.from + width / 2, width, 0, -Track.GROUND_DEPTH, Enum.Material.Grass)
 	end
 end
 

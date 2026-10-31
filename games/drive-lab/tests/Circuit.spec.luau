@@ -4,8 +4,12 @@ local Config = require("../src/shared/Config/Circuit")
 local T = require("../../../tools/test/T")
 local Track = require("../src/shared/Config/Track")
 local TrackPath = require("../src/shared/Rules/TrackPath")
+local Units = require("../src/shared/Units")
 
 local describe, it, expect = T.describe, T.it, T.expect
+
+-- A terrain voxel is 4 studs.
+local VOXEL = Units.studsToMetres(4)
 
 local NORTH: TrackPath.Point = { x = 0, z = 0, dirX = 0, dirZ = -1, s = 0 }
 local SLANTED: TrackPath.Point = { x = 40, z = -25, dirX = 0.6, dirZ = 0.8, s = 0 }
@@ -142,6 +146,29 @@ describe("Circuit", function()
 			local _, across = Circuit.placeOf(lap, point.x, point.z)
 			expect(across).toBeNear(Config.RIVER.offset, 1e-6)
 			expect(crossing.sine).toBeNear(1, 1e-9)
+		end
+	end)
+end)
+
+describe("Circuit tiles", function()
+	it("covers the field in tiles that overlap by more than a voxel and stay inside it", function()
+		expect(Config.TILE_OVERLAP > VOXEL).toBe(true)
+		local lap = Circuit.build(Config.SEGMENTS, NORTH)
+		local bounds = Circuit.bounds(lap, Config.FIELD_MARGIN, Track.STEP)
+		for _, axis in
+			{ { bounds.alongMin, bounds.alongMax }, { bounds.acrossMin, bounds.acrossMax }, { 0, 150 } }
+		do
+			local from, to = axis[1], axis[2]
+			local tiles = Circuit.tiles(from, to, Config.FIELD_TILE, Config.TILE_OVERLAP)
+			expect(tiles[1].from).toBe(from)
+			expect(tiles[#tiles].to).toBe(to)
+			for index, tile in tiles do
+				expect(tile.from >= from and tile.to <= to and tile.to > tile.from).toBe(true)
+				expect(tile.to - tile.from <= Config.FIELD_TILE + 2 * Config.TILE_OVERLAP + 1e-9).toBe(true)
+				if index > 1 then
+					expect(tiles[index - 1].to - tile.from >= Config.TILE_OVERLAP * 2 - 1e-9).toBe(true)
+				end
+			end
 		end
 	end)
 end)
