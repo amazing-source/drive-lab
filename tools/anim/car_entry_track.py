@@ -100,7 +100,7 @@ def pattern(evaluate, x, scales, rng, samples=16, rounds=4):
     return best
 
 
-def search_body(fr, centres, auth, pred, w_pred, step, rng, planted=False, w_auth=1.0):
+def search_body(fr, centres, auth, pred, w_pred, step, rng, w_auth=1.0):
     """(pelvis, torso angles, neck nod and roll) from each centre; the best per centre."""
     pel_a, tor_a, nek_a = auth
     pel_p, tor_p, nek_p = pred
@@ -119,10 +119,7 @@ def search_body(fr, centres, auth, pred, w_pred, step, rng, planted=False, w_aut
     out = []
     for centre in centres:
         x0 = np.concatenate([np.asarray(v, float) for v in centre])
-        # On a planted frame the pelvis is the solved stance's (the bake solves its height again).
-        if planted:
-            x0[0:3] = auth[0]
-        k, x = pattern(evaluate, x0, [(0.0 if planted else dp,) * 3 + (dt, dt, dt, 2 * dt, 2 * dt) for dp, dt in BODY_LEVELS], rng)
+        k, x = pattern(evaluate, x0, [(dp, dp, dp, dt, dt, dt, 2 * dt, 2 * dt) for dp, dt in BODY_LEVELS], rng)
         out.append((k, x[0:3], x[3:6], x[6:8]))
     return sorted(out, key=lambda r: r[0])
 
@@ -254,11 +251,13 @@ def main(argv):
         else:
             pred = tuple(previous[k] + (auth[k] - last[k]) for k in range(3))
             centres, w = [auth, pred], a.smooth
-        if pin:
+        # A planted frame keeps its authored body: the bake solves its stance from the authored
+        # torso, and a turned torso would move the hips off the planted soles.
+        if pin or f in supported:
             bodies = [((0, 0.0), auth[0], auth[1], auth[2])]
         else:
             goals = goals_of(f)
-            bodies = search_body(fr, centres, auth, pred, w, a.step, rng, f in supported, 1.0 + 20.0 * max([p for _, p in goals.values()] + [0.0]))
+            bodies = search_body(fr, centres, auth, pred, w, a.step, rng, 1.0 + 20.0 * max([p for _, p in goals.values()] + [0.0]))
         tgt = {k: targets[k][i] for k in LIMB_PART}
         fixed = {limb: np.asarray(body.fixed[limb][f], float) for limb in LIMB_PART if f in body.fixed.get(limb, {})}
         goals = goals_of(f)
