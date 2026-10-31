@@ -185,6 +185,15 @@ function CarLights.tellTale(switch: string, lit: Lit): boolean
 	return false
 end
 
+-- How much of an LED's full colour it shows (0 to 1) at a glow `strength`, against its day
+-- strength: Neon has no strength of its own, its glow follows how bright its colour is.
+function CarLights.ledShare(strength: number, day: number): number
+	if day <= 0 then
+		return 0
+	end
+	return math.clamp(strength / day, 0, 1)
+end
+
 -- A lamp's EmissiveStrength at `level` of its output, between its night and day strengths.
 function CarLights.strength(level: number, night: number, day: number, daylight: number): number
 	return level * (night + (day - night) * daylight)
