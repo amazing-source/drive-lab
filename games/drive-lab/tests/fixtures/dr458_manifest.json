@@ -269,6 +269,36 @@
     },
     {
       "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_FrontLeft_Projector"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_FrontRight_Projector"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearLeft_Tail"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearRight_Tail"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearLeft_Fog"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearRight_Reverse"
+    },
+    {
+      "group": "Chassis",
       "motion": "static",
       "name": "Cage_Padding_01"
     },
@@ -862,17 +892,32 @@
     {
       "group": "Chassis",
       "motion": "static",
-      "name": "Harness_AluminiumBrushed_01"
+      "name": "Harness_Stowed_AluminiumBrushed_01"
     },
     {
       "group": "Chassis",
       "motion": "static",
-      "name": "Harness_WebbingRed_01"
+      "name": "Harness_Stowed_WebbingRed_01"
     },
     {
       "group": "Chassis",
       "motion": "static",
-      "name": "Harness_WebbingYellow_01"
+      "name": "Harness_Stowed_WebbingYellow_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Harness_Worn_AluminiumBrushed_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Harness_Worn_WebbingRed_01"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Harness_Worn_WebbingYellow_01"
     },
     {
       "group": "Chassis",
@@ -1411,6 +1456,26 @@
       "forward": 1.5001,
       "right": -0.3443,
       "up": 0.3165
+    },
+    "Windshield_BottomLeft": {
+      "forward": 2.4301,
+      "right": -0.5746,
+      "up": 0.7508
+    },
+    "Windshield_BottomRight": {
+      "forward": 2.4307,
+      "right": 0.5732,
+      "up": 0.7508
+    },
+    "Windshield_TopLeft": {
+      "forward": 1.7932,
+      "right": -0.5353,
+      "up": 1.0585
+    },
+    "Windshield_TopRight": {
+      "forward": 1.7937,
+      "right": 0.5346,
+      "up": 1.0585
     }
   }
 }
