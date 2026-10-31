@@ -1,0 +1,33 @@
+Issue #197: pops per downshift, braking hard from 250 km/h to 30 km/h in sixth, 40 seeded runs per case
+(lune run games/drive-lab/tools/downshift_pops.luau 40). Main 2f81def against this branch.
+
+car    mode    gearbox  downshifts  pops before  pops after  per downshift before -> after
+SVJ    Strada  auto       5.0         2.5          2.5       0.51 -> 0.51
+SVJ    Strada  manual     5.0         6.5          6.5       1.29 -> 1.29
+SVJ    Sport   auto       5.0        19.8         19.8       3.96 -> 3.96
+SVJ    Sport   manual     5.0        20.4         20.4       4.07 -> 4.07
+SVJ    Corsa   auto       5.0        20.4         20.4       4.08 -> 4.08
+SVJ    Corsa   manual     5.0        20.4         20.4       4.08 -> 4.08
+DR458  1       auto       5.0        18.3          5.8       3.66 -> 1.15
+DR458  1       manual     5.0        20.1          6.3       4.03 -> 1.27
+DR458  2       auto       5.0        18.2         18.2       3.64 -> 3.64
+DR458  2       manual     5.0        20.1         20.1       4.03 -> 4.03
+DR458  OFF     auto       5.0        18.3         18.3       3.66 -> 3.66
+DR458  OFF     manual     5.0        20.1         20.1       4.03 -> 4.03
+
+Cause: #164 gave the DR458 the SVJ's Corsa triggers in every manettino position (downshift chance 1,
+a 0.3-0.8 s train of a pop every 0.06-0.22 s, about 4 pops). Both cars start in their first mode
+(Services/Cars: entry.physics.modeOrder[1]): the SVJ in Strada (downshift chance 0.25), the DR458 in 1.
+The DR458's gearbox makes as many downshifts as the SVJ's (5 in this run): not the cause.
+Fix: the SVJ's modes in order onto the positions (1 as Strada, 2 as Sport, OFF as Corsa).
+In auto the DR458's default pops 1.15 per downshift against the SVJ Strada's 0.51: with the same chance,
+the SVJ's automatic downshifts land under the 3,000 rpm pop floor sooner, which ends its trains (in manual
+the two match, 1.27 and 1.29).
+
+Breaks, each restored with `git checkout -- games` (961 passed after):
+P1  position 1 back on Corsa -> FAIL CarAudio config > DR458: pops on the SVJ's timing mode by mode, its default
+    position as the SVJ's default mode
+P2  positions 2 and OFF swapped -> FAIL the same spec
+SVJ: its audio timeline in Strada, Sport and Corsa is byte-identical to main.
+Gates: stylua, selene (0/0/0), luau-lsp (src), tools/test/run (92 spec files, 961 passed), tools (19 tools, 19 run,
+0 failed), rojo build.

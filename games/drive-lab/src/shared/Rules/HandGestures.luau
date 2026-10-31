@@ -25,11 +25,16 @@ export type Play = {
 	reachedAt: number?,
 	-- Whether the control's turn has finished: it stays turned while the hand goes back.
 	turned: boolean,
+	-- The presses this gesture owes its control: they take effect when the hand works it.
+	presses: number,
 }
 
+-- `queue` holds one gesture per press waiting its turn; `skipped`, the controls of presses whose
+-- gesture could not play (no track from the control's state), which are owed at once.
 export type Hand = {
 	playing: Play?,
 	queue: { Config.Gesture },
+	skipped: { string },
 }
 
 -- What the caller knows each step: whether a control's input is held, and the state a latching
@@ -46,7 +51,7 @@ local QUEUE_LIMIT = 3
 local HandGestures = {}
 
 function HandGestures.newHand(): Hand
-	return { playing = nil, queue = {} }
+	return { playing = nil, queue = {}, skipped = {} }
 end
 
 -- The track for a press from `state`.
@@ -55,17 +60,21 @@ function HandGestures.track(gesture: Config.Gesture, state: string): Config.Trac
 end
 
 -- The input of `gesture`'s control began. The same button pressed again while its gesture plays
--- runs it forward again; anything else waits its turn.
-function HandGestures.press(hand: Hand, gesture: Config.Gesture, now: number)
+-- runs it forward again and is owed with it; anything else waits its turn. Returns whether the
+-- hand took the press: false when its queue is full, and the press is then the caller's at once.
+function HandGestures.press(hand: Hand, gesture: Config.Gesture, now: number): boolean
 	local playing = hand.playing
 	if playing and playing.gesture == gesture and gesture.latch == nil then
 		playing.pressedAt = now
 		playing.reachedAt = nil
-		return
+		playing.presses += 1
+		return true
 	end
 	if #hand.queue < QUEUE_LIMIT then
 		table.insert(hand.queue, gesture)
+		return true
 	end
+	return false
 end
 
 local function start(hand: Hand, inputs: Inputs, now: number): Play?
@@ -85,16 +94,25 @@ local function start(hand: Hand, inputs: Inputs, now: number): Play?
 				pressedAt = now,
 				reachedAt = nil,
 				turned = false,
+				presses = 1,
 			}
 		end
+		table.insert(hand.skipped, gesture.control)
 	end
 	return nil
 end
 
 -- Moves the hand on by `dt` seconds, ending at `now`. Returns the control the hand worked in this
--- step, if it did: a button as the thumb reaches it (again on each press while it is held), a
--- knob or a toggle as its turn completes.
-function HandGestures.step(hand: Hand, inputs: Inputs, holdMin: number, now: number, dt: number): string?
+-- step, if it did, and how many presses take effect then: a button as the thumb reaches it (every
+-- press made while the thumb was on its way, and again on each press while it holds the button),
+-- a knob or a toggle as its turn completes (one press: each has its own turn).
+function HandGestures.step(
+	hand: Hand,
+	inputs: Inputs,
+	holdMin: number,
+	now: number,
+	dt: number
+): (string?, number)
 	local current = hand.playing
 	if current == nil then
 		current = start(hand, inputs, now)
@@ -103,7 +121,7 @@ function HandGestures.step(hand: Hand, inputs: Inputs, holdMin: number, now: num
 		dt = 0
 	end
 	if current == nil then
-		return nil
+		return nil, 0
 	end
 	local playing: Play = current
 	local control = playing.gesture.control
@@ -133,7 +151,72 @@ function HandGestures.step(hand: Hand, inputs: Inputs, holdMin: number, now: num
 	if playing.progress <= 0 and not wanted then
 		hand.playing = nil
 	end
-	return worked
+	if worked == nil then
+		return nil, 0
+	end
+	local presses = playing.presses
+	playing.presses = 0
+	return worked, presses
+end
+
+-- The button the thumb holds down this instant, if any: from the instant it reaches it until the
+-- hand starts back. A knob or a toggle is worked once, never held.
+function HandGestures.holding(hand: Hand): string?
+	local playing = hand.playing
+	if playing and playing.gesture.latch == nil and playing.progress >= playing.finish then
+		return playing.gesture.control
+	end
+	return nil
+end
+
+-- The buttons held down this instant: each a thumb holds, and each whose press the hands could not
+-- take (`atKey`), for as long as its key stays held; one let go of leaves `atKey`.
+function HandGestures.heldButtons(
+	hands: { [number]: Hand },
+	atKey: { [string]: true },
+	held: (control: string) -> boolean
+): { [string]: true }
+	local buttons: { [string]: true } = {}
+	for _, hand in hands do
+		local button = HandGestures.holding(hand)
+		if button then
+			buttons[button] = true
+		end
+	end
+	for control in atKey do
+		if held(control) then
+			buttons[control] = true
+		else
+			atKey[control] = nil
+		end
+	end
+	return buttons
+end
+
+-- The presses whose gesture could not play, by control, which are the caller's at once.
+function HandGestures.unplayed(hand: Hand): { [string]: number }
+	local owed: { [string]: number } = {}
+	for _, control in hand.skipped do
+		owed[control] = (owed[control] or 0) + 1
+	end
+	table.clear(hand.skipped)
+	return owed
+end
+
+-- The hand leaves the wheel (the driver is busy elsewhere): the presses it still owed, by control,
+-- which are the caller's at once, and nothing left playing or waiting.
+function HandGestures.drop(hand: Hand): { [string]: number }
+	local owed = HandGestures.unplayed(hand)
+	local playing = hand.playing
+	if playing and playing.presses > 0 then
+		owed[playing.gesture.control] = (owed[playing.gesture.control] or 0) + playing.presses
+	end
+	for _, gesture in hand.queue do
+		owed[gesture.control] = (owed[gesture.control] or 0) + 1
+	end
+	hand.playing = nil
+	table.clear(hand.queue)
+	return owed
 end
 
 -- The wrist's pose in the gesture's frame and the shape to draw, or nil when the hand grips.
