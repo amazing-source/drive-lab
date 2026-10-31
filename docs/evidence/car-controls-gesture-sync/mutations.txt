@@ -29,3 +29,9 @@ Baseline: 93 spec files, 970 passed, 0 failed.
 == 8 a press with no track is lost: 1 failing; 93 spec files, 969 passed, 1 failed
    FAIL Hand gestures: every press owed once > owes at once a press whose gesture has no track from the control's state: games/drive-lab/tests/HandGestures.spec:
 clean
+
+-- Added with the at-key hold (commit "Held controls act at their key ..."), baseline 972 passed:
+== 9 a button the hands could not take is never held: 1 failing; 93 spec files, 971 passed, 1 failed
+   FAIL Hand gestures: held buttons > holds a button the hands could not take for as long as its key is held, then lets it go
+== 10 a let-go button stays held: 1 failing; 93 spec files, 971 passed, 1 failed
+   FAIL Hand gestures: held buttons > holds a button the hands could not take for as long as its key is held, then lets it go
