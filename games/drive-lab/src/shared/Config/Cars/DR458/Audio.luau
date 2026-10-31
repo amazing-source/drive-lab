@@ -20,6 +20,13 @@ local corsa = SVJ.popTriggers
 local POPS_GAIN_DB = -4.5
 local popsGain = 10 ^ (POPS_GAIN_DB / 20)
 
+-- The wheel's push buttons ("1965 Jaguar E-Type Car Interior Switches 19") and the panel's toggles
+-- ("Moviola Toggle Switch Single Clicks Sharp 10").
+local WHEEL_BUTTON: CarAudio.ControlSound =
+	{ soundId = "rbxassetid://9112955977", region = { from = 0, to = 0.25 }, db = 7.9 }
+local PANEL_TOGGLE: CarAudio.ControlSound =
+	{ soundId = "rbxassetid://9117028855", region = { from = 0, to = 0.25 }, db = -4.5 }
+
 local function everyPosition(chances: { [string]: number }): { [string]: number }
 	return { ["1"] = chances.Corsa, ["2"] = chances.Corsa, OFF = chances.Corsa }
 end
@@ -265,6 +272,53 @@ local Audio: CarAudio.Pack = {
 	-- Mid-engined: the V8 sits behind the cabin, the two outlets low in the centre of the tail.
 	enginePosition = { forward = -0.5, up = 0.3 },
 	exhaustPosition = { forward = -2.2, up = 0.35 },
+	-- Roblox's licensed Pro Sound Effects library, but the wiper motor (in the events file). Each
+	-- `db` lands its loudest 100 ms 6 LU under the idle loop (the loops 12 LU, the radio's hiss 14
+	-- and its tail 8), by the loudness tools/audio/measure_control_sounds.py measured
+	-- (tests/fixtures/dr458_control_sounds.json).
+	controls = {
+		press = {
+			HIGH_BEAM = WHEEL_BUTTON,
+			PIT_LIMITER = WHEEL_BUTTON,
+			DISPLAY_PAGE = WHEEL_BUTTON,
+			WASHER = WHEEL_BUTTON,
+			WIPER = WHEEL_BUTTON,
+			RAIN_LIGHT = PANEL_TOGGLE,
+			PanelSwitch_Ignition = PANEL_TOGGLE,
+			HEADLIGHTS = PANEL_TOGGLE,
+			-- "Rotary Switch 2".
+			DRIVING_MODE = { soundId = "rbxassetid://9118727603", region = { from = 0, to = 0.25 }, db = 0.4 },
+			-- "Ferrari 308 Car Ignition Keys Movement 4": the key's turn.
+			TunnelKey_Master = {
+				soundId = "rbxassetid://9114402893",
+				region = { from = 2.15, to = 2.6 },
+				db = -10.7,
+			},
+			-- "Switch Impact On Flip Up Large Metal 2".
+			PanelGuard_Ignition = {
+				soundId = "rbxassetid://9119727134",
+				region = { from = 0, to = 0.3 },
+				db = -13.3,
+			},
+			-- "1979 Ford F-150 Pick Up Door Lock Button".
+			ENGINE_START = { soundId = "rbxassetid://9125343291", region = { from = 0, to = 0.3 }, db = -3.5 },
+		},
+		-- "Police Radio Button Pushes Walkie Talkie 2", "Radio Static 1" and "Radio Squelches 32".
+		radio = {
+			press = { soundId = "rbxassetid://9117795848", region = { from = 0, to = 0.15 }, db = 3.5 },
+			hiss = { soundId = "rbxassetid://9118026602", region = { from = 0.2, to = 2.2 }, db = -17.6 },
+			release = { soundId = "rbxassetid://9118021986", region = { from = 0.27, to = 1 }, db = -11.9 },
+		},
+		-- One wipe of the recording lasts 1.42 s: the rates fit it to the 1.33 s and 0.92 s wipes.
+		wiperMotor = {
+			soundId = "rbxassetid://79771227703971",
+			region = { from = 7.09175, to = 14.19175 },
+			db = -12,
+			rates = { 1.065, 1.538 },
+		},
+		-- "Water Hose Gun 1".
+		washerPump = { soundId = "rbxassetid://9120563177", region = { from = 0, to = 0.4 }, db = -15.6 },
+	},
 }
 
 return table.freeze(Audio)

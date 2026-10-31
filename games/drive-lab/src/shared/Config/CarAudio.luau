@@ -50,7 +50,8 @@ export type StartupSound = {
 }
 
 -- A cockpit control's sound: a file, or a region of it, at `db` against the idle loop's level at
--- idle (always below 0, so under the engine).
+-- idle. With the file's own loudness, that sets how far under the engine it is heard: a quiet file
+-- can need more than 0 dB.
 export type ControlSound = { soundId: string, region: Region?, db: number }
 
 -- The cockpit controls' sounds (Controllers/ControlSounds), played at the driver's seat; a missing
