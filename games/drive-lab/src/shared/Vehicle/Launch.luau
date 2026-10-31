@@ -27,7 +27,9 @@ end
 
 -- Whether the car has launch control and the drive mode and ESC are as it needs them.
 function Launch.selected(config: Types.LaunchConfig?, input: Interface.DriverInput): boolean
-	return config ~= nil and input.drivingMode == config.mode and not input.assists.esc
+	return config ~= nil
+		and input.drivingMode == config.mode
+		and (config.withEsc == true or not input.assists.esc)
 end
 
 -- Whether launch control can arm now: selected, stopped (under `standstill`, m/s) in first, not

@@ -26,13 +26,15 @@ describe("Car catalog", function()
 		expect(Catalog.of(modelNamed(1))).toBe(nil)
 	end)
 
-	it("admits a car only once its model binding has nothing pending", function()
+	it("admits a car only once its model binding and its start-up have nothing pending", function()
 		local fs = require("@lune/fs")
 		for name in Catalog.cars do
-			local path = `games/drive-lab/src/shared/Config/Cars/{name}/ModelPending.luau`
-			if fs.isFile(path) then
-				local pending = (require :: any)(`../src/shared/Config/Cars/{name}/ModelPending`)
-				expect(`{name}: {table.concat(pending, "; ")}`).toBe(`{name}: `)
+			for _, list in { "ModelPending", "StartupPending" } do
+				local path = `games/drive-lab/src/shared/Config/Cars/{name}/{list}.luau`
+				if fs.isFile(path) then
+					local pending = (require :: any)(`../src/shared/Config/Cars/{name}/{list}`)
+					expect(`{name} {list}: {table.concat(pending, "; ")}`).toBe(`{name} {list}: `)
+				end
 			end
 		end
 		expect(Catalog.of(modelNamed("DR458"))).toBe(Catalog.cars.DR458)

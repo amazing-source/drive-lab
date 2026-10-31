@@ -35,6 +35,18 @@ export type Hinge = {
 
 export type CarPoint = { forward: number, right: number, up: number }
 
+-- An H-pattern gear lever turning on two axes about its pivot: `axisFore` swings the knob fore and
+-- aft (positive forward), `axisSide` across (positive to the car's right), both unit vectors in the
+-- car frame; `gates` holds each gear's angles (radians) from the lever's modelled pose, "N" for
+-- neutral (the knob = pivot + turn(axisFore, fore) * turn(axisSide, side) * (knob - pivot)).
+export type Shifter = {
+	part: string,
+	pivot: CarPoint,
+	axisFore: CarPoint,
+	axisSide: CarPoint,
+	gates: { [string]: { side: number, fore: number } },
+}
+
 -- The windscreen wiper: its arm (with its blade) on a hinge, modelled parked, `travel` radians from
 -- parked to the far end of its sweep; the ends of the blade's wiping edge, parked; and where the
 -- washer's jets leave the body (all from the centre of mass, car frame, metres, before bodyRaise).
@@ -118,6 +130,8 @@ export type CarModel = {
 	panelLamps: { [string]: string }?,
 	-- Optional.
 	wiper: Wiper?,
+	-- An H-pattern gear lever. Optional.
+	shifter: Shifter?,
 }
 
 return table.freeze({})
