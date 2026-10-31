@@ -553,6 +553,11 @@ and speed later, if the owner wants a game mode.
 - The candidate law at frame rates other than 30, 60 and 120 FPS, on wet roads, on other surfaces, or
   in left-hand corners. The law is symmetric, but left-hand runs were not made.
 - The keyboard's input filter with the assist: the runs used the direct input help (§5.3).
+- The automatic gearbox during a drift: every run held one gear in manual. With the rear spinning,
+  the automatic may upshift on wheel-driven rpm mid-drift; the implementation's specs should run in
+  auto too.
+- The hold share's effect: both cars use 0.85, and the committed runs do not vary it, so its role as
+  a looseness knob is a proposal.
 - The handbrake-release-once-engaged behaviour, and opening the clutch for a low-speed handbrake: not
   measured, proposed.
 - Every [excerpt] source, the Freesound licences one by one, and the Rocket League values, which are
