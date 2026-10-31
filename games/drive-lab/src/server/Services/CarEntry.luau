@@ -19,9 +19,9 @@ local Workspace = game:GetService("Workspace")
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
+local Contract = require(ReplicatedStorage.Shared.Config.Cars.Contract)
 local Config = require(ReplicatedStorage.Shared.Config.CarEntry)
 local DoorMark = require(ReplicatedStorage.Shared.Car.DoorMark)
-local Driving = require(ReplicatedStorage.Shared.Config.Driving)
 local Log = require(ReplicatedStorage.Kit.Log)
 local Net = require(ReplicatedStorage.Kit.Net)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -224,7 +224,7 @@ local function seat(car: Car, player: Player, startedAt: number)
 		character,
 		root,
 		DoorMark.frame(car.entry.door, car.seat),
-		Driving.DRIVER_SCALE
+		Contract.driverScale(car.entry)
 	)
 	car.seat:Sit(humanoid)
 end

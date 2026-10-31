@@ -33,6 +33,7 @@ local CarEntry = require(ReplicatedStorage.Shared.Rules.CarEntry)
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
+local Contract = require(ReplicatedStorage.Shared.Config.Cars.Contract)
 local DriverArms = require(ReplicatedStorage.Shared.Config.DriverArms)
 local Gloves = require(script.Parent.Parent.Rig.Gloves)
 local StartupHands = require(script.Parent.Parent.Rig.StartupHands)
@@ -62,6 +63,9 @@ type Driver = {
 	rest: CFrame,
 	maxTurn: number,
 	scale: number,
+	-- The drawn arms' bone lengths in studs at this character's scale (Contract.armLengths).
+	upperLength: number,
+	lowerLength: number,
 	sides: { Side },
 	-- Whether the upper arms, elbows and forearms are drawn (Rules/ArmPieces).
 	sleevesShown: boolean,
@@ -187,18 +191,15 @@ local function build(model: Model, character: Model): Driver?
 		table.insert(found, { sign = limb.sign, joint = joint, arm = arm, hand = hand, cuff = cuff })
 	end
 	local scale = character:GetScale()
+	local upperLength, lowerLength = Contract.armLengths(entry)
 	local sides = {}
 	for _, limb in found do
 		local joint, arm = limb.joint, limb.arm
 		-- Each sleeve keeps its modelled cross-section and stretches to its bone's length.
 		local upper = sleeve(upperSleeve)
-		upper.Size = Vector3.new(upper.Size.X, upper.Size.Y, DriverArms.UPPER_LENGTH * scale)
+		upper.Size = Vector3.new(upper.Size.X, upper.Size.Y, upperLength * scale)
 		local lower = sleeve(lowerSleeve)
-		lower.Size = Vector3.new(
-			lower.Size.X,
-			lower.Size.Y,
-			DriverArms.LOWER_LENGTH * scale + DriverArms.CUFF_OVERHANG
-		)
+		lower.Size = Vector3.new(lower.Size.X, lower.Size.Y, lowerLength * scale + DriverArms.CUFF_OVERHANG)
 		local hand = Gloves.hand(limb.hand, arm.Color)
 		hand.Parent = folder
 		local cuff = Gloves.cuff(limb.cuff)
@@ -227,6 +228,8 @@ local function build(model: Model, character: Model): Driver?
 		rest = rest,
 		maxTurn = Steering.maxWheelAngle(entry.physics.steering),
 		scale = scale,
+		upperLength = upperLength * scale,
+		lowerLength = lowerLength * scale,
 		sides = sides,
 		sleevesShown = true,
 	}
@@ -279,7 +282,7 @@ local function pose(driver: Driver, state: CarEntry.State, now: number)
 	local wheel = driver.chassis.CFrame * driver.rest * CFrame.Angles(0, 0, -turn)
 	local torso = driver.torso.CFrame
 	local scale = driver.scale
-	local upper, lower = DriverArms.UPPER_LENGTH * scale, DriverArms.LOWER_LENGTH * scale
+	local upper, lower = driver.upperLength, driver.lowerLength
 	local bias, overhang = DriverArms.ELBOW_BIAS, DriverArms.CUFF_OVERHANG
 	-- The hands rest while the engine is off and reach through the start-up after the key.
 	local sinceKey = if state.engine == "On" then now - state.engineAt else nil

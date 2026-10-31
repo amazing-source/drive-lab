@@ -21,6 +21,7 @@ local Workspace = game:GetService("Workspace")
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
+local Contract = require(ReplicatedStorage.Shared.Config.Cars.Contract)
 local Config = require(ReplicatedStorage.Shared.Config.CarEntry)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local DoorMark = require(ReplicatedStorage.Shared.Car.DoorMark)
@@ -311,7 +312,7 @@ local function update()
 			exiting = car
 		elseif state.entry == "Enter" then
 			exiting = nil
-			SeatHandOver.seatedSize(current)
+			SeatHandOver.seatedSize(current, Contract.driverScale(entry))
 		end
 		seatedClips(current, car, entry, at)
 		local held = exitHeld

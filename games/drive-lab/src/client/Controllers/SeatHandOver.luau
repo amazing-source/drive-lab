@@ -13,7 +13,6 @@ local Workspace = game:GetService("Workspace")
 local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local DoorMark = require(ReplicatedStorage.Shared.Car.DoorMark)
-local Driving = require(ReplicatedStorage.Shared.Config.Driving)
 local Movement = require(ReplicatedStorage.Shared.Config.Movement)
 
 local ClipPlayer = require(script.Parent.Parent.Rig.ClipPlayer)
@@ -116,18 +115,18 @@ function SeatHandOver.holdOnMark(current: Body, car: Model?): boolean
 	return true
 end
 
--- Seated after getting in, the body has the driver's size. The server sets it before the seat's
+-- Seated after getting in, the body has the car's driver size (`scale`). The server sets it before the seat's
 -- weld, and should the weld reach this client first the size is set here too, about the root as
 -- the server sets it: the seated clips hold the torso up to 5 studs from the root, so at the
 -- wrong size it would be drawn up to 0.9 studs off (measured: 0.76 with the size a frame late).
-function SeatHandOver.seatedSize(current: Body)
+function SeatHandOver.seatedSize(current: Body, scale: number)
 	local character = current.character
-	if math.abs(character:GetScale() - Driving.DRIVER_SCALE) <= SCALE_EPSILON then
+	if math.abs(character:GetScale() - scale) <= SCALE_EPSILON then
 		return
 	end
 	local primary = character.PrimaryPart
 	character.PrimaryPart = current.root
-	character:ScaleTo(Driving.DRIVER_SCALE)
+	character:ScaleTo(scale)
 	character.PrimaryPart = primary
 end
 

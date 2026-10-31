@@ -1,6 +1,8 @@
 --!strict
 local Catalog = require("../src/shared/Config/Cars/Catalog")
 local Contract = require("../src/shared/Config/Cars/Contract")
+local DriverArms = require("../src/shared/Config/DriverArms")
+local Driving = require("../src/shared/Config/Driving")
 local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect
@@ -128,6 +130,66 @@ describe("Car contract: the driver", function()
 				entry.model.pedals = nil
 			end))
 		end).toThrow()
+	end)
+
+	it("keeps the SVJ's driver at Driving.DRIVER_SCALE with Config/DriverArms' arm lengths", function()
+		local svj = Catalog.cars.SVJ
+		expect(Contract.driverScale(svj)).toBe(Driving.DRIVER_SCALE)
+		local upper, lower = Contract.armLengths(svj)
+		expect(upper).toBe(DriverArms.UPPER_LENGTH)
+		expect(lower).toBe(DriverArms.LOWER_LENGTH)
+	end)
+
+	it("gives a car its own driver scale and arm lengths, and refuses unusable ones", function()
+		local own = Contract.define(svjWith(function(entry)
+			entry.driver.scale = 1.15
+			entry.driver.arms = { upper = 1.25, lower = 1.13 }
+		end))
+		expect(Contract.driverScale(own)).toBe(1.15)
+		local upper, lower = Contract.armLengths(own)
+		expect(upper).toBe(1.25)
+		expect(lower).toBe(1.13)
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				entry.driver.scale = 0
+			end))
+		end).toThrow()
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				entry.driver.arms = { upper = 1.25, lower = -1 }
+			end))
+		end).toThrow()
+	end)
+
+	it("finds the SVJ's footwell on its binding's pedal hinges", function()
+		local svj = Catalog.cars.SVJ
+		expect(#Contract.footwellMismatches(svj.model, svj.driver.footwell)).toBe(0)
+	end)
+
+	it("refuses a footwell whose hinge, axis or signed travel disagrees with the binding", function()
+		-- A pedal hinge 3 cm off the binding's pivot.
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				entry.driver.footwell.throttle.hinge.z += 0.03
+			end))
+		end).toThrow()
+		-- The binding turning a pedal about the car's left, so its weld turns against the foot.
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				entry.model.pedals[2].axis = { forward = 0, right = -1, up = 0 }
+			end))
+		end).toThrow()
+		-- A binding that presses the throttle the other way from the footwell.
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				entry.model.pedals[1].travel = -entry.driver.footwell.throttle.travel
+			end))
+		end).toThrow()
+		-- The same travel on both sides is accepted.
+		local same = Contract.define(svjWith(function(entry)
+			entry.model.pedals[1].travel = entry.driver.footwell.throttle.travel
+		end))
+		expect(#Contract.footwellMismatches(same.model, same.driver.footwell)).toBe(0)
 	end)
 end)
 
