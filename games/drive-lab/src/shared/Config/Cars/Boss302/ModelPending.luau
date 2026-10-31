@@ -25,7 +25,6 @@ return {
 	"the 3D model: the promoted manifest and the import (this binding is from the cockpit parts draft)",
 	"the driver's shift animation (Shift.luau: the reach, release and foot timings)",
 	"the remaining car entry: audio, camera, HUD, lights and the start-up",
-	"the shifter's knob: the hand's grip point on the lever",
 	"wheels: the manifest has no Wheel_FL_Tyre",
 	"wheels: the manifest has no Wheel_FR_Tyre",
 	"wheels: the manifest has no Wheel_RL_Tyre",

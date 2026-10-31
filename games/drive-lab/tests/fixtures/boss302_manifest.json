@@ -97,6 +97,14 @@
         ]
       },
       "group": "Chassis",
+      "knob": {
+        "centre": {
+          "forward": 1.4308,
+          "right": 0.0076,
+          "up": 0.685
+        },
+        "radius_m": 0.0246
+      },
       "motion": "gate",
       "name": "Shifter_Lever",
       "pivot": {
@@ -104,7 +112,8 @@
         "right": -0.0,
         "up": 0.5476
       },
-      "positive": "fore positive = the knob moves forward (R, 1, 3, 5 are forward); side positive = the knob moves to the car's right (R far left)"
+      "positive": "fore positive = the knob moves forward (R, 1, 3, 5 are forward); side positive = the knob moves to the car's right (R far left)",
+      "push_m": 0.008
     },
     {
       "axis": {

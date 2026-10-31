@@ -1,17 +1,40 @@
 --!strict
 --[[
-	Where the gear lever and the driver's right hand are for a car with a manual gear lever
-	(Config/DriverShift): the lever turned to a place in its H (a column and a row, as
-	Vehicle/ShiftPlan gives it) with the knob pushed down or not; the hand gripping the knob there;
-	and the hand on its way between the wheel and the knob by its share, the keyed way bent so it
-	starts on the live steering grip and ends on the live knob. Plain numbers, so Lune can test it.
+	Where the gear lever and the driver's right hand are for a car with a manual gear lever: the
+	lever (the car's model binding, Binding.Shifter, turned into the seat's frame) at a place in its H
+	(a column and a row, as Vehicle/ShiftPlan gives it) with the knob pushed down or not; the hand
+	gripping the knob there (Config/DriverShift); and the hand on its way between the wheel and the
+	knob by its share, the keyed way bent so it starts on the live steering grip and ends on the live
+	knob. Plain numbers, so Lune can test it.
 ]]
+local Binding = require("../Config/Cars/Binding")
 local Config = require("../Config/DriverShift")
+local Hinge = require("./Hinge")
 local StartupArms = require("./StartupArms")
+local Types = require("../Config/Cars/Types")
 
 export type Pose = StartupArms.Pose
 type Vector = StartupArms.Vector
 type Rotation = StartupArms.Rotation
+
+-- A lateral angle per gate column, degrees, positive toward the car's right.
+export type Column = { column: number, degrees: number }
+
+-- The lever in the driver's seat frame (metres; x right, y up, z back): its pivot and its knob's
+-- centre in neutral; the car's right and back, the axes it turns about (first sideways about the
+-- forward axis for its column, then fore and aft about the right axis for its row); each column's
+-- lateral angle in order; the fore-and-aft angles (degrees, row +1 forward, row -1 back, both
+-- positive); and how far the knob goes down the lever into reverse's lockout.
+export type Lever = {
+	pivot: Vector,
+	knob: Vector,
+	right: Vector,
+	back: Vector,
+	columns: { Column },
+	forward: number,
+	backward: number,
+	push: number,
+}
 
 local ShiftHand = {}
 
@@ -39,8 +62,74 @@ local function keyPose(key: Config.Key): Pose
 	}
 end
 
--- The lateral angle (degrees) of a place between the shifter's columns, held past the outer ones.
-function ShiftHand.columnAngle(shifter: Config.Shifter, column: number): number
+local function seatPoint(point: Binding.CarPoint, seat: Binding.CarPoint): Vector
+	local a, b = Hinge.chassis(point), Hinge.chassis(seat)
+	return { x = a.x - b.x, y = a.y - b.y, z = a.z - b.z }
+end
+
+local function negative(a: Vector): Vector
+	return { x = -a.x, y = -a.y, z = -a.z }
+end
+
+-- The lever in the seat's frame, from the car's model binding (`shifter`, with the seat's hip point
+-- `seat` the DriverSeat sits at, Car/CarRig) and its gearbox's gates (each gear's column and row):
+-- each column's angle is its gears' side angle, the rows' angles their gears' fore angles. Errors
+-- if two gears of one column, or of one row, disagree.
+function ShiftHand.leverFromBinding(
+	shifter: Binding.Shifter,
+	gates: { [number]: Types.Gate },
+	seat: Binding.CarPoint
+): Lever
+	local byColumn: { [number]: number } = {}
+	local forward: number?, backward: number? = nil, nil
+	for gear, gate in gates do
+		local angles = shifter.gates[if gear < 0 then "R" elseif gear == 0 then "N" else tostring(gear)]
+		assert(angles, `the lever's binding has no gate for gear {gear}`)
+		local side = math.deg(angles.side)
+		local known = byColumn[gate.column]
+		assert(
+			known == nil or math.abs(known - side) < 1e-3,
+			`column {gate.column}'s gears disagree on its angle`
+		)
+		byColumn[gate.column] = side
+		local fore = math.deg(angles.fore) * gate.row
+		if gate.row > 0 then
+			assert(
+				forward == nil or math.abs(forward - fore) < 1e-3,
+				"the forward gears disagree on their angle"
+			)
+			forward = fore
+		elseif gate.row < 0 then
+			assert(
+				backward == nil or math.abs(backward - fore) < 1e-3,
+				"the back gears disagree on their angle"
+			)
+			backward = fore
+		end
+	end
+	local columns: { Column } = {}
+	for column, degrees in byColumn do
+		table.insert(columns, { column = column, degrees = degrees })
+	end
+	table.sort(columns, function(a: Column, b: Column): boolean
+		return a.column < b.column
+	end)
+	return {
+		pivot = seatPoint(shifter.pivot, seat),
+		knob = seatPoint(shifter.knob, seat),
+		-- The binding turns the knob forward about axisFore and right about axisSide; this lever turns
+		-- about -right and -back for the same moves.
+		right = negative(Hinge.chassis(shifter.axisFore)),
+		back = negative(Hinge.chassis(shifter.axisSide)),
+		columns = columns,
+		forward = assert(forward, "no forward gear"),
+		backward = assert(backward, "no back gear"),
+		push = shifter.push,
+	}
+end
+
+-- The lateral angle (degrees) of a place between the lever's columns, held past the outer ones.
+function ShiftHand.columnAngle(shifter: Lever, column: number): number
 	local columns = shifter.columns
 	if column <= columns[1].column then
 		return columns[1].degrees
@@ -65,7 +154,7 @@ end
 -- origin at the knob's centre, axes the seat's turned with the lever. As the manifest's gate motion
 -- turns it: sideways about the forward axis for the column (positive to the car's right), then fore
 -- and aft about the car's right for the row (positive forward), both about the pivot.
-function ShiftHand.lever(shifter: Config.Shifter, column: number, row: number, knob: number): Pose
+function ShiftHand.lever(shifter: Lever, column: number, row: number, knob: number): Pose
 	local right, back = shifter.right, shifter.back
 	local side = axisAngle(scale(back, -1), ShiftHand.columnAngle(shifter, column))
 	local fore =
@@ -78,6 +167,15 @@ function ShiftHand.lever(shifter: Config.Shifter, column: number, row: number, k
 		position = add(shifter.pivot, scale(offset, 1 - pushed)),
 		rotation = turn,
 	}
+end
+
+-- The lever's joint at (`column`, `row`) with the knob pushed down by `knob`: its turn about the
+-- pivot and the slide after it (metres), so a point p modelled on the lever in neutral goes to
+-- pivot + slide + turn (p - pivot).
+function ShiftHand.joint(shifter: Lever, column: number, row: number, knob: number): (Rotation, Vector)
+	local pose = ShiftHand.lever(shifter, column, row, knob)
+	local reach = rotate(pose.rotation, add(shifter.knob, scale(shifter.pivot, -1)))
+	return pose.rotation, add(pose.position, scale(add(shifter.pivot, reach), -1))
 end
 
 -- The wrist holding the knob whose frame is `knob`.

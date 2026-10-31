@@ -1,6 +1,9 @@
 --!strict
+local Boss302Model = require("../src/shared/Config/Cars/Boss302/Model")
+local Boss302Physics = require("../src/shared/Config/Cars/Boss302/Physics")
 local Config = require("../src/shared/Config/DriverShift")
 local ShiftHand = require("../src/shared/Rules/ShiftHand")
+local Types = require("../src/shared/Config/Cars/Types")
 local StartupArms = require("../src/shared/Rules/StartupArms")
 local T = require("../../../tools/test/T")
 
@@ -9,13 +12,12 @@ local describe, it, expect = T.describe, T.it, T.expect
 type Pose = ShiftHand.Pose
 
 -- A lever for the specs: upright, 25 cm from pivot to knob, the H's columns 9 degrees apart with
--- reverse beyond first, 12.5 degrees fore and aft (a car's real one comes from shift_paths.py).
-local SHIFTER: Config.Shifter = {
+-- reverse beyond first, 12.5 degrees fore and aft (a car's real one comes from its model binding).
+local SHIFTER: ShiftHand.Lever = {
 	pivot = { x = 0.35, y = -0.2, z = -0.3 },
 	knob = { x = 0.35, y = 0.05, z = -0.3 },
 	right = { x = 1, y = 0, z = 0 },
 	back = { x = 0, y = 0, z = 1 },
-	knobRadius = 0.025,
 	columns = {
 		{ column = -1, degrees = -18 },
 		{ column = 0, degrees = -9 },
@@ -32,7 +34,7 @@ local HALF = math.sqrt(0.5)
 local GRIP: Config.Key = { 0, 0, 0.07, 0.06, HALF, HALF, 0, 0 }
 
 local SHIFT: Config.Shift = {
-	shifter = SHIFTER,
+	knobRadius = 0.025,
 	grip = GRIP,
 	hand = {
 		keys = {
@@ -111,6 +113,91 @@ describe("Shift hand: the lever", function()
 		local wrist = ShiftHand.knobWrist(upright, GRIP)
 		expect(wrist.position.y).toBeNear(upright.position.y + 0.07, 1e-9)
 		expect(wrist.position.z).toBeNear(upright.position.z + 0.06, 1e-9)
+	end)
+end)
+
+describe("Shift hand: the lever from the car's model binding", function()
+	local shifter = assert(Boss302Model.shifter, "the Boss binds its lever")
+	local gates = (Boss302Physics.gearbox.manual :: Types.ManualGearboxConfig).gates
+	local seat = { forward = 0.4, right = -0.3, up = 0.1 }
+	local lever = ShiftHand.leverFromBinding(shifter, gates, seat)
+
+	it("puts the pivot and knob in the seat's frame and turns about the car's right and back", function()
+		expect(lever.pivot.x).toBeNear(shifter.pivot.right - seat.right, 1e-12)
+		expect(lever.pivot.y).toBeNear(shifter.pivot.up - seat.up, 1e-12)
+		expect(lever.pivot.z).toBeNear(seat.forward - shifter.pivot.forward, 1e-12)
+		expect(lever.knob.x).toBeNear(shifter.knob.right - seat.right, 1e-12)
+		expect(lever.knob.y).toBeNear(shifter.knob.up - seat.up, 1e-12)
+		expect(lever.knob.z).toBeNear(seat.forward - shifter.knob.forward, 1e-12)
+		expect(distance(lever.right, { x = 1, y = 0, z = 0 })).toBeNear(0, 1e-12)
+		expect(distance(lever.back, { x = 0, y = 0, z = 1 })).toBeNear(0, 1e-12)
+		expect(lever.push).toBe(shifter.push)
+	end)
+
+	it("takes each column's angle and the rows' throws from the binding's gates", function()
+		local expected = { { -1, -18 }, { 0, -9 }, { 1, 0 }, { 2, 9 } }
+		expect(#lever.columns).toBe(#expected)
+		for index, column in expected do
+			expect(lever.columns[index].column).toBe(column[1])
+			expect(lever.columns[index].degrees).toBeNear(column[2], 1e-3)
+		end
+		expect(lever.forward).toBeNear(12.5, 1e-3)
+		expect(lever.backward).toBeNear(12.5, 1e-3)
+	end)
+
+	it("leans the knob to the driver's view of the MT-82's H: 1 up-left, 6 down-right, R past 1", function()
+		local function at(gear: number): StartupArms.Vector
+			local gate = gates[gear]
+			return ShiftHand.lever(lever, gate.column, gate.row, 0).position
+		end
+		local neutral = at(0)
+		expect(distance(neutral, lever.knob)).toBeNear(0, 1e-12)
+		local first, sixth, reverse = at(1), at(6), at(-1)
+		expect(first.x < neutral.x and first.z < neutral.z).toBe(true)
+		expect(sixth.x > neutral.x and sixth.z > neutral.z).toBe(true)
+		expect(reverse.x < first.x and reverse.z < neutral.z).toBe(true)
+		expect(at(2).z > neutral.z and at(3).z < neutral.z).toBe(true)
+	end)
+
+	it("refuses gates whose gears of one column, or of one row, disagree on its angle", function()
+		for _, change in { { "4", 0.05, nil }, { "3", nil, 0.3 }, { "6", nil, -0.1 } } do
+			local skewed = table.clone(shifter.gates)
+			local angles = skewed[change[1]]
+			skewed[change[1]] = { side = change[2] or angles.side, fore = change[3] or angles.fore }
+			local bent = table.clone(shifter)
+			bent.gates = skewed
+			expect(function()
+				ShiftHand.leverFromBinding(bent, gates, seat)
+			end).toThrow()
+		end
+	end)
+
+	it("moves a part on the lever rigidly about the pivot, slid down the lever by the push", function()
+		local pushing = table.clone(SHIFTER)
+		for _, place in { { 1, 0, 0 }, { 0, 1, 0 }, { 2, -1, 0 }, { -1, 1, 1 }, { 0.4, 0, 0.5 } } do
+			local turn, slide = ShiftHand.joint(pushing, place[1], place[2], place[3])
+			local pose = ShiftHand.lever(pushing, place[1], place[2], place[3])
+			local p = pushing.pivot
+			local reach = { x = pushing.knob.x - p.x, y = pushing.knob.y - p.y, z = pushing.knob.z - p.z }
+			-- The knob's modelled centre lands where the lever's pose puts it.
+			local q = turn
+			local t = {
+				x = 2 * (q.y * reach.z - q.z * reach.y),
+				y = 2 * (q.z * reach.x - q.x * reach.z),
+				z = 2 * (q.x * reach.y - q.y * reach.x),
+			}
+			local turned = {
+				x = reach.x + q.w * t.x + (q.y * t.z - q.z * t.y),
+				y = reach.y + q.w * t.y + (q.z * t.x - q.x * t.z),
+				z = reach.z + q.w * t.z + (q.x * t.y - q.y * t.x),
+			}
+			local landed =
+				{ x = p.x + slide.x + turned.x, y = p.y + slide.y + turned.y, z = p.z + slide.z + turned.z }
+			expect(distance(landed, pose.position)).toBeNear(0, 1e-12)
+			local length = math.sqrt(slide.x ^ 2 + slide.y ^ 2 + slide.z ^ 2)
+			expect(length).toBeNear(pushing.push * place[3], 1e-12)
+			expect(turnBetween(turn, pose.rotation)).toBeNear(0, 1e-9)
+		end
 	end)
 end)
 
