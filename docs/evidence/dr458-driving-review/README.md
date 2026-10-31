@@ -32,9 +32,10 @@ constant-speed method), assists off, as `DriveSim.skidpad` runs; the 40 m row is
 best grip came at a steering input of 0.18, 0.11 and 0.09, well before each run ended (at full lock
 or on speed loss), so each figure is a plateau, not a run cut short.
 Braking starts in the gear the car would be in (3rd at 100 km/h, 5th at 200 km/h), and the pedal
-goes down at exactly that speed. `DriveSim.brake`, which the calibration specs use, coasts 0.5 s in
-gear first and presses at 95.4 km/h on a "100 km/h" run: it gives 24.4 m, from that lower speed
-(#128). An earlier draft of this report quoted that 24.4 m as a 100-0 figure; it was wrong.
+goes down at exactly that speed. `DriveSim.brake` on main 8473fa4, which the calibration specs use,
+coasted 0.5 s in gear first and pressed at 95.4 km/h on a "100 km/h" run: 24.4 m, from that lower
+speed (#128, fixed in #134; the tool still prints that old method for comparison). An earlier draft
+of this report quoted that 24.4 m as a 100-0 figure; it was wrong.
 
 ## Traction control and the manettino
 
@@ -78,8 +79,8 @@ Physics changes need the owner's Play test, so none of these is made. In order o
 2. **Braking: no change from this review; it depends on #128.** From a true 100 km/h the DR458
    stops in 26.8 m at a mean 1.47 g, under the "about 1.6 g on slicks" its calibration spec
    estimates (24.5 m ± 2, measured from 95.4 km/h). No sourced figure exists for the Challenge,
-   so this is a gap against an estimate, not against the car; #128 re-measures it with a fixed
-   `DriveSim.brake` and puts any change to the owner.
+   so this is a gap against an estimate, not against the car. #134 fixes `DriveSim.brake` and
+   measures the same 26.81 m; the choice is the owner's.
 3. **Keep the high-speed lateral grip, unless the owner finds the car too planted at speed.** It is
    5 to 10 % over the only documented figure, but that figure is for the car without the Evo's aero.
    If the owner wants less, the lever is the estimated downforce (`aero.liftArea` 1.0), not the

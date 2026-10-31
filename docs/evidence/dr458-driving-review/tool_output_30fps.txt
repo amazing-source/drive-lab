@@ -18,7 +18,7 @@ Top speed: 301.7 km/h in 7 at 8290 rpm (from 250 km/h in 7th)
 Braking, manettino 1, pedal down at the speed shown | ABS on: m, peak g | ABS off: m, peak g
 100.0-0 km/h (in 3) | 26.9, 1.65 | 28.6, 1.67
 200.0-0 km/h (in 5) | 101.0, 1.93 | 107.1, 1.82
-DriveSim.brake(100 km/h), as the calibration spec runs it: pedal at 95.2 km/h, 24.6 m
+DriveSim.brake(100 km/h) as on main 8473fa4 (#128): pedal at 95.2 km/h, 24.6 m
 
 Lateral, assists off | g | body slip deg | downforce kg | steering at best | run ended on
 40 m skidpad, speed ramp (DriveSim.skidpad) | 1.490 | - | - | - | -

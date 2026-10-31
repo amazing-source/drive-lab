@@ -107,13 +107,13 @@ local function settle(speed: number, gear: number): DriveSim.Sim
 	return sim
 end
 
--- Full brake with the pedal going down at `speed`: the coast starts faster by its own loss,
--- corrected twice. Returns the distance (m), the peak 0.1 s deceleration (g) and the speed the
--- pedal went down at (km/h).
-local function brake(speed: number, gear: number, abs: boolean): (number, number, number)
+-- Full brake after the coast: the coast starts faster by its own loss, corrected `corrections`
+-- times (2 puts the pedal down at `speed`; 0 is DriveSim.brake on main 8473fa4). Returns the
+-- distance (m), the peak 0.1 s deceleration (g) and the speed the pedal went down at (km/h).
+local function brake(speed: number, gear: number, abs: boolean, corrections: number): (number, number, number)
 	local start = speed
 	local sim = settle(start, gear)
-	for _ = 1, 2 do
+	for _ = 1, corrections do
 		start += speed - DriveSim.forwardSpeed(sim)
 		sim = settle(start, gear)
 	end
@@ -267,8 +267,8 @@ print("")
 print("Braking, manettino 1, pedal down at the speed shown | ABS on: m, peak g | ABS off: m, peak g")
 local stops = { { kmh = 100, gear = 3 }, { kmh = 200, gear = 5 } }
 for _, run in stops do
-	local onDistance, onPeak, pedal = brake(run.kmh * KMH, run.gear, true)
-	local offDistance, offPeak = brake(run.kmh * KMH, run.gear, false)
+	local onDistance, onPeak, pedal = brake(run.kmh * KMH, run.gear, true, 2)
+	local offDistance, offPeak = brake(run.kmh * KMH, run.gear, false, 2)
 	print(
 		("%.1f-0 km/h (in %d) | %.1f, %.2f | %.1f, %.2f"):format(
 			pedal,
@@ -280,12 +280,11 @@ for _, run in stops do
 		)
 	)
 end
-local reference = DriveSim.brake(DR458, 100 * KMH, DT, inputFor("1", {}))
-local coasted = DriveSim.forwardSpeed(settle(100 * KMH, 3)) / KMH
+local coastedDistance, _, coastedPedal = brake(100 * KMH, 3, true, 0)
 print(
-	("DriveSim.brake(100 km/h), as the calibration spec runs it: pedal at %.1f km/h, %.1f m"):format(
-		coasted,
-		reference.distance
+	("DriveSim.brake(100 km/h) as on main 8473fa4 (#128): pedal at %.1f km/h, %.1f m"):format(
+		coastedPedal,
+		coastedDistance
 	)
 )
 
