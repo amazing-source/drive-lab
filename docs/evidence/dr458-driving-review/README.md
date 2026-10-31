@@ -5,7 +5,8 @@ flat test track the calibration specs use), no Studio, no Play. Nothing in the c
 
 Every simulated number below comes from `lune run games/drive-lab/tools/dr458_review.luau [fps]`
 on main 8473fa4; its full output at 30, 60 and 120 FPS is in this folder. The table quotes 60 FPS;
-30 and 120 FPS agree within 0.05 s, 0.2 m and 0.01 g.
+30 and 120 FPS agree within 0.05 s and 0.01 g, and the braking within 0.1 m from 100 km/h and
+1.2 m from 200 km/h.
 
 Real figures come from `docs/research/12_dr458_challenge_evo.md` and its sources, with that note's
 confidence. Ferrari published few figures for the Challenge, and none for the Evo's performance, so
@@ -21,14 +22,19 @@ a gap, never filled here.
 | Top speed | 301.6 km/h in 7th at 8,289 rpm, drag-limited | none from Ferrari | 12 §1.10: unverified "nearly 200 mph" (Daytona) and "210 mph" (a dealer) | 20 to 36 km/h under the unverified claims. The road 458 is "in excess of 325 km/h" [F09], with less drag than the Evo's wing. |
 | Gear tops (manual, at the limiter) | 74.9, 105.7, 141.3, 178.3, 223.4, 274.7 km/h for 1st to 6th; 7th never reaches its limiter | 75.6, 106.8, 142.8, 180.5, 226.0, 277.1 km/h from the ratios at 9,200 rpm | road ratios and 5.14 final drive, 12 §1.2, likely for the road car; 9,200 rpm limiter unknown | -0.9 to -1.2 %, the drive slip of the rear tyres. |
 | Shift points (game automatic, full throttle) | 9,079 to 9,100 rpm, at 71.6, 102.6, 138.4, 175.5, 220.9, 271.7 km/h | the real car is shifted on its paddles; redline 9,000 rpm | 12 §1.1, likely | The automatic holds each gear 100 rpm past the redline, as its config says it should. |
-| 100-0 km/h | 24.4 m with ABS (mean 1.61 g, peak 1.64 g); 26.1 m without | none for the Challenge | - | The road 458 stops in 32.5 m [F09], on road tyres and heavier (dry 1,380 kg against 1,218 kg); the DR458 is 8.1 m shorter. |
-| 200-0 km/h | 95.9 m with ABS (mean 1.64 g, peak 1.96 g); 101.8 m without | none | 12 §1.10: "stops suddenly even from 220 km/h" [HFO], likely | No number to compare. |
+| 100-0 km/h | 26.8 m with ABS (mean 1.47 g, peak 1.66 g); 28.6 m without | none for the Challenge | - | The road 458 stops in 32.5 m [F09], on road tyres and heavier (dry 1,380 kg against 1,218 kg); the DR458 is 5.7 m shorter. |
+| 200-0 km/h | 99.8 m with ABS (mean 1.58 g, peak 1.99 g); 107.0 m without | none | 12 §1.10: "stops suddenly even from 220 km/h" [HFO], likely | No number to compare. |
 | Lateral, low speed | 1.48 g on a 40 m skidpad (about 87 km/h); 1.52 g at 100 km/h | "up to 1.6G" | [FB10], documented, for the 2010 458 Challenge, not the Evo | 5 to 7 % under, as the config intends ("about 1.5 g at skidpad speed"). |
 | Lateral, high speed | 1.67 g at 200 km/h (185 kg of downforce); 1.76 g at 250 km/h (286 kg) | "up to 1.6G" | as above | 5 % over at 200 km/h, 10 % over at 250 km/h. The Evo adds a GT-style wing and splitter [B16], unquantified, so it may well exceed the 2010 car's figure. |
 
 The lateral rows hold a constant speed in one gear and wind the steering on slowly (ISO 4138's
-constant-speed method), assists off, as `DriveSim.skidpad` runs; the 40 m row is that skidpad.
-Braking starts in the gear the car would be in: 3rd at 100 km/h, 5th at 200 km/h.
+constant-speed method), assists off, as `DriveSim.skidpad` runs; the 40 m row is that skidpad. The
+best grip came at a steering input of 0.18, 0.11 and 0.09, well before each run ended (at full lock
+or on speed loss), so each figure is a plateau, not a run cut short.
+Braking starts in the gear the car would be in (3rd at 100 km/h, 5th at 200 km/h), and the pedal
+goes down at exactly that speed. `DriveSim.brake`, which the calibration specs use, coasts 0.5 s in
+gear first and presses at 95.4 km/h on a "100 km/h" run: it gives 24.4 m, from that lower speed
+(#128). An earlier draft of this report quoted that 24.4 m as a 100-0 figure; it was wrong.
 
 ## Traction control and the manettino
 
@@ -66,24 +72,29 @@ What this shows, within these runs:
 
 Physics changes need the owner's Play test, so none of these is made. In order of evidence:
 
-1. **Nothing in the straight-line and braking set.** 0-100 is inside the only bound, the gear tops
-   follow the ratios within 1.2 %, the shift points are the configured ones, and the braking is in
-   line with the calibration spec's estimate (24.5 m ± 2). No sourced number contradicts any of them.
-2. **Keep the high-speed lateral grip, unless the owner finds the car too planted at speed.** It is
+1. **Nothing in the straight-line set.** 0-100 is inside the only bound, the gear tops follow the
+   ratios within 1.2 %, and the shift points are the configured ones. No sourced number contradicts
+   any of them.
+2. **Braking: no change from this review; it depends on #128.** From a true 100 km/h the DR458
+   stops in 26.8 m at a mean 1.47 g, under the "about 1.6 g on slicks" its calibration spec
+   estimates (24.5 m ± 2, measured from 95.4 km/h). No sourced figure exists for the Challenge,
+   so this is a gap against an estimate, not against the car; #128 re-measures it with a fixed
+   `DriveSim.brake` and puts any change to the owner.
+3. **Keep the high-speed lateral grip, unless the owner finds the car too planted at speed.** It is
    5 to 10 % over the only documented figure, but that figure is for the car without the Evo's aero.
    If the owner wants less, the lever is the estimated downforce (`aero.liftArea` 1.0), not the
    tyres, which are right at low speed.
-3. **Top speed is the softest number.** Both levers are estimates: drag area 0.85 m² and the
+4. **Top speed is the softest number.** Both levers are estimates: drag area 0.85 m² and the
    downforce, whose load also raises rolling resistance. Inferred from the config: at 301.6 km/h
    aerodynamic drag is about 81 % of the resistance and rolling resistance about 19 %. The
    unverified claims sit higher, and a lower downforce would raise the top speed and lower the
    high-speed lateral grip together, which moves both checks toward their references. Not worth
    changing without a sourced Evo top speed or drag figure.
-4. **Position 2's TC threshold, low priority.** If 2 should be the cautious setting in every
+5. **Position 2's TC threshold, low priority.** If 2 should be the cautious setting in every
    condition, its slip threshold would sit under the slick's peak (below 0.08) and 1's at or just
    past it. The effect on a dry launch is 0.08 s. A spec would pin it: "2's dry launch is no quicker
    than 1's, and 2's body slip in the power step stays under 1's".
-5. **The slick's post-peak fall-off, held for the drift decision.** The curve keeps 77 to 82 % of
+6. **The slick's post-peak fall-off, held for the drift decision.** The curve keeps 77 to 82 % of
    its peak far past the limit, which is the bottom of the generic road-tyre range note 01
    estimates (75 to 90 %, "road tyres fall less than slicks", an inference there), and note 01
    cites Assetto Corsa EVO's slicks dropping harder past the limit. A lower sliding share would

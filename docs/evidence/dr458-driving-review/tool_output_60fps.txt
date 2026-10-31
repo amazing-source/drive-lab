@@ -15,16 +15,16 @@ Gear | at 9,000 rpm km/h | at 9,200 rpm (limiter) km/h | manual top km/h | auto 
 7 | 330.1 | 337.4 | - | - | -
 Top speed: 301.6 km/h in 7 at 8289 rpm (from 250 km/h in 7th)
 
-Braking, manettino 1 | ABS on: m, peak g | ABS off: m, peak g
-100-0 km/h (from 3) | 24.4, 1.64 | 26.1, 1.67
-200-0 km/h (from 5) | 95.9, 1.96 | 101.8, 1.76
-Check: DriveSim.brake 100-0 km/h with ABS, 24.4 m
+Braking, manettino 1, pedal down at the speed shown | ABS on: m, peak g | ABS off: m, peak g
+100.0-0 km/h (in 3) | 26.8, 1.66 | 28.6, 1.68
+200.0-0 km/h (in 5) | 99.8, 1.99 | 107.0, 1.78
+DriveSim.brake(100 km/h), as the calibration spec runs it: pedal at 95.4 km/h, 24.4 m
 
-Lateral, assists off | g | body slip deg | downforce kg
-40 m skidpad, speed ramp (DriveSim.skidpad) | 1.484 | - | -
-100 km/h, steering ramp | 1.515 | -1.4 | 47
-200 km/h, steering ramp | 1.674 | -2.5 | 185
-250 km/h, steering ramp | 1.760 | -2.6 | 286
+Lateral, assists off | g | body slip deg | downforce kg | steering at best | run ended on
+40 m skidpad, speed ramp (DriveSim.skidpad) | 1.484 | - | - | - | -
+100 km/h, steering ramp | 1.515 | -1.4 | 47 | 0.18 | 120 s, steering 1.00
+200 km/h, steering ramp | 1.674 | -2.5 | 185 | 0.11 | 120 s, steering 1.00
+250 km/h, steering ramp | 1.760 | -2.6 | 286 | 0.09 | speed under 90 %, steering 0.63
 
 Traction by position | 2nd from 50 km/h, 1.5 s full: rear slip mean / peak, TC share | power step
 1 | 0.036 / 0.054, 0 % | 0.86 g before, body slip peak 7.4 deg, rear slip peak 0.10

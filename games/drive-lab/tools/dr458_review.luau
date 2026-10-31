@@ -96,14 +96,28 @@ local function curveRow(
 	return `{label} | {table.concat(cells, " | ")}`
 end
 
--- DriveSim.brake with the gear the car would be in at `speed`, so it never starts over the limiter.
-local function brake(speed: number, gear: number, abs: boolean): (number, number)
+-- DriveSim.brake's 0.5 s coast in `gear` before the pedal (#128: it loses speed in gear).
+local function settle(speed: number, gear: number): DriveSim.Sim
 	local sim = DriveSim.new(DR458)
 	DriveSim.setSpeed(sim, speed, gear)
 	local coast = DriveSim.input(inputFor("1", {}))
 	while sim.time < 0.5 do
 		DriveSim.frame(sim, coast, DT)
 	end
+	return sim
+end
+
+-- Full brake with the pedal going down at `speed`: the coast starts faster by its own loss,
+-- corrected twice. Returns the distance (m), the peak 0.1 s deceleration (g) and the speed the
+-- pedal went down at (km/h).
+local function brake(speed: number, gear: number, abs: boolean): (number, number, number)
+	local start = speed
+	local sim = settle(start, gear)
+	for _ = 1, 2 do
+		start += speed - DriveSim.forwardSpeed(sim)
+		sim = settle(start, gear)
+	end
+	local pedal = DriveSim.forwardSpeed(sim) / KMH
 	local stop = DriveSim.input(inputFor("1", { brake = 1, abs = abs }))
 	local startX, start = sim.body.x, sim.time
 	local window = math.max(1, math.floor(0.1 / DT + 0.5))
@@ -116,19 +130,20 @@ local function brake(speed: number, gear: number, abs: boolean): (number, number
 			peak = math.max(peak, (history[#history - window] - history[#history]) / (window * DT))
 		end
 	end
-	return sim.body.x - startX, peak / G
+	return sim.body.x - startX, peak / G, pedal
 end
 
 -- Constant speed in a fixed gear, steering wound on at `rate` per second (ISO 4138's constant-speed
 -- method), assists off as on DriveSim.skidpad. Returns the best 1 s mean lateral g held, the body
--- slip there (deg) and the downforce there (kg).
-local function steadyTurn(kmh: number, gear: number, rate: number): (number, number, number)
+-- slip there (deg), the downforce there (kg), the steering there, and why the run ended.
+local function steadyTurn(kmh: number, gear: number, rate: number): (number, number, number, number, string)
 	local sim = DriveSim.new(DR458)
 	local target = kmh * KMH
 	DriveSim.setSpeed(sim, target, gear)
 	local window = math.floor(1 / DT + 0.5)
 	local samples: { number } = {}
-	local sum, best, bestSlip, bestDown, steer = 0, 0, 0, 0, 0
+	local sum, best, bestSlip, bestDown, bestSteer, steer = 0, 0, 0, 0, 0, 0
+	local ended = "120 s"
 	while sim.time < 120 do
 		local forward, right = DriveSim.localVelocity(sim.body)
 		steer = math.min(1, steer + rate * DT)
@@ -142,14 +157,15 @@ local function steadyTurn(kmh: number, gear: number, rate: number): (number, num
 			sum -= table.remove(samples, 1) :: number
 		end
 		if #samples == window and sum / window > best then
-			best, bestSlip = sum / window, slip
+			best, bestSlip, bestSteer = sum / window, slip, steer
 			bestDown = (result.downforceFront + result.downforceRear) / G
 		end
 		if math.abs(slip) > 12 or forward < 0.9 * target then
+			ended = if math.abs(slip) > 12 then "body slip over 12 deg" else "speed under 90 %"
 			break
 		end
 	end
-	return best / G, bestSlip, bestDown
+	return best / G, bestSlip, bestDown, bestSteer, `{ended}, steering {("%.2f"):format(steer)}`
 end
 
 -- Full throttle for 1.5 s in a fixed gear from `kmh`, straight ahead.
@@ -248,14 +264,14 @@ print(
 )
 
 print("")
-print("Braking, manettino 1 | ABS on: m, peak g | ABS off: m, peak g")
+print("Braking, manettino 1, pedal down at the speed shown | ABS on: m, peak g | ABS off: m, peak g")
 local stops = { { kmh = 100, gear = 3 }, { kmh = 200, gear = 5 } }
 for _, run in stops do
-	local onDistance, onPeak = brake(run.kmh * KMH, run.gear, true)
+	local onDistance, onPeak, pedal = brake(run.kmh * KMH, run.gear, true)
 	local offDistance, offPeak = brake(run.kmh * KMH, run.gear, false)
 	print(
-		("%d-0 km/h (from %d) | %.1f, %.2f | %.1f, %.2f"):format(
-			run.kmh,
+		("%.1f-0 km/h (in %d) | %.1f, %.2f | %.1f, %.2f"):format(
+			pedal,
 			run.gear,
 			onDistance,
 			onPeak,
@@ -265,20 +281,35 @@ for _, run in stops do
 	)
 end
 local reference = DriveSim.brake(DR458, 100 * KMH, DT, inputFor("1", {}))
-print(("Check: DriveSim.brake 100-0 km/h with ABS, %.1f m"):format(reference.distance))
+local coasted = DriveSim.forwardSpeed(settle(100 * KMH, 3)) / KMH
+print(
+	("DriveSim.brake(100 km/h), as the calibration spec runs it: pedal at %.1f km/h, %.1f m"):format(
+		coasted,
+		reference.distance
+	)
+)
 
 print("")
-print("Lateral, assists off | g | body slip deg | downforce kg")
+print("Lateral, assists off | g | body slip deg | downforce kg | steering at best | run ended on")
 local skidpad = DriveSim.skidpad(DR458, 40, DT, "1")
-print(("40 m skidpad, speed ramp (DriveSim.skidpad) | %.3f | - | -"):format(skidpad))
+print(("40 m skidpad, speed ramp (DriveSim.skidpad) | %.3f | - | - | - | -"):format(skidpad))
 local turns = {
 	{ kmh = 100, gear = 3, rate = 0.02 },
 	{ kmh = 200, gear = 5, rate = 0.01 },
 	{ kmh = 250, gear = 6, rate = 0.008 },
 }
 for _, run in turns do
-	local g, slip, down = steadyTurn(run.kmh, run.gear, run.rate)
-	print(("%d km/h, steering ramp | %.3f | %.1f | %.0f"):format(run.kmh, g, slip, down))
+	local g, slip, down, steer, ended = steadyTurn(run.kmh, run.gear, run.rate)
+	print(
+		("%d km/h, steering ramp | %.3f | %.1f | %.0f | %.2f | %s"):format(
+			run.kmh,
+			g,
+			slip,
+			down,
+			steer,
+			ended
+		)
+	)
 end
 
 print("")
