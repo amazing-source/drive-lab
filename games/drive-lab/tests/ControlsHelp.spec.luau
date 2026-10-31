@@ -10,9 +10,6 @@ local Config = require("../src/shared/Config/ControlsHelp")
 local Contract = require("../src/shared/Config/Cars/Contract")
 local Drift = require("../src/shared/Config/Drift")
 local ControlsHelp = require("../src/shared/Rules/ControlsHelp")
-local DR458 = require("../src/shared/Config/Cars/DR458/Physics")
-local DR458Assists = require("../src/shared/Config/Cars/DR458/Assists")
-local DR458Model = require("../src/shared/Config/Cars/DR458/Model")
 local DR458Switches = require("../src/shared/Config/Cars/DR458/Switches")
 local T = require("../../../tools/test/T")
 
@@ -61,10 +58,8 @@ local function svj(): (ControlsHelp.Help, ControlsHelp.Bindings)
 	return screen("SVJ", Catalog.cars.SVJ)
 end
 
--- The DR458 has no catalog entry until its model is bound: its screen from the modules it has.
 local function dr458(): (ControlsHelp.Help, ControlsHelp.Bindings)
-	local parts = { physics = DR458, assists = DR458Assists, switches = DR458Switches, model = DR458Model }
-	return screen("DR458", (parts :: any) :: Contract.Entry)
+	return screen("DR458", Catalog.cars.DR458)
 end
 
 local function svjHelp(): ControlsHelp.Help
