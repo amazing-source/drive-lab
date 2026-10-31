@@ -265,6 +265,15 @@ of touches by the same script, so a moved control or a changed time is a re-run:
 `Rig/StartupHands` draws the Pinch mesh (`HandPinch_R` / `_L`, uploaded like the others) and
 stands the Point hand in for it in a place without one.
 
+**Named contacts for the DR458 start-up, decided 2026-10-31** (`allow` list next to the bake;
+measured on the cockpit dump c6 with the v9_a10 grip):
+
+| Contact | When | Depth (limit) | Why it is not avoided | Decided by |
+|---|---|---|---|---|
+| The open left hand closing onto the rim | last 0.15 s before its grip | 3.6 mm (6) | a posed hand swaps from Rest to Grip; the open fingers dip into the rim before they close | coordinator, on renders |
+| The open right hand closing onto the rim | last 0.15 s before its grip | about 1.5 mm (3) | as above | coordinator |
+| The left hand brushing the A-pillar's cage padding | taking the rim | 3.5 mm (5) | the left grip itself rests 1.7 mm into that padding, so there is no clean way in; tighten if the padding is opened | coordinator |
+
 ## Owner decisions
 
 | Date | Decision |
