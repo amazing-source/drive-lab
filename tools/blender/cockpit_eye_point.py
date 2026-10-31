@@ -15,8 +15,8 @@ with the prefix (default `Seat_`) is the seat; its centre plane is the middle of
 - Eye: a 50th-percentile male's. A 0.50 m torso along the backrest line to the base of the neck, the
   head upright to look at the road, the eye 0.08 m forward and 0.17 m up from there. At a 25 deg back
   angle that puts the eye 0.635 m above the H-point, the SAE J941 eyellipse centroid height.
-- Helmet top: 0.16 m above the eye (0.125 m to the vertex, 0.035 m shell), 0.03 m behind it; the roof
-  is the first surface straight up from it.
+- Helmet top: 0.16 m above the eye (0.125 m to the vertex, 0.035 m shell), 0.03 m behind it; the
+  first surface straight up from it is reported as the roof (a cage tube there counts too).
 Writes the points in the car frame and as {forward = -y, right = -x, up = z} (the manifest's frame).
 
 Exit 1 unless the result is plausible: back angle 10 to 40 deg, cushion -5 to 30 deg, eye 0.56 to 0.66 m

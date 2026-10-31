@@ -449,6 +449,8 @@ changes. The DR458's binnacle face, which also sets the screen size agreed with 
 
 ### Checks used
 
+The DR458's check scripts are outside the repo too (`drive-lab-assets/dr458/work/checks/`).
+
 - Holes from the eye: `render_ids` frames drawn single-sided with each glass mesh given a reversed
   twin. Outward-facing glass is culled from inside, so without the twin the windscreen counts as a
   hole and any change that uncovers it "fails".
