@@ -295,16 +295,16 @@ CLOSE_FROM, ON_HAND_OVER, END = SEATED - 4, SEATED + 34, SEATED + 40
 # swings shut at the speed the game's other door does.
 SVJ_CLOSE = ((0.0, 1.0), (0.033, 0.995), (0.1, 0.961), (0.2, 0.88), (0.233, 0.847), (0.3, 0.756), (0.433, 0.55), (0.566, 0.369), (0.7, 0.228), (0.8, 0.143), (0.966, 0.031), (1.033, 0.004), (1.066, 0.0))
 KEY_FRAMES = {"B": SIT, "T1": T1, "T2": T2, "C": OVER, "D1": D1, "D2": D2}
-# Key poses found by grid search on scene_v14 (the torso and head first, then each limb):
+# Key poses found by grid search per group on scene_v15p (the torso and head first, then each limb):
 # B sitting across the bars facing in, head inside; T1, T2 turning on them; C facing the nose,
 # torso leaning 55 degrees in across the bucket; D1, D2 over the bolster and down.
 KEYS = {
-    "B": {"pelvis": (0.7, -1.57, 0.58), "torso": (-55, -36.21, 10), "neck": (-15, 0, 0), "limbs": {"right_leg": (20, -15), "left_leg": (10, -5), "right_arm": (110, -130), "left_arm": (-140, -130)}},
-    "T1": {"pelvis": (0.685, -1.575, 0.565), "torso": (-45, -20.21, -10), "neck": (-25, 0, 0), "limbs": {"right_leg": (-20, -35), "left_leg": (0, -25), "right_arm": (130, 130), "left_arm": (-190, -130)}},
-    "T2": {"pelvis": (0.67, -1.58, 0.55), "torso": (-35, 10, -30), "neck": (-25, 0, 0), "limbs": {"right_leg": (0, -85), "left_leg": (60, -65), "right_arm": (90, 130), "left_arm": (-20, 100)}},
-    "C": {"pelvis": (0.676, -1.527, 0.588), "torso": (5, 57, -55), "neck": (-10, 0, 0), "limbs": {"right_leg": (100, -75), "left_leg": (50, 75), "right_arm": (20, 100), "left_arm": (-170, -130)}},
-    "D1": {"pelvis": (0.5599, -1.503, 0.54), "torso": (15, 48, -35), "neck": (-20, 0, 0), "limbs": {"right_leg": (50, -65), "left_leg": (40, 65), "right_arm": (140, -120), "left_arm": (190, -130)}},
-    "D2": {"pelvis": (0.4438, -1.48, 0.44), "torso": (10, 54, -15), "neck": (-5, 0, 0), "limbs": {"right_leg": (130, 15), "left_leg": (70, 75), "right_arm": (30, -30), "left_arm": (140, 130)}},
+    "B": {"pelvis": (0.7, -1.57, 0.58), "torso": (-50, -6.212, -15), "neck": (-30, 0, 0), "limbs": {"right_leg": (0, -5), "left_leg": (10, -5), "right_arm": (-10, -60), "left_arm": (-150, -130)}},
+    "T1": {"pelvis": (0.685, -1.575, 0.565), "torso": (-35, 18, -35), "neck": (-25, 0, 0), "limbs": {"right_leg": (-10, -85), "left_leg": (20, -15), "right_arm": (50, -50), "left_arm": (20, 100)}},
+    "T2": {"pelvis": (0.67, -1.58, 0.56), "torso": (-40, 24, -35), "neck": (-25, 0, 0), "limbs": {"right_leg": (-20, -75), "left_leg": (70, -75), "right_arm": (90, 50), "left_arm": (20, 110)}},
+    "C": {"pelvis": (0.676, -1.527, 0.59), "torso": (10, 65, -55), "neck": (-10, 0, 0), "limbs": {"right_leg": (165, -50), "left_leg": (35, 85), "right_arm": (-10, 100), "left_arm": (-20, 90)}},
+    "D1": {"pelvis": (0.56, -1.503, 0.55), "torso": (10, 60, -50), "neck": (-20, 0, 0), "limbs": {"right_leg": (150, -40), "left_leg": (30, 75), "right_arm": (120, -110), "left_arm": (-170, -130)}},
+    "D2": {"pelvis": (0.444, -1.48, 0.45), "torso": (5, 48, -20), "neck": (10, 0, 0), "limbs": {"right_leg": (100, 25), "left_leg": (50, 60), "right_arm": (60, -40), "left_arm": (-190, 130)}},
 }
 STANCE = np.array([1.03, -1.58])  # where the body stands facing the car to lean in (car x, y)
 # Palms over the stowed net's roll on the upper door bar (top z 0.525): an R6 palm is 0.15 stud
@@ -566,8 +566,9 @@ def entry_contacts():
     allow = [
         {"why": "right hand on the door's pull, pulling (the pull is just ahead of the shut line: the hand also lies on the body behind it, as the SVJ's release hand does)", "from": 33, "to": 46, "parts": ["Right Arm"], "groups": ["door", "body"], "depth": 0.15},
         {"why": "hands on the door bars and the bucket, leaning in, pushing up, turning", "from": HOP0 - 2, "to": DROP + 2, "parts": ARMS, "groups": ["cage", "seat"], "depth": 0.15},
-        {"why": "PROPOSED (rigid-thigh class): thighs over the sill and the door bars while the legs swing in", "from": HOP0 + 4, "to": DROP + 4, "parts": LEGS, "groups": ["cage", "sill"], "depth": 0.25},
-        {"why": "PROPOSED: the bottom across the door bars while sitting and turning on them", "from": HOP0 + 4, "to": DROP, "parts": ["Torso"], "groups": ["cage"], "depth": 0.15},
+        {"why": "PROPOSED (rigid-thigh class): thighs over the sill and the door bars while the legs swing in", "from": HOP0 + 4, "to": D2 + 6, "parts": LEGS, "groups": ["cage", "sill"], "depth": 0.25},
+        {"why": "PROPOSED: the bottom across the door bars while sitting and turning on them, the torso's side on them sliding in", "from": HOP0 + 4, "to": D2 + 4, "parts": ["Torso"], "groups": ["cage"], "depth": 0.16},
+        {"why": "PROPOSED (rigid-thigh class): thighs over the bucket's bolster and cushion edge while the body slides in", "from": OVER - 4, "to": SEATED - 10, "parts": LEGS, "groups": ["seat"], "depth": 0.2},
         {"why": "DECIDED (owner, option D): torso sides into the bucket's bolsters, 5.5 cm seated", "from": OVER + 4, "to": END, "parts": ["Torso"], "groups": ["seat"], "depth": 0.261},
         {"why": "DECIDED (seated pose): head on the headrest pad: 0.0589 on the house checker's 0.05-stud cloud, 0.060 on a 0.04-stud one (its 0.62-stud head box; the seated check's smaller box measured 0.89 cm)", "from": SEATED, "to": END, "parts": ["Head"], "groups": ["seat"], "depth": 0.061},
         {"why": "DECIDED (coordinator, B): the blocky arms at their hand-over pose beside the torso, into the bucket's bolsters as the torso's sides are", "from": SEATED - 8, "to": END, "parts": ARMS, "groups": ["seat"], "depth": 0.22},
@@ -576,8 +577,6 @@ def entry_contacts():
     holds = [
         {"from": WALK0, "to": HOP0 + 2, "limb": "right_leg"},
         {"from": WALK0, "to": HOP0 + 2, "limb": "left_leg"},
-        {"from": HOP0 - 2, "to": HOP0 + 2, "limb": "right_arm"},
-        {"from": HOP0 - 2, "to": HOP0 + 2, "limb": "left_arm"},
         {"from": END, "to": END, "limb": "right_arm"},
         {"from": END, "to": END, "limb": "left_arm"},
     ]
