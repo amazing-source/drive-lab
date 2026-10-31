@@ -1,0 +1,59 @@
+Tyre pack (#137): levels and the ceiling handed to #136 PR 3. Measured 2026-10-31.
+Loudness: BS.1770 K-weighted, ungated, loops filtered as loops (cut_weather.loudness); every
+file read as two channels (mono doubled), as the engine and road packs were matched.
+
+1. Files
+   Engine loops, every one on both cars:  -17.97 to -18.16 LUFS
+     SVJ   eng_idle -17.97, eng_on -18.11, eng_off -18.01
+     DR458 idle -18.02, on_2100..on_8100 -18.04..-18.11, off_2000..off_9000 -18.02..-18.16
+   Road pack: road -20.11, wind -20.32
+   Tyre loops (after OGG decoding): -20.0 each (AC squeal, AC skid, real squeal, real skid)
+
+2. The engine as heard: each loop through its car's view shaping (three bands split at 400 Hz
+   and 4 kHz, render_road_preview.py's model)
+     SVJ outside (low -5, mid +1.5, high +5): idle -21.93, on -16.78, off -18.73
+     DR458 outside (low -4, mid +1.5, high +3): idle -20.06, on_2100 -19.61, on_4900 -18.46,
+       on_8100 -17.62, off_2000 -19.79, off_5000 -18.54, off_9000 -16.91
+     In the cockpit the SVJ's engine is unshaped (idle -17.97).
+   Quietest: the SVJ's idle outside, -21.93. offsetDb = -21.93 - (-20.0) = -1.9.
+
+3. The engine's level: the loudness curve against what the layers play (sqrt of the sum of
+   EngineSound.step's mix.volumes squared), on the preview timeline:
+     SVJ:   within 0.1 dB in a held drift; -0.7 to +1.9 dB in the lock's first 0.5 s (smoothing)
+     DR458: -0.1 dB in a held drift; -4.1 to -7.0 dB once the throttle closes (its off-load
+            layers carry volume 0.47 to 0.67)
+   So the ceiling reads the played level, not the curve.
+
+4. Ceiling, as agreed for Rules/TyreAudio:
+     sqrt(sum over both axles of (squeal_v^2 + skid_v^2)) <= engineLevel x 10^((offsetDb - headroomDb)/20)
+     engineLevel = pack.engineVolume x sqrt(sum mix.volumes^2), no shift dip, no start-up share
+     offsetDb -1.9, headroomDb 3; base volumes squeal 0.45, skid 0.45
+
+5. Physics readings (DriveSim on main, TyreSmoke.measure; per axle, its higher wheel;
+   p50 / p95 / max)
+                          SVJ                                 DR458
+     ABS stop     front slip 0.27/1.54/4.16 slide 0.22/2.98/7.70   slip 0.04/1.87/5.00 slide 0.02/2.86/6.31
+                  rear  slip 0.49/1.53/3.48 slide 0.24/3.17/5.30   slip 0.04/1.62/3.02 slide 0.02/2.50/3.83
+     lock (no ABS) front slip 10/10/10 slide 4.6/24.6/27.0         slip 4.8/12.5/12.5 slide 0.8/23.8/26.6
+                  rear  slip 6.4/10/10 slide 3.7/19.6/21.5         slip 1.1/12.5/12.5 slide 0.8/16.5/18.5
+     handbrake    rear  slip 11.1/15.0/15.5 slide 12.4/19.4/20.4   slip 12.6/18.1/18.8 slide 10.5/19.3/20.3
+   The agreed mapping gives: ABS stop squeal p95 0.50 to 0.72, skid at most 0.28; a lock or a
+   handbrake slide full skid, squeal 0.30 (the lock cut). A drift cannot be run on main (no drift
+   law yet): the preview's drift uses the drift plan's measured ranges (rear slip 3 to 5.5, slide
+   7 to 16 m/s).
+
+6. Preview levels (chase view, the agreed mapping and ceiling, timeline: grip 0-2.5 s, edge of
+   grip 2.5-6.5 s, drift 6.5-12.3 s, locked stop from 12.6 s). Engine lead = engine LUFS minus
+   tyres LUFS over the phase; closest = the smallest lead in any 400 ms window with tyres audible.
+
+                        edge    drift   lock    closest 400 ms
+     SVJ   AC pack      +9.4    +7.5    +4.9    +1.6 dB (14.3 s, engine at idle)
+     SVJ   real pack   +11.6    +7.7    +3.9    +1.6 dB (14.4 s)
+     DR458 AC pack      +9.5    +6.8    +8.8    +4.7 dB (7.6 s)
+     DR458 real pack   +11.7    +7.1    +8.3    +4.0 dB (12.2 s)
+
+   The ceiling took three tries, each measured with this check (negative = tyres louder):
+     1. per axle, the loudness curve, offset +1.9 (files only): SVJ closest -4.4 (AC) / -5.0 (real)
+     2. car-wide, offset -1.9, still the loudness curve:          SVJ +1.6; DR458 -0.6 / -1.4
+     3. car-wide, offset -1.9, the played level (sent to PR 3):    the table above
+   Only 3 was handed over as numbers to use; 1 went to the systems agent as a proposal first.
