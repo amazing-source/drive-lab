@@ -101,8 +101,11 @@ return Types.define({
 		tyre = {
 			-- Inferred: about 0.330 m loaded (285/35ZR19, 0.341 m free).
 			radius = 0.330,
-			peakMuX = 1.30,
-			peakMuY = 1.12,
+			-- The front's compound on a wider, lighter-loaded tyre, by the tyres' own load sensitivity:
+			-- (4640 / 3800)^0.15 for the lighter reference load and (285 / 255)^0.15 for the width
+			-- spreading it, 1.048 times the front's in both directions (#220).
+			peakMuX = 1.36,
+			peakMuY = 1.17,
 			slipRatioAtPeak = 0.10,
 			slipAngleAtPeak = math.rad(6.5),
 			slidingRatioX = 0.80,
@@ -193,20 +196,22 @@ return Types.define({
 				[5] = { column = 2, row = 1 },
 				[6] = { column = 2, row = -1 },
 			},
-			-- EST: a brisk human shift on a short-throw box (documented short-throw), about 0.5 s
-			-- from the clutch going down to fully up for 1-2 with the hand and foot already there.
-			-- The reach and the foot's move are the driver animation's to confirm.
+			-- EST: a quick human shift on a short-throw box (documented short-throw), as a road test's
+			-- driver makes it: about 0.37 s from the clutch going down to fully up for 1-2 with the hand
+			-- and foot already there, 0.47 s for 2-3 across the gate. A 0.5 s 1-2 left the standing start
+			-- a tenth slow per shift against the published runs (#220). The reach and the foot's move
+			-- are the driver animation's to confirm.
 			timing = {
 				reach = 0.30,
 				release = 0.35,
 				footMove = 0.20,
-				clutchIn = 0.10,
-				leave = 0.08,
+				clutchIn = 0.08,
+				leave = 0.06,
 				push = 0.10,
-				crossBase = 0.06,
-				crossPerColumn = 0.06,
-				enter = 0.10,
-				clutchOut = 0.20,
+				crossBase = 0.05,
+				crossPerColumn = 0.05,
+				enter = 0.08,
+				clutchOut = 0.15,
 				linger = 1.5,
 			},
 			-- EST: the clutch bites from 0.6 of the pedal and holds fully from 0.3.
@@ -231,7 +236,9 @@ return Types.define({
 		-- The automatic clutch's creep and slip band, as the others'.
 		clutchCreepRpm = 1200,
 		clutchSlipBand = 0.2,
-		clutchCloseTime = 0.25,
+		-- EST: the race clutch closes in 0.12 s. At the others' 0.25 s, a traction-control cut on the
+		-- start opened it and it came back too slowly, a cycle that made the start chaotic (#220).
+		clutchCloseTime = 0.12,
 		selectorMaxSpeed = 1.0,
 		upshiftHoldTime = 1.0,
 		-- The ISR's shares fill the shared shape; the H box does not read them.

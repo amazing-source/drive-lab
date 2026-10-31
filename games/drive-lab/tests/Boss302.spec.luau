@@ -19,6 +19,8 @@ local DT = 1 / 60
 local KMH = 1 / 3.6
 local MPH = 1.609344 / 3.6
 local QUARTER_MILE = 402.336
+-- The first foot of a road test's run, which MT and Edmunds take off their times as a drag strip does.
+local ROLLOUT = 0.3048
 local MANUAL = Boss302.gearbox.manual :: Types.ManualGearboxConfig
 
 local function inputFor(mode: Types.DrivingMode, options: DriveSim.InputOptions): DriveSim.InputOptions
@@ -29,8 +31,10 @@ local function inputFor(mode: Types.DrivingMode, options: DriveSim.InputOptions)
 end
 
 -- A standing start flat out in `mode` (with TracKey's launch control armed on the brake first when
--- `launch`): the 0-60 mph time, the quarter mile's time and trap speed, and every frame's telemetry.
-type Run = { time60: number, quarter: number, trap: number, frames: { Types.CarConfig | any } }
+-- `launch`): the 0-60 mph time, the quarter mile's time and trap speed, all from rest, the time the
+-- first foot took, and every frame's telemetry.
+type Run =
+	{ time60: number, quarter: number, trap: number, rollout: number, frames: { Types.CarConfig | any } }
 
 local function standingStart(mode: Types.DrivingMode, launch: boolean, dt: number, seconds: number?): Run
 	local sim = DriveSim.new(Boss302)
@@ -42,12 +46,15 @@ local function standingStart(mode: Types.DrivingMode, launch: boolean, dt: numbe
 	end
 	local go = DriveSim.input(inputFor(mode, { throttle = 1 }))
 	local start, startX = sim.time, sim.body.x
-	local run: Run = { time60 = math.huge, quarter = math.huge, trap = 0, frames = {} }
+	local run: Run = { time60 = math.huge, quarter = math.huge, trap = 0, rollout = math.huge, frames = {} }
 	while sim.time - start < (seconds or 20) do
 		local before = DriveSim.forwardSpeed(sim)
 		local result = DriveSim.frame(sim, go, dt)
 		local after = DriveSim.forwardSpeed(sim)
 		table.insert(run.frames, result.telemetry)
+		if sim.body.x - startX >= ROLLOUT and run.rollout == math.huge then
+			run.rollout = sim.time - start
+		end
 		if before < 60 * MPH and after >= 60 * MPH then
 			run.time60 = sim.time - dt * (after - 60 * MPH) / (after - before) - start
 		end
@@ -84,6 +91,17 @@ describe("Boss 302 against the data", function()
 		expect(DriveSim.forwardSpeed(sim) / KMH).toBeNear(249.4 - 1, 1.5)
 	end)
 
+	it(
+		"grips at the rear as the front's compound on a wider, lighter-loaded tyre, in both directions",
+		function()
+			local front, rear = Boss302.front.tyre, Boss302.rear.tyre
+			local exponent = 1 - front.loadSensitivity
+			local share = (front.referenceLoad / rear.referenceLoad) ^ exponent * (285 / 255) ^ exponent
+			expect(rear.peakMuX).toBeNear(front.peakMuX * share, 0.005)
+			expect(rear.peakMuY).toBeNear(front.peakMuY * share, 0.005)
+		end
+	)
+
 	it("holds 0.98 g ± 0.04 on a 200 ft skidpad, assists off (Edmunds, likely)", function()
 		expect(DriveSim.skidpad(Boss302, 30.48, DT, "Normal")).toBeNear(0.98, 0.04)
 	end)
@@ -104,12 +122,28 @@ describe("Boss 302 against the data", function()
 		expect(run.trap / MPH).toBeNear(112.9, 3)
 	end)
 
-	it("stays within 15 % of the slowest published 0-60 mph (4.6 s) and quarter mile (12.7 s)", function()
-		-- Published 4.0-4.6 s and 12.3-12.7 s. The gap left is the human shift's torque break and the
-		-- automatic clutch's start, reported on issue #209 rather than tuned away here.
+	it("runs 0-60 mph and the quarter mile in the road tests' range, timed as they time them", function()
+		-- MT and Edmunds take the first foot off: 4.0 and 4.3 s to 60 mph, 12.3 and 12.7 s for the
+		-- quarter mile; Edmunds also gives 4.6 s from rest. Each published to a tenth.
 		local run = standingStart("TracKey", true, DT)
-		expect(run.time60 < 4.6 * 1.15).toBe(true)
-		expect(run.quarter < 12.7 * 1.15).toBe(true)
+		local time60, quarter = run.time60 - run.rollout, run.quarter - run.rollout
+		expect(time60 > 3.95 and time60 < 4.35).toBe(true)
+		expect(quarter > 12.25 and quarter < 12.75).toBe(true)
+		expect(run.time60 < 4.65).toBe(true)
+	end)
+
+	it("starts the same with the launch rpm 200 either way: 0-100 km/h within 3 %", function()
+		local function tuned(rpm: number): Types.CarConfig
+			local engine = table.clone(Boss302.engine)
+			engine.launchRpm = rpm
+			local car = table.clone(Boss302)
+			car.engine = engine
+			return car
+		end
+		local reference = DriveSim.launch(Boss302, DT).time100
+		for _, rpm in { Boss302.engine.launchRpm - 200, Boss302.engine.launchRpm + 200 } do
+			expect(DriveSim.launch(tuned(rpm), DT).time100 / reference).toBeNear(1, 0.03)
+		end
 	end)
 
 	it("arms TracKey's launch control with ESC on, as Ford asks for nothing to be switched off", function()
