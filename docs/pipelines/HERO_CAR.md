@@ -459,6 +459,52 @@ The DR458's check scripts are outside the repo too (`drive-lab-assets/dr458/work
   face centres and corners missed the seat's cloth cover lying over its shell.
 - Clearance from the seated avatar to the cage, and intersections between the cockpit parts.
 
+## 14. Interior mirror and wiper (the DR458 way)
+
+### Interior mirror (`tools/blender/car_mirror.py`)
+
+Game models often ship the rear-view mirror as a bare glass plate, and Roblox's Reflectance on it shows
+the sky, so it reads as a floating blue shape. Find the mount in the photos first: the DR458's is
+glass-mounted inside the windscreen's top band, with the stalk hidden behind the head.
+
+- **Build, on the master.** From the plate's outline, the tool makes the glass (recessed behind a lip),
+  the housing with its domed back, a ball joint, a stalk to a pad that follows the glass 1.5 mm inside
+  it, and the day/night tab. It turns the head on its ball so the default eye sees the rear window (the
+  DR458's plate was aimed at the passenger side). The plate goes to a `Replaced_*` collection.
+- **Bake, on the assembled car**, so the cage and the seats are in the image. The camera sits at the eye
+  mirrored in the glass plane and is framed exactly on the glass; the glass's UVs are that camera's
+  projection. The glazing is hidden so the view passes through, and a ground plane gives the road
+  behind. Check what the mirror actually sees before judging the image: the DR458's first bake saw the
+  cabin's inner filler skin, which covered the rear window from inside (243 of 256 rays).
+- **Material.** A `baked` library set (colour map plus uniform roughness, square for the export). Roblox
+  lights it like any surface, so it darkens at night and shows no sky. Door mirrors take a flat dark set
+  instead: a baked exterior view is a frozen landscape.
+- **Checks** (exit 1, each shown failing with `--break`):
+  - the pad's gap to the glass, the aim of the reflected centre ray, and the glass's recess behind the lip;
+  - no clash with the car, on the master and on the assembly;
+  - UVs equal to the camera's projection, and nothing between the camera and the glass.
+- **Live mirror: not built.** A ViewportFrame draws only copies cloned into it, under one directional
+  light and an ambient colour (Creator docs). Prototype it and measure frame time before deciding.
+
+### Wiper (`tools/blender/car_wiper.py`)
+
+Read the layout from the photos; one taken with the bonnet open shows the spindle. Model the wiper parked,
+as one hinged part (arm and blade) plus a static spindle boss.
+
+- **A rigid blade cannot follow a doubly curved screen.** The tool tilts the spindle axis to minimise the
+  worst float, then puts the rubber edge on the glass's envelope over the sweep, plus 3 mm. On the
+  DR458, whose screen base bows 21 cm in plan, the worst float went from 105 mm with the axis on the glass
+  normal to 16.5 mm.
+- **The range** is the sweep that keeps the blade on the glass, 30 mm inside its outer edge (the blade may
+  ride the printed band), cut back to where the built part would come within the minimum clearance of the
+  car. On the DR458 the blade's inner end meets the scuttle at 93° before its outer end meets the edge, so
+  the range is 91°.
+- **Checks** at every pose, on the mesh (exit 1, `--break clear|edge|sign`): no triangle crossing the car,
+  every vertex at least 2 mm clear, and the rubber edge over the glass. The report also gives the
+  clear-pane share and the share inside the area the game clears.
+- **Manifest:** the hinge's pivot, axis, range and `positive`, plus the parked rubber edge's two end points,
+  from which the controls work out the swept area.
+
 ## Open items on the SVJ
 
 | Item | Plan |
