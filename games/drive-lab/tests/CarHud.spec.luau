@@ -7,6 +7,7 @@ local Catalog = require("../src/shared/Config/Cars/Catalog")
 local Contract = require("../src/shared/Config/Cars/Contract")
 local DR458Hud = require("../src/shared/Config/Cars/DR458/Hud")
 local HudDesign = require("../src/shared/Config/HudDesign")
+local HudHarness = require("./HudHarness")
 local Rules = require("../src/shared/Rules/Hud")
 local T = require("../../../tools/test/T")
 
@@ -73,6 +74,56 @@ end
 
 local function same(actual: any, expected: any)
 	expect(show(actual)).toBe(show(expected))
+end
+
+-- The SVJ's HUD as Controllers/Hud built and drew it before a car could carry its own (dcb2a51),
+-- through HudHarness.SCENARIO: one dump per frame.
+local function recorded(): { string }
+	local frames: { string } = {}
+	local lines: { string } = {}
+	for line in string.gmatch(fs.readFile("games/drive-lab/tests/fixtures/hud_svj_dump.txt"), "[^\n]+") do
+		if string.match(line, "^%-%-%- frame") then
+			if #lines > 0 then
+				table.insert(frames, table.concat(lines, "\n"))
+			end
+			lines = {}
+		else
+			table.insert(lines, line)
+		end
+	end
+	table.insert(frames, table.concat(lines, "\n"))
+	return frames
+end
+
+-- The first line where two dumps differ, or nil.
+local function difference(actual: string, expected: string): string?
+	local a = string.split(actual, "\n")
+	local b = string.split(expected, "\n")
+	for index = 1, math.max(#a, #b) do
+		if a[index] ~= b[index] then
+			return `line {index}: got {a[index]}, recorded {b[index]}`
+		end
+	end
+	return nil
+end
+
+-- Every node under `node` (itself included) for which `keep` holds, in child order.
+local function find(node: HudHarness.Node, keep: (HudHarness.Node) -> boolean): { HudHarness.Node }
+	local found: { HudHarness.Node } = {}
+	local function walk(current: HudHarness.Node)
+		if keep(current) then
+			table.insert(found, current)
+		end
+		for _, child in current.children do
+			walk(child)
+		end
+	end
+	walk(node)
+	return found
+end
+
+local function near(a: number, b: number): boolean
+	return math.abs(a - b) < 1e-6
 end
 
 describe("Car HUDs", function()
@@ -240,5 +291,116 @@ describe("Car HUDs", function()
 		expect(function()
 			Contract.define(entry)
 		end).toThrow()
+	end)
+	it("builds and draws the SVJ's HUD exactly as before a car could carry its own", function()
+		local run = HudHarness.start("SVJ")
+		local expected = recorded()
+		expect(#expected).toBe(#HudHarness.SCENARIO + 1)
+		local svj, dr458 = HudHarness.gui(run, "DriveHud"), HudHarness.gui(run, "DriveHudDR458")
+		expect(difference(HudHarness.dump(svj), expected[1])).toBe(nil)
+		for index, frame in HudHarness.SCENARIO do
+			HudHarness.playFrame(run, frame)
+			expect(difference(HudHarness.dump(svj), expected[index + 1])).toBe(nil)
+			expect(HudHarness.tree(dr458).props.Enabled).toBe(false)
+		end
+	end)
+
+	it("draws the DR458's own HUD: slanted digits, its red zone, its pictograms; the SVJ's hidden", function()
+		local run = HudHarness.start("DR458")
+		local svj, dr458 = HudHarness.gui(run, "DriveHud"), HudHarness.gui(run, "DriveHudDR458")
+		local glyphs = assert(DR458Hud.glyphs)
+		local function glyphImages(nodes: { HudHarness.Node }): { HudHarness.Node }
+			local found = {}
+			for _, node in nodes do
+				local size = node.props.ImageRectSize
+				if size ~= nil and size.Y == glyphs.rects["0"][4] and node.props.Visible ~= false then
+					table.insert(found, node)
+				end
+			end
+			return found
+		end
+		local function holder(frame: HudHarness.Node): HudHarness.Node
+			return find(frame, function(node)
+				return node.className == "Frame" and node.props.Size ~= nil and node.props.Size.X.Scale == 1
+			end)[1]
+		end
+		local function expectRun(
+			images: { HudHarness.Node },
+			text: string,
+			box: { number },
+			align: Rules.Align
+		)
+			local boxes = Rules.glyphBoxes(text, glyphs, box, align)
+			expect(#images).toBe(#text)
+			for index, image in images do
+				local rect = glyphs.rects[string.sub(text, index, index)]
+				expect(image.props.ImageRectOffset.X).toBe(rect[1])
+				expect(image.props.ImageRectOffset.Y).toBe(rect[2])
+				expect(near(image.props.Position.X.Scale, boxes[index][1] / 2172)).toBe(true)
+				expect(near(image.props.Size.Y.Scale, (boxes[index][4] - boxes[index][2]) / 724)).toBe(true)
+			end
+		end
+		local function mask(frame: HudHarness.Node, rect: { number }): HudHarness.Node
+			return find(frame, function(node)
+				local offset = node.props.ImageRectOffset
+				return offset ~= nil and offset.X == rect[1] and offset.Y == rect[2]
+			end)[1]
+		end
+		local white = roblox.Color3.fromRGB(243, 244, 242)
+		local green = roblox.Color3.fromRGB(0, 216, 55)
+		local unlit = roblox.Color3.fromRGB(53, 58, 64)
+		local indicators = assert(DR458Hud.indicators)
+
+		HudHarness.playFrame(run, HudHarness.SCENARIO[1])
+		local tree = HudHarness.tree(dr458)
+		expect(tree.props.Enabled).toBe(true)
+		expect(HudHarness.tree(svj).props.Enabled).toBe(false)
+		local frame = tree.children[1]
+		expect(frame.props.Image).toBe(DR458Hud.frameImage)
+		expectRun(glyphImages(frame.children), "148", glyphs.speed, "Right")
+		expectRun(glyphImages(holder(frame).children), "3", glyphs.gear, "Center")
+		local segments = find(frame, function(node)
+			local size = node.props.ImageRectSize
+			return size ~= nil and size.X == DR458Hud.segmentRect[3] and size.Y == DR458Hud.segmentRect[4]
+		end)
+		expect(#segments).toBe(10)
+		expect(tostring(segments[10].children[1].props.Color)).toBe(
+			tostring(roblox.ColorSequence.new(roblox.Color3.fromRGB(217, 47, 60)))
+		)
+		expect(tostring(segments[9].children[1].props.Color)).toBe(tostring(roblox.ColorSequence.new(white)))
+		local lit = 0
+		for _, segment in segments do
+			lit += if segment.props.Visible then 1 else 0
+		end
+		expect(lit).toBe(7)
+		expect(mask(frame, indicators.left.rect).props.ImageColor3).toBe(green)
+		expect(mask(frame, indicators.right.rect).props.ImageColor3).toBe(unlit)
+		expect(mask(frame, DR458Hud.light.rect).props.ImageColor3).toBe(green)
+		expect(mask(frame, assert(DR458Hud.modeIcon).rect).props.ImageColor3).toBe(white)
+		local byText: { [string]: HudHarness.Node } = {}
+		for _, text in
+			find(frame, function(node)
+				return node.className == "TextLabel"
+			end)
+		do
+			byText[text.props.Text] = text
+		end
+		expect(byText["1"].props.FontFace.Family).toBe("rbxasset://fonts/families/Sarpanch.json")
+		expect(byText.TC.props.FontFace.Family).toBe("rbxasset://fonts/families/Michroma.json")
+		expect(byText.TC.props.TextColor3).toBe(white)
+		expect(byText.A.props.FontFace.Family).toBe("rbxasset://fonts/families/Michroma.json")
+
+		HudHarness.playFrame(run, HudHarness.SCENARIO[2])
+		frame = HudHarness.tree(dr458).children[1]
+		expect(frame.props.AnchorPoint).toBe(roblox.Vector2.new(1, 1))
+		expectRun(glyphImages(frame.children), "213", glyphs.speed, "Right")
+		expect(mask(frame, indicators.right.rect).props.ImageColor3).toBe(green)
+		expect(mask(frame, DR458Hud.light.rect).props.ImageColor3).toBe(roblox.Color3.fromRGB(61, 123, 255))
+
+		HudHarness.playFrame(run, HudHarness.SCENARIO[3])
+		HudHarness.playFrame(run, HudHarness.SCENARIO[4])
+		frame = HudHarness.tree(dr458).children[1]
+		expectRun(glyphImages(frame.children), "0", glyphs.speed, "Right")
+		expectRun(glyphImages(holder(frame).children), "N", glyphs.gear, "Center")
 	end)
 end)
