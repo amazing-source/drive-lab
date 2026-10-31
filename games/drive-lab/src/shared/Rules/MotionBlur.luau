@@ -97,12 +97,12 @@ function MotionBlur.speedFar(speedKmh: number, speed: Speed): number
 	return speed.far * speedShare(speedKmh, speed)
 end
 
--- The share of the acceleration blur a pull of `g` asks for, 0 to 1: none braking or coasting.
 local function pullStrength(pull: number, acceleration: Acceleration): number
-	local share = if pull == pull then math.clamp(pull, 0, 1) else 0
-	return if share < acceleration.off then 0 else share * math.max(acceleration.intensity, 0)
+	local clamped = if pull == pull then math.clamp(pull, 0, 1) else 0
+	return if clamped < acceleration.off then 0 else clamped * math.max(acceleration.intensity, 0)
 end
 
+-- The share of the acceleration blur a pull of `g` asks for, 0 to 1: none braking or coasting.
 function MotionBlur.pullShare(g: number, acceleration: Acceleration): number
 	if g ~= g then
 		return 0
