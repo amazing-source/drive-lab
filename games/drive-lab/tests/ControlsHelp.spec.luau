@@ -10,8 +10,6 @@ local Config = require("../src/shared/Config/ControlsHelp")
 local Contract = require("../src/shared/Config/Cars/Contract")
 local Drift = require("../src/shared/Config/Drift")
 local ControlsHelp = require("../src/shared/Rules/ControlsHelp")
-local DR458 = require("../src/shared/Config/Cars/DR458/Physics")
-local DR458Assists = require("../src/shared/Config/Cars/DR458/Assists")
 local DR458Switches = require("../src/shared/Config/Cars/DR458/Switches")
 local T = require("../../../tools/test/T")
 
@@ -60,10 +58,8 @@ local function svj(): (ControlsHelp.Help, ControlsHelp.Bindings)
 	return screen("SVJ", Catalog.cars.SVJ)
 end
 
--- The DR458 has no catalog entry until its model is bound: its screen from the modules it has.
 local function dr458(): (ControlsHelp.Help, ControlsHelp.Bindings)
-	local parts = { physics = DR458, assists = DR458Assists, switches = DR458Switches }
-	return screen("DR458", (parts :: any) :: Contract.Entry)
+	return screen("DR458", Catalog.cars.DR458)
 end
 
 local function svjHelp(): ControlsHelp.Help
@@ -284,6 +280,57 @@ describe("ControlsHelp", function()
 		end
 		expect(svjKeys.ESC_OFF ~= nil).toBe(true)
 		expect(drKeys.ESC_OFF).toBe(nil)
+	end)
+
+	it("offers the cabin light only on a car whose model has a cabin lamp", function()
+		local function rowsFor(help: ControlsHelp.Help, control: string): { ControlsHelp.Row }
+			local found: { ControlsHelp.Row } = {}
+			for _, group in help.groups do
+				for _, row in group.rows do
+					if table.find(row.controls, control) then
+						table.insert(found, row)
+					end
+				end
+			end
+			return found
+		end
+		local svjScreen, svjKeys = svj()
+		local drScreen, drKeys = dr458()
+		expect(svjKeys.CABIN_LIGHT ~= nil).toBe(true)
+		expect(#rowsFor(svjScreen, "CABIN_LIGHT")).toBe(1)
+		expect(drKeys.CABIN_LIGHT).toBe(nil)
+		expect(#rowsFor(drScreen, "CABIN_LIGHT")).toBe(0)
+		local svjPad, drPad = rowsFor(svjScreen, "LIGHTS_PAD"), rowsFor(drScreen, "LIGHTS_PAD")
+		expect(#svjPad).toBe(1)
+		expect(#drPad).toBe(1)
+		expect(string.find(svjPad[1].text, "cabin light", 1, true) ~= nil).toBe(true)
+		expect(string.find(drPad[1].text, "cabin", 1, true)).toBe(nil)
+		expect(drKeys.LIGHTS_PAD ~= nil).toBe(true)
+	end)
+
+	it("shows a row that says less only on a car without the feature it lacks", function()
+		local help: ControlsHelp.Help = {
+			groups = {
+				{
+					title = "Lights",
+					rows = {
+						{ label = "Long", text = "With it.", controls = { "PAD" }, requires = "lamp" },
+						{ label = "Short", text = "Without it.", controls = { "PAD" }, lacks = "lamp" },
+					},
+				},
+			},
+			keyNames = {},
+			values = {},
+			maxLabelLength = 40,
+			maxTextLength = 200,
+		}
+		local bindings = { PAD = { "DPadDown" } }
+		local with = ControlsHelp.forCar(help, bindings, "Any", { lamp = true }, {}, {})
+		local without = ControlsHelp.forCar(help, bindings, "Any", { lamp = false }, {}, {})
+		expect(#with.groups[1].rows).toBe(1)
+		expect(with.groups[1].rows[1].label).toBe("Long")
+		expect(#without.groups[1].rows).toBe(1)
+		expect(without.groups[1].rows[1].label).toBe("Short")
 	end)
 
 	it("quotes each car's own numbers", function()

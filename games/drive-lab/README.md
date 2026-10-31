@@ -88,7 +88,7 @@ judgements and open gaps are in the commit that added it.
 | Headlights (auto, on, off) | H | tap D-pad down (auto, on, high beam, off) |
 | High beam on / off | J | a step of the D-pad down cycle above |
 | Indicators left / right | X / C | D-pad left / right |
-| Cabin light | L | hold D-pad down (no pad button is free while driving) |
+| Cabin light (a car with one: the SVJ) | L | hold D-pad down (no pad button is free while driving) |
 | HUD full / minimal / off | U | |
 | Controls screen (every control, with an (i) on each) | K | tap B (under 0.25 s; holding B stays the exit) |
 | Weather: clear day, rain by day, rain at night | N | |
@@ -147,6 +147,7 @@ changes: sync, then hand over.
 | 2026-10-30 | The DR458 starts on the Creator Store recording "FERRARI 458 STARTUP" (asset 126032464409866, another creator's public upload), played as its own sound since it cannot be downloaded (#107). It replaces the Ferrari 360 start-up, which stays in the events file only as the fallback should that asset stop loading. |
 | 2026-10-30 | The DR458's binnacle is the owner's ChatGPT pack, drawn as the HUD is: the empty pages are the images, everything live is drawn over them at places measured off the pack (#106). The screen keeps its measured shape and the pages are centred on it, the sides in the page's own colours; TCS is red when OFF, POS stays OFF on its white pill, as in the pack and the photo. |
 | 2026-10-30 | The DR458's binnacle lights its first two rpm segments at idle, as the real screen does in photo `011` (the owner: stay realistic, #112). Two, not three: the count first reported was read off a reduced view. |
+| 2026-10-31 | A car without a cabin lamp offers no cabin-light control (#133): the DR458 has none (its bare roof, #126), so L and the gamepad's hold do nothing in it, and its controls screen shows neither the cabin light nor the hold. The SVJ keeps both. |
 | 2026-10-31 | The DR458's flames are a game-feel estimate (#126): no footage of a 458 Challenge throwing flame was found. Road 458s on straight pipes show short blue jets, mostly at night, so its flames are blue jets from some of its pops, an orange fireball only on the loudest, and faint by day. The manettino changes only TC and ABS, so every position throws flame alike. |
 | 2026-10-31 | The DR458 has no cabin light (#126): its bare roof shows none (photos `interior/021` to `023`). At night its cockpit is lit by the binnacle screen, the shift lights and the green LEDs beside LIGHT and RAIN LIGHT. |
 | 2026-10-31 | The DR458's rain light is steady, on the road 458's rear fog lamps (#126): no source names the Challenge's rain-light lamp or a flash rate for the series. Its pattern is one config line, and the FIA's flashing standard (4 Hz) is the documented alternative. |

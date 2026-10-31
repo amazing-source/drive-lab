@@ -331,6 +331,7 @@ describe("Car contract: switches", function()
 	it("reports what the SVJ has: an ESC button and launch control, none of the race switches", function()
 		local features = Contract.features(Catalog.cars.SVJ)
 		expect(features.escButton and features.launch).toBe(true)
+		expect(features.cabinLight).toBe(true)
 		expect(features.pitLimiter or features.wiper or features.rainLight or features.displayPages).toBe(
 			false
 		)
