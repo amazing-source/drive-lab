@@ -5,7 +5,7 @@ Build (on the master, which holds the plate and the windscreen):
             <spec.json> --out <out.blend> [--report <report.json>] [--break pad|aim|recess]
 Bake (on the assembled car, so the cage and the seats are in the mirror):
     blender -b <assembled.blend> --factory-startup --python-exit-code 1 -P tools/blender/car_mirror.py --
-            <spec.json> --bake <maps dir> [--library <library.json>] [--report <report.json>] [--break hide|uv]
+            <spec.json> --bake <maps dir> [--library <library.json>] [--report <report.json>] [--break hide|uv|order]
 
 Build:
 1. The plate's plane (normal toward the eye) and its outline in that plane, resampled by angle (or, with
@@ -31,7 +31,9 @@ resized to `bake.map_px` square (the SurfaceAppearance export wants square maps)
 and dl_maps; `--library` adds the set to library.json (a copy of the old file is kept once).
 Checks (exit 1): rays from the camera to points of the glass meet nothing before the glass plane (else a
 hidden list is missing something); the glass's UVs equal the camera's projection within 1e-4; the
-map is not blank. `--break hide` shows the windscreen to the camera, `--break uv` shifts the UVs.
+map is not blank; both maps read back from disk equal what was meant within 1/255. `--break hide` shows
+the windscreen to the camera, `--break uv` shifts the UVs, `--break order` writes the roughness in the old
+order (its colour space set after its pixels).
 """
 import json
 import math
@@ -563,11 +565,29 @@ def bake():
     rpath = out / f"{S['materials']['glass']}_roughness.png"
     rimg = bpy.data.images.new("mirror_r", 16, 16, alpha=False)
     rv = S["bake"]["roughness"]
+    # The colour space is set before the pixels: changing it on a generated image afterwards regenerates it black.
+    if BREAK != "order":
+        rimg.colorspace_settings.name = "Non-Color"
     rimg.pixels[:] = [rv, rv, rv, 1.0] * 256
-    rimg.colorspace_settings.name = "Non-Color"
+    if BREAK == "order":
+        rimg.colorspace_settings.name = "Non-Color"
     rimg.filepath_raw = str(rpath)
     rimg.file_format = "PNG"
     rimg.save()
+    # Read both maps back from disk: what was written is what the export uploads.
+    want_c = np.asarray(tmp.pixels[:], dtype=np.float32).reshape(mp, mp, 4)[..., :3]
+    back_c = bpy.data.images.load(str(cpath), check_existing=False)
+    got_c = np.asarray(back_c.pixels[:], dtype=np.float32).reshape(mp, mp, 4)[..., :3]
+    back_r = bpy.data.images.load(str(rpath), check_existing=False)
+    got_r = np.asarray(back_r.pixels[:], dtype=np.float32).reshape(16, 16, 4)[..., :3]
+    report["readback"] = {"color_mean_abs_diff_255": float(np.abs(got_c - want_c).mean() * 255),
+                          "roughness_written_255": [int(round(float(got_r.min()) * 255)), int(round(float(got_r.max()) * 255))],
+                          "roughness_wanted_255": int(round(rv * 255))}
+    if np.abs(got_c - want_c).mean() * 255 > 1.0:
+        problems.append(f"readback: the colour map on disk differs from the bake by {np.abs(got_c - want_c).mean() * 255:.1f}/255")
+    if np.abs(got_r - rv).max() * 255 > 1.0:
+        problems.append(f"readback: the roughness map on disk is {report['readback']['roughness_written_255']}/255, "
+                        f"wanted {report['readback']['roughness_wanted_255']}")
     report["maps"] = {"color": cpath.as_posix(), "roughness": rpath.as_posix()}
     if LIBRARY:
         lp = Path(LIBRARY)
@@ -620,7 +640,8 @@ else:
 if REPORT:
     Path(REPORT).write_text(json.dumps(report, indent=1, default=str))
 print("MIRROR", report["mode"], "PASS" if not problems else "FAIL", *problems, sep="\n  ")
-for k in ("aim", "pad", "recess_mm", "clashes", "triangles", "uv_error", "blocked_before_glass", "seen", "bake", "library"):
+for k in ("aim", "pad", "recess_mm", "clashes", "triangles", "uv_error", "blocked_before_glass", "seen", "bake", "readback",
+          "library"):
     if k in report:
         print("MIRROR", k, json.dumps(report[k], default=str)[:400])
 sys.exit(1 if problems else 0)
