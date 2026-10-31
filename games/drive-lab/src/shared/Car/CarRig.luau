@@ -218,14 +218,15 @@ local function hingeFrame(pivot: Hinge.CarPoint, axis: Hinge.CarPoint, bodyRaise
 	)
 end
 
-local function hingeWeld(name: string, chassis: BasePart, part: BasePart, frame: CFrame)
+-- `rest` turns the part from its modelled pose to where it rests (Rules/Hinge.restAngle).
+local function hingeWeld(name: string, chassis: BasePart, part: BasePart, frame: CFrame, rest: number)
 	local joint = Instance.new("Weld")
 	joint.Name = name
 	joint.Part0 = chassis
 	joint.Part1 = part
-	joint.C0 = frame
+	joint.C0 = frame * CFrame.Angles(rest, 0, 0)
 	joint.C1 = part.CFrame:ToObjectSpace(chassis.CFrame * frame)
-	joint:SetAttribute("RestC0", frame)
+	joint:SetAttribute("RestC0", joint.C0)
 	joint.Parent = chassis
 end
 
@@ -246,21 +247,22 @@ local function doorParts(model: Model, binding: Binding.CarModel): ({ BasePart }
 end
 
 -- The hinged parts the binding names and the model has (its pedals or its cabin controls), each
--- with its hinge frame. Each hangs on its own Weld named after it, which Controllers/DriverLegs
--- (pedals) and Controllers/CarDoor (controls) turn about X.
+-- with its hinge frame and rest. Each hangs on its own Weld named after it, which
+-- Controllers/DriverLegs (pedals) and Controllers/CarDoor (controls) turn about X from its rest.
 local function hingeParts<K>(
 	model: Model,
 	hinges: { [K]: Binding.Hinge }?,
 	bodyRaise: number
-): { [BasePart]: CFrame }
-	local found: { [BasePart]: CFrame } = {}
+): { [BasePart]: { frame: CFrame, rest: number } }
+	local found: { [BasePart]: { frame: CFrame, rest: number } } = {}
 	if hinges == nil then
 		return found
 	end
 	for _, hinge in hinges do
 		local part = model:FindFirstChild(hinge.part, true)
 		if part and part:IsA("BasePart") then
-			found[part] = hingeFrame(hinge.pivot, hinge.axis, bodyRaise)
+			found[part] =
+				{ frame = hingeFrame(hinge.pivot, hinge.axis, bodyRaise), rest = Hinge.restAngle(hinge) }
 		end
 	end
 	return found
@@ -281,7 +283,7 @@ local function hang(
 		local hinge = newPart("Part", DOOR_HINGE, Vector3.new(0.2, 0.2, 0.2), chassis.CFrame * frame)
 		hinge.Massless = true
 		hinge.Parent = model
-		hingeWeld(DOOR_HINGE, chassis, hinge, frame)
+		hingeWeld(DOOR_HINGE, chassis, hinge, frame, 0)
 		for _, part in door do
 			local joint = Instance.new("WeldConstraint")
 			joint.Part0 = hinge
@@ -478,7 +480,7 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: Binding.CarMo
 	hang(model, chassis, binding, door, strapPart)
 	for _, set in { pedals, controls } do
 		for part, hinge in set do
-			hingeWeld(part.Name, chassis, part, hinge)
+			hingeWeld(part.Name, chassis, part, hinge.frame, hinge.rest)
 		end
 	end
 	addHull(model, chassis, ground, binding.hullClearance)

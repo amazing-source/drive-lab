@@ -151,3 +151,16 @@ describe("Steering column frame", function()
 		expect(turned.X > top.X + 0.4).toBe(true)
 	end)
 end)
+
+describe("Hinge rest", function()
+	local DR458Model = require("../src/shared/Config/Cars/DR458/Model")
+
+	it("rests a control at its binding's rest, so its travel ends where the model says it is on", function()
+		local controls = assert(DR458Model.controls, "the DR458 has start-up controls")
+		local switch = controls.PanelSwitch_Ignition
+		-- The cockpit modeller: modelled straight out, off tipped down (+0.35), on tipped up (-0.35).
+		expect(Hinge.restAngle(switch)).toBeNear(0.35, 1e-9)
+		expect(Hinge.restAngle(switch) + assert(switch.travel, "a travel")).toBeNear(-0.35, 1e-9)
+		expect(Hinge.restAngle(controls.TunnelKey_Master)).toBe(0)
+	end)
+end)

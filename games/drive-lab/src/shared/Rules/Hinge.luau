@@ -71,6 +71,12 @@ function Hinge.rotate(point: Vector, pivot: Vector, axis: Vector, angle: number)
 	}
 end
 
+-- Where a hinged part rests, in radians from its modelled pose: its binding's rest, or the pose
+-- itself. Its rig weld rests there, so its travel and every move turn it from there.
+function Hinge.restAngle(hinge: { rest: number? }): number
+	return hinge.rest or 0
+end
+
 -- The turn, in radians, for an openness from 0 (shut) to 1 (fully open).
 function Hinge.angle(openness: number, openAngle: number): number
 	return math.clamp(openness, 0, 1) * openAngle
