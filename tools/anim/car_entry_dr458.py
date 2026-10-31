@@ -106,6 +106,34 @@ def facing_right(yaw):
     return np.array([np.cos(a), 0.0, -np.sin(a)])
 
 
+def hike(b, steps, roll=7.0):
+    """A rigid leg clears the ground only if its hip rides up: over each (limb, start, end) step the
+    torso rolls toward the planted side (R6_ANIMATION.md section 4), on the lean and yaw the torso
+    had before any hike, so consecutive steps do not cancel."""
+    plan = []
+    for limb, start, end in steps:
+        sign = 1.0 if limb == "right_leg" else -1.0
+        frames = (start + 1, (start + end) // 2, end - 2)
+        for f, (lean, yaw, r) in zip(frames, b.torso.sample(np.array(frames, dtype=float))):
+            plan.append((f, (lean, yaw, r + sign * roll * (1.2 if f == frames[1] else 1.0))))
+    for f, turn in plan:
+        b.torso.at(f, turn)
+
+
+def step(b, limb, start, end, frm, to, lift=0.4):
+    """One step of `limb`, the other leg supporting, with the hip hiked (hike): the foot rises
+    straight up over two frames before it travels and comes straight down over two before it
+    lands, since a grounded sole that moves fails the check as a slide."""
+    other = "left_leg" if limb == "right_leg" else "right_leg"
+    frm, to = np.asarray(frm, float), np.asarray(to, float)
+    up = np.array([0.0, 1.0, 0.0])
+    b.support.append((start, end - 1, [other]))
+    t = b.targets[limb]
+    t.at(start, frm).at(start + 1, frm + up * 0.08).at(start + 2, frm + up * 0.22)
+    t.at(start + 4, frm * 0.6 + to * 0.4 + up * lift).at(end - 4, frm * 0.4 + to * 0.6 + up * lift)
+    t.at(end - 2, to + up * 0.22).at(end - 1, to + up * 0.08).at(end, to)
+
+
 def both(b, start, end):
     b.support.append((start, end, ["right_leg", "left_leg"]))
 
@@ -165,27 +193,30 @@ def entry(car, rest_path):
     fwd = np.array([0.15, 0.0, -0.65])
     back = np.array([0.55, 0.0, 0.55])
     both(b, 0, 1)
-    side_step(b, "right_leg", 2, 11, IDLE["right_leg"], IDLE["right_leg"] + fwd, lift=0.4)
-    b.pelvis.at(2, IDLE_PELVIS).at(11, IDLE_PELVIS + fwd * np.array([0.5, 0, 0.5]))
-    both(b, 11, 24)
+    step(b, "right_leg", 2, 12, IDLE["right_leg"], IDLE["right_leg"] + fwd)
+    b.pelvis.at(2, IDLE_PELVIS).at(12, IDLE_PELVIS + fwd * np.array([0.5, 0, 0.5]))
+    both(b, 12, 23)
     b.torso.at(2, (0, 0, 0)).at(14, (-20, -6, 3)).at(24, (-16, -4, 2))
     b.targets["right_arm"].at(4, IDLE["right_arm"])
     b.targets["right_arm"].at(11, car.p(DOOR_HANDLE + np.array([0.16, 0.06, -0.04])))
     b.targets["right_arm"].attach(15, 38, handle)
     b.contact.append((15, 38))
     b.door.at(18, (0.0,)).at(24, (0.05,)).at(38, (0.24,)).at(54, (0.92,)).at(60, (1.0,))
-    side_step(b, "right_leg", 24, 33, IDLE["right_leg"] + fwd, IDLE["right_leg"] + back, lift=0.45)
-    side_step(b, "left_leg", 32, 41, IDLE["left_leg"], IDLE["left_leg"] + back, lift=0.4)
-    b.pelvis.at(24, IDLE_PELVIS + fwd * np.array([0.5, 0, 0.5])).at(41, IDLE_PELVIS + back)
-    both(b, 41, 50)
+    step(b, "right_leg", 23, 33, IDLE["right_leg"] + fwd, IDLE["right_leg"] + back)
+    step(b, "left_leg", 34, 44, IDLE["left_leg"], IDLE["left_leg"] + back)
+    b.pelvis.at(23, IDLE_PELVIS + fwd * np.array([0.5, 0, 0.5])).at(44, IDLE_PELVIS + back)
+    both(b, 44, 49)
     b.torso.at(34, (2, 4, 0)).at(44, (4, 10, 0)).at(56, (0, 8, 0))
     b.targets["right_arm"].at(48, IDLE["right_arm"] + back)
     b.hang("left_arm", 0, open_end)
-    side_step(b, "left_leg", 50, 59, IDLE["left_leg"] + back, IDLE["left_leg"], lift=0.4)
-    side_step(b, "right_leg", 58, 67, IDLE["right_leg"] + back, IDLE["right_leg"], lift=0.4)
-    b.pelvis.at(50, IDLE_PELVIS + back).at(67, IDLE_PELVIS)
-    both(b, 67, walk0 + 1)
+    step(b, "left_leg", 49, 59, IDLE["left_leg"] + back, IDLE["left_leg"])
+    step(b, "right_leg", 60, 70, IDLE["right_leg"] + back, IDLE["right_leg"])
+    b.pelvis.at(49, IDLE_PELVIS + back).at(70, IDLE_PELVIS)
+    both(b, 70, walk0 + 1)
     b.torso.at(open_end, (0, 0, 0))
+    hike(b, (("right_leg", 2, 12), ("right_leg", 23, 33), ("left_leg", 34, 44), ("left_leg", 49, 59), ("right_leg", 60, 70)))
+    both(b, 33, 34)
+    both(b, 59, 60)
     b.neck.at(0, (0, 0, 0)).at(12, (-15, -5, 0)).at(40, (-5, 15, 0)).at(open_end, (0, 0, 0))
     b.pelvis.at(open_end, IDLE_PELVIS)
     for limb in ("right_arm", "right_leg", "left_leg"):
@@ -196,13 +227,34 @@ def entry(car, rest_path):
 
 
 # GetIn's beats, frames from the timeline's start.
-WALK0, LEAN0, HOP0, OVER, DROP, SEATED, MEET, SHUT, END = 72, 108, 124, 150, 162, 176, 194, 206, 220
+WALK0, LEAN0, HOP0, SIT, OVER, DROP, SEATED, MEET, SHUT, END = 72, 108, 124, 134, 150, 162, 176, 194, 206, 220
+KEY_FRAMES = {"B": SIT, "T1": 139, "T2": 144, "C": OVER, "D1": 158, "D2": 166}
+KEYS = {}
 STANCE = np.array([1.03, -1.58])  # where the body stands facing the car to lean in (car x, y)
 # Palms over the stowed net's roll on the upper door bar (top z 0.525): an R6 palm is 0.15 stud
 # (3.2 cm at 1.15) above the arm's end face, which is what rests on the roll.
 BAR_REAR = np.array([0.61, -1.42, 0.557])
 BAR_FRONT = np.array([0.61, -1.74, 0.557])
-OVER_PELVIS = np.array([0.706, -1.527, 0.568])  # sitting across the bars facing the nose, head in
+
+
+LIMB_PART = {"right_arm": "Right Arm", "left_arm": "Left Arm", "right_leg": "Right Leg", "left_leg": "Left Leg"}
+
+
+def key_beats(b, car, frame, key, limbs=None):
+    """A key pose (pelvis as a car point, torso and neck angles, limb joint angles) as beats: the
+    limbs' targets are where those angles put the palm or the sole."""
+    rot = r6_fk.body_turn(*key["torso"])
+    pelvis = car.p(key["pelvis"])
+    loc = r6_fk.torso_root_offset(rot, pelvis - np.array([0.0, r6_fk.ROOT_HEIGHT, 0.0]))
+    pose = {"RootJoint": (rot, tuple(loc)), "Neck": (tuple(key["neck"]), (0, 0, 0))}
+    for limb, (x, z) in key["limbs"].items():
+        pose[r6_fk.LIMB_JOINT[limb]] = ((x, 0.0, z), (0, 0, 0))
+    parts = r6_fk.pose_parts(pose)
+    b.pelvis.at(frame, pelvis)
+    b.torso.at(frame, tuple(key["torso"]))
+    b.neck.at(frame, tuple(key["neck"]))
+    for limb in limbs if limbs is not None else key["limbs"]:
+        b.targets[limb].at(frame, r6_fk.point(parts[LIMB_PART[limb]], Body.LIMB_POINT[limb]))
 
 
 def getin(b, car, s, start, ends):
@@ -247,30 +299,25 @@ def getin(b, car, s, start, ends):
     b.targets["right_arm"].at(LEAN0 + 6, car.p(BAR_REAR + (0.15, 0.0, 0.15))).at(HOP0 - 2, car.p(BAR_REAR))
     b.targets["left_arm"].at(LEAN0 + 6, car.p(BAR_FRONT + (0.15, 0.0, 0.15))).at(HOP0 - 2, car.p(BAR_FRONT))
     b.contact.append((HOP0 - 2, OVER + 2))
-    # 3. Push up and turn on the bars to face the nose, the spine kept pointing in so the head stays
-    #    under the rail; the legs leave the ground and swing over the sill and the bars.
+    # 3. Push up onto the bars, sitting across them still facing in with the head inside and the
+    #    legs hanging outside (B); turn on them to face the nose, the spine kept pointing in so the
+    #    head stays under the rail, the legs swinging over the sill and the bars (T1, T2, OVER);
+    #    slide over the bolster and drop into the bucket (D1, D2). Key poses from a grid search of
+    #    the torso and head, then of each limb, against the scene (KEYS); the frames between are
+    #    cleared by car_entry_clear.py.
     b.pelvis.at(HOP0 + 2, car.p([STANCE[0], STANCE[1], 0.43]))
-    b.pelvis.at(HOP0 + 14, car.p([0.86, -1.56, 0.56])).at(OVER, car.p(OVER_PELVIS))
-    b.torso.at(HOP0 + 14, (-15, (yaw_in + yaw_seat) / 2, -20)).at(OVER, (8.7, 61.5, -37.9))
-    b.neck.at(OVER, (10, 0, -20))
-    for limb in ("right_arm", "left_arm"):
-        b.targets[limb].at(HOP0 + 10, b.targets[limb].beats[HOP0 - 2])
-    for limb, feet, side in (("right_leg", feet_r, -1), ("left_leg", feet_l, 1)):
-        b.targets[limb].at(HOP0 + 2, feet).at(HOP0 + 5, feet + (0, 0.05, 0))
-        b.targets[limb].at(HOP0 + 14, car.p([0.80 + side * 0.06, -1.90, 0.62]))
-        b.targets[limb].at(OVER, car.p([0.48 + side * 0.07, -1.98, 0.50]))
-    # 4. Slide over the bolster, right hand over to the far bolster, then drop into the bucket.
-    b.targets["right_arm"].at(OVER, car.p([0.18, -1.62, 0.52])).at(DROP, car.p([0.18, -1.62, 0.52]))
-    b.targets["left_arm"].at(OVER, car.p(BAR_REAR + (0.0, 0.05, 0.0))).at(DROP, car.p(BAR_REAR + (0.0, 0.05, 0.0)))
+    for limb, feet in (("right_leg", feet_r), ("left_leg", feet_l)):
+        b.targets[limb].at(HOP0 + 2, feet).at(HOP0 + 4, feet + (0, 0.05, 0))
+    for name, frame in KEY_FRAMES.items():
+        if name in KEYS:
+            key_beats(b, car, frame, KEYS[name])
     b.contact.append((OVER - 2, DROP + 2))
-    b.pelvis.at(DROP, car.p([0.45, -1.50, 0.53])).at(SEATED, s["pelvis"])
-    b.torso.at(DROP, (16.0, 56.0, -20.0)).at(SEATED, s["torso"])
-    b.neck.at(DROP, (0, 0, -10)).at(SEATED, s["neck"])
     b.neck_loc.at(0, (0.0, 0.0, 0.0)).at(DROP, (0.0, 0.0, 0.0)).at(SEATED, s["neck_loc"])
-    for limb in ("right_leg", "left_leg"):
-        b.targets[limb].at(DROP, car.p([0.30 + (0.12 if limb == "left_leg" else 0.0), -1.92, 0.42]))
+    b.pelvis.at(SEATED, s["pelvis"])
+    b.torso.at(SEATED, s["torso"])
+    b.neck.at(SEATED, s["neck"])
+    for limb in ("right_leg", "left_leg", "right_arm"):
         b.targets[limb].at(SEATED, ends[limb])
-    b.targets["right_arm"].at(SEATED, ends["right_arm"])
     # 5. The door swings in as the left hand reaches out over the bars; the hand meets the card's
     #    top edge and rides it shut, then rests on the thigh.
     b.door.at(SEATED - 4, (1.0,)).at(MEET, (0.12,)).at(SHUT, (0.0,))
@@ -293,21 +340,18 @@ def entry_contacts():
     allow file is written from the same list at the measured depths."""
     allow = [
         {"why": "right hand on the door handle, pulling", "from": 15, "to": 38, "parts": ["Right Arm"], "groups": ["door"], "depth": 0.15},
-        {"why": "hands on the door bars, leaning in and pushing up", "from": HOP0 - 2, "to": HOP0 + 12, "parts": ARMS, "groups": ["cage"], "depth": 0.15},
-        {"why": "right hand on the far bolster, left on the bars, sliding over", "from": OVER - 2, "to": DROP + 2, "parts": ARMS, "groups": ["seat", "cage"], "depth": 0.15},
-        {"why": "PROPOSED (rigid-thigh class): thighs over the door bars while the legs swing in", "from": HOP0 + 6, "to": DROP + 4, "parts": LEGS, "groups": ["cage"], "depth": 0.25},
-        {"why": "PROPOSED: the bottom across the door bars while turning on them", "from": HOP0 + 10, "to": DROP, "parts": ["Torso"], "groups": ["cage"], "depth": 0.15},
-        {"why": "DECIDED (owner, option D): torso sides into the bucket's bolsters, 5.5 cm seated", "from": DROP, "to": END, "parts": ["Torso"], "groups": ["seat"], "depth": 0.261},
+        {"why": "hands on the door bars and the bucket, leaning in, pushing up, turning", "from": HOP0 - 2, "to": DROP + 2, "parts": ARMS, "groups": ["cage", "seat"], "depth": 0.15},
+        {"why": "PROPOSED (rigid-thigh class): thighs over the sill and the door bars while the legs swing in", "from": HOP0 + 4, "to": DROP + 4, "parts": LEGS, "groups": ["cage", "sill"], "depth": 0.25},
+        {"why": "PROPOSED: the bottom across the door bars while sitting and turning on them", "from": HOP0 + 4, "to": DROP, "parts": ["Torso"], "groups": ["cage"], "depth": 0.15},
+        {"why": "DECIDED (owner, option D): torso sides into the bucket's bolsters, 5.5 cm seated", "from": OVER + 4, "to": END, "parts": ["Torso"], "groups": ["seat"], "depth": 0.261},
         {"why": "DECIDED (seated pose): head on the headrest pad", "from": SEATED, "to": END, "parts": ["Head"], "groups": ["seat"], "depth": 0.047},
         {"why": "left hand on the door card's top edge, riding it shut", "from": MEET, "to": SHUT, "parts": ["Left Arm"], "groups": ["door"], "depth": 0.12},
     ]
     holds = [
         {"from": WALK0, "to": HOP0 + 2, "limb": "right_leg"},
         {"from": WALK0, "to": HOP0 + 2, "limb": "left_leg"},
-        {"from": HOP0 - 2, "to": HOP0 + 4, "limb": "right_arm"},
-        {"from": HOP0 - 2, "to": HOP0 + 4, "limb": "left_arm"},
-        {"from": OVER, "to": DROP, "limb": "right_arm"},
-        {"from": OVER, "to": DROP, "limb": "left_arm"},
+        {"from": HOP0 - 2, "to": HOP0 + 2, "limb": "right_arm"},
+        {"from": HOP0 - 2, "to": HOP0 + 2, "limb": "left_arm"},
         {"from": MEET, "to": SHUT, "limb": "left_arm"},
         {"from": END, "to": END, "limb": "right_arm"},
         {"from": END, "to": END, "limb": "left_arm"},
