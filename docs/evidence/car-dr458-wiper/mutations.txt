@@ -1,0 +1,25 @@
+Deliberate breaks for PR 3 of #163 (agent/car-dr458-wiper), each applied alone, the full spec
+suite run (lune run tools/test/run), then the file restored from git; the tree was clean after.
+Run on the 3D artist's refitted wiper fields. Baseline: 86 spec files, 842 passed, 0 failed.
+
+Sweep measured with Rules/WiperSweep on the binding's windscreen quad (80 x 80 samples):
+  before the refit: 39.8% of the quad swept; the Driver_Eye level line of sight just above it.
+  after the refit:  60.1% swept (driver's half 69.9%, passenger's 50.4%); level line of sight
+                    and 1, 3, 6, 10 deg below all swept. The 3D artist's own measure on the curved
+                    glass: 37.4% before, 57.7% after.
+
+== 1 sweep sense reversed (v = u x axis): 1 failing; 86 spec files, 841 passed, 1 failed
+   FAIL WiperSweep > over a whole wipe, clears the driver's level view and the road ahead, more on the driver's side: games/drive-lab/tests/WiperSweep.spec:126: 
+== 2 slack ignored and range shifted by a tenth: 1 failing; 86 spec files, 841 passed, 1 failed
+   FAIL WiperSweep > sweeps each point of the blade at the turn that carries the blade over it, not before or after: games/drive-lab/tests/WiperSweep.spec:85: ex
+== 3 radius not limited to the blade: 1 failing; 86 spec files, 841 passed, 1 failed
+   FAIL WiperSweep > never sweeps past the blade's outer end, nor anything while the blade stands still: games/drive-lab/tests/WiperSweep.spec:96: expected false
+== 4 blade projected along the pane normal: 1 failing; 86 spec files, 841 passed, 1 failed
+   FAIL WiperSweep > sweeps each point of the blade at the turn that carries the blade over it, not before or after: games/drive-lab/tests/WiperSweep.spec:85: ex
+== 5 pane point drops the down axis: 1 failing; 86 spec files, 841 passed, 1 failed
+   FAIL WindshieldDrops > takes each corner's pane coordinates back to the corner itself: games/drive-lab/tests/WindshieldDrops.spec:54: expected 1.2 within 1e-0
+== 6 writer leaves the blade in the manifest frame: 1 failing; 86 spec files, 841 passed, 1 failed
+   FAIL DR458 binding > writes a wiper from its hinge part and its blade's points, moved to the centre of mass: games/drive-lab/tests/DR458Binding.spec:248: expe
+== 7 writer drops the wiper: 1 failing; 86 spec files, 841 passed, 1 failed
+   FAIL DR458 binding > writes a wiper from its hinge part and its blade's points, moved to the centre of mass: games/drive-lab/tests/DR458Binding.spec:235: the 
+clean
