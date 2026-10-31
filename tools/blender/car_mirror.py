@@ -113,6 +113,15 @@ def project_uv(p, e2, R, box):
     return ((x - box[0]) / (box[1] - box[0]), (y - box[2]) / (box[3] - box[2]))
 
 
+def smooth_by_angle(bm, deg):
+    """Faces smooth, an edge sharp where its two faces meet at more than `deg` (the glTF splits there)."""
+    lim = math.radians(deg)
+    for f in bm.faces:
+        f.smooth = True
+    for e in bm.edges:
+        e.smooth = not (len(e.link_faces) == 2 and e.link_faces[0].normal.angle(e.link_faces[1].normal, 0.0) > lim)
+
+
 def set_material(o, name):
     m = bpy.data.materials.get(name) or bpy.data.materials.new(name)
     o.data.materials.clear()
@@ -334,10 +343,9 @@ def build():
         bmx = bmesh.new()
         bmx.from_mesh(mesh)
         bmesh.ops.recalc_face_normals(bmx, faces=bmx.faces)
+        smooth_by_angle(bmx, S.get("sharp_deg", 40))
         bmx.to_mesh(mesh)
         bmx.free()
-        mesh.shade_smooth()
-        mesh.set_sharpness_by_angle(angle=math.radians(S.get("sharp_deg", 40)))
         o = bpy.data.objects.new(name, mesh)
         collection.objects.link(o)
         if parent:

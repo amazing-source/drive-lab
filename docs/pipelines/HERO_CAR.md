@@ -491,14 +491,19 @@ glass-mounted inside the windscreen's top band, with the stalk hidden behind the
 Read the layout from the photos; one taken with the bonnet open shows the spindle. Model the wiper parked,
 as one hinged part (arm and blade) plus a static spindle boss.
 
+- **Place the parked blade from a solved camera, not a pixel scale.** On the DR458 a scale taken off the
+  photo put the blade 8 cm too far toward the centre. The sweep then cleared only 37 % of the area the game
+  clears, and the driver's line of sight was at its edge. Back-projecting the blade's ends from the
+  edge-aligned solve of a front photo onto the modelled glass fixed it: 58 %, with the line of sight and
+  everything below it swept. Check the solve first by projecting the glass outline onto the photo.
 - **A rigid blade cannot follow a doubly curved screen.** The tool tilts the spindle axis to minimise the
-  worst float, then puts the rubber edge on the glass's envelope over the sweep, plus 3 mm. On the
-  DR458, whose screen base bows 21 cm in plan, the worst float went from 105 mm with the axis on the glass
-  normal to 16.5 mm.
+  worst float, then puts the rubber edge on the glass's envelope over the sweep, plus 3 mm. The DR458's
+  screen base bows 21 cm in plan. On its first fit, the worst float went from 105 mm with the axis on the
+  glass normal to 17 mm tilted; the final fit, with a longer reach, floats 3 to 21 mm.
 - **The range** is the sweep that keeps the blade on the glass, 30 mm inside its outer edge (the blade may
   ride the printed band), cut back to where the built part would come within the minimum clearance of the
-  car. On the DR458 the blade's inner end meets the scuttle at 93° before its outer end meets the edge, so
-  the range is 91°.
+  car. A blade's inner end can reach the scuttle before its outer end reaches the edge; that happened on
+  the DR458's first fit. The final range is 113°, set by the glass edge.
 - **Checks** at every pose, on the mesh (exit 1, `--break clear|edge|sign`): no triangle crossing the car,
   every vertex at least 2 mm clear, and the rubber edge over the glass. The report also gives the
   clear-pane share and the share inside the area the game clears.

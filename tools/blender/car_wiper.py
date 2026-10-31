@@ -218,6 +218,8 @@ def sweep(a, n, theta_max=None):
         shares.append(sum(x is not None for x in hp) / n)
         H.append(h)
         thetas.append(deg)
+    if not H:  # the parked blade is not wholly over the glass for this axis: not a candidate
+        return None
     H = np.array(H)
     env = H.max(0) + S["blade_clear_m"]
     gap = env[None] - H
@@ -226,7 +228,7 @@ def sweep(a, n, theta_max=None):
 
 def score(a):
     r = sweep(a, 21)
-    return r["gap"].max(), r["end_deg"]
+    return (float("inf"), -1) if r is None else (r["gap"].max(), r["end_deg"])
 
 
 best = None
@@ -386,6 +388,15 @@ for z0 in (-(PIVOT - sp).dot(w) - 0.006, 0.001):
 boss_v, boss_f = ring_sweep(boss_rings)
 
 
+def smooth_by_angle(bm, deg):
+    """Faces smooth, an edge sharp where its two faces meet at more than `deg` (the glTF splits there)."""
+    lim = math.radians(deg)
+    for f in bm.faces:
+        f.smooth = True
+    for e in bm.edges:
+        e.smooth = not (len(e.link_faces) == 2 and e.link_faces[0].normal.angle(e.link_faces[1].normal, 0.0) > lim)
+
+
 def make(name, groups, col, parent):
     verts, faces, mats = [], [], []
     slot_of = {}
@@ -403,6 +414,7 @@ def make(name, groups, col, parent):
     bm = bmesh.new()
     bm.from_mesh(me)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    smooth_by_angle(bm, S.get("sharp_deg", 40))
     uvl = bm.loops.layers.uv.new("UVMap")
     for f in bm.faces:
         ax = max(range(3), key=lambda i: abs(f.normal[i]))
@@ -413,8 +425,6 @@ def make(name, groups, col, parent):
     bm.free()
     for set_name in slot_of:
         me.materials.append(bpy.data.materials.get(set_name) or bpy.data.materials.new(set_name))
-    me.shade_smooth()
-    me.set_sharpness_by_angle(angle=math.radians(S.get("sharp_deg", 40)))
     o = bpy.data.objects.new(name, me)
     col.objects.link(o)
     if parent:
