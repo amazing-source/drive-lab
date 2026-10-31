@@ -46,7 +46,8 @@ type Car = {
 	occupant: Model?,
 }
 -- `at` is the server time the client asked an entry to start; nil for the other actions.
-type Request = { car: Model, action: Rules.Action, at: number? }
+-- `key`, on a Start, is the key the driver's drive mode turns (Rules/CarEntry.startKey).
+type Request = { car: Model, action: Rules.Action, at: number?, key: unknown }
 
 local ATTRIBUTE = Config.ATTRIBUTES
 local ACTION_LIMIT = { perSecond = 4, burst = 6 }
@@ -301,9 +302,10 @@ local function moveDoor(car: Car, player: Player, request: Request)
 	car.model:SetAttribute(ATTRIBUTE.DOOR, clip)
 end
 
-local function start(car: Car, player: Player, _request: Request)
+local function start(car: Car, player: Player, request: Request)
 	local state, at = CarState.read(car.model), now()
 	if driver(car) == player and Rules.canStart(car.entry, state, at) then
+		car.model:SetAttribute(ATTRIBUTE.START_KEY, Rules.parseKey(car.entry, request.key))
 		car.model:SetAttribute(ATTRIBUTE.ENGINE_AT, at)
 		car.model:SetAttribute(ATTRIBUTE.ENGINE, "On")
 	end
@@ -415,7 +417,12 @@ local function parseRequest(payload: unknown): Request?
 		return nil
 	end
 	local asked = fields.at
-	return { car = model, action = action, at = if typeof(asked) == "number" then asked else nil }
+	return {
+		car = model,
+		action = action,
+		at = if typeof(asked) == "number" then asked else nil,
+		key = fields.key,
+	}
 end
 
 local function updateCar(car: Car, at: number)

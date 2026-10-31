@@ -7,6 +7,7 @@
 	server and every client call the same functions, so they agree without more messages.
 ]]
 local Config = require("../Config/CarEntry")
+local Hinge = require("./Hinge")
 
 export type EntryKind = "None" | "Enter" | "Exit"
 export type Phase = "Outside" | "Entering" | "Seated" | "Exiting"
@@ -259,6 +260,68 @@ function CarEntry.controlOpenness(move: Config.ControlMove, state: State, now: n
 		return math.clamp((t - (move.at - move.move)) / move.move, 0, 1)
 	end
 	return math.clamp(1 - (t - back) / move.move, 0, 1)
+end
+
+-- The angle the start-up turns `control` to, radians from its rest: its moves added up.
+function CarEntry.controlAngle(car: Car, control: string, state: State, now: number): number
+	local angle = 0
+	for _, move in car.startup.moves do
+		if move.control == control then
+			angle += Hinge.angle(CarEntry.controlOpenness(move, state, now), move.angle)
+		end
+	end
+	return angle
+end
+
+-- How far the left foot holds the clutch while the car starts, until driving unlocks; nil
+-- otherwise, and on a car whose start-up has no clutch.
+function CarEntry.startupClutch(car: Car, state: State, now: number): number?
+	local clutch = car.startup.clutch
+	if clutch == nil then
+		return nil
+	end
+	local startup = CarEntry.startup(car, state, now)
+	if startup.stage == "Off" or startup.drivable then
+		return nil
+	end
+	return clutch
+end
+
+-- The key a start in the drive mode `mode` turns: the car's own for that mode, else the standard
+-- key.
+function CarEntry.startKey(car: Car, mode: string?): string
+	local keys = car.startup.keys
+	local key = if keys and mode then keys[mode] else nil
+	return key or Config.STANDARD_KEY
+end
+
+-- The key a start request names, as the server accepts it: one this car has, else the standard
+-- key.
+function CarEntry.parseKey(car: Car, value: unknown): string
+	if typeof(value) ~= "string" or value == Config.STANDARD_KEY then
+		return Config.STANDARD_KEY
+	end
+	local keys = car.startup.keys
+	if keys then
+		for _, key in keys do
+			if key == value then
+				return key
+			end
+		end
+	end
+	return Config.STANDARD_KEY
+end
+
+-- Why the starter refuses, if it does: "Clutch" on a car with a clutch interlock, its engine off,
+-- whose driver works the clutch (`gearboxMode`) and has not pressed it far enough (`clutchPedal`,
+-- 0 to 1).
+function CarEntry.startRefusal(car: Car, state: State, gearboxMode: unknown, clutchPedal: unknown): "Clutch"?
+	local interlock = Config.CLUTCH_INTERLOCK
+	if car.startup.interlock ~= "Clutch" or state.engine ~= "Off" or gearboxMode ~= interlock.gearboxMode then
+		return nil
+	end
+	local pedal = if typeof(clutchPedal) == "number" then clutchPedal else 0
+	return if pedal >= interlock.pressed then nil else "Clutch"
 end
 
 -- The brake the right foot holds while the car starts, until driving unlocks; nil otherwise.

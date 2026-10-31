@@ -30,7 +30,9 @@ export type Clip = {
 
 -- A cabin control the start-up turns on its hinge (the model binding's `controls`, by name):
 -- it reaches `angle` radians `at` seconds after the start key, taking `move` seconds, and turns
--- back from `back` seconds after the key; with no `back` it holds until the engine is off.
+-- back from `back` seconds after the key; with no `back` it holds until the engine is off. Moves
+-- of one control add up: an ignition key turns to ON and holds, then a second move turns it on to
+-- START and its spring brings it back.
 export type ControlMove = { control: string, angle: number, move: number, at: number, back: number? }
 
 -- A car's start, as a sequence from the start key: the cabin controls the driver works, the
@@ -48,6 +50,16 @@ export type Startup = {
 	rpm: Curve,
 	-- How hard the right foot holds the brake from the key until driving unlocks (0 to 1).
 	brake: number,
+	-- How far the left foot holds the clutch down over the same time (0 to 1); nil on a car with
+	-- no clutch pedal.
+	clutch: number?,
+	-- What the starter needs: "Clutch", the clutch pressed (a manual's starter interlock). A
+	-- driver working the clutch by hand must hold it down to start; otherwise the start-up's
+	-- left foot presses it.
+	interlock: "Clutch"?,
+	-- The key a drive mode starts the car with, by mode, where it is not the standard one (a
+	-- track key); the server publishes it as the car's StartKey.
+	keys: { [string]: string }?,
 }
 
 export type Region = { from: number, to: number }
@@ -101,6 +113,20 @@ export type CarEntry = {
 		ENGINE_AT: string,
 		RESERVED_BY: string,
 		RESERVED_AT: string,
+		START_KEY: string,
+	},
+	-- The key a start uses unless the drive mode names another (Startup.keys).
+	STANDARD_KEY: string,
+	-- A manual starter interlock (Startup.interlock "Clutch"): the gearbox mode in which the driver
+	-- works the clutch, the car's attribute that carries the clutch the physics uses (0 to 1,
+	-- 1 pressed), how far it must be pressed to start, and the local attribute that says why a
+	-- start was refused, with the seconds it shows.
+	CLUTCH_INTERLOCK: {
+		gearboxMode: string,
+		pedalAttribute: string,
+		pressed: number,
+		hintAttribute: string,
+		hintSeconds: number,
 	},
 	-- The walk to the mark, in studs, radians and seconds. Unless it already stands in the
 	-- corridor straight out from the mark (`lineUpAngle` either side, at least `lineUp` out), the
@@ -170,6 +196,16 @@ local CarEntry: CarEntry = {
 		ENGINE_AT = "EngineAt",
 		RESERVED_BY = "ReservedBy",
 		RESERVED_AT = "ReservedAt",
+		START_KEY = "StartKey",
+	}),
+	STANDARD_KEY = "Standard",
+	CLUTCH_INTERLOCK = table.freeze({
+		gearboxMode = "manualClutch",
+		pedalAttribute = "ClutchPedal",
+		-- EST: "fully down" in the owner's guide; the last tenth of travel is the pedal's stop.
+		pressed = 0.9,
+		hintAttribute = "StartHint",
+		hintSeconds = 3,
 	}),
 	-- Measured in Play (2026-10-28): Humanoid:MoveTo stops 0.76 to 0.92 studs short of its
 	-- target, and its own turn leaves 36 degrees of a half turn after 0.3 s. On the mark at full
