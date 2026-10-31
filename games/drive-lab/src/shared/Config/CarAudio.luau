@@ -47,6 +47,24 @@ export type StartupSound = {
 	to: number,
 }
 
+-- A cockpit control's sound: a file, or a region of it, at `db` against the idle loop's level at
+-- idle (always below 0, so under the engine).
+export type ControlSound = { soundId: string, region: Region?, db: number }
+
+-- The cockpit controls' sounds (Controllers/ControlSounds), played at the driver's seat; a missing
+-- entry plays nothing.
+export type ControlSounds = {
+	-- One-shots, by the name Rig/ControlPresses fires: a Config/Controls name at the instant the
+	-- hand works the control, a start-up move's control, or ENGINE_START.
+	press: { [string]: ControlSound },
+	-- Push-to-talk: as it opens, looped while it is held (RadioTalking), as it closes.
+	radio: { press: ControlSound, hiss: ControlSound, release: ControlSound }?,
+	-- Looped while the blade moves, at a playback speed per speed step (WiperSpeed), slowest first.
+	wiperMotor: (ControlSound & { rates: { number } })?,
+	-- Looped while the washer sprays (Washing).
+	washerPump: ControlSound?,
+}
+
 -- One car's sound pack (its entry's audio).
 export type Pack = {
 	engineLayers: { EngineLayer },
@@ -80,6 +98,8 @@ export type Pack = {
 	-- Metres from the chassis centre: forward is toward the nose, up is up.
 	enginePosition: { forward: number, up: number },
 	exhaustPosition: { forward: number, up: number },
+	-- Optional: a pack without them plays no control sounds.
+	controls: ControlSounds?,
 }
 
 export type CarAudio = {
@@ -93,6 +113,16 @@ export type CarAudio = {
 	ENGINE_LEVEL_ATTRIBUTE: string,
 	-- The uploaded file a pack's pops are cut from.
 	popsSoundId: (pack: Pack) -> string,
+	-- The idle loop's volume at idle: the lowest layer, at its own rpm and the pack's volume. The
+	-- start-up and the cockpit controls' sounds are levelled against it.
+	idleLevel: (pack: Pack) -> number,
+	-- The cockpit controls' sounds: studs of full volume and of silence from the driver's seat, so
+	-- they are heard in the car and faintly or not at all outside it, and their SoundGroup's name.
+	CONTROLS_ROLL_OFF: Region,
+	CONTROLS_GROUP: string,
+	-- Seconds a control's one-shot is kept at most, should it never report its end (a file that
+	-- fails to load).
+	CONTROLS_ONE_SHOT_SECONDS: number,
 }
 
 local CarAudio: CarAudio = table.freeze({
@@ -103,6 +133,18 @@ local CarAudio: CarAudio = table.freeze({
 	popsSoundId = function(pack: Pack): string
 		return pack.pops.soundId or pack.eventsSoundId
 	end,
+	idleLevel = function(pack: Pack): number
+		local idle = pack.engineLayers[1]
+		for _, layer in pack.engineLayers do
+			if layer.rpm < idle.rpm then
+				idle = layer
+			end
+		end
+		return pack.engineVolume * idle.volume * EngineSound.loudness(pack.engineTuning, idle.rpm)
+	end,
+	CONTROLS_ROLL_OFF = table.freeze({ from = 2, to = 30 }),
+	CONTROLS_GROUP = "DriveLabCarControls",
+	CONTROLS_ONE_SHOT_SECONDS = 10,
 })
 
 return CarAudio

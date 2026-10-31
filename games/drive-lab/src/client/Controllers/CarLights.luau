@@ -29,6 +29,7 @@ local CarRig = require(ReplicatedStorage.Shared.Car.CarRig)
 local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local Config = require(ReplicatedStorage.Shared.Config.CarLights)
+local ControlPresses = require(script.Parent.Parent.Rig.ControlPresses)
 local Controls = require(ReplicatedStorage.Shared.Config.Controls)
 local Rules = require(ReplicatedStorage.Shared.Rules.CarLights)
 local StreetLamps = require(ReplicatedStorage.Shared.Rules.StreetLamps)
@@ -196,12 +197,14 @@ function Controller.start()
 		end
 	end)
 	UserInputService.InputBegan:Connect(function(input, processed)
-		if processed or drivenModel() == nil then
+		local driven = drivenModel()
+		if processed or driven == nil then
 			return
 		end
 		local key = input.KeyCode
 		if table.find(Controls.HEADLIGHTS, key) then
 			mode = Rules.nextMode(mode)
+			ControlPresses.fire(driven, "HEADLIGHTS")
 		elseif table.find(Controls.HIGH_BEAM, key) then
 			local driving = drivenModel()
 			local entry = driving and Catalog.of(driving)
@@ -212,8 +215,10 @@ function Controller.start()
 			cabin = not cabin
 		elseif table.find(Controls.INDICATOR_LEFT, key) then
 			toggleIndicator("Left")
+			ControlPresses.fire(driven, "INDICATOR_LEFT")
 		elseif table.find(Controls.INDICATOR_RIGHT, key) then
 			toggleIndicator("Right")
+			ControlPresses.fire(driven, "INDICATOR_RIGHT")
 		end
 	end)
 	RunService.Heartbeat:Connect(update)
