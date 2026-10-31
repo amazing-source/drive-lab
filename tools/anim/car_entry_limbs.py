@@ -35,6 +35,7 @@ HALF = np.array([0.5, 1.0, 0.5])
 CORNERS = np.array([[sx, sy, sz] for sx in (-1, 1) for sy in (-1, 1) for sz in (-1, 1)], dtype=float) * HALF
 EXCESS_COST = 1e4  # per stud past an allowance: always dearer than any detour
 TARGET_SCALE = 0.5  # studs off the authored target that cost as much as a 10-degree turn
+GOAL_SPAN = 12
 
 
 def euler_cells(xs, zs):
@@ -194,6 +195,17 @@ def main(argv):
             costs.append(cost)
             guess = centres[0]
             print(f"{limb} f{f}: {len(cells)} cells, {int(np.sum(excess <= 0))} clear", flush=True)
+        # Toward a held or fixed frame ahead, the limb is drawn to its angles there over GOAL_SPAN
+        # frames, so it arrives rather than jumping on the last frame.
+        for i in range(len(frames)):
+            if forced[i] is not None:
+                continue
+            ahead = [j for j in range(i + 1, min(len(frames), i + GOAL_SPAN + 1)) if forced[j] is not None]
+            if ahead:
+                j = ahead[0]
+                pull = (1.0 - (j - i) / GOAL_SPAN) ** 2
+                finite = np.isfinite(costs[i])
+                costs[i][finite] += 4.0 * pull * np.sum(((grid.angles[finite] - forced[j][1]) / 10.0) ** 2, axis=1)
         # Dynamic programming over the frames, between the scored cells of one frame and the next.
         # A step costs its turn; a step past `turn` cells on an axis costs like a contact, so the
         # path only takes one where held or fixed frames ask for it (they can move faster).

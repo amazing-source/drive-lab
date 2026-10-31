@@ -276,7 +276,8 @@ def main(argv):
         held = [h["limb"] for h in holds if h["from"] <= f <= h["to"]]
         fr = Frame(scene, allow, f, scene.door(float(door_t[i])), tuple(loc_t[i]), float(nek_t[i][1]))
         auth = (pel_t[i], tor_t[i], np.array([nek_t[i][0], nek_t[i][2]]))
-        pin = a.pin is not None and f >= a.pin
+        # A frame whose limbs all hold a pose (the hand-over) has the authored, seated body.
+        pin = (a.pin is not None and f >= a.pin) or all(f in body.fixed.get(limb, {}) for limb in LIMB_PART)
         if previous is None or pin:
             pred, centres, w = auth, [auth], 0.0
         else:
