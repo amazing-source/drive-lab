@@ -24,6 +24,8 @@ export type DriverInput = {
 	gearboxMode: Gearbox.GearboxMode,
 	drivingMode: Types.DrivingMode,
 	assists: Assists,
+	-- The drift button (Vehicle/Drift), held. Absent or false, the car drives exactly as without it.
+	drift: boolean?,
 }
 
 export type WheelContact = {
@@ -86,9 +88,13 @@ export type Telemetry = {
 	-- 0 closed (high downforce) to 1 open (low drag).
 	alaOpen: number,
 	launch: LaunchPhase,
-	-- Steering input after the input filter, in [−1, 1]; times the lock gives the wheel angle.
+	-- Steering input after the input filter and the drift's assist, in [−1, 1]; times the lock
+	-- gives the wheel angle.
 	steer: number,
 	rearSteerAngle: number,
+	-- 0 to 1: how far a drift is engaged; and the body slip (rad) it aims for.
+	drift: number,
+	driftTarget: number,
 }
 
 export type StepResult = {
