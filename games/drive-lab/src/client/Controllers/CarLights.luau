@@ -6,11 +6,12 @@
 
 	The driver of a car: H cycles the headlights (automatic, on, off; automatic means at night or
 	in heavy rain), J switches the high beam, or flashes it while held on a car whose switch flashes
-	(Config/CarSwitches), X and C toggle the left and right indicators, L the
-	cabin light; on a pad, D-pad left and right are the indicators and D-pad down steps the
+	(Config/CarSwitches), even with the headlights off, X and C toggle the left and right
+	indicators, L the cabin light; on a pad, D-pad left and right are the indicators and D-pad down steps the
 	headlights Auto, On, high beam, Off on a tap and switches the cabin light on a hold. The car this player drives also shows its brakes and
-	reverse from its readouts; other cars show what this client can know: running lights and
-	headlights. Everything here is local.
+	reverse from its readouts, and its rain light from its switch (RainLightOn, Controllers/
+	CarSwitches); other cars show what this client can know: running lights and headlights.
+	Everything here is local.
 ]]
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
@@ -39,6 +40,8 @@ local highBeam = false
 local indicator: Rules.Side? = nil
 local indicatorSince = 0
 local cabin = false
+local rainLightOn = false
+local rainLightSince = 0
 local pad: Rules.Press = { since = nil, spent = false }
 local sinceScan = 0
 
@@ -112,6 +115,11 @@ local function update(dt: number)
 	local rain = Workspace:GetAttribute("RainIntensity")
 	local serverNow = Workspace:GetServerTimeNow()
 	local driven = drivenModel()
+	local rainSwitch = driven ~= nil and driven:GetAttribute("RainLightOn") == true
+	if rainSwitch ~= rainLightOn then
+		rainLightOn = rainSwitch
+		rainLightSince = now
+	end
 	for model, lamps in cars do
 		if model.Parent == nil then
 			cars[model] = nil
@@ -123,11 +131,13 @@ local function update(dt: number)
 			and entry ~= nil
 			and entry.switches.highBeam == "Flash"
 			and held(Controls.HIGH_BEAM)
+		local rainLight = entry and entry.lights.rain
 		local lit = Rules.decide({
 			running = entry ~= nil
 				and CarEntry.startup(entry, CarState.read(model), serverNow).sincePress ~= nil,
 			mode = if mine then mode else "Auto",
-			highBeam = mine and (highBeam or flashing),
+			highBeam = mine and highBeam,
+			flash = flashing,
 			night = night,
 			rain = if typeof(rain) == "number" then rain else 0,
 			brake = if mine then number(model, "Brake", 0) else 0,
@@ -135,7 +145,9 @@ local function update(dt: number)
 			indicator = if mine then indicator else nil,
 			indicating = now - indicatorSince,
 			cabin = mine and cabin,
-		}, Config.TUNING)
+			rainLight = mine and rainLight ~= nil and rainLightOn,
+			rainLightFor = now - rainLightSince,
+		}, Config.TUNING, rainLight and rainLight.pattern)
 		-- Shadowed lights cost a pass each; only the car this player drives casts them.
 		CarLamps.apply(lamps, lit, daylight, mine)
 		if mine then

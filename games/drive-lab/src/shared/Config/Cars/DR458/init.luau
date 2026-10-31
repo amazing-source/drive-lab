@@ -9,14 +9,13 @@ local Camera = require("@self/Camera")
 local Contract = require("./Contract")
 local Door = require("@self/Door")
 local Driver = require("@self/Driver")
+local Flames = require("@self/Flames")
+local Lights = require("@self/Lights")
 local Model = require("@self/Model")
 local Physics = require("@self/Physics")
 local RimBlur = require("@self/RimBlur")
 local Startup = require("@self/Startup")
 local Switches = require("@self/Switches")
--- The SVJ's lamp table until the DR458's own lamp set lands (VFX, #126): it names no DR458 piece,
--- so no lamp lights.
-local Lights = require("./SVJ/Lights")
 
 return Contract.define({
 	physics = Physics,
@@ -28,6 +27,7 @@ return Contract.define({
 	camera = Camera,
 	rimBlur = RimBlur,
 	audio = Audio,
+	flames = Flames,
 	lights = Lights,
 	binnacle = Binnacle,
 	assists = Assists,
