@@ -1,0 +1,93 @@
+Deliberate breaks for agent/car-boss302-shift-sync (#223), each applied alone to the committed
+tree (89e50cd), run against the spec that owns the rule, then restored with git checkout.
+Runner: the repo's spec runner limited to one spec file (games/drive-lab/tests/<Name>.spec.luau).
+Every break failed; the tree was clean after the run.
+
+== BREAK: ShiftSync.lever ignores the running plan (lever stays in the start gear's gate)
+   file: games/drive-lab/src/shared/Rules/ShiftSync.luau
+   exit: 1
+   FAIL ShiftSync > moves the lever along the shift running and pushes the knob down only on the way into reverse: games/drive-lab/tests/ShiftSync.spec:98: expected 0.9936021728395061, got 1
+   5 passed, 1 failed
+== BREAK: ShiftSync.lever never pushes the knob down
+   file: games/drive-lab/src/shared/Rules/ShiftSync.luau
+   exit: 1
+   FAIL ShiftSync > moves the lever along the shift running and pushes the knob down only on the way into reverse: games/drive-lab/tests/ShiftSync.spec:99: expected 0.01040696731301929, got 0
+   5 passed, 1 failed
+== BREAK: ShiftSync.readout places the lever by neutral instead of the gear
+   file: games/drive-lab/src/shared/Rules/ShiftSync.luau
+   exit: 1
+   FAIL ShiftSync > publishes the clutch in effect, the foot and hand shares and the shift running: games/drive-lab/tests/ShiftSync.spec:56: expected 0, got 1
+   FAIL ShiftSync > parks the lever where a fresh drive's first frame puts it, so sitting in moves nothing: games/drive-lab/tests/ShiftSync.spec:76: expected 1, got 0
+   4 passed, 2 failed
+== BREAK: leverFromBinding keeps the binding's fore axis unflipped
+   file: games/drive-lab/src/shared/Rules/ShiftHand.luau
+   exit: 1
+   FAIL Shift hand: the lever from the car's model binding > puts the pivot and knob in the seat's frame and turns about the car's right and back: games/drive-lab/tests/ShiftHand.spec:132: expected 0 within 1e-12, got 2
+   FAIL Shift hand: the lever from the car's model binding > leans the knob to the driver's view of the MT-82's H: 1 up-left, 6 down-right, R past 1: games/drive-lab/tests/ShiftHand.spec:156: expected true, got false
+   9 passed, 2 failed
+== BREAK: leverFromBinding leaves points from the centre of mass, not the seat
+   file: games/drive-lab/src/shared/Rules/ShiftHand.luau
+   exit: 1
+   FAIL Shift hand: the lever from the car's model binding > puts the pivot and knob in the seat's frame and turns about the car's right and back: games/drive-lab/tests/ShiftHand.spec:126: expected 0.3 within 1e-12, got 0
+   10 passed, 1 failed
+== BREAK: leverFromBinding accepts a column whose gears disagree
+   file: games/drive-lab/src/shared/Rules/ShiftHand.luau
+   exit: 1
+   FAIL Shift hand: the lever from the car's model binding > refuses gates whose gears of one column, or of one row, disagree on its angle: games/drive-lab/tests/ShiftHand.spec:171: expected the function to throw
+   10 passed, 1 failed
+== BREAK: leverFromBinding accepts forward gears that disagree on their throw
+   file: games/drive-lab/src/shared/Rules/ShiftHand.luau
+   exit: 1
+   FAIL Shift hand: the lever from the car's model binding > refuses gates whose gears of one column, or of one row, disagree on its angle: games/drive-lab/tests/ShiftHand.spec:171: expected the function to throw
+   10 passed, 1 failed
+== BREAK: leverFromBinding accepts back gears that disagree on their throw
+   file: games/drive-lab/src/shared/Rules/ShiftHand.luau
+   exit: 1
+   FAIL Shift hand: the lever from the car's model binding > refuses gates whose gears of one column, or of one row, disagree on its angle: games/drive-lab/tests/ShiftHand.spec:171: expected the function to throw
+   10 passed, 1 failed
+== BREAK: ShiftHand.joint slides the lever up instead of down
+   file: games/drive-lab/src/shared/Rules/ShiftHand.luau
+   exit: 1
+   FAIL Shift hand: the lever from the car's model binding > moves a part on the lever rigidly about the pivot, slid down the lever by the push: games/drive-lab/tests/ShiftHand.spec:196: expected 0 within 1e-12, got 0.024000000000000056
+   10 passed, 1 failed
+== BREAK: ShiftSync.engaged fires on any gear flip while a shift runs, not only onto its target
+   file: games/drive-lab/src/shared/Rules/ShiftSync.luau
+   exit: 1
+   FAIL ShiftSync > says a shift engaged only on the frame its gear flips onto the shift's target: games/drive-lab/tests/ShiftSync.spec:117: expected false, got true
+   5 passed, 1 failed
+== BREAK: ShiftSync.engaged fires with no shift running
+   file: games/drive-lab/src/shared/Rules/ShiftSync.luau
+   exit: 1
+   FAIL ShiftSync > says a shift engaged only on the frame its gear flips onto the shift's target: games/drive-lab/tests/ShiftSync.spec:119: expected false, got true
+   5 passed, 1 failed
+== BREAK: ShiftSync.engaged fires again on the frames after the gear engaged
+   file: games/drive-lab/src/shared/Rules/ShiftSync.luau
+   exit: 1
+   FAIL ShiftSync > says a shift engaged only on the frame its gear flips onto the shift's target: games/drive-lab/tests/ShiftSync.spec:115: expected false, got true
+   FAIL ShiftSync > fires once per shift of the Boss flat out in auto, as its plan reaches the gate (DriveSim): games/drive-lab/tests/ShiftSync.spec:148: expected 3, got 36
+   4 passed, 2 failed
+== BREAK: ShiftSync.readout publishes the hand's share as the foot's
+   file: games/drive-lab/src/shared/Rules/ShiftSync.luau
+   exit: 1
+   FAIL ShiftSync > publishes the clutch in effect, the foot and hand shares and the shift running: games/drive-lab/tests/ShiftSync.spec:51: expected 1, got 0.6
+   5 passed, 1 failed
+== BREAK: ManifestBinding binds the knob at the lever's pivot
+   file: games/drive-lab/tools/ManifestBinding.luau
+   exit: 1
+   FAIL Boss 302 binding > is the writer's output for the manifest and its notes, not a hand edit: games/drive-lab/tests/Boss302Binding.spec:61: expected true, got false
+   5 passed, 1 failed
+== BREAK: ManifestBinding ignores the manifest's push_m
+   file: games/drive-lab/tools/ManifestBinding.luau
+   exit: 1
+   FAIL Boss 302 binding > is the writer's output for the manifest and its notes, not a hand edit: games/drive-lab/tests/Boss302Binding.spec:61: expected true, got false
+   5 passed, 1 failed
+== BREAK: ManifestBinding stops listing a missing push_m
+   file: games/drive-lab/tools/ManifestBinding.luau
+   exit: 1
+   FAIL Boss 302 binding > binds the knob's centre from the rig's centre and reverse's push depth, listed until the manifest has it: games/drive-lab/tests/Boss302Binding.spec:140: expected true, got false
+   5 passed, 1 failed
+== BREAK: ShiftSync.parked rests the lever in neutral, not the gate a drive starts in
+   file: games/drive-lab/src/shared/Rules/ShiftSync.luau
+   exit: 1
+   FAIL ShiftSync > parks the lever where a fresh drive's first frame puts it, so sitting in moves nothing: games/drive-lab/tests/ShiftSync.spec:76: expected 0, got 1
+   5 passed, 1 failed

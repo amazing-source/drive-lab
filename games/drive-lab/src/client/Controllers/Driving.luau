@@ -28,6 +28,7 @@ local Interface = require(ReplicatedStorage.Shared.Vehicle.Interface)
 local Net = require(ReplicatedStorage.Kit.Net)
 local PitLimiter = require(ReplicatedStorage.Shared.Rules.PitLimiter)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local ShiftSync = require(ReplicatedStorage.Shared.Rules.ShiftSync)
 local Stall = require(ReplicatedStorage.Shared.Rules.Stall)
 local TyreSmoke = require(ReplicatedStorage.Shared.Rules.TyreSmoke)
 local TyreSmokeConfig = require(ReplicatedStorage.Shared.Config.TyreSmoke)
@@ -53,6 +54,8 @@ local tyreReadings: { TyreSmoke.Wheel } = {}
 local stall = Stall.newTracker()
 -- Shifts refused with the player's clutch up, counted for the car's grind (Rules/GearboxModes).
 local grinds = 0
+-- The gear of the frame before, on a car with an H-pattern manual, for the instant a shift engages.
+local lastGear: number? = nil
 
 local function held(keys: { Enum.KeyCode }): boolean
 	for _, key in keys do
@@ -188,6 +191,24 @@ local function publish(
 	model:SetAttribute("PitLimiter", pitLimiter.armed)
 	grinds = GearboxModes.grinds(grinds, telemetry.shiftRefusal)
 	model:SetAttribute("ShiftGrinds", grinds)
+	local entry = driven
+	local manual = if entry then entry.physics.gearbox.manual else nil
+	if entry and manual and entry.physics.gearbox.kind == "manual" then
+		local readout = ShiftSync.readout(telemetry, current.state.gearbox.hbox, manual.gates)
+		model:SetAttribute("ClutchPedal", readout.ClutchPedal)
+		model:SetAttribute("ClutchFoot", readout.ClutchFoot)
+		model:SetAttribute("ShiftHand", readout.ShiftHand)
+		model:SetAttribute("ShiftFrom", readout.ShiftFrom)
+		model:SetAttribute("ShiftTo", readout.ShiftTo)
+		model:SetAttribute("ShiftElapsed", readout.ShiftElapsed)
+		model:SetAttribute("LeverColumn", readout.LeverColumn)
+		model:SetAttribute("LeverRow", readout.LeverRow)
+		model:SetAttribute("KnobDown", readout.KnobDown)
+		if ShiftSync.engaged(lastGear, telemetry) then
+			ControlPresses.fire(model, "SHIFT")
+		end
+		lastGear = telemetry.gear
+	end
 	-- Per tyre, for the smoke: read from the model, never written back.
 	for wheel, reading in TyreSmoke.measure(current.state, result.wheels, tyreReadings) do
 		model:SetAttribute(TyreSmokeConfig.SLIP_ATTRIBUTES[wheel], reading.slip)
@@ -201,6 +222,7 @@ local function stop()
 	pitLimiter = PitLimiter.newState()
 	stall = Stall.newTracker()
 	grinds = 0
+	lastGear = nil
 	driven = nil
 	drivenModel = nil
 	if connection then

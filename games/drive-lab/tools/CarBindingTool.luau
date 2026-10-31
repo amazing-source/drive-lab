@@ -27,6 +27,8 @@ local KEPT = {
 	"axis_fore",
 	"axis_side",
 	"gates_rad",
+	"knob",
+	"push_m",
 }
 
 local CarBindingTool = {}
@@ -75,6 +77,11 @@ function CarBindingTool.run(name: string, write: boolean, manifestPath: string?)
 		local kept = {}
 		for _, key in KEPT do
 			kept[key] = part[key]
+		end
+		-- Of the knob only its ball's geometry: no source object names leave drive-lab-assets.
+		local knob = part.knob
+		if knob then
+			kept.knob = { centre = knob.centre, radius_m = knob.radius_m }
 		end
 		table.insert(manifest.parts, kept :: any)
 	end
