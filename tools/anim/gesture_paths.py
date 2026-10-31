@@ -207,8 +207,8 @@ def regrip_track(gesture, button, grip_r, rim, side):
     off ("liftOff"), round ("round") and on ("comeOn") are each [out along the radius, toward the
     driver] in metres and a roll over the tube in degrees, relative to the hand's place on the
     rim, eased from one to the next. A fourth number on the way off turns the hand round the
-    wheel's axis as it lifts (degrees, toward the button), to keep clear of what is beside the
-    grip."""
+    wheel's axis as it lifts (degrees, signed as the slides are in the right hand's frame: positive
+    up the rim), to keep clear of what is beside the grip."""
     slide, roll = button["slideDeg"], button["rollDeg"]
     off, mid, on = gesture["liftOff"], gesture["round"], gesture["comeOn"]
     early_slide = off[3] if len(off) > 3 else 0.0

@@ -338,7 +338,9 @@ after a tap). The data is the car's `driver.gestures` (`Config/DriverGestures`),
   - **thumb** (FLASH, PIT, SCROLL): the grip slides and rolls on the rim to the button's thumb pose
     (section 11), loosening 1 mm off the rim half way, then the thumb mesh shows;
   - **regrip** (WATER, WIPER): Grip to Rest, off the rim, round past the spoke, back onto it below
-    and closing on the thumb mesh in the last frames;
+    and closing on the thumb mesh in the last frames. On the DR458 the way off peels the hand 40
+    degrees up the rim first (away from the button): every way that turned toward the button met
+    the spoke junction or the cage (5.7 mm and more), so the hand arcs up and round;
   - **toggle** (RAIN LIGHT, seat frame): off the rim, the Point hand's index end behind the
     lever's end while the game flicks it through the binding's travel, one track per state;
   - **knob** (the manettino): the index on the lever, the thumb resting on the rim. Per moment the
