@@ -23,6 +23,9 @@ The pieces come from <export dir>/export.json (tools/blender/car_export.py), the
 - Overrides: MeshPart properties for pieces matching a pattern, after their set.
 - --binding: the part names the car's binding needs (games/drive-lab/tools/car_import_names.luau); a
   name with no piece stops the build.
+- An --ids file may also hold "replace": {map stem: {"image": uri, "why": ...}}: a map Roblox moderation
+  rejected, swapped for an approved image; it wins over the map's own upload, so a re-import never brings
+  the rejected image back (tools/assets/check_moderation.py finds them).
 - --old: against the previous import's data, `stable` (five unrotated Chassis pieces with identical rows,
   spread across the car: the Studio build places the new car by the offset they had in the old one) and
   `expect` new / gone / changed. Without --old, `stable` is five unrotated pieces spread across the car
@@ -33,7 +36,8 @@ The pieces come from <export dir>/export.json (tools/blender/car_export.py), the
   maps reused from earlier uploads. Checks: at most 20 MB per file (the Open Cloud cap), no two uploads
   with the same bytes.
 --break: binding (adds a name no piece has), lamp (drops the lamps' sets' maps), dup (stages one map
-twice under two names), primary (a primary rule naming a material no piece of the part has).
+twice under two names), primary (a primary rule naming a material no piece of the part has), replace
+(ignores the ids files' replacements).
 """
 import collections
 import hashlib
@@ -74,12 +78,14 @@ for name, s in kept["sets"].items():
     assert name not in all_sets, f"kept set {name} is also a library set"
     all_sets[name] = s
 
-decal_by_hash, image_by_decal, white = {}, {}, None
+decal_by_hash, image_by_decal, replaced, white = {}, {}, {}, None
 for f in ids_files:
     j = json.loads(f.read_text())
     for stem, decal in j.get("decals", {}).items():
         decal_by_hash.setdefault(stem[:10], (stem, str(decal), f.name))
     image_by_decal.update({str(k): str(v) for k, v in j.get("images", {}).items()})
+    for stem, entry in j.get("replace", {}).items():
+        replaced.setdefault(stem[:10], (stem, entry["image"], f.name))
     white = white or j.get("white")
 assert white, "no --ids file names the white image (\"white\")"
 
@@ -139,6 +145,10 @@ pending, reused, unresolved = {}, {}, []
 def uri_of(file, where):
     stem = Path(file).stem
     h = stem[:10]
+    if h in replaced and BREAK != "replace":
+        old_stem, image, source = replaced[h]
+        reused[stem] = {"from": old_stem, "replaced_by": image, "record": source}
+        return image
     if h in decal_by_hash:
         old_stem, decal, source = decal_by_hash[h]
         reused[stem] = {"from": old_stem, "decal": decal, "image": image_by_decal.get(decal), "record": source}
