@@ -3,8 +3,9 @@
 	Which of a seated driver's hand meshes show for a shape (Rig/StartupHands): the grip and its
 	cuff, a start-up shape (Rest, Point, Pinch) with the posed hands' wrist cuff, or one of the
 	car's gesture meshes with the cuff it was made with. A mesh the place lacks is stood in for:
-	Pinch by Point; a gesture mesh by the grip it was posed from (a "Thumb" mesh) or by Point; any
-	posed shape by the grip when the place has no start-up shapes at all. Plain values, so Lune can
+	Pinch by Point; the shift hand's Knob by Rest (the place has no knob mesh yet); a gesture mesh
+	by the grip it was posed from (a "Thumb" mesh) or by Point; any posed shape by the grip when the
+	place has no start-up shapes at all. Plain values, so Lune can
 	test it.
 ]]
 export type Cuff = "Grip" | "Wrist"
@@ -34,6 +35,9 @@ local HandShapes = {}
 function HandShapes.drawn(shape: string, have: Have): string
 	if shape == "Pinch" then
 		return if have.pinch then shape else "Point"
+	end
+	if shape == "Knob" then
+		return "Rest"
 	end
 	if shape == "Grip" or STARTUP[shape] or have.gestures[shape] then
 		return shape

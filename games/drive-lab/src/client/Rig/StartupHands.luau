@@ -246,6 +246,21 @@ function StartupHands.draw(
 	return wrist, hand, handFrame, hands.gripCuff, wrist * hands.gripCuffOffset
 end
 
+-- The side's grip on the wheel `wheel` (turned as the arms follow it) in the seat frame `seat`.
+function StartupHands.gripPose(hands: Hands, wheel: CFrame, seat: CFrame): StartupArms.Pose
+	return toPose(seat:ToObjectSpace(wheel * hands.gripWrist))
+end
+
+-- Shows `shape` at the wrist `pose` (seat frame `seat`), as StartupHands.draw.
+function StartupHands.drawPose(
+	hands: Hands,
+	seat: CFrame,
+	pose: StartupArms.Pose,
+	shape: string
+): (CFrame, BasePart, CFrame, BasePart, CFrame)
+	return StartupHands.draw(hands, seat * toCFrame(pose), shape)
+end
+
 -- The wrist frame for one side, and the hand and cuff to draw with their frames. `wheel` is the
 -- steering wheel's frame turned as the arms follow it; `sinceKey` is nil with the engine off.
 function StartupHands.place(

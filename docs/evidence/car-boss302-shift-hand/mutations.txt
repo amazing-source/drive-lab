@@ -1,0 +1,38 @@
+Deliberate breaks for agent/car-boss302-shift-hand (#238), each applied alone to the committed
+tree (b4c6761), run against the spec that owns the rule, then restored with git checkout.
+Runner: the repo's spec runner limited to one spec file (games/drive-lab/tests/<Name>.spec.luau).
+Every break failed; the tree was clean after the run. The DriverArms hook and the StartupHands
+helpers use the live rig and have no spec; see the PR.
+
+== BREAK: checkShift accepts a shift hand with no lever bound
+   file: games/drive-lab/src/shared/Config/Cars/Contract.luau
+   exit: 1
+   FAIL Car contract: the driver > gives a shift hand only a lever the model binds, on a manual gearbox whose gates it covers: games/drive-lab/tests/CarContract.spec:184: expected the function to throw
+   45 passed, 1 failed
+== BREAK: checkShift accepts a gearbox that is not the manual kind
+   file: games/drive-lab/src/shared/Config/Cars/Contract.luau
+   exit: 1
+   FAIL Car contract: the driver > gives a shift hand only a lever the model binds, on a manual gearbox whose gates it covers: games/drive-lab/tests/CarContract.spec:190: expected the function to throw
+   45 passed, 1 failed
+== BREAK: checkShift never builds the lever (bad gates pass)
+   file: games/drive-lab/src/shared/Config/Cars/Contract.luau
+   exit: 1
+   FAIL Car contract: the driver > gives a shift hand only a lever the model binds, on a manual gearbox whose gates it covers: games/drive-lab/tests/CarContract.spec:204: expected the function to throw
+   45 passed, 1 failed
+== BREAK: the Knob shape falls through to the Point hand
+   file: games/drive-lab/src/shared/Rules/HandShapes.luau
+   exit: 1
+   FAIL Hand shapes: the shift hand's knob > draws the open Rest hand on the knob, with the wrist cuff, while the place has no knob mesh: games/drive-lab/tests/HandShapes.spec:83: expected Rest, got Point
+   3 passed, 1 failed
+== BREAK: ShiftHand.wrist holds the knob with the lever in neutral, not where it is
+   file: games/drive-lab/src/shared/Rules/ShiftHand.luau
+   exit: 1
+   FAIL Shift hand: the wrist from the lever's place > is the live grip at the wheel and the hand on the knob wherever the lever is: games/drive-lab/tests/ShiftHand.spec:255: expected 0 within 1e-09, got 0.08593358345798573
+   12 passed, 1 failed
+== BREAK: ShiftHand.lever turns the column the other way (parity with the tool)
+   file: games/drive-lab/src/shared/Rules/ShiftHand.luau
+   exit: 1
+   FAIL Shift hand: the lever > stands the knob a lever's length above the pivot in neutral and leans it into the gates: games/drive-lab/tests/ShiftHand.spec:73: expected 0.31089138373994224 within 1e-12, got 0.3891086162600577
+   FAIL Shift hand: the lever from the car's model binding > leans the knob to the driver's view of the MT-82's H: 1 up-left, 6 down-right, R past 1: games/drive-lab/tests/ShiftHand.spec:159: expected true, got false
+   FAIL Shift hand: the wrist from the lever's place > puts the Boss's knob where the shift-hand tool keyed it, at every gate and on the way: games/drive-lab/tests/ShiftHand.spec:271: expected 0 within 0.00001, got 0.08504786942795743
+   10 passed, 3 failed
