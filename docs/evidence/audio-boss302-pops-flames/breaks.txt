@@ -1,0 +1,51 @@
+## 1. Pop chances back to Normal as Strada, Sport as Sport (games/drive-lab/src/shared/Config/Cars/Boss302/Audio.luau)
+FAIL CarAudio config > Boss302: pops on the SVJ's timing a mode up, Normal as Sport, Sport and TracKey as Corsa: tests/CarAudio.spec:319: expected 1, got 0.35
+113 spec files, 1196 passed, 1 failed
+
+## 2. Floor back to the SVJ's 3,000 rpm (games/drive-lab/src/shared/Config/Cars/Boss302/Audio.luau)
+FAIL Boss 302's pops on the H box > keeps a downshift refused for over-revving silent in every mode, and pops an engaged one: tests/Boss302.spec:387: expected true, got false
+FAIL CarAudio config > Boss302: pops on the SVJ's timing a mode up, Normal as Sport, Sport and TracKey as Corsa: tests/CarAudio.spec:326: expected true, got false
+113 spec files, 1195 passed, 2 failed
+
+## 3. Gearbox lets an over-revving downshift through (games/drive-lab/src/shared/Vehicle/Gearbox.luau)
+FAIL Boss 302's pops on the H box > keeps a downshift refused for over-revving silent in every mode, and pops an engaged one: tests/Boss302.spec:383: expected false, got true
+FAIL H box shifts > refuses a downshift that would over-rev, and says so: tests/HBox.spec:181: expected nil, got table: 0x00000176fe05e490
+113 spec files, 1195 passed, 2 failed
+
+## 4. Boss given a flames entry that never throws one (games/drive-lab/src/shared/Config/Cars/Boss302/init.luau)
+FAIL ExhaustFlames on the Boss 302 > throws them as the SVJ does: a jet and a fireball with every pop, in every mode: tests/ExhaustFlames.spec:127: expected nil, got table: 0x000001c5437dd9f0
+FAIL ExhaustFlames drawn on the Boss 302 > fires a full-strength pop from both outlets in every mode: three jets, two fireballs, a flash: tests/ExhaustFlamesBurst.spec:125: drew a number
+113 spec files, 1195 passed, 2 failed
+
+## 5. Binding's second outlet removed (games/drive-lab/src/shared/Config/Cars/Boss302/Model.luau)
+FAIL Boss 302 binding > is the writer's output for the manifest and its notes, not a hand edit: tests/Boss302Binding.spec:65: expected true, got false
+FAIL Boss 302 binding > binds the full model's wheels, door, steering hub, exhaust tips and windscreen: tests/Boss302Binding.spec:201: expected 2, got 1
+FAIL ExhaustFlames on the Boss 302 > throws them out of its two tail pipes, back and a little up as the SVJ's: tests/ExhaustFlames.spec:139: the Boss has its two outlets
+FAIL ExhaustFlames drawn on the Boss 302 > mounts a jet, a fireball and a flash at each of its two outlets, on the chassis: tests/ExhaustFlamesBurst.spec:152: expected 2, got 1
+FAIL ExhaustFlames drawn on the Boss 302 > fires a full-strength pop from both outlets in every mode: three jets, two fireballs, a flash: tests/ExhaustFlamesBurst.spec:199: expected 2, got 1
+FAIL ExhaustFlames drawn on the Boss 302 > keeps the same two outlets for the car's later pops: tests/ExhaustFlamesBurst.spec:226: expected 2, got 1
+113 spec files, 1191 passed, 6 failed
+
+## 6. Effect parents the outlets to the model, not the chassis (games/drive-lab/src/client/Effects/ExhaustFlames.luau)
+FAIL ExhaustFlames drawn on the Boss 302 > mounts a jet, a fireball and a flash at each of its two outlets, on the chassis: tests/ExhaustFlamesBurst.spec:153: expected 2, got 0
+FAIL ExhaustFlames drawn on the Boss 302 > fires a full-strength pop from both outlets in every mode: three jets, two fireballs, a flash: tests/ExhaustFlamesBurst.spec:199: expected 2, got 0
+FAIL ExhaustFlames drawn on the Boss 302 > keeps the same two outlets for the car's later pops: tests/ExhaustFlamesBurst.spec:226: expected 2, got 0
+113 spec files, 1194 passed, 3 failed
+
+## 7. Effect names the outlets otherwise (games/drive-lab/src/client/Effects/ExhaustFlames.luau)
+FAIL ExhaustFlames drawn on the Boss 302 > mounts a jet, a fireball and a flash at each of its two outlets, on the chassis: tests/ExhaustFlamesBurst.spec:153: expected 2, got 0
+FAIL ExhaustFlames drawn on the Boss 302 > fires a full-strength pop from both outlets in every mode: three jets, two fireballs, a flash: tests/ExhaustFlamesBurst.spec:199: expected 2, got 0
+FAIL ExhaustFlames drawn on the Boss 302 > keeps the same two outlets for the car's later pops: tests/ExhaustFlamesBurst.spec:226: expected 2, got 0
+113 spec files, 1194 passed, 3 failed
+
+## 8. Effect points the outlets into the car (games/drive-lab/src/client/Effects/ExhaustFlames.luau)
+FAIL ExhaustFlames drawn on the Boss 302 > points every outlet back out of the car and a little up, wherever the car stands: tests/ExhaustFlamesBurst.spec:185: expected true, got false
+113 spec files, 1196 passed, 1 failed
+
+## 9. Effect emits no jet (games/drive-lab/src/client/Effects/ExhaustFlames.luau)
+FAIL ExhaustFlames drawn on the Boss 302 > fires a full-strength pop from both outlets in every mode: three jets, two fireballs, a flash: tests/ExhaustFlamesBurst.spec:203: expected 3, got 0
+113 spec files, 1196 passed, 1 failed
+
+## Restored
+113 spec files, 1197 passed, 0 failed
+

@@ -312,9 +312,9 @@ describe("CarAudio config", function()
 		end
 	end)
 
-	it("Boss302: pops on the SVJ's timing, Normal as Strada, Sport as Sport, TracKey as Corsa", function()
+	it("Boss302: pops on the SVJ's timing a mode up, Normal as Sport, Sport and TracKey as Corsa", function()
 		local mine, svj = Boss302.popTriggers, SVJ.popTriggers
-		local mapping = { Normal = "Strada", Sport = "Sport", TracKey = "Corsa" }
+		local mapping = { Normal = "Sport", Sport = "Corsa", TracKey = "Corsa" }
 		for mode, svjMode in mapping do
 			expect(mine.liftChance[mode]).toBe(svj.liftChance[svjMode])
 			expect(mine.upshiftChance[mode]).toBe(svj.upshiftChance[svjMode])
@@ -322,7 +322,8 @@ describe("CarAudio config", function()
 		end
 		-- The car starts in its first mode (Services/Cars), its road calibration.
 		expect(Boss302Physics.modeOrder[1]).toBe("Normal")
-		expect(mine.minRpm).toBe(svj.minRpm)
+		-- Its floor sits lower, for the H box's sagging downshifts (Boss302.spec).
+		expect(mine.minRpm < svj.minRpm).toBe(true)
 		expect(mine.closedThrottle).toBe(svj.closedThrottle)
 	end)
 
