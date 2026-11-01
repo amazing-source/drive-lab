@@ -4,11 +4,5 @@
 ]]
 -- What the binding still lacks or estimates; a car joins the catalog once this is empty.
 return {
-	"displays (MessageCentre): the manifest has no Screen_MessageCentre",
-	"displays (PodReadout): the manifest has no Screen_PodReadout",
-	"needles: the manifest has no Needle_Fuel",
-	"needles: the manifest has no Needle_Oil",
-	"needles: the manifest has no Needle_Temp",
-	"needles: the manifest has no Needle_Water",
 	"the 3D model: its upload and the Studio import (this binding is from the promoted full manifest)",
 }

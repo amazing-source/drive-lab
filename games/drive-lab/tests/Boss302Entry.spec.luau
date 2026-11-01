@@ -58,4 +58,11 @@ describe("Boss 302 entry", function()
 			expect(string.find(item, "gauges", 1, true) ~= nil).toBe(true)
 		end
 	end)
+
+	it("defines the whole entry: every rule of the car contract holds", function()
+		local entry = require("../src/shared/Config/Cars/Boss302") :: any
+		expect(entry.gauges ~= nil and entry.cluster == nil and entry.binnacle == nil).toBe(true)
+		expect(entry.driver.shift ~= nil).toBe(true)
+		expect(#EntryPending).toBe(0)
+	end)
 end)

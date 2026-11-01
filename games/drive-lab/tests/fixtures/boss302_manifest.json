@@ -225,22 +225,42 @@
     {
       "group": "Chassis",
       "motion": "emissive",
-      "name": "Light_RearLeft_Brake"
-    },
-    {
-      "group": "Chassis",
-      "motion": "emissive",
-      "name": "Light_RearRight_Brake"
-    },
-    {
-      "group": "Chassis",
-      "motion": "emissive",
       "name": "Light_RearLeft_HighStop"
     },
     {
       "group": "Chassis",
       "motion": "emissive",
       "name": "Light_RearRight_HighStop"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearLeft_BarInner"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearLeft_BarMiddle"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearLeft_BarOuter"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearRight_BarInner"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearRight_BarMiddle"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearRight_BarOuter"
     },
     {
       "group": "Chassis",
@@ -261,6 +281,16 @@
       "group": "Chassis",
       "motion": "emissive",
       "name": "Light_FrontRight_ParkTurn"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearLeft_Reverse"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearRight_Reverse"
     },
     {
       "axis": {
@@ -493,8 +523,8 @@
       },
       "positive": "clockwise as the driver sees it (the value rising)",
       "range": [
-        0,
-        3.14159
+        0.0083,
+        3.1631
       ]
     },
     {
@@ -513,9 +543,131 @@
       },
       "positive": "clockwise as the driver sees it (the value rising)",
       "range": [
-        0,
-        3.14159
+        0.02162,
+        3.16542
       ]
+    },
+    {
+      "axis": {
+        "forward": 0.94463,
+        "right": 0,
+        "up": -0.32813
+      },
+      "group": "Chassis",
+      "motion": "rotary",
+      "name": "Needle_Fuel",
+      "pivot": {
+        "forward": 1.7938,
+        "right": -0.3838,
+        "up": 0.9083
+      },
+      "positive": "clockwise as the driver sees it (the value rising)",
+      "range": [
+        -0.01702,
+        1.43555
+      ]
+    },
+    {
+      "axis": {
+        "forward": 0.94463,
+        "right": 0,
+        "up": -0.32813
+      },
+      "group": "Chassis",
+      "motion": "rotary",
+      "name": "Needle_Temp",
+      "pivot": {
+        "forward": 1.7938,
+        "right": -0.3507,
+        "up": 0.9083
+      },
+      "positive": "clockwise as the driver sees it (the value rising)",
+      "range": [
+        0.0023,
+        1.42926
+      ]
+    },
+    {
+      "axis": {
+        "forward": 1,
+        "right": 0,
+        "up": -0.0
+      },
+      "group": "Chassis",
+      "motion": "rotary",
+      "name": "Needle_Oil",
+      "pivot": {
+        "forward": 1.7969,
+        "right": -0.0548,
+        "up": 1.023
+      },
+      "positive": "clockwise as the driver sees it (the value rising)",
+      "range": [
+        -0.043,
+        4.68909
+      ]
+    },
+    {
+      "axis": {
+        "forward": 1,
+        "right": 0,
+        "up": -0.0
+      },
+      "group": "Chassis",
+      "motion": "rotary",
+      "name": "Needle_Water",
+      "pivot": {
+        "forward": 1.7969,
+        "right": 0.0553,
+        "up": 1.023
+      },
+      "positive": "clockwise as the driver sees it (the value rising)",
+      "range": [
+        -0.01772,
+        4.71434
+      ]
+    },
+    {
+      "group": "Chassis",
+      "mesh": false,
+      "motion": "static",
+      "name": "Screen_PodReadout",
+      "screen": {
+        "centre": {
+          "forward": 1.7959,
+          "right": 0.0032,
+          "up": 1.0228
+        },
+        "height_m": 0.0086,
+        "normal": {
+          "forward": -1,
+          "right": -0.0,
+          "up": 0
+        },
+        "tilt_back_deg": 0,
+        "width_m": 0.0213
+      }
+    },
+    {
+      "group": "Chassis",
+      "mesh": false,
+      "motion": "static",
+      "name": "Screen_MessageCentre",
+      "screen": {
+        "centre": {
+          "forward": 1.7837,
+          "right": -0.2592,
+          "up": 0.8413
+        },
+        "height_m": 0.0171,
+        "normal": {
+          "forward": -0.94463,
+          "right": -0.0,
+          "up": 0.32813
+        },
+        "tilt_back_deg": 19.16,
+        "width_m": 0.0574
+      }
     }
   ],
   "points": {
