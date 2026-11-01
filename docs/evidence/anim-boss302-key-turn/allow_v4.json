@@ -8,7 +8,7 @@
   "to": 2.65,
   "limitMm": 20.0,
   "measuredMm": 19.98,
-  "why": "the right spoke and rim behind it, on the way to the key, while holding it and on the way back; the key's position is an unverified estimate (the A3DR cylinder faces the passenger side; the 2012 one faces the driver): re-key on the measured cylinder",
+  "why": "the right spoke and rim behind it, on the way to the key, while holding it and on the way back; the key's place is the A3DR's: photo-checked only across the view (about +-10 mm), not along the line of sight, its axis not photo-measured; key position unverified, re-key follows if a measurement moves it",
   "decidedBy": "coordinator, 2026-11-01"
  },
  {
@@ -20,7 +20,7 @@
   "to": 2.35,
   "limitMm": 20.0,
   "measuredMm": 19.94,
-  "why": "the lower dash at START and as the hand lets go; the key's position is an unverified estimate (the A3DR cylinder faces the passenger side; the 2012 one faces the driver): re-key on the measured cylinder",
+  "why": "the lower dash at START and as the hand lets go; the key's place is the A3DR's: photo-checked only across the view (about +-10 mm), not along the line of sight, its axis not photo-measured; key position unverified, re-key follows if a measurement moves it",
   "decidedBy": "coordinator, 2026-11-01"
  },
  {
@@ -32,7 +32,7 @@
   "to": 2.35,
   "limitMm": 10.1,
   "measuredMm": 10.02,
-  "why": "the lower dash beside the column as the hand lets go; the key's position is an unverified estimate (the A3DR cylinder faces the passenger side; the 2012 one faces the driver): re-key on the measured cylinder",
+  "why": "the lower dash beside the column as the hand lets go; the key's place is the A3DR's: photo-checked only across the view (about +-10 mm), not along the line of sight, its axis not photo-measured; key position unverified, re-key follows if a measurement moves it",
   "decidedBy": "coordinator, 2026-11-01"
  },
  {
@@ -44,7 +44,7 @@
   "to": 2.35,
   "limitMm": 7.4,
   "measuredMm": 7.32,
-  "why": "the column shroud at ON and START; the key's position is an unverified estimate (the A3DR cylinder faces the passenger side; the 2012 one faces the driver): re-key on the measured cylinder",
+  "why": "the column shroud at ON and START; the key's place is the A3DR's: photo-checked only across the view (about +-10 mm), not along the line of sight, its axis not photo-measured; key position unverified, re-key follows if a measurement moves it",
   "decidedBy": "coordinator, 2026-11-01"
  },
  {
@@ -56,7 +56,7 @@
   "to": 2.35,
   "limitMm": 2.6,
   "measuredMm": 2.55,
-  "why": "the lower dash at START; the key's position is an unverified estimate (the A3DR cylinder faces the passenger side; the 2012 one faces the driver): re-key on the measured cylinder",
+  "why": "the lower dash at START; the key's place is the A3DR's: photo-checked only across the view (about +-10 mm), not along the line of sight, its axis not photo-measured; key position unverified, re-key follows if a measurement moves it",
   "decidedBy": "coordinator, 2026-11-01"
  },
  {
@@ -68,7 +68,7 @@
   "to": 2.6,
   "limitMm": 29.0,
   "measuredMm": 28.92,
-  "why": "the forearm through the wheel's right spoke (sleeves hidden in the local cockpit view); the key's position is an unverified estimate (the A3DR cylinder faces the passenger side; the 2012 one faces the driver): re-key on the measured cylinder",
+  "why": "the forearm through the wheel's right spoke (sleeves hidden in the local cockpit view); the key's place is the A3DR's: photo-checked only across the view (about +-10 mm), not along the line of sight, its axis not photo-measured; key position unverified, re-key follows if a measurement moves it",
   "decidedBy": "coordinator, 2026-11-01"
  },
  {
