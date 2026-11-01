@@ -68,6 +68,13 @@ export type Lit = {
 	-- The rain light switched on with the ignition, and whether its lamp is lit this instant.
 	rainLightOn: boolean,
 	rainLight: boolean,
+	-- That side's indicator runs (its turn signal or the hazards), flashing or not this instant.
+	leftRunning: boolean,
+	rightRunning: boolean,
+	-- Seconds since that side's turn signal was switched on, while it runs without the hazards; nil
+	-- otherwise (a sequential lamp sweeps on it, CarLights.sweepBars).
+	leftTurnFor: number?,
+	rightTurnFor: number?,
 }
 
 export type Levels = {
@@ -98,6 +105,23 @@ end
 -- with the lamp lit, then holds each period's lit share.
 function CarLights.blinkOn(elapsed: number, hz: number, onShare: number): boolean
 	return (math.max(elapsed, 0) * hz) % 1 < onShare
+end
+
+-- How many of a sequential lamp's `count` pieces are lit `elapsed` seconds into its turn signal:
+-- from the start of each flash, one more every `step` seconds inner to outer, all held to the
+-- flash's end, none between flashes.
+function CarLights.sweepBars(
+	elapsed: number,
+	hz: number,
+	onShare: number,
+	count: number,
+	step: number
+): number
+	local intoPeriod = (math.max(elapsed, 0) * hz) % 1 / hz
+	if intoPeriod >= onShare / hz then
+		return 0
+	end
+	return math.min(count, math.floor(intoPeriod / step + 1e-9) + 1)
 end
 
 local function drl(side: Side, state: State, headlights: boolean, tuning: Tuning): number
@@ -141,6 +165,18 @@ function CarLights.decide(state: State, tuning: Tuning, rainPattern: RainPattern
 		rainLight = running
 			and state.rainLight == true
 			and CarLights.rainLit(state.rainLightFor or 0, rainPattern),
+		leftRunning = running and (state.indicator == "Left" or state.hazards == true),
+		rightRunning = running and (state.indicator == "Right" or state.hazards == true),
+		leftTurnFor = if running
+				and state.indicator == "Left"
+				and state.hazards ~= true
+			then state.indicating
+			else nil,
+		rightTurnFor = if running
+				and state.indicator == "Right"
+				and state.hazards ~= true
+			then state.indicating
+			else nil,
 	}
 end
 
