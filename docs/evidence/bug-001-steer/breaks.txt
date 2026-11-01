@@ -1,0 +1,11 @@
+Each rule broken on purpose against Drift.spec and DriftBound.spec, then restored byte-exact. The first break is
+main's own handbrake rule: the new spec fails on main.
+
+BREAK the handbrake as on main: Space's again once the gate drops -> 19 passed, 1 failed
+    Drift button held after the steering is let go (BUG-001) > stays the drift's for the rest of the hold: no handbrake lock, so no smoke, yaw or new drift: games\drive-lab\tests\Drift.spec:310: expected true, got false
+BREAK a hold that never counts as drifted -> 18 passed, 2 failed
+    Drift button held after the steering is let go (BUG-001) > stays the drift's for the rest of the hold: no handbrake lock, so no smoke, yaw or new drift: games\drive-lab\tests\Drift.spec:310: expected true, got false
+    Drift button held after the steering is let go (BUG-001) > is the handbrake again on the next hold, and once the car is slower than a drift: games\drive-lab\tests\Drift.spec:320: expected true, got false
+BREAK a drifted hold that outlives the button -> 19 passed, 1 failed
+    Drift button held after the steering is let go (BUG-001) > is the handbrake again on the next hold, and once the car is slower than a drift: games\drive-lab\tests\Drift.spec:324: expected false, got true
+every file restored byte-exact

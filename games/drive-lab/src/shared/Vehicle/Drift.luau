@@ -28,6 +28,9 @@ export type DriftState = {
 	engagement: number,
 	-- The gate is met this frame: the button is held, fast enough, steered or already sliding.
 	wants: boolean,
+	-- This hold of the button has drifted, and the car is still faster than a drift: the button
+	-- stays the drift's, not the handbrake's, until it is let go (BUG-001).
+	drifted: boolean,
 	-- After a drift: the travel is still turning onto the heading.
 	exiting: boolean,
 	exitTime: number,
@@ -41,7 +44,15 @@ export type DriftState = {
 local Drift = {}
 
 function Drift.newState(): DriftState
-	return { engagement = 0, wants = false, exiting = false, exitTime = 0, yawTarget = 0, target = 0 }
+	return {
+		engagement = 0,
+		wants = false,
+		drifted = false,
+		exiting = false,
+		exitTime = 0,
+		yawTarget = 0,
+		target = 0,
+	}
 end
 
 -- Body slip (rad), unsigned: the angle between the heading and the direction of travel.
@@ -88,6 +99,7 @@ function Drift.update(
 		and forwardSpeed > 0
 		and speed >= Config.MIN_SPEED
 		and (math.abs(steer) >= Config.STEER_GATE or slip > Config.SLIDE_GATE)
+	state.drifted = held and speed >= Config.MIN_SPEED and (state.drifted or state.wants)
 	state.engagement = if state.wants
 		then math.min(1, state.engagement + dt / Config.RISE_TIME)
 		else math.max(0, state.engagement - dt / Config.FALL_TIME)

@@ -11,7 +11,9 @@ local DriftTurn = require("../tools/DriftTurn")
 local DriveSim = require("../tools/DriveSim")
 local InputHelp = require("../src/shared/Config/InputHelp")
 local SVJ = require("../src/shared/Config/Cars/SVJ/Physics")
+local SmokeConfig = require("../src/shared/Config/TyreSmoke")
 local T = require("../../../tools/test/T")
+local TyreSmoke = require("../src/shared/Rules/TyreSmoke")
 local Types = require("../src/shared/Config/Cars/Types")
 
 local describe, it, expect = T.describe, T.it, T.expect
@@ -277,5 +279,51 @@ describe("Drift button and handbrake", function()
 			expect(locked < -0.9).toBe(true)
 			expect(drifting > -0.5).toBe(true)
 		end
+	end)
+end)
+
+describe("Drift button held after the steering is let go (BUG-001)", function()
+	it(
+		"stays the drift's for the rest of the hold: no handbrake lock, so no smoke, yaw or new drift",
+		function()
+			local sim = DriveSim.new(DR458, InputHelp.keyboard)
+			DriveSim.setSpeed(sim, 100 * KMH, 3)
+			local readings: { TyreSmoke.Wheel } = {}
+			local smoke, yaw, redrift = 0, 0, false
+			while sim.time < 4 do
+				local input = DriveSim.input({
+					steer = if sim.time < 1 then 1 else 0,
+					handbrake = 1,
+					drift = true,
+					drivingMode = DR458.modeOrder[1],
+				})
+				local result = DriveSim.frame(sim, input, DT)
+				local wheels = TyreSmoke.measure(sim.model, result.wheels, readings)
+				if sim.time > 2.5 then
+					for _, wheel in wheels do
+						smoke = math.max(smoke, TyreSmoke.share(wheel, SmokeConfig.THRESHOLDS))
+					end
+					yaw = math.max(yaw, math.abs(sim.body.yawRate))
+					redrift = redrift or sim.model.drift.engagement > 0
+				end
+			end
+			expect(DriveSim.forwardSpeed(sim) > Config.MIN_SPEED).toBe(true)
+			expect(smoke <= 0.01).toBe(true)
+			expect(yaw < 0.05).toBe(true)
+			expect(redrift).toBe(false)
+		end
+	)
+
+	it("is the handbrake again on the next hold, and once the car is slower than a drift", function()
+		local state = Drift.newState()
+		Drift.update(DR458.drift :: Types.DriftProfile, state, true, 1, 25, 0, 0, DT)
+		expect(state.drifted).toBe(true)
+		Drift.update(DR458.drift :: Types.DriftProfile, state, true, 0, 25, 0, 0, DT)
+		expect(state.drifted).toBe(true)
+		Drift.update(DR458.drift :: Types.DriftProfile, state, false, 0, 25, 0, 0, DT)
+		expect(state.drifted).toBe(false)
+		Drift.update(DR458.drift :: Types.DriftProfile, state, true, 1, 25, 0, 0, DT)
+		Drift.update(DR458.drift :: Types.DriftProfile, state, true, 0, Config.MIN_SPEED * 0.9, 0, 0, DT)
+		expect(state.drifted).toBe(false)
 	end)
 end)

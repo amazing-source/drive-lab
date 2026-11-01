@@ -603,7 +603,7 @@ function Model.step(
 		steer = Drift.steer(car, state.drift, steer, forward, right, yaw)
 	end
 	state.wheelSteer = steer
-	state.handbrake = if state.drift.wants then 0 else controls.handbrake
+	state.handbrake = if state.drift.wants or state.drift.drifted then 0 else controls.handbrake
 	Steering.update(car, state.steering, steer, forward, dt)
 	updateCorners(state, wheels, mode, dt)
 	local alaTarget =
