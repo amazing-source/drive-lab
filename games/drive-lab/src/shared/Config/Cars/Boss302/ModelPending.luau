@@ -11,6 +11,4 @@ return {
 	"needles: the manifest has no Needle_Temp",
 	"needles: the manifest has no Needle_Water",
 	"the 3D model: its upload and the Studio import (this binding is from the promoted full manifest)",
-	"the driver's shift animation (Shift.luau: the reach, release and foot timings)",
-	"the remaining car entry: audio, camera, HUD, lights and the start-up",
 }

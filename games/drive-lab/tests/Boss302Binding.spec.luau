@@ -229,8 +229,10 @@ describe("Boss 302 binding", function()
 		do
 			expect(if string.find(listed, part, 1, true) then part else "bound").toBe("bound")
 		end
-		for _, lacking in { "the 3D model", "shift animation", "the remaining car entry" } do
-			expect(string.find(listed, lacking, 1, true) ~= nil).toBe(true)
+		expect(string.find(listed, "the 3D model", 1, true) ~= nil).toBe(true)
+		-- The car's entry (init.luau, with its driver's shift hand) exists, so neither is still listed.
+		for _, done in { "shift animation", "the remaining car entry" } do
+			expect(if string.find(listed, done, 1, true) then done else "done").toBe("done")
 		end
 		-- Its cluster is needles, so no live display screen is wanted.
 		expect(string.find(listed, "cluster:", 1, true)).toBe(nil)

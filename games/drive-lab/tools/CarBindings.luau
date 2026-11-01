@@ -50,8 +50,6 @@ local Cars: { [string]: Car } = {
 		-- What the Boss's entry still needs beyond the parts the manifest lacks (#209).
 		notes = {
 			"the 3D model: its upload and the Studio import (this binding is from the promoted full manifest)",
-			"the driver's shift animation (Shift.luau: the reach, release and foot timings)",
-			"the remaining car entry: audio, camera, HUD, lights and the start-up",
 		},
 		model = `{FOLDER}/Boss302/Model.luau`,
 		pending = `{FOLDER}/Boss302/ModelPending.luau`,
