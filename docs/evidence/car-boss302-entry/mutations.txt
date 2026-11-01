@@ -1,0 +1,52 @@
+Deliberate breaks for agent/car-boss302-entry (#248), each applied alone to the committed tree,
+run against the spec that owns the rule, then restored with git checkout.
+Runner: the repo's spec runner limited to one spec file (games/drive-lab/tests/<Name>.spec.luau).
+
+First run, on 32d0773 (the entry before the re-merge; EntryPending still listed the gauges' parts):
+== BREAK: the hand-over in studs, as the export first wrote it
+   file: games/drive-lab/src/shared/Config/Cars/Boss302/Driver.luau
+   exit: 1
+   FAIL Boss 302 entry > gives the hand-over in metres in the seat frame, as the drawn hands read it: games/drive-lab/tests/Boss302Entry.spec:37: expected true, got false
+   3 passed, 1 failed
+== BREAK: the throttle's hinge 5 cm off the binding's pedal pivot
+   file: games/drive-lab/src/shared/Config/Cars/Boss302/Driver.luau
+   exit: 1
+   FAIL Boss 302 entry > puts the driver's feet on the pedals the binding hinges and its right hand on the bound lever: games/drive-lab/tests/Boss302Entry.spec:23: expected , got the footwell's Pedal_Throttle hinge is 0.050000000000000155 
+   3 passed, 1 failed
+== BREAK: the driver without the shift hand
+   file: games/drive-lab/src/shared/Config/Cars/Boss302/Driver.luau
+   exit: 1
+   FAIL Boss 302 entry > puts the driver's feet on the pedals the binding hinges and its right hand on the bound lever: games/drive-lab/tests/Boss302Entry.spec:27: expected true, got false
+   3 passed, 1 failed
+== BREAK: the door plays the DR458's clips instead of seating directly
+   file: games/drive-lab/src/shared/Config/Cars/Boss302/Door.luau
+   exit: 1
+   FAIL Boss 302 entry > seats the driver directly from its own mark until its clips exist: games/drive-lab/tests/Boss302Entry.spec:44: expected true, got nil
+   3 passed, 1 failed
+== BREAK: the door's mark moved to the DR458's
+   file: games/drive-lab/src/shared/Config/Cars/Boss302/Door.luau
+   exit: 1
+   FAIL Boss 302 entry > seats the driver directly from its own mark until its clips exist: games/drive-lab/tests/Boss302Entry.spec:45: expected -1, got -0.956
+   3 passed, 1 failed
+== BREAK: the entry's pending list emptied while the gauges still lack parts
+   file: games/drive-lab/src/shared/Config/Cars/Boss302/EntryPending.luau
+   exit: 1
+   FAIL Boss 302 entry > waits only on the gauges' parts the binding lacks, and lists them: games/drive-lab/tests/Boss302Entry.spec:56: expected false, got true
+   3 passed, 1 failed
+
+Second run, on edfcbc4 (after the re-merge: the lamps on the split bars, define passing):
+== BREAK: the left sweep runs outer to inner
+   file: games/drive-lab/src/shared/Config/Cars/Boss302/Lights.luau
+   exit: 1
+   FAIL Lamp pieces > gives each of the Boss's rear compartments tail, brake and its place in the sweep, red: games/drive-lab/tests/LampPieces.spec:83: expected Light_RearLeft_BarInner=rearIndicator Light_RearLeft_BarMiddle=rearIndicator L
+   3 passed, 1 failed
+== BREAK: a bar also flashes with the front turn lamp
+   file: games/drive-lab/src/shared/Config/Cars/Boss302/Lights.luau
+   exit: 1
+   FAIL Lamp pieces > gives each of the Boss's rear compartments tail, brake and its place in the sweep, red: games/drive-lab/tests/LampPieces.spec:90: expected nil, got 55
+   3 passed, 1 failed
+== BREAK: the driver's arms too short to be usable (the full contract)
+   file: games/drive-lab/src/shared/Config/Cars/Boss302/Driver.luau
+   exit: 1
+   FAIL Boss 302 entry > defines the whole entry: every rule of the car contract holds: runtime error: games/drive-lab/src/shared/Config/Cars/Contract:167: the driver's arms need positive lengths
+   4 passed, 1 failed
