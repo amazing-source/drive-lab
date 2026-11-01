@@ -166,12 +166,13 @@ describe("Start-up arms: the right hand works the START flap in time", function(
 	end)
 
 	it("pushes START down to its face at the press, from a few millimetres above it", function()
+		local button = assert(Config.BUTTON, "the SVJ's paths name its START button")
 		local function aboveButton(t: number): number
-			local tip, top, normal = rightTip(t), Config.BUTTON.top, Config.BUTTON.normal
+			local tip, top, normal = rightTip(t), button.top, button.normal
 			return (tip.x - top.x) * normal.x + (tip.y - top.y) * normal.y + (tip.z - top.z) * normal.z
 		end
 		expect(math.abs(aboveButton(STARTUP.pressAt)) < 0.001).toBe(true)
-		expect(aboveButton(STARTUP.pressAt - 0.16) > Config.BUTTON.depth * 0.8).toBe(true)
+		expect(aboveButton(STARTUP.pressAt - 0.16) > button.depth * 0.8).toBe(true)
 		expect(StartupArms.shape(Config.RIGHT, STARTUP.pressAt)).toBe("Point")
 	end)
 end)

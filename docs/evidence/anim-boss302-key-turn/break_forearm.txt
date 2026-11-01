@@ -1,0 +1,12 @@
+Break: the forearm's named contact removed (startup_check, the Boss bake v2, allow_v1 with and without the forearm entry).
+
+with every entry:       188 failing samples, of them forearm: 0 (in the listed first 40)
+forearm entry removed:  677 failing samples; the forearm on the wheel now fails at the strict 5 mm limit:
+  GEO_INT_STwheel_00: 28.71 mm, limit 5.0 mm
+  GEO_INT_STwheel_01: 28.76 mm, limit 5.0 mm
+  GEO_INT_STwheel_02: 10.35 mm, limit 5.0 mm
+  GEO_INT_STwheel_05: 28.7 mm, limit 5.0 mm
+  GEO_INT_STwheel_06: 28.92 mm, limit 5.0 mm
+
+The baseline was not clean then (the key-piece false positive and the left hand's swap were still open); the
+evidence is the change: the forearm contacts appear as failures only when their name is removed.
