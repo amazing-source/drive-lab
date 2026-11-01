@@ -1,0 +1,25 @@
+Evidence for agent/car-boss302-gauges-measured (#235 follow-up). Lune, no Studio.
+
+The deliberate break: Rules/Gauges.turn scaling a needle by a half turn (`share * math.pi`)
+instead of its bound travel. The three gauge specs run against main's committed binding, then
+against the binding regenerated from the measured manifest (boss302_manifest.json 546c691d,
+speedo [0.0083, 3.1631], tach [0.02162, 3.16542]), then restored byte for byte. The regenerated
+binding is not committed here: the binding owner commits it in the Boss entry PR with the lamp
+pieces it needs (regenerated on main alone it fails LampPieces.spec, which is theirs).
+
+== A. main's committed binding (speedo/tach range [0, pi]), scaling broken back to pi
+  FAIL Gauge needles > turns a needle by its measured sweep from its measured zero: games/drive-lab/tests/Gauges.spec:164: expected 3.1548 within 1e-09, got 3.141592653589793
+  34 passed, 1 failed
+== B. measured binding (manifest 546c691d), scaling as committed
+  35 passed, 0 failed
+== C. measured binding, scaling broken back to pi
+  FAIL Boss 302 gauges > puts 0 and 180 mph, 0 and 9,000 rpm on the manifest's measured ends: games/drive-lab/tests/Boss302Gauges.spec:120: expected 3.1631 within 0.0001, got 3.149892653589793
+  FAIL Gauge needles > turns a needle by its measured sweep from its measured zero: games/drive-lab/tests/Gauges.spec:164: expected 3.1548 within 1e-09, got 3.141592653589793
+  33 passed, 2 failed
+restored the rule and the generated binding byte for byte
+
+Tolerances are the old ones: 1e-4 rad for the Boss's ends and the binding's sweeps (the binding's
+loop over every needle stays at 1e-5), 1e-9 for the synthetic case.
+
+SVJ/DR458 catalog dump (Catalog.cars, canonical): fadc03e0f68e9379b215e4bb35c0542661eb6e903de2a7612f286096f305a458,
+as on origin/main before #245.

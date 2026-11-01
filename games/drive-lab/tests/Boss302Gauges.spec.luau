@@ -5,6 +5,9 @@
 	problems are the needles and screens the 3D manifest has not measured yet, each also pending in
 	its binding.
 ]]
+local fs = require("@lune/fs")
+local serde = require("@lune/serde")
+
 local Boss302Gauges = require("../src/shared/Config/Cars/Boss302/Gauges")
 local Boss302Binding = require("../tools/Boss302Binding")
 local Contract = require("../src/shared/Config/Cars/Contract")
@@ -15,6 +18,18 @@ local Startup = require("../src/shared/Config/Cars/Boss302/Startup")
 local T = require("../../../tools/test/T")
 
 local describe, it, expect = T.describe, T.it, T.expect
+
+local MANIFEST = serde.decode("json", fs.readFile("games/drive-lab/tests/fixtures/boss302_manifest.json"))
+
+-- A needle's measured range in the manifest the binding was written from: [zero, full scale].
+local function measuredRange(name: string): { number }
+	for _, part in MANIFEST.parts do
+		if part.name == name then
+			return part.range
+		end
+	end
+	error(`the fixture has no {name}`)
+end
 
 local function copy<V>(value: V): V
 	if type(value) ~= "table" then
@@ -96,12 +111,16 @@ describe("Boss 302 gauges", function()
 		expect(displays[(Boss302Gauges.message :: any).display] ~= nil).toBe(true)
 	end)
 
-	it("puts 180 mph and 9,000 rpm at the end of the bound half turn", function()
-		local speedo, tach = Boss302Gauges.dials[1], Boss302Gauges.dials[2]
-		expect(Rules.share(speedo, 180 * 1.609344)).toBeNear(1, 1e-9)
-		expect(Rules.share(tach, 9000)).toBe(1)
+	it("puts 0 and 180 mph, 0 and 9,000 rpm on the manifest's measured ends", function()
+		local needles = Model.needles :: any
+		for _, case in { { 1, "Needle_Speedo", 180 * 1.609344 }, { 2, "Needle_Tach", 9000 } } do
+			local dial, needle, range = Boss302Gauges.dials[case[1]], needles[case[2]], measuredRange(case[2])
+			expect(dial.needle).toBe(case[2])
+			expect(Rules.poseAngle(needle, Rules.share(dial, 0))).toBeNear(range[1], 1e-4)
+			expect(Rules.poseAngle(needle, Rules.share(dial, case[3]))).toBeNear(range[#range], 1e-4)
+		end
+		local tach = Boss302Gauges.dials[2]
 		expect(Rules.share(tach, Boss302Gauges.redlineRpm)).toBeNear(7500 / 9000, 1e-9)
-		expect((Model.needles :: any).Needle_Tach.travel).toBeNear(math.pi, 1e-4)
 	end)
 
 	it("refuses a dial on a needle the binding does not bind", function()

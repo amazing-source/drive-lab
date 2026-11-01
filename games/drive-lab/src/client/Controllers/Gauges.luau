@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local Binding = require(ReplicatedStorage.Shared.Config.Cars.Binding)
 local CarEntry = require(ReplicatedStorage.Shared.Rules.CarEntry)
 local CarEntryConfig = require(ReplicatedStorage.Shared.Config.CarEntry)
 local CarLightsConfig = require(ReplicatedStorage.Shared.Config.CarLights)
@@ -36,9 +37,9 @@ type Drive = {
 	cluster: Gauges.Cluster,
 	engine: Engine.Engine,
 	needles: { Rules.Needle },
-	-- Each dial's hinge and travel, once its part has streamed in.
+	-- Each dial's weld and its bound needle, once its part has streamed in.
 	welds: { [number]: CarRig.Hinged },
-	travels: { number },
+	bound: { [number]: Binding.Hinge },
 	-- Each backlit part's SurfaceAppearance found so far, with its glow.
 	glows: { [SurfaceAppearance]: CarLightsConfig.Glow },
 	complete: boolean,
@@ -87,7 +88,7 @@ local function scan(current: Drive)
 		local hinged = rig and rig.needles[dial.needle]
 		if hinged and current.welds[index] == nil then
 			current.welds[index] = hinged
-			current.travels[index] = bound[dial.needle].travel or 0
+			current.bound[index] = bound[dial.needle]
 		end
 		complete = complete and current.welds[index] ~= nil
 	end
@@ -131,7 +132,7 @@ local function build(model: Model, entry: Catalog.Entry, cluster: Gauges.Cluster
 		engine = Engine.prepare(entry.physics.engine),
 		needles = needles,
 		welds = {},
-		travels = {},
+		bound = {},
 		glows = {},
 		complete = false,
 		sinceScan = 0,
@@ -243,7 +244,7 @@ local function refresh(current: Drive, dt: number)
 		Rules.follow(needle, dial, target, dt)
 		local hinged = current.welds[index]
 		if hinged then
-			hinged.weld.C0 = hinged.rest * CFrame.Angles(needle.share * current.travels[index], 0, 0)
+			hinged.weld.C0 = hinged.rest * CFrame.Angles(Rules.turn(current.bound[index], needle.share), 0, 0)
 		end
 	end
 

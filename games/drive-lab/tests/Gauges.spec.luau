@@ -150,6 +150,23 @@ describe("Gauge needles", function()
 		expect(Rules.sinceLit(Startup, "Nothing", state, 100 + Startup.pressAt + 0.25)).toBeNear(0.25, 1e-9)
 	end)
 
+	it("turns a needle by its measured sweep from its measured zero", function()
+		-- The Boss's speedometer as the 3D side measured it: 0.48 degrees off its modelled pose, a
+		-- sweep of 180.76 degrees.
+		local needle = {
+			part = "Needle",
+			pivot = { forward = 0, right = 0, up = 0 },
+			axis = { forward = 1, right = 0, up = 0 },
+			rest = 0.0083,
+			travel = 3.1548,
+		}
+		expect(Rules.turn(needle, 0)).toBe(0)
+		expect(Rules.turn(needle, 1)).toBeNear(3.1548, 1e-9)
+		expect(Rules.poseAngle(needle, 0)).toBeNear(0.0083, 1e-9)
+		expect(Rules.poseAngle(needle, 1)).toBeNear(0.0083 + 3.1548, 1e-9)
+		expect(Rules.poseAngle(needle, 0.5)).toBeNear(0.0083 + 3.1548 / 2, 1e-9)
+	end)
+
 	it("sweeps up and back only when the car has a sweep", function()
 		expect(Rules.sweepShare(nil, 0.3)).toBe(nil)
 		expect(Rules.sweepShare(1.2, 0.6)).toBeNear(1, 1e-9)
