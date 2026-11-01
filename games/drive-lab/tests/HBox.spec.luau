@@ -168,6 +168,29 @@ describe("H box shifts", function()
 		end
 	)
 
+	it("shifts at the automatic's quick pace in auto and at the human pace by hand", function()
+		local function planFor(mode: string): ShiftPlan.Plan
+			local state = engaged(2)
+			state.hbox.handAt, state.hbox.footAt = 1, 1
+			Gearbox.request(config, engine, state, true, false, context({ gearboxMode = mode }))
+			return state.hbox.plan :: ShiftPlan.Plan
+		end
+		local quick, human = planFor("auto"), planFor("manual")
+		expect(quick.clutchUp < 0.2).toBe(true)
+		expect(human.clutchUp > 0.3).toBe(true)
+		local upshift = engaged(2)
+		local near = Boss302.modes.Normal.upshiftRpm.full * RPM
+		Gearbox.update(
+			config,
+			engine,
+			upshift,
+			context({ gearboxMode = "auto", throttle = 1, outputSpeed = near * 1.01 / config.ratios[2] }),
+			STEP
+		)
+		expect((upshift.hbox.plan :: ShiftPlan.Plan).to).toBe(3)
+		expect((upshift.hbox.plan :: ShiftPlan.Plan).clutchUp < 0.5).toBe(true)
+	end)
+
 	it("refuses a downshift that would over-rev, and says so", function()
 		local high = engaged(3)
 		Gearbox.request(

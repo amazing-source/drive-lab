@@ -64,27 +64,24 @@ end
 -- Starts a shift from `gear` to `to`. A plan still short of its gate is replaced by one from the
 -- lever's place, with the clutch where it is; once the plan's gear has engaged, the shift waits
 -- for the plan's end.
-function HBox.shift(manual: Types.ManualGearboxConfig, state: State, gear: number, to: number)
+function HBox.shift(
+	manual: Types.ManualGearboxConfig,
+	state: State,
+	gear: number,
+	to: number,
+	timing: Types.ShiftTiming
+)
 	local plan = state.plan
 	if plan == nil then
-		state.plan = ShiftPlan.plan(
-			manual.gates,
-			manual.timing,
-			gear,
-			to,
-			state.handAt,
-			state.footAt,
-			nil,
-			nil,
-			state.pedal
-		)
+		state.plan =
+			ShiftPlan.plan(manual.gates, timing, gear, to, state.handAt, state.footAt, nil, nil, state.pedal)
 		state.time = 0
 	elseif state.time < plan.gateIn then
 		local column, row = ShiftPlan.lever(plan, manual.gates, state.time)
 		local pedal = ShiftPlan.clutch(plan, state.time)
 		state.plan = ShiftPlan.plan(
 			manual.gates,
-			manual.timing,
+			timing,
 			plan.from,
 			to,
 			state.handAt,

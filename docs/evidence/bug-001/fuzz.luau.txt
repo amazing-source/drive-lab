@@ -1,0 +1,74 @@
+local DriveSim = require("./tools/DriveSim")
+local InputHelp = require("./src/shared/Config/InputHelp")
+local TyreSmoke = require("./src/shared/Rules/TyreSmoke")
+local SmokeConfig = require("./src/shared/Config/TyreSmoke")
+local cars = {
+	{ "DR458", require("./src/shared/Config/Cars/DR458/Physics") },
+	{ "SVJ", require("./src/shared/Config/Cars/SVJ/Physics") },
+	{ "Boss302", require("./src/shared/Config/Cars/Boss302/Physics") },
+}
+local thresholds = SmokeConfig.THRESHOLDS or SmokeConfig
+local dt = 1 / 60
+local seed = 1
+local function rand()
+	seed = (seed * 1103515245 + 12345) % 2147483648
+	return seed / 2147483648
+end
+local readings = {}
+local function smoke(sim, result)
+	local worst = 0
+	for _, w in TyreSmoke.measure(sim.model, result.wheels, readings) do
+		worst = math.max(worst, TyreSmoke.share(w, thresholds))
+	end
+	return worst
+end
+local stuckCount = {}
+for _, c in cars do
+	local name, car = c[1], c[2]
+	local mode = car.modeOrder[1]
+	stuckCount[name] = 0
+	for run = 1, 300 do
+		seed = run * 7919 + #name
+		local sim = DriveSim.new(car, InputHelp.keyboard)
+		local v0 = rand() * 150
+		DriveSim.setSpeed(sim, v0 / 3.6, if v0 < 60 then 2 elseif v0 < 110 then 3 else 4)
+		local log = {}
+		local segments = 3 + math.floor(rand() * 6)
+		for _ = 1, segments do
+			local space, brake, throttle = rand() < 0.7, rand() < 0.6, rand() < 0.5
+			local steer = ({ -1, 0, 1 })[1 + math.floor(rand() * 3)]
+			local shift = rand()
+			local dur = 0.1 + rand() * 1.4
+			table.insert(log, ("%s%s%s%s%s%.1f"):format(space and "Sp" or "", brake and "S" or "", throttle and "W" or "", steer == 0 and "" or (steer > 0 and "D" or "Q"), shift < 0.2 and "+E" or (shift < 0.4 and "+Qs" or ""), dur))
+			local t0 = sim.time
+			local first = true
+			local gbm = if rand() < 0.3 then "manual" else "auto"
+			while sim.time - t0 < dur do
+				local input = DriveSim.input({ throttle = throttle and 1 or 0, brake = brake and 1 or 0, steer = steer, handbrake = space and 1 or 0, drift = space, drivingMode = mode, gearboxMode = gbm, shiftUp = first and shift < 0.2, shiftDown = first and shift >= 0.2 and shift < 0.4 })
+				local ok, err = pcall(DriveSim.frame, sim, input, dt)
+				if not ok then
+					print(name, "ERROR in frame:", err)
+					break
+				end
+				first = false
+			end
+		end
+		-- release everything for 6 s
+		local idle = DriveSim.input({ drivingMode = mode })
+		local r
+		local t0 = sim.time
+		while sim.time - t0 < 6 do r = DriveSim.frame(sim, idle, dt) end
+		local d = sim.model.drift
+		local s = smoke(sim, r)
+		local speed = math.sqrt(sim.body.vx ^ 2 + sim.body.vy ^ 2)
+		local nan = sim.body.vx ~= sim.body.vx or sim.body.yawRate ~= sim.body.yawRate or r.telemetry.rpm ~= r.telemetry.rpm or s ~= s
+		local stuck = nan or not (s <= 0.01) or d.engagement > 0 or d.exiting or math.abs(r.telemetry.steer) > 0.01 or math.abs(sim.body.yawRate) > 0.05
+		if stuck then
+			stuckCount[name] += 1
+			if stuckCount[name] <= 6 then
+				print(("%s run %d STUCK after 6 s idle: smoke %.2f drift eng %.2f exiting %s steer %.2f yaw %.2f speed %.1f km/h gear %d | seq v0=%.0f %s"):format(name, run, s, d.engagement, tostring(d.exiting), r.telemetry.steer, sim.body.yawRate, speed * 3.6, r.telemetry.gear, v0, table.concat(log, " ")))
+			end
+		end
+	end
+	print(name, "stuck runs:", stuckCount[name], "/ 300")
+end

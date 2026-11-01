@@ -202,13 +202,16 @@ local Audio: CarAudio.Pack = {
 	-- The SVJ's timing, mode by mode (byMode).
 	popTriggers = {
 		liftChance = byMode(svjTriggers.liftChance),
-		upshiftChance = byMode(svjTriggers.upshiftChance),
+		-- Every upshift cracks, and so throws a flame.
+		upshiftChance = { Normal = 1, Sport = 1, TracKey = 1 },
 		downshiftChance = byMode(svjTriggers.downshiftChance),
 		liftTrain = svjTriggers.liftTrain,
 		downshiftTrain = svjTriggers.downshiftTrain,
 		gap = svjTriggers.gap,
-		upshiftMinRpm = svjTriggers.upshiftMinRpm,
-		upshiftMinThrottle = svjTriggers.upshiftMinThrottle,
+		-- No floors: the H box's throttle reads cut to near 0 as the gear engages, and its clutch-in
+		-- sags the revs, so a floor on either would silence upshifts made under power.
+		upshiftMinRpm = 0,
+		upshiftMinThrottle = 0,
 		-- Under the SVJ's floor: the H box's clutch-in lets the revs sag, and a downshift that engages
 		-- under the floor never pops.
 		minRpm = 2400,

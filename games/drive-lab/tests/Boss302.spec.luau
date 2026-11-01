@@ -9,8 +9,10 @@ local Assists = require("../src/shared/Config/Cars/Boss302/Assists")
 local Boss302 = require("../src/shared/Config/Cars/Boss302/Physics")
 local Boss302Audio = require("../src/shared/Config/Cars/Boss302/Audio")
 local CarAudioEvents = require("../src/shared/Rules/CarAudioEvents")
+local Catalog = require("../src/shared/Config/Cars/Catalog")
 local DriveSim = require("../tools/DriveSim")
 local DriverAssists = require("../src/shared/Rules/DriverAssists")
+local ExhaustFlames = require("../src/shared/Rules/ExhaustFlames")
 local ExhaustPops = require("../src/shared/Rules/ExhaustPops")
 local InputHelp = require("../src/shared/Config/InputHelp")
 local Model = require("../src/shared/Vehicle/Model")
@@ -213,6 +215,54 @@ describe("Boss 302's H box in the car", function()
 		expect(worst > -0.3).toBe(true)
 	end)
 
+	it("breaks drive for under 0.2 s on each automatic upshift, as a modern automatic", function()
+		local dt = 1 / 240
+		local sim = DriveSim.new(Boss302)
+		local go = DriveSim.input(inputFor("Normal", { throttle = 1 }))
+		local started, longest, upshifts = nil :: number?, 0, 0
+		while sim.time < 9 do
+			local telemetry = DriveSim.frame(sim, go, dt).telemetry
+			local cut = telemetry.clutch < 0.9 or telemetry.throttle < 0.05
+			if telemetry.shifting and cut and started == nil then
+				started = sim.time
+			elseif started and not telemetry.shifting and not cut then
+				longest = math.max(longest, sim.time - started)
+				upshifts += 1
+				started = nil
+			end
+		end
+		expect(upshifts >= 3).toBe(true)
+		expect(longest < 0.2).toBe(true)
+	end)
+
+	it("settles its yaw within 0.5 s when the steering is released at 160 km/h, ESC off", function()
+		local function settle(throttle: number): number
+			local sim = DriveSim.new(Boss302, InputHelp.keyboard)
+			DriveSim.setSpeed(sim, 160 * KMH, 5)
+			local function input(steer: number): Model.DriverInput
+				return DriveSim.input(
+					inputFor("Normal", { throttle = throttle, steer = steer, esc = false, tc = false })
+				)
+			end
+			while sim.time < 1 do
+				DriveSim.frame(sim, input(0), DT)
+			end
+			local released = sim.time + 1
+			while sim.time < released do
+				DriveSim.frame(sim, input(1), DT)
+			end
+			while sim.time < released + 3 do
+				DriveSim.frame(sim, input(0), DT)
+				if math.abs(sim.body.yawRate) < 0.02 then
+					return sim.time - released
+				end
+			end
+			return math.huge
+		end
+		expect(settle(1) < 0.5).toBe(true)
+		expect(settle(0) < 1).toBe(true)
+	end)
+
 	it("never stalls with the automatic clutch, braking to a stop in 6th or pulling away in it", function()
 		local sim = DriveSim.new(Boss302)
 		DriveSim.setSpeed(sim, 40 * KMH, 6)
@@ -385,6 +435,76 @@ describe("Boss 302's pops on the H box", function()
 			local popped, engaged = askFirst(mode, 4000)
 			expect(engaged).toBe(true)
 			expect(popped > 0).toBe(true)
+		end
+	end)
+end)
+
+-- The unluckiest draw that still pops at a chance of 1.
+local function highDraw(): number
+	return 0.999
+end
+
+type Drive = { gearbox: "auto" | "manual", throttle: number, shiftAt: number? }
+
+-- Pulls away from rest in `mode` for 25 s, the throttle held. The automatic box shifts itself; on the
+-- H box an upshift is asked once the revs reach `shiftAt`. Returns the upshifts that engaged, the
+-- Upshift pops and the flames they threw.
+local function upshifts(mode: Types.DrivingMode, drive: Drive): (number, number, number)
+	local sim = DriveSim.new(Boss302)
+	local events = CarAudioEvents.new(Boss302Audio.events)
+	local pops = ExhaustPops.new(Boss302Audio.popTriggers)
+	local flames = Catalog.cars.Boss302.flames
+	local engaged, cracks, thrown = 0, 0, 0
+	local gear, asked, rpm = 1, false, 0
+	while sim.time < 25 do
+		local ask = drive.gearbox == "manual"
+			and not asked
+			and gear < 6
+			and rpm >= (drive.shiftAt or math.huge)
+		asked = asked or ask
+		local options =
+			inputFor(mode, { throttle = drive.throttle, gearboxMode = drive.gearbox, shiftUp = ask })
+		local t = DriveSim.frame(sim, DriveSim.input(options), DT).telemetry
+		local readout = {
+			rpm = t.rpm,
+			throttle = t.throttle,
+			gear = t.gear,
+			shifting = t.shifting,
+			limiter = t.limiter,
+			tcActive = t.tcActive,
+		}
+		local happened = CarAudioEvents.step(events, readout, DT)
+		if t.gear > gear then
+			engaged += 1
+			asked = false
+		end
+		gear, rpm = t.gear, t.rpm
+		if ExhaustPops.step(pops, happened, readout, mode, sim.time, highDraw) and pops.kind == "Upshift" then
+			cracks += 1
+			if ExhaustFlames.share(flames, mode, "Upshift", 1, highDraw) then
+				thrown += 1
+			end
+		end
+	end
+	return engaged, cracks, thrown
+end
+
+describe("Boss 302's upshift cracks", function()
+	it("cracks and throws a flame on every upshift, in every mode, on both gearboxes", function()
+		local drives: { Drive } = {
+			{ gearbox = "auto", throttle = 1 },
+			{ gearbox = "auto", throttle = 0.5 },
+			{ gearbox = "manual", throttle = 1, shiftAt = 6800 },
+			{ gearbox = "manual", throttle = 0.6, shiftAt = 3500 },
+			{ gearbox = "manual", throttle = 0.4, shiftAt = 2500 },
+		}
+		for _, mode in Boss302.modeOrder do
+			for _, drive in drives do
+				local engaged, cracks, thrown = upshifts(mode, drive)
+				expect(engaged >= 3).toBe(true)
+				expect(cracks).toBe(engaged)
+				expect(thrown).toBe(engaged)
+			end
 		end
 	end)
 end)
