@@ -24,6 +24,12 @@ export type Track = {
 -- index) and the point of the control it touches with the control at rest (seat frame, metres).
 export type Touch = { control: string, shape: Shape, tip: Point, point: Point }
 
+-- The torso leaning forward through the start-up, where the drawn arm cannot reach a control from
+-- the seated pose: its keys { seconds after the start key, degrees forward }, smoothstep between
+-- them and 0 outside their span (Rules/StartupLean), turning about the seat's x axis through
+-- `pivot` (the hips, seat frame, metres), positive tipping the top toward the nose.
+export type Lean = { pivot: Point, keys: { { number } } }
+
 export type Paths = {
 	RIGHT: Track,
 	LEFT: Track,
@@ -41,6 +47,8 @@ export type Paths = {
 	FLAP: { hinge: Point, edge: Point }?,
 	-- Every other car: the controls its start-up turns, each with the hand that works it.
 	TOUCHES: { Touch }?,
+	-- A car whose start-up leans the torso forward. Optional.
+	LEAN: Lean?,
 }
 
 return table.freeze({})

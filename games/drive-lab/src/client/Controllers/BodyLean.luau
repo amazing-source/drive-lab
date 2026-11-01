@@ -12,6 +12,7 @@ local Workspace = game:GetService("Workspace")
 
 local BodyLean = require(ReplicatedStorage.Shared.Rules.BodyLean)
 local JointLayer = require(script.Parent.Parent.Rig.JointLayer)
+local StartupLean = require(script.Parent.Parent.Rig.StartupLean)
 
 type Body = {
 	layer: JointLayer.JointLayer,
@@ -117,7 +118,10 @@ local function update(dt: number)
 			gravity = gravity,
 			upright = not RELAXED[body.humanoid:GetState()],
 		}, dt)
-		JointLayer.apply(body.layer, leanFor(body))
+		-- A seated driver's start-up lean goes through this same layer: one writer per joint.
+		local lean = leanFor(body)
+		local startup = StartupLean.rootTurn(body.humanoid, body.layer.parent, body.layer.pivot)
+		JointLayer.apply(body.layer, if startup then lean * startup else lean)
 	end
 end
 

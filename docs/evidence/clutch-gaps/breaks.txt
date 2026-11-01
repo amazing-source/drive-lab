@@ -1,0 +1,12 @@
+Each new rule broken on purpose, one at a time, against Stall.spec and CarCamera.spec (a 120 s timeout per run;
+none hung), then restored byte-exact.
+
+BREAK the wheel leaves the eye alone while the clutch key is in use -> 30 passed, 1 failed
+    Cockpit eye scroll > moves the eye up with its modifier, forward without it, and not at all while the clutch key is in use  [CarCamera.spec:68: expected nil, got Height]
+BREAK an ignored report is sent once more -> 30 passed, 1 failed
+    Stall round trip > sends a report the server ignores once more, then runs the engine again as the server shows it  [Stall.spec:87: expected Report@0 Report@4 Restart@12 Report@13, got Report@0 Restart@12 Report@13]
+BREAK only once more -> 30 passed, 1 failed
+    Stall round trip > sends a report the server ignores once more, then runs the engine again as the server shows it  [Stall.spec:87: expected Report@0 Report@4 Restart@12 Report@13, got Report@0 Report@4 Report@5 Report@6 Report]
+BREAK the engine runs again when the server never stopped it -> 30 passed, 1 failed
+    Stall round trip > sends a report the server ignores once more, then runs the engine again as the server shows it  [Stall.spec:87: expected Report@0 Report@4 Restart@12 Report@13, got Report@0 Report@4]
+every file restored byte-exact

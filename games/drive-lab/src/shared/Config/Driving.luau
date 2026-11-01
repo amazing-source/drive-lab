@@ -14,6 +14,11 @@ export type Driving = {
 	-- size R6 avatar but too big next to one on foot (2026-10-27): the world stays 1.5x and the
 	-- driver shrinks to 1.5 / 1.75 while seated, which gives the same room inside.
 	DRIVER_SCALE: number,
+	-- A stall the driving client reported (Rules/Stall) that the server has not turned into an
+	-- engine stop within STALL_RESEND_SECONDS is reported once more; still running on the server's
+	-- record at STALL_RESUME_SECONDS, the client's engine runs again, as the server says it does.
+	STALL_RESEND_SECONDS: number,
+	STALL_RESUME_SECONDS: number,
 }
 
 local Driving: Driving = table.freeze({
@@ -22,6 +27,10 @@ local Driving: Driving = table.freeze({
 	MAX_SPEED = Units.metresToStuds(Units.kmhToMps(420)),
 	RECLAIM_SECONDS = 0.5,
 	DRIVER_SCALE = 1.5 / 1.75,
+	-- EST: several round trips on a slow connection, and short enough that a car is never left
+	-- dead for long.
+	STALL_RESEND_SECONDS = 0.5,
+	STALL_RESUME_SECONDS = 1.5,
 })
 
 return Driving
