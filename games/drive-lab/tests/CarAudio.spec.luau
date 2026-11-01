@@ -317,8 +317,9 @@ describe("CarAudio config", function()
 		local mapping = { Normal = "Sport", Sport = "Corsa", TracKey = "Corsa" }
 		for mode, svjMode in mapping do
 			expect(mine.liftChance[mode]).toBe(svj.liftChance[svjMode])
-			expect(mine.upshiftChance[mode]).toBe(svj.upshiftChance[svjMode])
 			expect(mine.downshiftChance[mode]).toBe(svj.downshiftChance[svjMode])
+			-- Every upshift cracks, in every mode (Boss302.spec).
+			expect(mine.upshiftChance[mode]).toBe(1)
 		end
 		-- The car starts in its first mode (Services/Cars), its road calibration.
 		expect(Boss302Physics.modeOrder[1]).toBe("Normal")

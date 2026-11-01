@@ -1,0 +1,22 @@
+## 1. Upshift floors back to the SVJ's (4,000 rpm, 0.6 throttle) (games/drive-lab/src/shared/Config/Cars/Boss302/Audio.luau)
+FAIL Boss 302's upshift cracks > cracks and throws a flame on every upshift, in every mode, on both gearboxes: tests/Boss302.spec:457: expected 4, got 0
+113 spec files, 1198 passed, 1 failed
+
+## 2. Upshift floor at 2,000 rpm, the agent's first try (games/drive-lab/src/shared/Config/Cars/Boss302/Audio.luau)
+FAIL Boss 302's upshift cracks > cracks and throws a flame on every upshift, in every mode, on both gearboxes: tests/Boss302.spec:457: expected 5, got 4
+113 spec files, 1198 passed, 1 failed
+
+## 3. Normal's upshift chance back to the SVJ's Sport (0.6) (games/drive-lab/src/shared/Config/Cars/Boss302/Audio.luau)
+FAIL Boss 302's upshift cracks > cracks and throws a flame on every upshift, in every mode, on both gearboxes: tests/Boss302.spec:457: expected 4, got 0
+FAIL CarAudio config > Boss302: pops on the SVJ's timing a mode up, Normal as Sport, Sport and TracKey as Corsa: tests/CarAudio.spec:322: expected 1, got 0.6
+113 spec files, 1197 passed, 2 failed
+
+## 4. Boss given flames that no upshift throws (games/drive-lab/src/shared/Config/Cars/Boss302/init.luau)
+FAIL Boss 302's upshift cracks > cracks and throws a flame on every upshift, in every mode, on both gearboxes: tests/Boss302.spec:458: expected 4, got 0
+FAIL ExhaustFlames on the Boss 302 > throws them as the SVJ does: a jet and a fireball with every pop, in every mode: tests/ExhaustFlames.spec:127: expected nil, got table: 0x00000165f20d0790
+FAIL ExhaustFlames drawn on the Boss 302 > fires a full-strength pop from both outlets in every mode: three jets, two fireballs, a flash: tests/ExhaustFlamesBurst.spec:125: drew a number
+113 spec files, 1196 passed, 3 failed
+
+## Restored
+113 spec files, 1199 passed, 0 failed
+
