@@ -57,6 +57,11 @@ local Shift: DriverShift.Shift = {
 		release = 0.18,
 		foot = 0.1,
 	},
+	mesh = {
+		x = -0.011088,
+		y = -0.030688,
+		z = -0.061395,
+	},
 }
 
 return table.freeze(Shift)
