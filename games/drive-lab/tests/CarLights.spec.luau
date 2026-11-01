@@ -291,3 +291,49 @@ describe("CarLights: tell-tale LEDs", function()
 		expect(CarLights.ledShare(1, 0)).toBe(0)
 	end)
 end)
+
+describe("CarLights: a sequential turn lamp", function()
+	it(
+		"lights one more piece every step from the start of each flash, all held to its end, none between",
+		function()
+			-- 1.5 flashes a second, half of each lit: on for 0.333 s of every 0.667 s.
+			local function bars(elapsed: number): number
+				return CarLights.sweepBars(elapsed, 1.5, 0.5, 3, 0.1)
+			end
+			expect(bars(0)).toBe(1)
+			expect(bars(0.05)).toBe(1)
+			expect(bars(0.1)).toBe(2)
+			expect(bars(0.15)).toBe(2)
+			expect(bars(0.2)).toBe(3)
+			expect(bars(0.3)).toBe(3)
+			expect(bars(0.34)).toBe(0)
+			expect(bars(0.6)).toBe(0)
+			-- The next flash starts again at the inner piece.
+			expect(bars(0.6667)).toBe(1)
+			expect(bars(0.8667)).toBe(3)
+			expect(bars(-1)).toBe(1)
+		end
+	)
+
+	it(
+		"says which side's indicator runs, and how long its turn signal has, apart from the hazards",
+		function()
+			local turning = decide({ indicator = "Left", indicating = 0.4 })
+			expect(turning.leftRunning).toBe(true)
+			expect(turning.rightRunning).toBe(false)
+			expect(turning.leftTurnFor).toBe(0.4)
+			expect(turning.rightTurnFor).toBe(nil)
+			-- On the hazards both run and neither sweeps: the factory car flashes them together.
+			local hazards = decide({ hazards = true, hazardsFor = 0.2, indicator = "Left", indicating = 0.4 })
+			expect(hazards.leftRunning and hazards.rightRunning).toBe(true)
+			expect(hazards.leftTurnFor).toBe(nil)
+			expect(hazards.rightTurnFor).toBe(nil)
+			-- With the ignition off nothing runs, on either side, turn signal or hazards.
+			for _, side in { "Left", "Right" } do
+				local off = decide({ running = false, indicator = side, indicating = 0.1, hazards = true })
+				expect(off.leftRunning or off.rightRunning).toBe(false)
+				expect(off.leftTurnFor == nil and off.rightTurnFor == nil).toBe(true)
+			end
+		end
+	)
+end)
