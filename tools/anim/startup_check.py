@@ -64,7 +64,7 @@ FOREARM_RADIUS, UPPER_RADIUS = 0.029, 0.046
 SPACING = 0.0015
 MAX_DEPTH = 0.02
 REGION_MARGIN = 0.08
-STRICT_ARM = ("SwitchPanel", "Panel", "SteeringWheel", "WheelButton", "WheelRotary", "Cage", "Binnacle", "Dash", "dash")
+STRICT_ARM = ("SwitchPanel", "Panel", "SteeringWheel", "GEO_INT_STwheel", "WheelButton", "WheelRotary", "Cage", "Binnacle", "Dash", "dash")
 WORLD_STUD = 0.28 / 1.5
 
 
@@ -185,6 +185,28 @@ def parity_inside(points, triangles):
     return odd.sum(0) >= 2
 
 
+def lean_at(lean, t):
+    """tools/blender/startup_sequence.lean_at: degrees forward, smoothstep between keys."""
+    if not lean:
+        return 0.0
+    keys = lean["keys"]
+    if t <= keys[0][0]:
+        return keys[0][1]
+    for (t0, d0), (t1, d1) in zip(keys, keys[1:]):
+        if t <= t1:
+            u = (t - t0) / (t1 - t0)
+            return d0 + (d1 - d0) * u * u * (3 - 2 * u)
+    return keys[-1][1]
+
+
+def lean_turn(lean, t):
+    """The torso's turn at `t` about the seat's x axis (forward positive), and its pivot (metres)."""
+    a = -math.radians(lean_at(lean, t))
+    c, s = math.cos(a), math.sin(a)
+    pivot = np.array(lean["pivot"], float) if lean else np.zeros(3)
+    return np.array([[1, 0, 0], [0, c, -s], [0, s, c]]), pivot
+
+
 def elbow(shoulder, wrist, along, sign, upper, lower, bias):
     to_wrist = wrist - shoulder
     distance = min(max(np.linalg.norm(to_wrist), abs(upper - lower) + 1e-6), upper + lower - 1e-6)
@@ -281,7 +303,8 @@ def main(argv):
     lo, hi = lo - REGION_MARGIN, hi + REGION_MARGIN
 
     touches = record["touches"]
-    moving = {t["control"]: t for t in touches if t["move"]}
+    # By the cabin object that stands for the control (a touch's "part", else its name).
+    moving = {name: t for t in touches if t["move"] for name in (t.get("turns") or [t.get("part") or t["control"]])}
     # Static cabin in the region; each moving control on its own, at rest.
     tri_lo = verts[tris].min(1)
     tri_hi = verts[tris].max(1)
@@ -367,13 +390,14 @@ def main(argv):
                         note("hand", name, d, t, side, named["why"], named["limitMm"] / 1000, where)
                     elif shape == "Grip" and name.startswith("SteeringWheel"):
                         note("hand", name, d, t, side, "grip on the rim", GRIP_LIMIT, where)
-                    elif touch and name == touch["control"]:
+                    elif touch and name in (touch.get("turns") or [touch.get("part") or touch["control"]]):
                         note("hand", name, d, t, side, "touch", TOUCH_LIMIT, where)
                     else:
                         note("hand", name, d, t, side, None, HAND_LIMIT, where)
             for name, control in moving.items():
                 tree_c, cp, cn, _ = surfaces[name]
-                angle = control["move"]["angle"] * openness(t, control["move"])
+                # Moves on one control add up (a key to ON, then on to START).
+                angle = sum(m["angle"] * openness(t, m) for m in control.get("moves") or [control["move"]])
                 pivot = np.array(control["pivot"]) / studs
                 back = rotation(control["axis"], -angle)
                 local = (pts - pivot) @ back.T + pivot
@@ -384,7 +408,7 @@ def main(argv):
                     if closed is not None:
                         d_c[flagged[~parity_inside(local[flagged], closed)]] = 0.0
                 if d_c.max() > 0:
-                    allowed = touch is not None and touch["control"] == name
+                    allowed = touch is not None and name in (touch.get("turns") or [touch.get("part") or touch["control"]])
                     k = int(np.argmax(d_c))
                     where = [round(c, 4) for c in r.T @ (pts[k] - p)]
                     note("hand", name, d_c.max(), t, side, "touch" if allowed else None, TOUCH_LIMIT if allowed else HAND_LIMIT, where)
@@ -394,8 +418,9 @@ def main(argv):
                 d = (torso_half - np.abs(local[inside])).min(1).max()
                 note("hand", "Torso (R6)", d, t, side, None, HAND_LIMIT)
             # The arm the controller draws to this wrist.
-            shoulder = shoulders[side]
-            joint = elbow(shoulder, p, r[:, 2], sign, upper, lower, bias)
+            turn, pivot = lean_turn(record.get("lean"), t)
+            shoulder = pivot + turn @ (shoulders[side] - pivot)
+            joint = elbow(shoulder, p, r[:, 2], sign, upper, lower, list(turn @ np.array(bias, float)))
             for bone, a, b, radius in (("forearm", joint, p, FOREARM_RADIUS), ("upper arm", shoulder, joint, UPPER_RADIUS)):
                 near = tree.query_ball_point((a + b) / 2, np.linalg.norm(b - a) / 2 + radius)
                 if not near:
@@ -411,7 +436,7 @@ def main(argv):
             if side == "R":
                 for touch in touches:
                     if touch["move"] and touch["from"] <= t <= touch["to"]:
-                        angle = touch["move"]["angle"] * openness(t, touch["move"])
+                        angle = sum(m["angle"] * openness(t, m) for m in touch.get("moves") or [touch["move"]])
                         pivot = np.array(touch["pivot"]) / studs
                         target = (np.array(touch["point"]) / studs - pivot) @ rotation(touch["axis"], angle).T + pivot
                         tip = r @ tips[touch["shape"]] + p

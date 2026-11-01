@@ -93,7 +93,7 @@ describe("DR458 start-up hands: the controls the game turns", function()
 	end)
 
 	it("pushes ENGINE START to its face at the press, from a few millimetres off it", function()
-		local button = Paths.BUTTON
+		local button = assert(Paths.BUTTON, "the DR458's paths name its ENGINE START button")
 		local function aboveButton(t: number): number
 			local tip = handPoint(Paths.FINGERTIP, t)
 			local top, normal = button.top, button.normal
