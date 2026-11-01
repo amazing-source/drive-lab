@@ -25,6 +25,20 @@ the house check passed it. `boss_palm_check.py` (in the asset folder's `boss302/
 measures each held palm (`r6_fk.HAND` on the posed arm) against the very point the keys module holds
 it on, and fails on table v5 (`palm_check_entry.txt`, second run, exit 1) and passes on the bake.
 
+## Results
+
+| Timeline | Clips | Per-group check on the bake | Break | Palm check |
+|---|---|---|---|---|
+| entry | OutsideOpen 2.8 s, GetIn 5.633 s | 0 failures | 360 failures | 4/4 PASS |
+| close | InsideClose 1.6 s | 0 failures | 217 failures | (no hold) |
+| seated | SeatedPose 1.0 s | 0 failures | 279 failures | (no hold) |
+| exit | InsideOpen 2.067 s, GetOut 5.433 s, OutsideClose 10.267 s (exitEnd at 8.7 s) | 0 failures | 433 failures | 2/4 PASS; the two bolster holds FAIL (known issue below) |
+
+Known issue, accepted by the coordinator and left failing in `palm_check_exit.txt`: getting out, the
+palms reach the bolsters three frames after the feet land (gap 0.152 / 0.178 stud on f123, about 0.09 on
+f125, 0.02-0.06 on f127). The limb planner quantizes a held aim to its 6-degree cells, and the bake's own
+aim converges over three frames from the drop's pose.
+
 ## Not in this folder
 
 The scene, the bakes, the exports and the scratch solvers live in the asset folder (`boss302/anim/`),

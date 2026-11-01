@@ -797,8 +797,8 @@ def exit_contacts():
     ] + seated_contacts_from(0, GO_SEATED) + mirrored + inside_open_start() + [
         {"why": "DECIDED (coordinator): the entry's settle, mirrored as the body rises, the left arm by the wheel's rim", "from": exit_frame(SETTLE[1]), "to": exit_frame(SETTLE[0]), "parts": ["Left Arm"], "groups": ["wheel"], "depth": 0.0501},
         # Getting out, the hands come down onto the bolsters as the body drops off the seat's edge.
-        {"why": "DECIDED (coordinator, option A): the left arm into the backrest's wing as the hand comes down onto it in the drop", "from": GO_HOP_TOP - 3, "to": GO_HOP0 - 4, "parts": ["Left Arm"], "groups": ["seat"], "depth": 0.3969},
-        {"why": "DECIDED (coordinator, option A): the right arm against the lower dash and the body as the hand comes down onto the cushion's bolster in the drop", "from": GO_HOP_TOP - 3, "to": GO_HOP0 - 4, "parts": ["Right Arm"], "groups": ["cabin", "body"], "depth": 0.0564},
+        {"why": "DECIDED (coordinator, option A): the left arm into the backrest's wing as the hand comes down onto it in the drop", "from": GO_HOP_TOP - 3, "to": GO_HOP0 - 4, "parts": ["Left Arm"], "groups": ["seat"], "depth": 0.3970},
+        {"why": "DECIDED (coordinator, option A): the right arm against the lower dash and the body as the hand comes down onto the cushion's bolster in the drop", "from": GO_HOP_TOP - 3, "to": GO_HOP0 - 4, "parts": ["Right Arm"], "groups": ["cabin", "body"], "depth": 0.0565},
     ] + [
         {"why": "the left palm on the door card's insert, pushing: must touch", "from": PUSH, "to": PUSH_END, "parts": ["Left Arm"], "groups": ["door"], "touch": 0.1},
         {"why": "the right palm on the door's skin near its rear edge, pushing: must touch", "from": CLOSE_PULL, "to": CLOSE_RELEASE, "parts": ["Right Arm"], "groups": ["door"], "touch": 0.1},

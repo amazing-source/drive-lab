@@ -1,0 +1,23 @@
+# car_entry_check.py on the exit Blender bake (InsideOpen, GetOut, OutsideClose), per group, with allow_exit.json
+534 frames, cloud 2064165 points (+door 285523), tol 0.04
+contacts tested: every group a part touches
+  worst Torso       0.3048 at f21 (seat)
+  worst Head        0.0000 at f0 (None)
+  worst Right Arm   0.2421 at f123 (seat)
+  worst Left Arm    0.3969 at f117 (seat)
+  worst Right Leg   0.1972 at f96 (seat)
+  worst Left Leg    0.3077 at f69 (seat)
+FAILURES 0
+SPANS 0
+
+# the same bake with a deliberate break: --mutate pelvis_y=-0.6@0-60
+  worst Torso       0.3865 at f25 (seat)
+  worst Head        0.0000 at f0 (None)
+  worst Right Arm   0.4199 at f48 (cabin)
+  worst Left Arm    0.4990 at f47 (seat)
+  worst Right Leg   0.4997 at f36 (seat)
+  worst Left Leg    0.4103 at f37 (seat)
+FAILURES 433
+
+# exitEnd (car_entry_exit_end.py --mark -1.00,-0.80 --scale 1.15)
+exitEnd = { at = 8.700, right = -1.2791, forward = -0.8000 }

@@ -1,0 +1,7 @@
+# boss_palm_check.py on the exit Blender bake (limit 0.1 stud)
+# KNOWN ISSUE, accepted by the coordinator and left failing (not loosened): GetOut's palms land on the bolsters 3 frames after the feet.
+PASS Left Arm on the door card's insert f26-f36: worst palm gap 0.020 studs at f30 (limit 0.1)
+FAIL Right Arm on the cushion's front bolster f123-f127: worst palm gap 0.152 studs at f123 (limit 0.1)
+FAIL Left Arm on the backrest's wing f123-f127: worst palm gap 0.178 studs at f123 (limit 0.1)
+PASS Right Arm on the door's skin f354-f360: worst palm gap 0.002 studs at f354 (limit 0.1)
+exit code 1
