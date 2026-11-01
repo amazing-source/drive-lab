@@ -1,0 +1,26 @@
+local DriveSim = require("./tools/DriveSim")
+local InputHelp = require("./src/shared/Config/InputHelp")
+local TyreSmoke = require("./src/shared/Rules/TyreSmoke")
+local SmokeConfig = require("./src/shared/Config/TyreSmoke")
+local cars = {
+	{ "DR458", require("./src/shared/Config/Cars/DR458/Physics") },
+	{ "SVJ", require("./src/shared/Config/Cars/SVJ/Physics") },
+	{ "Boss302", require("./src/shared/Config/Cars/Boss302/Physics") },
+}
+local dt = 1 / 60
+for _, c in cars do
+	local sim = DriveSim.new(c[2], InputHelp.keyboard)
+	DriveSim.setSpeed(sim, 70 / 3.6, 2)
+	local readings = {}
+	local line = {}
+	while sim.time < 6 do
+		local hold = sim.time < 4.5
+		local r = DriveSim.frame(sim, DriveSim.input({ brake = hold and 1 or 0, handbrake = hold and 1 or 0, drift = hold, drivingMode = c[2].modeOrder[1] }), dt)
+		local worst = 0
+		for _, w in TyreSmoke.measure(sim.model, r.wheels, readings) do worst = math.max(worst, TyreSmoke.share(w, SmokeConfig.THRESHOLDS)) end
+		if math.floor(sim.time * 60 + 0.5) % 30 == 0 then
+			table.insert(line, ("t%.1f v%.0f g%d thr%.2f brk%.2f smoke%.2f"):format(sim.time, DriveSim.forwardSpeed(sim) * 3.6, r.telemetry.gear, r.telemetry.throttle, r.telemetry.brake, worst))
+		end
+	end
+	print(c[1] .. ": hold Space+S 4.5 s from 70 km/h, then release:\n  " .. table.concat(line, "\n  "))
+end

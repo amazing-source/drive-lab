@@ -25,6 +25,7 @@ local DrivingConfig = require(ReplicatedStorage.Shared.Config.Driving)
 local Gearbox = require(ReplicatedStorage.Shared.Vehicle.Gearbox)
 local GearboxModes = require(ReplicatedStorage.Shared.Rules.GearboxModes)
 local InputHelp = require(ReplicatedStorage.Shared.Config.InputHelp)
+local Log = require(ReplicatedStorage.Kit.Log)
 local Interface = require(ReplicatedStorage.Shared.Vehicle.Interface)
 local Net = require(ReplicatedStorage.Kit.Net)
 local PitLimiter = require(ReplicatedStorage.Shared.Rules.PitLimiter)
@@ -38,6 +39,9 @@ local VehicleModel = require(ReplicatedStorage.Shared.Vehicle.Model)
 local VehicleRunner = require(ReplicatedStorage.Shared.Car.VehicleRunner)
 
 local localPlayer = Players.LocalPlayer
+local log = Log.scope("Driving")
+-- A frame's drive failed once already this session (`release`).
+local failureReported = false
 local runner: VehicleRunner.Runner? = nil
 local connection: RBXScriptConnection? = nil
 local pressed = { shiftUp = false, shiftDown = false }
@@ -221,6 +225,24 @@ local function publish(
 	end
 end
 
+-- A frame whose drive failed leaves nothing behind (BUG-001): the forces of its last good frame
+-- would keep turning the car, and its last slip readouts would keep the tyres smoking. The first
+-- failure says where to read it.
+local function release(model: Model, current: VehicleRunner.Runner, failure: unknown)
+	VehicleRunner.release(current.rig)
+	for wheel = 1, #TyreSmokeConfig.SLIP_ATTRIBUTES do
+		model:SetAttribute(TyreSmokeConfig.SLIP_ATTRIBUTES[wheel], 0)
+		model:SetAttribute(TyreSmokeConfig.SLIDE_ATTRIBUTES[wheel], 0)
+	end
+	model:SetAttribute("Steer", 0)
+	if not failureReported then
+		failureReported = true
+		log.warn(
+			`the car's drive failed and was released ({failure}); read this line and the error with it in the Developer Console (F9) in the live game, or the Output in Studio`
+		)
+	end
+end
+
 local function stop()
 	-- ESC is back on for the next drive, as at a new ignition cycle (the car's assists).
 	escSwitch = DriverAssists.newSwitch()
@@ -256,7 +278,7 @@ local function start(seat: Seat)
 	drivenModel = model
 	keyboard = help == InputHelp.keyboard
 	gearboxMode = GearboxModes.valid(entry.physics.gearbox, gearboxMode, keyboard)
-	connection = RunService.PreSimulation:Connect(function(dt: number)
+	local function frame(dt: number)
 		local mode = modeOf(entry)
 		local input = limitPit(entry, model, readInput(entry, mode))
 		local result = VehicleRunner.step(current, gated(entry, model, current, input), dt)
@@ -271,6 +293,11 @@ local function start(seat: Seat)
 			-- follows the engine the server shows running.
 			VehicleModel.restart(current.state, 1)
 		end
+	end
+	connection = RunService.PreSimulation:Connect(function(dt: number)
+		xpcall(frame, function(failure: unknown)
+			release(model, current, failure)
+		end, dt)
 	end)
 end
 
