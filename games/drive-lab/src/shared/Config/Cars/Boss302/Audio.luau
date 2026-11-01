@@ -24,10 +24,10 @@ local LEVEL_DB = 8
 -- the engine 6 dB over the wind coasting at top speed (tests/RoadAudio.spec.luau).
 local OFF_VOLUME = 0.65
 
--- The SVJ's drive modes onto the Boss's, quietest to loudest: Normal is the road calibration, as
--- Strada is; TracKey the track calibration, as Corsa is.
+-- The SVJ's pop chances one mode up: Normal pops as its Sport, Sport and TracKey as its Corsa, on
+-- every lift, downshift and loaded upshift. Chances stop at 1, so TracKey cannot go past Corsa.
 local function byMode(chances: { [string]: number }): { [string]: number }
-	return { Normal = chances.Strada, Sport = chances.Sport, TracKey = chances.Corsa }
+	return { Normal = chances.Sport, Sport = chances.Corsa, TracKey = chances.Corsa }
 end
 
 local Audio: CarAudio.Pack = {
@@ -209,7 +209,9 @@ local Audio: CarAudio.Pack = {
 		gap = svjTriggers.gap,
 		upshiftMinRpm = svjTriggers.upshiftMinRpm,
 		upshiftMinThrottle = svjTriggers.upshiftMinThrottle,
-		minRpm = svjTriggers.minRpm,
+		-- Under the SVJ's floor: the H box's clutch-in lets the revs sag, and a downshift that engages
+		-- under the floor never pops.
+		minRpm = 2400,
 		closedThrottle = svjTriggers.closedThrottle,
 	},
 	events = { liftFrom = 0.6, liftTo = 0.1, liftMinRpm = 3500, limiterHold = 0.15 },
