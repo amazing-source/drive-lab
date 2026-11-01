@@ -1,4 +1,5 @@
 --!strict
+local Boss302 = require("../src/shared/Config/Cars/Boss302/Audio")
 local DR458 = require("../src/shared/Config/Cars/DR458/Audio")
 local StartupHandOver = require("../src/shared/Rules/StartupHandOver")
 local SVJ = require("../src/shared/Config/Cars/SVJ/Audio")
@@ -93,8 +94,8 @@ describe("StartupHandOver", function()
 		expect(state.done).toBe(true)
 	end)
 
-	it("holds the idle loop's level at the SVJ's and the DR458's region ends", function()
-		for _, pack in { SVJ, DR458 } do
+	it("holds the idle loop's level at every car's region end", function()
+		for _, pack in { SVJ, DR458, Boss302 } do
 			local region = pack.startup.region
 			local state = StartupHandOver.new(pack.startup, nil, 0, 0)
 			local result =

@@ -14,6 +14,7 @@ type Overrides = {
 	shifting: boolean?,
 	limiter: boolean?,
 	tcActive: boolean?,
+	grinds: number?,
 }
 
 -- Fourth gear at 7,000 rpm, full throttle, nothing else going on, unless overridden.
@@ -26,6 +27,7 @@ local function car(overrides: Overrides?): CarAudioEvents.Readout
 		shifting = given.shifting == true,
 		limiter = given.limiter == true,
 		tcActive = given.tcActive == true,
+		grinds = given.grinds,
 	}
 end
 
@@ -44,6 +46,21 @@ describe("CarAudioEvents", function()
 		expect(CarAudioEvents.step(state, car({ gear = 4 }), DT).gear).toBe(nil)
 		expect(CarAudioEvents.step(state, car({ gear = 3 }), DT).gear).toBe("Down")
 	end)
+
+	it(
+		"grinds once per rise of the grind count, never on its first read, a drop or a car without one",
+		function()
+			local state = CarAudioEvents.new(TUNING)
+			expect(CarAudioEvents.step(state, car({ grinds = 3 }), DT).grind).toBe(false)
+			expect(CarAudioEvents.step(state, car({ grinds = 3 }), DT).grind).toBe(false)
+			expect(CarAudioEvents.step(state, car({ grinds = 4 }), DT).grind).toBe(true)
+			expect(CarAudioEvents.step(state, car({ grinds = 4 }), DT).grind).toBe(false)
+			expect(CarAudioEvents.step(state, car({ grinds = 0 }), DT).grind).toBe(false)
+			expect(CarAudioEvents.step(state, car({ grinds = 1 }), DT).grind).toBe(true)
+			expect(CarAudioEvents.step(state, car(), DT).grind).toBe(false)
+			expect(CarAudioEvents.step(state, car({ grinds = 2 }), DT).grind).toBe(false)
+		end
+	)
 
 	it("fires once when an open throttle closes at high rpm", function()
 		local state = CarAudioEvents.new(TUNING)

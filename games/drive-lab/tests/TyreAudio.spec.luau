@@ -1,5 +1,6 @@
 --!strict
 local Config = require("../src/shared/Config/TyreAudio")
+local Boss302Audio = require("../src/shared/Config/Cars/Boss302/Audio")
 local DR458Audio = require("../src/shared/Config/Cars/DR458/Audio")
 local EngineSound = require("../src/shared/Rules/EngineSound")
 local SVJAudio = require("../src/shared/Config/Cars/SVJ/Audio")
@@ -99,7 +100,7 @@ describe("Tyre audio mix", function()
 		"keeps all four loops the headroom under what the engine plays, at every rpm, throttle and slip",
 		function()
 			local margin = 10 ^ ((TUNING.loudnessOffsetDb - TUNING.headroomDb) / 20)
-			for _, pack in { SVJAudio, DR458Audio } do
+			for _, pack in { SVJAudio, DR458Audio, Boss302Audio } do
 				for rpm = 800, 9000, 800 do
 					for _, throttle in { 0, 1 } do
 						local engine = engineLevel(pack, rpm, throttle)
