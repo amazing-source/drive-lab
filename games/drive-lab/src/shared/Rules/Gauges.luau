@@ -3,9 +3,11 @@
 	An analog cluster's needles (Config/Gauges): where a reading puts a needle on its dial, how the
 	needle follows it, when the cluster is lit, and its optional start-up sweep.
 ]]
+local Binding = require("../Config/Cars/Binding")
 local CarEntryConfig = require("../Config/CarEntry")
 local CarEntryRules = require("./CarEntry")
 local Gauges = require("../Config/Gauges")
+local Hinge = require("./Hinge")
 
 -- Where a needle is, as a share of its travel, and how fast it moves (shares a second); `met`
 -- once it has first reached its reading since the cluster lit.
@@ -56,6 +58,18 @@ function Rules.share(dial: Gauges.Dial, value: number): number
 		end
 	end
 	return scale[#scale][2]
+end
+
+-- The turn (radians) from a bound needle's rest, the dial's zero, at `share` of its dial: its
+-- measured sweep, not an assumed one. The rig's weld already rests the needle there.
+function Rules.turn(needle: Binding.Hinge, share: number): number
+	return share * (needle.travel or 0)
+end
+
+-- The needle's angle from its modelled pose at `share` of its dial, as the manifest's range
+-- measures it: the zero's offset plus the turn.
+function Rules.poseAngle(needle: Binding.Hinge, share: number): number
+	return Hinge.restAngle(needle) + Rules.turn(needle, share)
 end
 
 function Rules.newNeedle(): Needle
