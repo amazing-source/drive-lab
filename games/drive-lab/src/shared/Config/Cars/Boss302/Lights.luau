@@ -28,6 +28,18 @@ local RED = rgb(255, 10, 0)
 -- A halogen bulb's warm white (about 3200 K), against the DR458's bluish xenon.
 local HALOGEN = rgb(255, 228, 190)
 
+-- Each side's compartments inner to outer, the turn signal's sweep.
+local SWEEP_LEFT: { CarLights.Piece } = {
+	{ name = "Light_RearLeft_BarInner", glow = "rearIndicator" },
+	{ name = "Light_RearLeft_BarMiddle", glow = "rearIndicator" },
+	{ name = "Light_RearLeft_BarOuter", glow = "rearIndicator" },
+}
+local SWEEP_RIGHT: { CarLights.Piece } = {
+	{ name = "Light_RearRight_BarInner", glow = "rearIndicator" },
+	{ name = "Light_RearRight_BarMiddle", glow = "rearIndicator" },
+	{ name = "Light_RearRight_BarOuter", glow = "rearIndicator" },
+}
+
 -- The three compartments play tail, brake and turn; the park and turn lamp plays park and turn.
 local PIECES: CarLights.Pieces = {
 	drlLeft = {},
@@ -70,16 +82,8 @@ local PIECES: CarLights.Pieces = {
 		{ name = "Light_RearLeft_Reverse", glow = "reverse" },
 		{ name = "Light_RearRight_Reverse", glow = "reverse" },
 	},
-	sweepLeft = {
-		{ name = "Light_RearLeft_BarInner", glow = "rearIndicator" },
-		{ name = "Light_RearLeft_BarMiddle", glow = "rearIndicator" },
-		{ name = "Light_RearLeft_BarOuter", glow = "rearIndicator" },
-	},
-	sweepRight = {
-		{ name = "Light_RearRight_BarInner", glow = "rearIndicator" },
-		{ name = "Light_RearRight_BarMiddle", glow = "rearIndicator" },
-		{ name = "Light_RearRight_BarOuter", glow = "rearIndicator" },
-	},
+	sweepLeft = SWEEP_LEFT,
+	sweepRight = SWEEP_RIGHT,
 	-- No source gives the delay between compartments; UN R6 5.6(d) bounds the sweep to finish within
 	-- 200 ms of the flash's start. EST: 1/15 s, so the third lights at 133 ms.
 	sweepStep = 1 / 15,
