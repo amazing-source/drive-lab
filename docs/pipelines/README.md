@@ -8,6 +8,7 @@ decisions on feel, which numbers alone did not predict.
 |---|---|
 | [R6 animation](R6_ANIMATION.md) | walk, run and any other R6 cycle: rig, keys, foot checks, renders, export, upload |
 | [Hero car](HERO_CAR.md) | a downloaded car model to a debadged, PBR-textured, real-scale car in Studio |
+| [DR458 checks](DR458.md) | the second car's measured checks: depth fighting, hidden-face clean-up, render diffs, the merged manifest, photo-matched cameras |
 | [Flipbook effects](VFX_FLIPBOOK.md) | drawn particle effects fired from animation markers |
 | [Driver hands](DRIVER_HANDS.md) | rigged hands posed around a car's steering-wheel rim, tinted per player |
 | [Street lamp](STREET_LAMP.md) | a prop modelled from a photo, lit, and scattered along the road |
