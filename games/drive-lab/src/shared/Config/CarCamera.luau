@@ -50,6 +50,9 @@ export type SpeedWiden = { fromKmh: number, perKmh: number, max: number, halfLif
 -- takes.
 export type ViewFov = { base: number, kickShare: number, speedShare: number }
 
+-- The chase camera's place behind and above the rear axle, metres (Chase).
+export type ChaseFraming = { distance: number, height: number }
+
 -- One car's own camera points (its entry's camera), metres: the cockpit eye ahead of and above
 -- the head's centre, and the hood camera from the centre of mass, along the car and up.
 export type CarViews = {
@@ -57,6 +60,8 @@ export type CarViews = {
 	hood: { forward: number, up: number },
 	-- Per drive mode, the share of Config/CarShake's upshift kick the car's gearbox gives.
 	shiftKick: { [string]: number },
+	-- The car's own chase framing, for a body the shared one frames badly; nil keeps CHASE's.
+	chase: ChaseFraming?,
 }
 
 export type CarCamera = {

@@ -12,6 +12,10 @@ local Camera: CarCamera.CarViews = table.freeze({
 	hood = table.freeze({ forward = 0.6, up = 0.64 }),
 	-- EST: the six-speed's shifts kick harder as TracKey sharpens the car, as the DR458's modes do.
 	shiftKick = table.freeze({ Normal = 0.6, Sport = 0.8, TracKey = 1 }),
+	-- The SVJ's chase scaled by the body's height (1.400 m against 1.136 m, 1.232 times): its
+	-- 1.55 m above the road becomes 1.91 m, here 1.58 m above the 0.33 m axle, and its 3.3 m back
+	-- 4.07 m, so the camera looks over the taller roof at the SVJ's angle.
+	chase = table.freeze({ distance = 4.07, height = 1.58 }),
 })
 
 return Camera

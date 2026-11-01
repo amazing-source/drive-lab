@@ -14,10 +14,12 @@ local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local Rules = require(ReplicatedStorage.Shared.Rules.CarCamera)
 local Units = require(ReplicatedStorage.Shared.Units)
 
--- `axle` is the rear axle from the centre of mass (metres, forward and up) of `model`.
+-- `axle` is the rear axle from the centre of mass (metres, forward and up) of `model`, and
+-- `framing` its chase distance and height.
 export type State = {
 	model: Model?,
 	axle: { forward: number, up: number },
+	framing: CarCamera.ChaseFraming,
 	lean: Rules.Lean,
 	yaw: Rules.Spring?,
 	driftYaw: number,
@@ -43,6 +45,7 @@ function ChaseView.new(): State
 	return {
 		model = nil,
 		axle = { forward = 0, up = 0 },
+		framing = Rules.chaseFraming(nil),
 		lean = { right = 0, back = 0 },
 		yaw = nil,
 		driftYaw = 0,
@@ -59,6 +62,7 @@ function ChaseView.step(state: State, model: Model, chassis: CFrame, velocity: V
 		end
 		local forward, up = Rules.rearAxle(entry.physics)
 		state.model, state.axle = model, { forward = forward, up = up }
+		state.framing = Rules.chaseFraming(entry.camera)
 	end
 	local target =
 		Rules.leanTarget(number(model, "LongitudinalG"), number(model, "LateralG"), number(model, "SpeedKmh"))
@@ -98,7 +102,9 @@ function ChaseView.place(state: State, chassis: CFrame, lookYaw: number, lookPit
 		* CFrame.Angles(-lookPitch, 0, 0)
 		* CFrame.new(0, 0, toCentre)
 	local lean = state.lean
-	local eye = orbit * Vector3.new(studs(lean.right), studs(chase.height), studs(chase.distance + lean.back))
+	local framing = state.framing
+	local eye = orbit
+		* Vector3.new(studs(lean.right), studs(framing.height), studs(framing.distance + lean.back))
 	local focus = orbit * Vector3.new(0, 0, -studs(chase.lookAhead))
 	return CFrame.lookAt(eye, focus) * CFrame.Angles(chase.pitch, 0, 0)
 end
