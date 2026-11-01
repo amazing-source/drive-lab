@@ -21,7 +21,18 @@ local Model: Binding.CarModel = {
 		"Door_L_Glass",
 		"Door_R_Glass",
 	},
-	windshield = {},
+	windshield = {
+		{ forward = -0.0102, right = -0.5863, up = 0.7428 },
+		{ forward = -0.0102, right = 0.5863, up = 0.7428 },
+		{ forward = 0.4735, right = 0.636, up = 0.4709 },
+		{ forward = 0.4735, right = -0.636, up = 0.4709 },
+	},
+	door = {
+		pivot = { forward = 0.4521, right = -0.8797, up = 0.142 },
+		axis = { forward = 0, right = 0, up = -1 },
+		parts = { "Door_L_Card", "Door_L_Glass", "Door_L_Mirror", "Door_L_Skin" },
+		openAngle = 1.0367,
+	},
 	controls = {
 		Key_Ignition = {
 			part = "Key_Ignition",
@@ -50,7 +61,31 @@ local Model: Binding.CarModel = {
 			travel = 0.5,
 		},
 	},
-	parents = {},
+	parents = {
+		SteeringWheel_Hub = "SteeringWheel",
+		SteeringWheel_Rim = "SteeringWheel",
+		SteeringWheel_Spokes = "SteeringWheel",
+		Wheel_FL = "Wheel_FL_Tyre",
+		Wheel_FR = "Wheel_FR_Tyre",
+		Wheel_RL = "Wheel_RL_Tyre",
+		Wheel_RR = "Wheel_RR_Tyre",
+	},
+	steeringHub = {
+		pivot = { forward = 0.0179, right = -0.3713, up = 0.3649 },
+		axis = { forward = -0.91122, right = 0, up = 0.41192 },
+	},
+	exhaustOutlets = {
+		{
+			centre = { forward = -2.5593, right = -0.5867, up = -0.1894 },
+			axis = { forward = -1, right = 0, up = 0 },
+			diameter = 0.1077,
+		},
+		{
+			centre = { forward = -2.5593, right = 0.5867, up = -0.1894 },
+			axis = { forward = -1, right = 0, up = 0 },
+			diameter = 0.1077,
+		},
+	},
 	shifter = {
 		part = "Shifter_Lever",
 		pivot = { forward = -0.0499, right = 0, up = 0.0376 },
