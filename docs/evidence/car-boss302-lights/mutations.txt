@@ -1,0 +1,43 @@
+Deliberate breaks for agent/car-boss302-lights, each applied alone to the committed tree (3d8a173),
+run against the spec that owns the rule, then restored with git checkout.
+Runner: the repo's spec runner limited to one spec file (games/drive-lab/tests/<Name>.spec.luau).
+Every break below failed. On the first run (61ef6f4) the "running with the ignition off" break
+SURVIVED: the spec's ignition-off case checked only the right side and the break was on the left.
+The case now checks both sides (3d8a173), and the break fails. The CarLamps runtime (the piece
+map, the brightest request, the indicator taking its pieces, the sweep) has no spec; see the PR.
+
+== BREAK: sweepBars lights all the pieces at once
+   file: games/drive-lab/src/shared/Rules/CarLights.luau
+   exit: 1
+   FAIL CarLights: a sequential turn lamp > lights one more piece every step from the start of each flash, all held to its end, none between: games/drive-lab/tests/CarLights.spec:303: expected 1, got 3
+   24 passed, 1 failed
+== BREAK: sweepBars keeps the pieces lit between flashes
+   file: games/drive-lab/src/shared/Rules/CarLights.luau
+   exit: 1
+   FAIL CarLights: a sequential turn lamp > lights one more piece every step from the start of each flash, all held to its end, none between: games/drive-lab/tests/CarLights.spec:309: expected 0, got 3
+   24 passed, 1 failed
+== BREAK: the turn time is kept on the hazards (they would sweep)
+   file: games/drive-lab/src/shared/Rules/CarLights.luau
+   exit: 1
+   FAIL CarLights: a sequential turn lamp > says which side's indicator runs, and how long its turn signal has, apart from the hazards: games/drive-lab/tests/CarLights.spec:329: expected nil, got 0.4
+   24 passed, 1 failed
+== BREAK: a side's indicator counts as running with the ignition off
+   file: games/drive-lab/src/shared/Rules/CarLights.luau
+   exit: 1
+   FAIL CarLights: a sequential turn lamp > says which side's indicator runs, and how long its turn signal has, apart from the hazards: games/drive-lab/tests/CarLights.spec:334: expected false, got true
+   24 passed, 1 failed
+== BREAK: the house pieces lose the DR458's stop bar name
+   file: games/drive-lab/src/shared/Config/CarLights.luau
+   exit: 1
+   FAIL Lamp pieces > names the house pieces exactly as the lamps did before, and the SVJ and DR458 use them: games/drive-lab/tests/LampPieces.spec:44: expected stop: Light_RearLeft_Bar=stop Light_RearRight_Bar=stop, got stop: Light_RearL
+   2 passed, 1 failed
+== BREAK: the Boss maps a piece its model does not have
+   file: games/drive-lab/src/shared/Config/Cars/Boss302/Lights.luau
+   exit: 1
+   FAIL Lamp pieces > maps the Boss's pieces, every one in its model, each to one of its glows: games/drive-lab/tests/LampPieces.spec:65: expected present, got Light_RearLeft_ThirdStop
+   2 passed, 1 failed
+== BREAK: the Boss's compartments no longer play the turn
+   file: games/drive-lab/src/shared/Config/Cars/Boss302/Lights.luau
+   exit: 1
+   FAIL Lamp pieces > gives the Boss's rear compartments tail, brake and turn, red, and no fog, rain or running light: games/drive-lab/tests/LampPieces.spec:86: expected true, got false
+   2 passed, 1 failed
