@@ -17,15 +17,14 @@ local KEY_START = math.rad(90)
 
 local Startup: CarEntry.Startup = {
 	moves = {
-		-- EST, the animator's: the right hand comes from the thigh to the key (about 0.3 m) and turns
-		-- it to ON, then waits about 0.6 s for the gauges and the fuel pump.
+		-- The right hand comes from the thigh to the key and turns it to ON, then holds it about 0.6 s
+		-- for the gauges and the fuel pump (StartupPaths is keyed to these times; EST against footage).
 		{ control = "Key_Ignition", angle = KEY_ON, move = 0.25, at = 1.0 },
 		-- At the press: on to START. The guide has the driver let go as it cranks (the computer keeps
 		-- cranking until it catches), so the spring brings it back to ON at once.
 		{ control = "Key_Ignition", angle = KEY_START - KEY_ON, move = 0.15, at = 1.85, back = 2.15 },
 	},
-	-- EST, the animator's: START, then the hand back on the wheel (about 0.35 m) and driving
-	-- unlocked.
+	-- START, then the hand back on the wheel and driving unlocked (StartupPaths is keyed to these).
 	pressAt = 1.85,
 	wheelAt = 3.3,
 	drivableAt = 3.5,

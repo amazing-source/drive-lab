@@ -1,0 +1,98 @@
+[
+ {
+  "kind": "hand",
+  "object": "GEO_INT_STwheel",
+  "side": "R",
+  "shape": "*",
+  "from": 0.1,
+  "to": 2.65,
+  "limitMm": 20.0,
+  "measuredMm": 19.98,
+  "why": "the right spoke and rim behind it, on the way to the key, while holding it and on the way back; the key's position is an unverified estimate (the A3DR cylinder faces the passenger side; the 2012 one faces the driver): re-key on the measured cylinder",
+  "decidedBy": "coordinator, 2026-11-01"
+ },
+ {
+  "kind": "hand",
+  "object": "GEO_INT_01",
+  "side": "R",
+  "shape": "*",
+  "from": 0.7,
+  "to": 2.35,
+  "limitMm": 20.0,
+  "measuredMm": 19.94,
+  "why": "the lower dash at START and as the hand lets go; the key's position is an unverified estimate (the A3DR cylinder faces the passenger side; the 2012 one faces the driver): re-key on the measured cylinder",
+  "decidedBy": "coordinator, 2026-11-01"
+ },
+ {
+  "kind": "hand",
+  "object": "GEO_INT_05",
+  "side": "R",
+  "shape": "*",
+  "from": 0.7,
+  "to": 2.35,
+  "limitMm": 10.1,
+  "measuredMm": 10.02,
+  "why": "the lower dash beside the column as the hand lets go; the key's position is an unverified estimate (the A3DR cylinder faces the passenger side; the 2012 one faces the driver): re-key on the measured cylinder",
+  "decidedBy": "coordinator, 2026-11-01"
+ },
+ {
+  "kind": "hand",
+  "object": "GEO_INT_07",
+  "side": "R",
+  "shape": "*",
+  "from": 0.7,
+  "to": 2.35,
+  "limitMm": 7.4,
+  "measuredMm": 7.32,
+  "why": "the column shroud at ON and START; the key's position is an unverified estimate (the A3DR cylinder faces the passenger side; the 2012 one faces the driver): re-key on the measured cylinder",
+  "decidedBy": "coordinator, 2026-11-01"
+ },
+ {
+  "kind": "hand",
+  "object": "GEO_INT_04",
+  "side": "R",
+  "shape": "*",
+  "from": 0.7,
+  "to": 2.35,
+  "limitMm": 2.6,
+  "measuredMm": 2.55,
+  "why": "the lower dash at START; the key's position is an unverified estimate (the A3DR cylinder faces the passenger side; the 2012 one faces the driver): re-key on the measured cylinder",
+  "decidedBy": "coordinator, 2026-11-01"
+ },
+ {
+  "kind": "forearm",
+  "object": "GEO_INT_STwheel",
+  "side": "R",
+  "shape": "*",
+  "from": 0.1,
+  "to": 2.6,
+  "limitMm": 29.0,
+  "measuredMm": 28.92,
+  "why": "the forearm through the wheel's right spoke (sleeves hidden in the local cockpit view); the key's position is an unverified estimate (the A3DR cylinder faces the passenger side; the 2012 one faces the driver): re-key on the measured cylinder",
+  "decidedBy": "coordinator, 2026-11-01"
+ },
+ {
+  "kind": "hand",
+  "object": "GEO_INT_STwheel",
+  "side": "L",
+  "shape": "*",
+  "from": 0.85,
+  "to": 1.0,
+  "limitMm": 6.0,
+  "measuredMm": 5.97,
+  "why": "the left hand's open-to-grip swap arriving on the rim leather (playbook P26: no half-open mesh; the DR458 named the same at 1.5-3.6 mm)",
+  "decidedBy": "coordinator, 2026-11-01"
+ },
+ {
+  "kind": "hand",
+  "object": "GEO_INT_STwheel_00",
+  "side": "R",
+  "shape": "*",
+  "from": 3.2,
+  "to": 3.3,
+  "limitMm": 5.1,
+  "measuredMm": 5.03,
+  "why": "the right hand's open-to-grip swap arriving back on the rim leather (playbook P26: no half-open mesh; the DR458 named the same at 1.5-3.6 mm)",
+  "decidedBy": "coordinator, 2026-11-01 (the left hand's twin)"
+ }
+]
