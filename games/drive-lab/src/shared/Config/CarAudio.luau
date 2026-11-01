@@ -103,7 +103,11 @@ export type Pack = {
 		abortHalfLife: number,
 		sound: StartupSound?,
 	},
-	gear: { region: Region, volume: number, upSpeed: number, downSpeed: number },
+	-- `downRegion`, when set, is a downshift's own sound; else a downshift plays `region` at downSpeed.
+	gear: { region: Region, volume: number, upSpeed: number, downSpeed: number, downRegion: Region? },
+	-- A manual box's grind (a shift refused with the clutch up), its last `fadeOut` seconds faded so
+	-- a region cut from a longer recording does not click. Optional: a pack without it plays none.
+	grind: { region: Region, volume: number, fadeOut: number }?,
 	shiftDip: { gain: number, downHalfLife: number, upHalfLife: number },
 	-- The regions are cut from `soundId` when set (another car's uploaded events file), else from
 	-- this pack's events file.
