@@ -21,7 +21,11 @@ local lamps: CarImportNames.Lamps? = nil
 if fs.isFile(`{folder}/Lights.luau`) then
 	lamps = (require :: any)(`../src/shared/Config/Cars/{name}/Lights`)
 end
-local names = CarImportNames.of(model, lamps)
+local gauges: CarImportNames.Gauges? = nil
+if fs.isFile(`{folder}/Gauges.luau`) then
+	gauges = (require :: any)(`../src/shared/Config/Cars/{name}/Gauges`)
+end
+local names = CarImportNames.of(model, lamps, gauges)
 local text = serde.encode("json", names, true)
 if out then
 	fs.writeFile(out, text)
