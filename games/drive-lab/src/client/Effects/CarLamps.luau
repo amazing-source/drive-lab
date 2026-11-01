@@ -348,6 +348,35 @@ local function addBeams(lamps: Lamps, projector: BasePart)
 	table.insert(lamps.highBeams, switchFor(far))
 end
 
+-- An amber glow (red on a US car's rear pieces) at each named indicator piece that is present.
+local function addIndicators(
+	model: Model,
+	indicator: {
+		range: number,
+		brightness: number,
+		color: Config.Rgb,
+		rearColor: Config.Rgb?,
+	},
+	blinks: { Switch },
+	list: { Config.Piece }?
+)
+	if list == nil then
+		return
+	end
+	for _, item in list do
+		local found = piece(model, item.name)
+		if found then
+			local color = indicator.color
+			local rear = indicator.rearColor
+			if item.glow == "rearIndicator" and rear then
+				color = rear
+			end
+			local glow = attach(found, "IndicatorGlow", CFrame.identity)
+			table.insert(blinks, switchFor(pointLight(glow, indicator.brightness, indicator.range, color)))
+		end
+	end
+end
+
 local function addSources(lamps: Lamps, model: Model)
 	local indicator = lamps.lights.indicator
 	local pieces = lamps.pieces
@@ -362,13 +391,8 @@ local function addSources(lamps: Lamps, model: Model)
 		local blinks = if side == "Left" then lamps.blinksLeft else lamps.blinksRight
 		local flashing = if side == "Left" then pieces.left else pieces.right
 		local sweeping = if side == "Left" then pieces.sweepLeft else pieces.sweepRight
-		for _, list in { parts(model, flashing), parts(model, sweeping) } do
-			for _, found in list do
-				local glow = attach(found, "IndicatorGlow", CFrame.identity)
-				local light = pointLight(glow, indicator.brightness, indicator.range, indicator.color)
-				table.insert(blinks, switchFor(light))
-			end
-		end
+		addIndicators(model, indicator, blinks, flashing)
+		addIndicators(model, indicator, blinks, sweeping)
 	end
 	local rain = lamps.lights.rain
 	if rain then

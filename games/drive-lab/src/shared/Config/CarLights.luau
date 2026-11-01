@@ -96,7 +96,8 @@ export type Lights = {
 	headlight: { range: number, angle: number, brightness: number, color: Rgb, pitch: number },
 	highBeam: { range: number, angle: number, brightness: number, pitch: number },
 	tail: { range: number, brightness: number, brakeRange: number, brakeBrightness: number, color: Rgb },
-	indicator: { range: number, brightness: number, color: Rgb },
+	-- The glow each indicator piece throws; `rearColor`, where the rear ones differ (red on a US car).
+	indicator: { range: number, brightness: number, color: Rgb, rearColor: Rgb? },
 	reverse: { range: number, angle: number, brightness: number, color: Rgb },
 	cabin: { range: number, angle: number, brightness: number, color: Rgb },
 	-- A car with a rain light switch lights its rear fog lamp pieces as the rain light (their
