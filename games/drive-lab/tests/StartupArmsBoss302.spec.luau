@@ -151,6 +151,68 @@ describe("Boss 302 start-up hands: the key", function()
 	end)
 end)
 
+-- The rim's outer radius about the column's axis, metres (GEO_INT_STwheel_00 in the cockpit dump).
+local RIM_RADIUS = 0.185
+local HUB = assert(Model.steeringHub, "the Boss's binding places its steering hub")
+
+-- The radius from the column's axis at which a point of the right hand crosses the wheel's plane,
+-- for every crossing between `from` and `to`.
+local function rimCrossings(offset: Vector, from: number, to: number): { number }
+	local pivot = inSeat(HUB.pivot)
+	local axis = Hinge.chassis(HUB.axis)
+	local size = math.sqrt(axis.x ^ 2 + axis.y ^ 2 + axis.z ^ 2)
+	axis = { x = axis.x / size, y = axis.y / size, z = axis.z / size }
+	local function relative(t: number): (Vector, number)
+		local p = handPoint(offset, t)
+		local r = { x = p.x - pivot.x, y = p.y - pivot.y, z = p.z - pivot.z }
+		return r, r.x * axis.x + r.y * axis.y + r.z * axis.z
+	end
+	local radii = {}
+	local steps = math.ceil((to - from) * 600)
+	local before, beforeAlong = relative(from)
+	for step = 1, steps do
+		local now, along = relative(from + (to - from) * step / steps)
+		if (beforeAlong > 0) ~= (along > 0) then
+			local share = beforeAlong / (beforeAlong - along)
+			local c = {
+				x = before.x + (now.x - before.x) * share,
+				y = before.y + (now.y - before.y) * share,
+				z = before.z + (now.z - before.z) * share,
+			}
+			local across = c.x * axis.x + c.y * axis.y + c.z * axis.z
+			table.insert(
+				radii,
+				math.sqrt(
+					(c.x - axis.x * across) ^ 2 + (c.y - axis.y * across) ^ 2 + (c.z - axis.z * across) ^ 2
+				)
+			)
+		end
+		before, beforeAlong = now, along
+	end
+	return radii
+end
+
+describe("Boss 302 start-up hands: round the rim", function()
+	-- The wrist, the Pinch mesh's centre and the pinch: the hand passes the wheel outside its rim.
+	local POINTS = { { x = 0, y = 0, z = 0 }, Paths.MESHES.Pinch, KEY.tip }
+
+	it("goes round the rim's outside to the key and back, never through the wheel", function()
+		local pinchEnd = SPRING
+		while StartupArms.shape(Paths.RIGHT, pinchEnd) == "Pinch" do
+			pinchEnd += 0.01
+		end
+		for _, window in { { 0, FIRST.at - FIRST.move }, { SPRING, pinchEnd } } do
+			-- Behind the wheel at the key and in front of it at each window's other end: the pinch crosses.
+			expect(#rimCrossings(KEY.tip, window[1], window[2]) > 0).toBe(true)
+			for _, point in POINTS do
+				for _, radius in rimCrossings(point, window[1], window[2]) do
+					expect(radius >= RIM_RADIUS).toBe(true)
+				end
+			end
+		end
+	end)
+end)
+
 describe("Boss 302 start-up hands: the keyed paths", function()
 	it("start resting, run in time order with unit rotations and end on the wheel when it says", function()
 		for _, keyed in { Paths.RIGHT, Paths.LEFT } do

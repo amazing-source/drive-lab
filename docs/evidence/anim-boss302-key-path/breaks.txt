@@ -1,0 +1,46 @@
+Breaks: each new rule shown failing, then passing once restored.
+
+1. StartupArmsBoss302.spec, 'goes round the rim's outside to the key and back, never through the wheel'
+   (the wrist, the Pinch mesh's centre and the pinch must cross the wheel plane outside the rim's 0.185 m radius,
+   from the thigh to the hold and from the spring back until the Pinch hand is put away).
+   The break: main's StartupPaths.luau (the path that goes through the wheel) copied over this branch's, the spec run, the file restored.
+
+   == StartupArmsBoss302.spec on this branch's StartupPaths (bake v6)
+   7 passed 0 failed
+   == the same spec on main's StartupPaths (the path that dives through the wheel), file swapped in
+   FAIL Boss 302 start-up hands: round the rim > goes round the rim's outside to the key and back, never through the wheel: <repo>\games\drive-lab\tests\StartupArmsBoss302.spec:208: expected true, got false
+   6 passed 1 failed
+   == its crossings on main's path
+   way in   pinch       crosses the wheel plane at t 0.287 s, radius 0.1253 m (rim outer 0.185): INSIDE
+   way in   pinchCentre crosses the wheel plane at t 0.478 s, radius 0.1730 m (rim outer 0.185): INSIDE
+   way back pinch       crosses the wheel plane at t 2.565 s, radius 0.1040 m (rim outer 0.185): INSIDE
+   way back wrist       crosses the wheel plane at t 2.410 s, radius 0.2246 m (rim outer 0.185): outside
+   way back pinchCentre crosses the wheel plane at t 2.510 s, radius 0.1809 m (rim outer 0.185): INSIDE
+   == restored
+   7 passed 0 failed
+
+   The same crossings on this branch's path (bake v6):
+   way in   pinch       crosses the wheel plane at t 0.292 s, radius 0.2344 m (rim outer 0.185): outside
+   way in   pinchCentre crosses the wheel plane at t 0.432 s, radius 0.2710 m (rim outer 0.185): outside
+   way back pinch       crosses the wheel plane at t 2.695 s, radius 0.2281 m (rim outer 0.185): outside
+   way back wrist       crosses the wheel plane at t 2.552 s, radius 0.2998 m (rim outer 0.185): outside
+   way back pinchCentre crosses the wheel plane at t 2.638 s, radius 0.2741 m (rim outer 0.185): outside
+
+2. startup_check with the wheel's named windows tightened to the hold (0.70-2.35 s; the limits unchanged).
+   (The runs below used a copy of startup_check.py that records every failing sample instead of the first 40; nothing else differs.)
+
+   a) main's path (bake v3) against the final allow list allow_v5.json:
+     -> FAIL, 234 failing samples
+        hand     R GEO_INT_STwheel_00   0.133-2.600 s, worst 14.36 mm, 77 samples
+        hand     R GEO_INT_STwheel_01   0.225-2.608 s, worst 16.99 mm, 63 samples
+        hand     R GEO_INT_STwheel_05   0.225-2.608 s, worst 18.85 mm, 61 samples
+        hand     R GEO_INT_STwheel_06   0.358-2.625 s, worst 17.37 mm, 33 samples
+
+   b) this branch's path (bake v6) with only the hold named (allow_v5_hold: allow_v5.json without the three 0.54-0.70 s entries):
+     -> FAIL, 58 failing samples
+        hand     R GEO_INT_STwheel_00   0.550-0.692 s, worst 13.22 mm, 18 samples
+        hand     R GEO_INT_STwheel_05   0.567-0.692 s, worst 19.17 mm, 16 samples
+        hand     R GEO_INT_STwheel_01   0.592-0.692 s, worst 18.52 mm, 13 samples
+        forearm  R GEO_INT_STwheel_00   0.608-0.692 s, worst 28.59 mm, 11 samples
+
+   c) this branch's path (bake v6) with allow_v5.json: PASS, 0 failing samples (check.txt).
