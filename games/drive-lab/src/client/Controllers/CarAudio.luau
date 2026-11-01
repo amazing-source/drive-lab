@@ -1,10 +1,10 @@
 --!strict
 --[[
 	Plays the car the local player drives: the engine loops mixed by rpm and throttle, the
-	limiter, the start-up, gear changes, the shift cut and the exhaust's pops, with their flames
-	(Rules/ExhaustPops decides when it pops, Rules/ExhaustFlames which pops throw flame). The readouts come from the attributes Driving sets
-	on the car every frame, and only the driver's client has them, so other players' cars stay
-	silent for now.
+	limiter, the start-up, gear changes and a manual box's grinds, the shift cut and the exhaust's
+	pops, with their flames (Rules/ExhaustPops decides when it pops, Rules/ExhaustFlames which pops
+	throw flame). The readouts come from the attributes Driving sets on the car every frame, and only
+	the driver's client has them, so other players' cars stay silent for now.
 
 	Every sound hangs on an attachment on the chassis, so it is positional. The camera's
 	DriveLabView attribute picks the shaping: the engine loops are cabin recordings, dry in the
@@ -97,6 +97,9 @@ local function readout(model: Model): CarAudioEvents.Readout?
 		shifting = model:GetAttribute("Shifting") == true,
 		limiter = model:GetAttribute("Limiter") == true,
 		tcActive = model:GetAttribute("TcActive") == true,
+		grinds = if typeof(model:GetAttribute("ShiftGrinds")) == "number"
+			then readNumber(model, "ShiftGrinds", 0)
+			else nil,
 	}
 end
 
@@ -337,16 +340,33 @@ local function update(current: Session, dt: number)
 
 	if events.gear then
 		local gear = pack.gear
-		local speed = if events.gear == "Up" then gear.upSpeed else gear.downSpeed
+		local up = events.gear == "Up"
 		oneShot(
 			pack,
 			pack.eventsSoundId,
-			gear.region,
+			if up then gear.region else gear.downRegion or gear.region,
 			current.eventsGroup,
 			current.enginePoint,
 			gear.volume * CarAudio.carGain(pack),
-			speed
+			if up then gear.upSpeed else gear.downSpeed
 		)
+	end
+	local grind = pack.grind
+	if events.grind and grind then
+		local sound = oneShot(
+			pack,
+			pack.eventsSoundId,
+			grind.region,
+			current.eventsGroup,
+			current.enginePoint,
+			grind.volume * CarAudio.carGain(pack),
+			1
+		)
+		task.delay(math.max(0, grind.region.to - grind.region.from - grind.fadeOut), function()
+			if sound.Parent then
+				TweenService:Create(sound, TweenInfo.new(grind.fadeOut), { Volume = 0 }):Play()
+			end
+		end)
 	end
 	if ExhaustPops.step(current.pops, events, car, mode, os.clock(), draw) then
 		pop(current, mode)
