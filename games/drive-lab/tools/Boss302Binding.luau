@@ -49,6 +49,10 @@ local Settings: ManifestBinding.Settings = {
 		Key_Ignition = { rest = 0, other = math.pi / 2 },
 	},
 	shifter = "Shifter_Lever",
+	-- The cluster's four needles and the dash-top pod's two (Config/Cars/Boss302/Gauges); its live
+	-- screens are the tachometer's message centre and the pod's performance readout.
+	needles = { "Needle_Speedo", "Needle_Tach", "Needle_Fuel", "Needle_Temp", "Needle_Oil", "Needle_Water" },
+	displays = { MessageCentre = "Screen_MessageCentre", PodReadout = "Screen_PodReadout" },
 }
 
 return Settings

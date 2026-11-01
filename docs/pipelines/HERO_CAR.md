@@ -133,6 +133,26 @@ How the geometry is measured, so another car's face can go through the same tool
 Upload the three images as in step 6 and put the image ids in the car's face, with the
 positions of the live readouts (gear, speed, mode, tell-tales) in pixels of the face image.
 
+### Analog clusters (the Boss 302 way)
+
+A car whose cluster is needles has no cluster image to animate: its own faces, needles, rings and
+glass are separate parts of the model, and the game turns the needles (`Config/Gauges`,
+`Controllers/Gauges`). What the 3D side delivers, in the car's manifest:
+- each needle a `rotary` part with its pivot, an `axis` into its dial (a positive turn is clockwise as
+  the driver sees it) and a `range` of [the dial's zero, its full scale] in radians from the modelled
+  pose. The binding (`tools/car_binding`, settings `needles`) makes each a hinge whose rest is the
+  zero and whose travel is the full scale; a needle without a range stays pending;
+- each small live screen (a message centre, a digital readout) as a `mesh: false` marker part with a
+  `screen` entry covering its whole dark window (settings `displays`); the rig builds a screen part
+  named `Display<name>` there and the canvas takes the window's shape;
+- faces and needles with a SurfaceAppearance carrying an emissive mask (white where it glows): the
+  controller drives EmissiveTint and EmissiveStrength with the ignition, as the car lamps do.
+
+The car's `Gauges` config then maps each needle to a reading and its printed scale (value, share of
+the travel), the needles' damping, the backlight's glow, the screens' content and the simulated
+engine (`Rules/EngineGauges`). `Contract.gaugeProblems` checks it against the binding and the
+start-up, also for a car still out of the catalog.
+
 ## 8. Lights the game can drive
 
 A model often bakes every lamp into one light mesh with one emissive map, so the brake lights
