@@ -103,3 +103,23 @@ describe("Hand shapes: the shift hand's knob", function()
 		expect(DriverShift.KNOB_MESH).toBe("HandKnob")
 	end)
 end)
+
+describe("Hand shapes: the lateral key pinch", function()
+	it(
+		"draws the KeyPinch mesh with the wrist cuff where the place has it, the Rest hand where not",
+		function()
+			local with: HandShapes.Have =
+				{ startupShapes = true, pinch = true, keyPinch = true, gestures = {} }
+			local shown = HandShapes.shown("KeyPinch", with)
+			expect(shown.shape).toBe("KeyPinch")
+			expect(shown.mesh).toBe("KeyPinch")
+			expect(shown.wristCuff).toBe(true)
+			local without =
+				HandShapes.shown("KeyPinch", { startupShapes = true, pinch = true, gestures = {} })
+			expect(without.shape).toBe("Rest")
+			expect(without.mesh).toBe("Rest")
+			local bare = HandShapes.shown("KeyPinch", { startupShapes = false, pinch = false, gestures = {} })
+			expect(bare.grip).toBe(true)
+		end
+	)
+end)

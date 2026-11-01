@@ -16,8 +16,11 @@ type Vector = StartupArms.Vector
 local TOUCH_GAP = 0.002
 -- By the time the key springs back, the pinch has left its grip by at least this, metres.
 local LET_GO = 0.008
+-- The least cosine between the palm and the way to the column's axis while the key is held.
+local PALM_TOWARD_COLUMN = 0.5
 local TOUCHES = assert(Paths.TOUCHES, "the Boss's paths list the controls the hand works")
 local CONTROLS = assert(Model.controls, "the Boss's binding hinges its key")
+local HUB = assert(Model.steeringHub, "the Boss's binding places its steering hub")
 
 local RUNNING: CarEntryRules.State = {
 	entry = "Enter",
@@ -71,7 +74,8 @@ describe("Boss 302 start-up hands: the key", function()
 	it("turns one key, to ON and then on to START, the START landing on the press", function()
 		expect(#TOUCHES).toBe(1)
 		expect(KEY.control).toBe("Key_Ignition")
-		expect(KEY.shape).toBe("Pinch")
+		expect(KEY.shape).toBe("KeyPinch")
+		expect(Paths.MESHES.KeyPinch ~= nil).toBe(true)
 		expect(#MOVES).toBe(2)
 		expect(LAST.at).toBeNear(Startup.pressAt, 1e-9)
 		expect(Paths.BUTTON).toBe(nil)
@@ -140,10 +144,37 @@ describe("Boss 302 start-up hands: the key", function()
 		expect(worst < 3).toBe(true)
 	end)
 
-	it("shows the Pinch hand while it holds the key", function()
+	it("shows the KeyPinch hand while it holds the key", function()
 		for _, t in { FIRST.at - FIRST.move, FIRST.at, (FIRST.at + LAST.at) / 2, LAST.at, SPRING - 0.07 } do
-			expect(StartupArms.shape(Paths.RIGHT, t)).toBe("Pinch")
+			expect(StartupArms.shape(Paths.RIGHT, t)).toBe("KeyPinch")
 		end
+	end)
+
+	it("holds the key with the palm toward the column, from OFF until it lets go", function()
+		-- The palm is the wrist frame's -y (y runs out of the back of the hand).
+		local pivot = inSeat(HUB.pivot)
+		local axis = Hinge.chassis(HUB.axis)
+		local size = math.sqrt(axis.x ^ 2 + axis.y ^ 2 + axis.z ^ 2)
+		axis = { x = axis.x / size, y = axis.y / size, z = axis.z / size }
+		local origin = { x = 0, y = 0, z = 0 }
+		local from, to = FIRST.at - FIRST.move, SPRING - 0.07
+		local least = math.huge
+		for step = 0, 60 do
+			local t = from + (to - from) * step / 60
+			local pose = StartupArms.sample(Paths.RIGHT.keys, t)
+			local palm = StartupArms.apply(
+				{ position = origin, rotation = pose.rotation },
+				{ x = 0, y = -1, z = 0 }
+			)
+			local pinch = handPoint(KEY.tip, t)
+			local r = { x = pinch.x - pivot.x, y = pinch.y - pivot.y, z = pinch.z - pivot.z }
+			local along = r.x * axis.x + r.y * axis.y + r.z * axis.z
+			local toColumn = { x = axis.x * along - r.x, y = axis.y * along - r.y, z = axis.z * along - r.z }
+			local length = math.sqrt(toColumn.x ^ 2 + toColumn.y ^ 2 + toColumn.z ^ 2)
+			least =
+				math.min(least, (palm.x * toColumn.x + palm.y * toColumn.y + palm.z * toColumn.z) / length)
+		end
+		expect(least > PALM_TOWARD_COLUMN).toBe(true)
 	end)
 
 	it("has let go of the key by the time it springs back from START", function()
@@ -153,7 +184,6 @@ end)
 
 -- The rim's outer radius about the column's axis, metres (GEO_INT_STwheel_00 in the cockpit dump).
 local RIM_RADIUS = 0.185
-local HUB = assert(Model.steeringHub, "the Boss's binding places its steering hub")
 
 -- The radius from the column's axis at which a point of the right hand crosses the wheel's plane,
 -- for every crossing between `from` and `to`.
@@ -193,12 +223,13 @@ local function rimCrossings(offset: Vector, from: number, to: number): { number 
 end
 
 describe("Boss 302 start-up hands: round the rim", function()
-	-- The wrist, the Pinch mesh's centre and the pinch: the hand passes the wheel outside its rim.
-	local POINTS = { { x = 0, y = 0, z = 0 }, Paths.MESHES.Pinch, KEY.tip }
-
 	it("goes round the rim's outside to the key and back, never through the wheel", function()
+		-- The wrist, the key hand mesh's centre and the pinch: the hand passes the wheel outside its rim.
+		local centre =
+			assert((Paths.MESHES :: { [string]: Vector? })[KEY.shape], "the key hand's mesh centre")
+		local POINTS = { { x = 0, y = 0, z = 0 }, centre, KEY.tip }
 		local pinchEnd = SPRING
-		while StartupArms.shape(Paths.RIGHT, pinchEnd) == "Pinch" do
+		while StartupArms.shape(Paths.RIGHT, pinchEnd) == KEY.shape do
 			pinchEnd += 0.01
 		end
 		for _, window in { { 0, FIRST.at - FIRST.move }, { SPRING, pinchEnd } } do

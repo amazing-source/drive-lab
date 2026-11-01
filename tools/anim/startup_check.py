@@ -247,7 +247,7 @@ def main(argv):
     tris = data["triangles"]
 
     shapes = {}
-    for shape in ("Rest", "Point", "Pinch"):
+    for shape in ["Rest", "Point", "Pinch"] + [n for n in record["tips"] if n not in ("Point", "Pinch")]:
         for side in ("R", "L"):
             shapes[(shape, side)] = read_glb(f"{inputs['posesDir']}/hand_{shape}_{side}.glb")
     grip_local = {s: np.array(m) for s, m in record["gripLocal"].items()}
@@ -256,7 +256,7 @@ def main(argv):
         wheel_verts = read_glb(f"{inputs['gripDir']}/hand_{side}.glb")
         rot, pos = g[:3, :3], g[:3, 3] / studs
         shapes[("Grip", side)] = (wheel_verts - pos) @ rot
-    tips = {"Point": np.array(record["tips"]["Point"]) / studs, "Pinch": np.array(record["tips"]["Pinch"]) / studs}
+    tips = {name: np.array(tip) / studs for name, tip in record["tips"].items()}
 
     def samples_of(track, mutate):
         times = np.array([s["t"] for s in track])

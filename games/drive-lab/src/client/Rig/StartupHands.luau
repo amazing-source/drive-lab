@@ -3,12 +3,13 @@
 	The driver's hands off the wheel: resting on the thighs while the engine is off, then the
 	start-up's keyed reach (Rules/StartupArms) to the car's controls, and on to the wheel. Each
 	side has the grip hand Controllers/DriverArms already draws plus the posed meshes, Rest, Point
-	and Pinch (a key held between thumb and index), and a sleeve cuff for them, kept in the place
-	at ReplicatedStorage.DriveLabAssets.Hands; one shows at a time, dressed as Rig/Gloves says. A
-	place without the Pinch mesh draws the Point hand for it. The same set draws the car's gesture
-	meshes on the wheel (Config/DriverGestures), each with the grip's cuff or the posed hands'; a
-	gesture mesh the place lacks is drawn as the grip (a thumb or finger moved from it) or the
-	Point hand.
+	and Pinch (a key held between thumb and index), KeyPinch (the lateral key pinch, the palm toward
+	the cylinder), and a sleeve cuff for them, kept in the place at
+	ReplicatedStorage.DriveLabAssets.Hands; one shows at a time, dressed as Rig/Gloves says. A place
+	without the Pinch mesh draws the Point hand for it, without the KeyPinch mesh the Rest hand. The
+	same set draws the car's gesture meshes on the wheel (Config/DriverGestures), each with the
+	grip's cuff or the posed hands'; a gesture mesh the place lacks is drawn as the grip (a thumb or
+	finger moved from it) or the Point hand.
 	Everything is placed from a wrist frame (z up the forearm, y out of the back of the hand), the
 	frame the arm reaches.
 ]]
@@ -47,13 +48,14 @@ export type Hands = {
 	restOffset: CFrame,
 	pointOffset: CFrame,
 	pinchOffset: CFrame,
+	keyPinchOffset: CFrame,
 	knobOffset: CFrame,
 	cuffOffset: CFrame,
 }
 
 local STUDS_PER_METRE = 1 / Units.METRES_PER_STUD
-local REST: DriverStartup.Shape, POINT: DriverStartup.Shape, PINCH: DriverStartup.Shape =
-	"Rest", "Point", "Pinch"
+local REST: DriverStartup.Shape, POINT: DriverStartup.Shape, PINCH: DriverStartup.Shape, KEY_PINCH: DriverStartup.Shape =
+	"Rest", "Point", "Pinch", "KeyPinch"
 
 local StartupHands = {}
 
@@ -134,10 +136,12 @@ local function have(hands: Hands): HandShapes.Have
 		gestures[name] = mesh.cuff
 	end
 	local pinch: BasePart? = if shapes then shapes[PINCH] else nil
+	local keyPinch: BasePart? = if shapes then shapes[KEY_PINCH] else nil
 	return {
 		startupShapes = shapes ~= nil,
 		pinch = pinch ~= nil,
 		knob = hands.knob ~= nil,
+		keyPinch = keyPinch ~= nil,
 		gestures = gestures,
 	}
 end
@@ -154,6 +158,7 @@ function StartupHands.build(
 	local rest, point, cuff =
 		asset("HandRest_" .. letter), asset("HandPoint_" .. letter), asset("WristCuff_" .. letter)
 	local pinch = asset("HandPinch_" .. letter)
+	local keyPinch = asset("HandKeyPinch_" .. letter)
 	local knob = asset(`{DriverShift.KNOB_MESH}_{letter}`)
 	local paths = driver.startupPaths
 	local shift = driver.shift
@@ -180,6 +185,7 @@ function StartupHands.build(
 		restOffset = offset(paths.MESHES.Rest),
 		pointOffset = offset(paths.MESHES.Point),
 		pinchOffset = offset(paths.MESHES.Pinch or paths.MESHES.Point),
+		keyPinchOffset = offset(paths.MESHES.KeyPinch or paths.MESHES.Rest),
 		knobOffset = offset(knobMesh or paths.MESHES.Rest),
 		cuffOffset = offset(paths.CUFF),
 	}
@@ -189,6 +195,9 @@ function StartupHands.build(
 		shapes[POINT] = hidden(Gloves.hand(point, color), folder)
 		if pinch and paths.MESHES.Pinch then
 			shapes[PINCH] = hidden(Gloves.hand(pinch, color), folder)
+		end
+		if keyPinch and paths.MESHES.KeyPinch then
+			shapes[KEY_PINCH] = hidden(Gloves.hand(keyPinch, color), folder)
 		end
 		if knob and knobMesh then
 			hands.knob = hidden(Gloves.hand(knob, color), folder)
@@ -262,6 +271,7 @@ function StartupHands.draw(
 		local offset = if shown.shape == REST
 			then hands.restOffset
 			elseif shown.shape == PINCH then hands.pinchOffset
+			elseif shown.shape == KEY_PINCH then hands.keyPinchOffset
 			else hands.pointOffset
 		hand, handFrame = shapes[shown.shape :: DriverStartup.Shape], wrist * offset
 	end

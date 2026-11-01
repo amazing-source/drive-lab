@@ -1,0 +1,17 @@
+The palm-toward-column spec (StartupArmsBoss302.spec) against main's StartupPaths (copied over, then restored):
+
+== the full StartupArmsBoss302.spec on main's StartupPaths (copied over this branch's, then restored)
+FAIL Boss 302 start-up hands: the key > turns one key, to ON and then on to START, the START landing on the press: StartupArmsBoss302.spec:77: expected KeyPinch, got Pinch
+FAIL Boss 302 start-up hands: the key > shows the KeyPinch hand while it holds the key: StartupArmsBoss302.spec:149: expected KeyPinch, got Pinch
+FAIL Boss 302 start-up hands: the key > holds the key with the palm toward the column, from OFF until it lets go: StartupArmsBoss302.spec:177: expected true, got false
+11 passed 3 failed
+== restored (bake v9)
+14 passed 0 failed
+
+The same rule alone, its least cosine:
+== main's StartupPaths (the Pinch hold, #262)
+key shape Pinch: palm toward the column, least cosine -0.911 at 2.080 s (the spec needs > 0.5): FAIL
+== the full StartupArmsBoss302.spec on main's StartupPaths
+== this branch's StartupPaths (the KeyPinch hold, bake v9)
+key shape KeyPinch: palm toward the column, least cosine 0.626 at 0.750 s (the spec needs > 0.5): PASS
+14 passed 0 failed

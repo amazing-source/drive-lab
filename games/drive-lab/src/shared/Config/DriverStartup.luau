@@ -8,7 +8,7 @@
 	driver's seat frame (the DriverSeat part: x right, y up, z back; metres), whose z axis runs up
 	the forearm and y out of the back of the hand. The left hand's keys are its own (not mirrored).
 ]]
-export type Shape = "Rest" | "Point" | "Pinch" | "Grip"
+export type Shape = "Rest" | "Point" | "Pinch" | "KeyPinch" | "Grip"
 export type Point = { x: number, y: number, z: number }
 export type Key = { number }
 export type ShapeChange = { at: number, shape: Shape }
@@ -35,7 +35,7 @@ export type Paths = {
 	LEFT: Track,
 	-- The right hand's posed meshes' centres in the wrist frame, metres (hand_poses.py); the left
 	-- hand mirrors x.
-	MESHES: { Rest: Point, Point: Point, Pinch: Point? },
+	MESHES: { Rest: Point, Point: Point, Pinch: Point?, KeyPinch: Point? },
 	CUFF: Point,
 	-- What the keys were made against, for the specs: the Point hand's index tip in its wrist
 	-- frame; START's top face, the console's normal there and the push (seat frame, metres), in a

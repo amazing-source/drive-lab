@@ -169,7 +169,7 @@ local function checkDriverSize(entry: Entry)
 	assert(handOver == nil or handOver.seconds > 0, "the driver's hand-over needs a positive duration")
 end
 
-local DRAWN_SHAPES = table.freeze({ Grip = true, Rest = true, Point = true, Pinch = true })
+local DRAWN_SHAPES = table.freeze({ Grip = true, Rest = true, Point = true, Pinch = true, KeyPinch = true })
 
 local function checkTrack(
 	entry: Entry,
