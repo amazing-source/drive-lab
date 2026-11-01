@@ -96,4 +96,12 @@ describe("Lamp pieces", function()
 			expect(halogen.r >= halogen.g and halogen.g > halogen.b).toBe(true)
 		end
 	)
+
+	it("finishes the Boss's sweep within UN R6's 200 ms of each flash's start", function()
+		local step =
+			assert(assert(Boss302Lights.pieces, "the Boss names its pieces").sweepStep, "a sweep step")
+		expect(step > 0).toBe(true)
+		-- Three compartments: the last lights two steps after the first.
+		expect(2 * step <= 0.2).toBe(true)
+	end)
 end)

@@ -4,7 +4,10 @@
 	and lamp sections: one halogen bulb per side does both beams (HID came to the Boss for 2013); the
 	front park and turn lamp sits in the headlamp unit behind an amber lens; the tail, brake and turn
 	lamps are LEDs in three compartments per side, which light one after another on the turn signal
-	"from the inner most" and all together on the brakes and the hazards; the high stop lamp is an
+	"from the inner most" and all together on the brakes and the hazards (Ford's 2014 Mustang
+	workshop manual, 417-01: "sequentially from the inboard lamp to the outboard lamp", "the rear
+	lamps do not flash sequentially for the hazard function"; each compartment is a combined stop
+	and turn lamp, so it shows no brake while it flashes, FMVSS 108 table I-a); the high stop lamp is an
 	LED strip; the Boss's fog lamp openings are blocked (Ford Racing); the reversing lamps are in
 	the tail lamp assemblies.
 
@@ -60,6 +63,9 @@ local PIECES: CarLights.Pieces = {
 		{ name = "Light_RearRight_HighStop", glow = "stop" },
 	},
 	reverse = {},
+	-- No source gives the delay between compartments; UN R6 5.6(d) bounds the sweep to finish within
+	-- 200 ms of the flash's start. EST: 1/15 s, so the third lights at 133 ms.
+	sweepStep = 1 / 15,
 }
 
 local Lights: CarLights.Lights = table.freeze({

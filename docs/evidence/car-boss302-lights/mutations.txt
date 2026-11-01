@@ -41,3 +41,11 @@ map, the brightest request, the indicator taking its pieces, the sweep) has no s
    exit: 1
    FAIL Lamp pieces > gives the Boss's rear compartments tail, brake and turn, red, and no fog, rain or running light: games/drive-lab/tests/LampPieces.spec:86: expected true, got false
    2 passed, 1 failed
+
+Added after the research (commit below): the Boss's sweep step within UN R6 5.6(d).
+== BREAK: the Boss's sweep step set to 0.11 s (the third compartment at 220 ms)
+   file: games/drive-lab/src/shared/Config/Cars/Boss302/Lights.luau
+   exit: 1
+   FAIL Lamp pieces > finishes the Boss's sweep within UN R6's 200 ms of each flash's start: games/drive-lab/tests/LampPieces.spec:105: expected true, got false
+   3 passed, 1 failed
+   (restored to 1/15 s: 4 passed, 0 failed)
