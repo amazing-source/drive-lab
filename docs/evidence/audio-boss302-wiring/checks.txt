@@ -1,0 +1,44 @@
+Boss 302 audio wiring: checks run 2026-11-01 by the clock (worktree .worktrees/audio-boss302-wiring,
+on origin/main 1d616e9). No Studio, no upload: the assets are the ones uploaded after #214
+(bank 76323385151102, events 83051264425723).
+
+1. Mutation proof (each break made, the suite run, the break reverted, the suite run again)
+   BREAK 1: CarAudioEvents grind on any change of the count (grinds ~= before) instead of a rise
+   FAIL CarAudioEvents > grinds once per rise of the grind count, never on its first read, a drop or a car without one: games/drive-lab/tests/CarAudioEvents.spec:56: expected false, got true
+   103 spec files, 1106 passed, 1 failed
+   BREAK 2: Boss302/Audio byMode maps TracKey onto the SVJ's Sport instead of Corsa
+   FAIL CarAudio config > Boss302: pops on the SVJ's timing, Normal as Strada, Sport as Sport, TracKey as Corsa: games/drive-lab/tests/CarAudio.spec:320: expected 1, got 0.6
+   103 spec files, 1106 passed, 1 failed
+   RESTORED
+   103 spec files, 1107 passed, 0 failed
+
+2. SVJ and DR458 outputs unchanged (same commands in a detached worktree of origin/main and here)
+   lune run games/drive-lab/tools/audio_timeline.luau SVJ | DR458 | "SVJ Corsa" | "DR458 OFF"
+     all four byte-identical (420,840 / 1,906,977 / 420,840 / 1,910,442 bytes)
+   lune run games/drive-lab/tools/control_sounds.luau, downshift_pops.luau, startup_config.luau
+     all three byte-identical
+
+3. The engine over the wind and roar (tests/RoadAudio.spec.luau), the Boss at DriveSim's 247.6 km/h
+   top speed (its 155 mph limit), worst case over 1 km/h to top speed:
+     off-throttle loops at 0.60 (the strips' setting): coasting, outside view, asphalt 5.82 dB  FAIL (rule: 6)
+     off-throttle loops at 0.65 (this PR):              coasting, outside view, asphalt 6.52 dB, any surface 4.55 dB
+                                                         on throttle, outside view, asphalt 10.26 dB
+   The spec's "top speed over 250 km/h" sanity bound became each car's own least top speed
+   (SVJ 250, DR458 250 unchanged; Boss 240, its 249 km/h limit less a margin).
+
+4. The start-up's measured timing (events.ogg's start-up region, 0.25 s windows every 0.2 s,
+   strongest line 40-140 Hz read as the 4th order)
+   10 ms RMS: under -40 dB to 0.53 s, -26 dB at 0.55 s: the engine catches at about 0.54 s.
+   window centre (s)  0.73  0.93  1.13  1.33  1.53  1.73  1.93  2.13  2.53  3.13  4.13
+   rpm               1458  1522  1503  1462  1406  1346  1305  1282  1260  1252  1230
+   Correction: the earlier "catches about 0.67 s, settles around 1,140" (the Startup placeholder)
+   was the loudest sample and a frequency read at 44.1 kHz on 48 kHz samples; checked against the
+   source file, which gives the same 82-84 Hz as the pack.
+
+5. Gates
+   stylua --check games kit tools          pass
+   selene games/drive-lab/src kit/src tools 0 errors, 0 warnings
+   luau-lsp analyze (CI's command)          exit 0
+   lune run tools/test/run                  103 spec files, 1107 passed, 0 failed
+   lune run tools/test/tools                25 tools, 25 run, 0 failed
+   rojo build                               built

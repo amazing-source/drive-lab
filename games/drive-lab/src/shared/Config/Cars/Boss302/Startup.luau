@@ -29,12 +29,13 @@ local Startup: CarEntry.Startup = {
 	pressAt = 1.85,
 	wheelAt = 3.3,
 	drivableAt = 3.5,
-	-- Placeholders for the sound pack's measured start (the audio agent writes them): the 5.0's
-	-- recording catches about 0.67 s after the press and settles around 1,140 rpm.
-	catchAfter = 0.67,
+	-- Measured on the sound pack's start-up (its 4th-order line, from the press): the starter until
+	-- it catches, a flare, and a settle above both idles, which the engine leaves for the drive
+	-- mode's idle after the hand-over.
+	catchAfter = 0.54,
 	rpm = {
-		times = { 0, 0.6, 0.8, 4.5, 5.3 },
-		values = { 200, 200, 1140, 1140, 1140 },
+		times = { 0, 0.52, 0.7, 0.9, 1.3, 1.7, 2.1, 2.7, 4.1 },
+		values = { 200, 200, 1460, 1520, 1460, 1345, 1280, 1255, 1230 },
 	},
 	-- The order holds the car on the handbrake: the right foot stays off the brake.
 	brake = 0,
