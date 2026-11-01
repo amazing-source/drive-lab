@@ -1,10 +1,9 @@
 --!strict
 --[[
 	What tools/car_binding is told about the Boss 302 beyond its manifest (tools/ManifestBinding
-	Settings). The manifest is the 3D artist's cockpit parts draft until its full manifest is
-	promoted: the parts it lacks yet (wheels, door, steering wheel, glass, lamps, exhaust, the seat's
-	hip point, the windscreen) are named by the house convention and listed as pending, and the car
-	stays out of the catalog until none is.
+	Settings): the parts and points by the house convention, which the 3D artist's full manifest
+	names. Whatever the manifest lacks is listed as pending, and the car stays out of the catalog
+	until none is.
 ]]
 local ManifestBinding = require("./ManifestBinding")
 
