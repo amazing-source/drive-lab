@@ -461,9 +461,8 @@ HAND_OVER = 18  # frames the drawn hands take to ease onto the blocky ones (Driv
 PUSH, PUSH_END = HAND_OVER + 8, HAND_OVER + 18  # the left palm on the armrest, the door pushed to 12 %
 SEATED_AGAIN = HAND_OVER + 32  # back in the seat after the push
 IO_END = HAND_OVER + 44
-# GetOut: GetIn's solved path played backwards, beat for beat, from the seated pose to leaning back at the
-# seat's edge (car_entry_mirror.py writes its table from the entry's); then standing up at the stance and
-# side steps back to the mark, authored.
+# GetOut: GetIn's solved path played backwards, beat for beat, from the seated pose to standing at the
+# stance (car_entry_mirror.py writes its table from the entry's); then side steps back to the mark.
 GO_SEATED = IO_END + 4
 GO_LET_GO, GO_REACH = GO_SEATED + 14, GO_SEATED + 20
 GO_T2, GO_T1, GO_SIT = GO_REACH + 8, GO_REACH + 16, GO_REACH + 24
@@ -473,17 +472,16 @@ GO_WALK = GO_STAND + 2
 GO_END = GO_WALK + 90  # five pairs of side steps (four left a planted foot sliding 10.6 studs/s)
 MIRROR = (
     (GO_SEATED, SEATED), (GO_LET_GO, LET_GO), (GO_REACH, REACH), (GO_T2, T2), (GO_T1, T1), (GO_SIT, SIT),
-    (GO_HOP_TOP, HOP_TOP), (GO_HOP_MID, HOP_MID), (GO_HOP0, HOP0), (GO_LEAN_BACK, LEAN_BACK),
+    (GO_HOP_TOP, HOP_TOP), (GO_HOP_MID, HOP_MID), (GO_HOP0, HOP0), (GO_LEAN_BACK, LEAN_BACK), (GO_STAND - 1, AT_STANCE + 1),
 )
 EXIT_OUT = 1.3  # studs out from the mark of the stance where getting out ends (1.5 game studs at 1.15)
 EXIT_HOLD = 8  # frames that stance is held
 
 
 def exit_frame(entry_frame):
-    """The GetOut frame that mirrors a GetIn frame between the seated pose and the stance: the mirrored
-    span down to the lean-back, then the stand-up, authored frame for frame as the entry's lean-back."""
-    if entry_frame < LEAN_BACK:
-        return GO_LEAN_BACK + (LEAN_BACK - entry_frame)
+    """The GetOut frame that mirrors a GetIn frame between the seated pose and the stance."""
+    if entry_frame < AT_STANCE + 1:
+        return GO_STAND - 1 + (AT_STANCE + 1 - entry_frame)
     ex, en = zip(*MIRROR)
     return int(round(float(np.interp(-entry_frame, [-f for f in en], ex))))
 
@@ -537,9 +535,13 @@ def exit_timeline(car, rest_path):
         b.targets[limb].at(SEATED_AGAIN, t).at(IO_END, t)
     # Back in the seat the limbs hold the hand-over pose; InsideOpen ends, and GetOut starts, on it.
     hold_hand_over(b, SEATED_AGAIN, GO_SEATED)
+    for track, value in ((b.pelvis, s["pelvis"]), (b.torso, s["torso"]), (b.neck, s["neck"])):
+        track.at(GO_SEATED, value)
     # -- GetOut: GetIn's key poses in reverse (the table from car_entry_mirror.py replaces them).
+    # The legs from the key poses while the body is on the seat's edge; leaning back (P) the feet are
+    # planted at the stance below (a key's leg angles there would drag the planted soles).
     for name, frame in (("R", GO_REACH), ("T2", GO_T2), ("T1", GO_T1), ("S", GO_SIT), ("H", GO_HOP_TOP), ("P", GO_LEAN_BACK)):
-        key_beats(b, car, frame, KEYS[name], [limb for limb in KEYS[name]["limbs"] if limb.endswith("leg")])
+        key_beats(b, car, frame, KEYS[name], [limb for limb in KEYS[name]["limbs"] if limb.endswith("leg") and name != "P"])
     b.pelvis.at(GO_HOP_MID, car.p(HOP_ARC))
     b.neck_loc.at(GO_SEATED, s["neck_loc"]).at(GO_LET_GO, (0.0, 0.0, 0.0))
     # The hands: the left one on the backrest's wing and the right one on the cushion's front bolster
@@ -549,7 +551,7 @@ def exit_timeline(car, rest_path):
     b.contact.append((GO_LET_GO - 2, GO_STAND + 2))
     stance, stance_c = feet_at(car, STANCE, yaw_stance)
     for limb in ("right_leg", "left_leg"):
-        b.targets[limb].at(GO_HOP0 - 2, stance[limb] + (0, 0.05, 0)).at(GO_HOP0, stance[limb]).at(GO_STAND, stance[limb])
+        b.targets[limb].at(GO_HOP0 - 2, stance[limb] + (0, 0.05, 0)).at(GO_HOP0, stance[limb]).at(GO_LEAN_BACK, stance[limb]).at(GO_STAND, stance[limb])
     both(b, GO_HOP0, GO_WALK)
     b.torso.at(GO_STAND, (0, yaw_stance, 0))
     b.neck.at(GO_STAND, (-10, 0, 0))
@@ -580,8 +582,8 @@ def exit_timeline(car, rest_path):
     assert (push, release) == (CLOSE_PULL, CLOSE_RELEASE), (push, release)
     both(b, f - 1, release + 18)
     palm = CLOSE_PALM
-    b.hang("right_arm", GO_END, push - 8)
-    b.targets["right_arm"].at(push - 4, car.p(car_point_at_door(car, palm + np.array([0.10, 0.0, 0.0]), 1.0)))
+    b.hang("right_arm", GO_END, push - 10)
+    b.targets["right_arm"].at(push - 5, car.p(car_point_at_door(car, palm + np.array([0.25, 0.0, 0.0]), 1.0)))
     b.targets["right_arm"].attach(push, release, car.riding(b, palm))
     b.contact.append((push, release))
     for offset, pelvis, turn in CLOSE_RIDE:
@@ -591,10 +593,15 @@ def exit_timeline(car, rest_path):
         b.door.at(fr, (v,))
     b.targets["right_arm"].at(release + 4, car.p(car_point_at_door(car, palm + np.array([0.20, 0.0, -0.10]), CLOSE_LET_GO)))
     b.hang("right_arm", release + 10, OC_END)
-    b.hang("left_arm", GO_END, OC_END)
+    # Facing the door, the left arm swings a little out and back, clear of the door's skin on that side
+    # (the arm at (-30, -40) degrees: hanging straight it is 0.15-0.2 stud into the door as it starts to
+    # move, crossed before the hips 0.08 as the body follows the push, at (-20, -40) 0.07 on the release).
+    b.hang("left_arm", GO_END, push - 12)
+    b.hang("left_arm", push - 6, release + 12, np.array([-2.151, -0.093, 0.632]))
+    b.hang("left_arm", release + 20, OC_END)
     rest_at = release + 18
-    b.torso.at(release + 6, (0, yaw_push, 0)).at(rest_at, (0, yaw_push, 0))
-    b.pelvis.at(release + 6, (push_c[0], 2.0, push_c[2])).at(rest_at, (push_c[0], 2.0, push_c[2]))
+    b.torso.at(release + 10, (0, yaw_push, 0)).at(rest_at, (0, yaw_push, 0))
+    b.pelvis.at(release + 10, (push_c[0], 2.0, push_c[2])).at(rest_at, (push_c[0], 2.0, push_c[2]))
     b.neck.at(push - 6, (-10, 0, 0)).at(release + 10, (-5, 10, 0)).at(rest_at, (0, 0, 0))
     # Back toward the mark, turning to its heading, and a still stance out from the car (exitEnd);
     # then the last steps in to the mark.
@@ -602,7 +609,7 @@ def exit_timeline(car, rest_path):
     f = walk(b, rest_at + 1, push_feet, stance_out, yaw_push, 0.0, "left_leg", pairs=CLOSE_PAIRS_BACK)
     both(b, f - 1, f + EXIT_HOLD)
     b.torso.at(f - 1, (0, 0, 0)).at(f + EXIT_HOLD, (0, 0, 0))
-    f = walk(b, f + EXIT_HOLD, stance_out, {k: IDLE[k] for k in push_feet}, 0.0, 0.0, "left_leg", pairs=1)
+    f = walk(b, f + EXIT_HOLD, stance_out, {k: IDLE[k] for k in push_feet}, 0.0, 0.0, "left_leg", pairs=2)
     assert f <= OC_END, f
     both(b, f - 1, OC_END + 1)
     for track, value in ((b.pelvis, IDLE_PELVIS), (b.torso, (0, 0, 0)), (b.neck, (0, 0, 0))):
@@ -628,23 +635,25 @@ PUSH_YAW = -120.0  # facing the open door's skin
 CLOSE_PALM = np.array([0.94, -0.70, 0.85])
 CLOSE_ARC = 0.75  # metres the walk arcs out, round the open door's rear edge (1.93 m out at its stop)
 # Seven and five pairs of side steps: with fewer, each step is too long for a rigid leg and a planted foot
-# slides (10-13 studs/s at five and four).
-CLOSE_PAIRS, CLOSE_PAIRS_BACK = 7, 5
-CLOSE_PUSH_FRAMES = 4
+# slides (10-13 studs/s at five and four out, 9.4 at five back).
+CLOSE_PAIRS, CLOSE_PAIRS_BACK = 7, 6
+CLOSE_PUSH_FRAMES = 6  # at four, the body following the door slid the planted feet 0.67 studs/s
 # The door's openness where the palm leaves it: a short push, the feet planted (pushed to 0.85 the body
 # had to slide 16 cm toward the door to keep the rigid arm's palm on it).
 CLOSE_LET_GO = 0.93
 CLOSE_PULL = GO_END + 1 + 9 * 2 * CLOSE_PAIRS + 2  # the push starts two frames after the walk
 CLOSE_RELEASE = CLOSE_PULL + CLOSE_PUSH_FRAMES
-OC_END = CLOSE_RELEASE + 18 + 1 + 9 * 2 * CLOSE_PAIRS_BACK + EXIT_HOLD + 18 + 2
+OC_END = CLOSE_RELEASE + 18 + 1 + 9 * 2 * CLOSE_PAIRS_BACK + EXIT_HOLD + 36 + 2
 # The body over the push (offset from CLOSE_PULL, pelvis car metres, (lean, yaw, roll)), solved by
-# boss_hold.py with the right palm on the skin (misses <= 0.006 stud, the arm <= 0.101 into the door).
+# boss_hold.py with the right palm on the skin (misses <= 0.005 stud, the arm <= 0.101 into the door).
 CLOSE_RIDE = (
     (0, (1.8861, -1.6670, 0.4290), (0.0, -120.0, 0.0)),
-    (1, (1.8832, -1.6602, 0.4314), (0.0, -120.0, 0.0)),
-    (2, (1.8755, -1.6425, 0.4373), (0.0, -120.0, 0.0)),
-    (3, (1.8663, -1.6169, 0.4425), (0.0, -120.0, 0.0)),
-    (4, (1.8572, -1.5882, 0.4459), (0.0, -120.0, 0.0)),
+    (1, (1.8849, -1.6641, 0.4300), (0.0, -120.0, 0.0)),
+    (2, (1.8815, -1.6562, 0.4328), (0.0, -120.0, 0.0)),
+    (3, (1.8762, -1.6440, 0.4368), (0.0, -120.0, 0.0)),
+    (4, (1.8698, -1.6281, 0.4410), (0.0, -120.0, 0.0)),
+    (5, (1.8640, -1.6086, 0.4433), (0.0, -120.0, 0.0)),
+    (6, (1.8574, -1.5877, 0.4457), (0.0, -120.0, 0.0)),
 )
 # The body over InsideOpen's push (frame offset from PUSH, pelvis car metres, (lean, yaw, roll)), solved
 # by boss_hold.py with the left palm on PUSH_PATCH (misses <= 0.01 stud, the arm 0.30-0.37 into the
@@ -681,9 +690,31 @@ def seated_contacts_from(start, end):
     their hand-over angles (SEATED_ARMS, SEATED_LEGS) at the depths measured."""
     return [
         {"why": "DECIDED (owner: torso 15 deg, scale 1.15, the seat moved 11 cm): the torso's side into the backrest's inboard wing, 5.85 cm seated", "from": start, "to": end, "parts": ["Torso"], "groups": ["seat"], "depth": 0.2727},
-        {"why": "DECIDED (coordinator, as the DR458's decision B): the right blocky arm at its hand-over pose against the seat's bolster", "from": start, "to": end, "parts": ["Right Arm"], "groups": ["seat"], "depth": 0.0976},
+        {"why": "DECIDED (coordinator, as the DR458's decision B): the right blocky arm at its hand-over pose against the seat's bolster", "from": start, "to": end, "parts": ["Right Arm"], "groups": ["seat"], "depth": 0.0977},
         {"why": "DECIDED (coordinator, as the DR458's left arm): the left blocky arm at its hand-over pose between the seat's bolster and the door card", "from": start, "to": end, "parts": ["Left Arm"], "groups": ["seat", "door"], "depth": 0.2996},
         {"why": "DECIDED (coordinator, as the DR458's blocky legs): the blocky legs at their least-deep pose on the cushion, under the wheel's rim, the left one against the door card", "from": start, "to": end, "parts": LEGS, "groups": ["seat", "wheel", "door", "cabin"], "depth": 0.1630},
+    ]
+
+
+# The last frames before the limbs hold their hand-over pose, as the body lands in the seat.
+SETTLE = (HOLD_FROM - 5, HOLD_FROM + 1)
+
+
+def settle_contacts():
+    """The settle into the hand-over pose: the limbs reach their held angles as the body lands, a few
+    frames of squash into the cushion. No pose of the entry's polish clears it; named at the depths
+    measured, rounded up at the fourth decimal (coordinator's decision, option a, as the DR458's)."""
+    why = "DECIDED (coordinator, option a): the settle into the hand-over pose as the body lands, "
+    return [
+        {"why": why + "the left leg into the cushion", "from": SETTLE[0], "to": SETTLE[1], "parts": ["Left Leg"], "groups": ["seat"], "depth": 0.3078},
+        {"why": why + "the left leg against the lower dash", "from": SETTLE[0], "to": SETTLE[1], "parts": ["Left Leg"], "groups": ["cabin"], "depth": 0.1215},
+        {"why": why + "the left leg by the rim, the door card and the sill's body", "from": SETTLE[0], "to": SETTLE[1], "parts": ["Left Leg"], "groups": ["wheel", "door", "body"], "depth": 0.0488},
+        {"why": why + "the right leg into the cushion", "from": SETTLE[0], "to": SETTLE[1], "parts": ["Right Leg"], "groups": ["seat"], "depth": 0.186},
+        {"why": why + "the right leg under the rim and the lower dash", "from": SETTLE[0], "to": SETTLE[1], "parts": ["Right Leg"], "groups": ["wheel", "cabin"], "depth": 0.0997},
+        {"why": why + "the left arm against the door card", "from": SETTLE[0], "to": SETTLE[1], "parts": ["Left Arm"], "groups": ["door"], "depth": 0.1031},
+        {"why": why + "the left arm into the bolster", "from": SETTLE[0], "to": SETTLE[1], "parts": ["Left Arm"], "groups": ["seat"], "depth": 0.279},
+        {"why": why + "the right arm into the bolster", "from": SETTLE[0], "to": SETTLE[1], "parts": ["Right Arm"], "groups": ["seat"], "depth": 0.0909},
+        {"why": why + "the torso into the cushion", "from": SETTLE[0], "to": SETTLE[1], "parts": ["Torso"], "groups": ["seat"], "depth": 0.2657},
     ]
 
 
@@ -691,14 +722,14 @@ def entry_contacts():
     """Named contacts (depth, studs at scale 1) and held limbs, for car_entry_clear.py; the check's
     allow file is written from the same list at the measured depths."""
     allow = [
-        {"why": "right hand on the door's pull bar, arriving in the pocket and pulling (its arm lies on the skin around the pocket)", "from": PULL - 2, "to": PULL + 4, "parts": ["Right Arm"], "groups": ["door"], "depth": 0.15},
-        {"why": "DECIDED (coordinator): the palms on the bolsters pushing up for the hop, the rigid arms' boxes into the bolsters' foam", "from": LEAN_BACK - 2, "to": HOP_TOP + 4, "parts": ARMS, "groups": ["seat"], "depth": 0.35},
+        {"why": "DECIDED (coordinator): the right hand on the door's pull bar, arriving in the pocket and pulling, the body leaning in so the rigid arm keeps the bar (its arm lies on the skin around the pocket)", "from": PULL - 2, "to": PULL + 4, "parts": ["Right Arm"], "groups": ["door"], "depth": 0.1912},
+        {"why": "DECIDED (coordinator): the palms on the bolsters pushing up for the hop, the rigid arms' boxes into the bolsters' foam", "from": LEAN_BACK - 2, "to": HOP_TOP + 4, "parts": ARMS, "groups": ["seat"], "depth": 0.3471},
         {"why": "DECIDED (coordinator): leaning back to the seat's edge with the feet planted, the rigid right leg against the rocker (boss_lean_probe.py: the trade with the palms' reach)", "from": AT_STANCE, "to": HOP0 + 2, "parts": LEGS, "groups": ["body", "sill"], "depth": 0.14},
-        {"why": "PROPOSED (rigid-thigh class): thighs over the sill while the legs lift in", "from": HOP0, "to": REACH, "parts": LEGS, "groups": ["sill"], "depth": 0.25},
-        {"why": "PROPOSED (rigid-thigh class): thighs over the bolster and the cushion's edge while the body turns and slides across", "from": HOP_TOP - 2, "to": SEATED, "parts": LEGS, "groups": ["seat"], "depth": 0.2},
-        {"why": "PROPOSED: the bottom landing on the cushion's outboard bolster and sliding across it", "from": HOP_TOP - 2, "to": SEATED, "parts": ["Torso"], "groups": ["seat"], "depth": 0.16},
-        {"why": "DECIDED (coordinator, decision A): the left palm on the door's pull, drawing the door in", "from": REACH, "to": LET_GO, "parts": ["Left Arm"], "groups": ["door"], "depth": 0.29},
-    ] + seated_contacts_from(HOLD_FROM, END) + [
+        {"why": "DECIDED (coordinator, rigid-thigh class): thighs over the sill while the legs lift in", "from": HOP0, "to": REACH, "parts": LEGS, "groups": ["sill"], "depth": 0.2345},
+        {"why": "DECIDED (coordinator, rigid-thigh class): thighs over the bolster and the cushion's edge while the body turns and slides across", "from": HOP_TOP - 2, "to": SETTLE[0] - 1, "parts": LEGS, "groups": ["seat"], "depth": 0.1973},
+        {"why": "DECIDED (coordinator): the bottom landing on the cushion's outboard bolster and sliding across it", "from": HOP_TOP - 2, "to": SETTLE[0] - 1, "parts": ["Torso"], "groups": ["seat"], "depth": 0.1569},
+        {"why": "DECIDED (coordinator, decision A): the left palm on the door's pull, drawing the door in", "from": REACH, "to": LET_GO, "parts": ["Left Arm"], "groups": ["door"], "depth": 0.3137},
+    ] + settle_contacts() + seated_contacts_from(HOLD_FROM, END) + [
         # A hand "on" a surface must reach it (within 0.1 stud of its end), not push on air.
         {"why": "the right hand on the pull bar: must touch", "from": PULL, "to": PULL + 4, "parts": ["Right Arm"], "groups": ["door"], "touch": 0.1},
         {"why": "the palms on the bolsters for the push: must touch", "from": LEAN_BACK, "to": HOP0, "parts": ARMS, "groups": ["seat"], "touch": 0.1},
@@ -731,6 +762,23 @@ def apply_table(b, path):
             b.fixed.setdefault(limb, {}).setdefault(f, (x, z))
 
 
+def inside_open_start():
+    """InsideOpen's first frames, as the left hand leaves the hand-over pose for the card and the body
+    begins to ease inboard: named at the depths measured (coordinator's decision, the DR458's class of
+    the left arm sliding along the door card from the hand-over pose to the push)."""
+    why = "DECIDED (coordinator, the DR458's class): InsideOpen's start, the hand leaving the hand-over pose for the card as the body eases inboard, "
+    start, end = HAND_OVER, PUSH - 1
+    return [
+        {"why": why + "the left arm along the door card and the bolster", "from": start, "to": end, "parts": ["Left Arm"], "groups": ["door"], "depth": 0.3294},
+        {"why": why + "the left arm against the bolster", "from": start, "to": end, "parts": ["Left Arm"], "groups": ["seat"], "depth": 0.3002},
+        {"why": why + "the left leg against the door card", "from": start, "to": end, "parts": ["Left Leg"], "groups": ["door"], "depth": 0.2138},
+        {"why": why + "the left leg under the wheel's rim", "from": start, "to": end, "parts": ["Left Leg"], "groups": ["wheel"], "depth": 0.1959},
+        {"why": why + "the right arm against the bolster", "from": start, "to": end, "parts": ["Right Arm"], "groups": ["seat"], "depth": 0.1764},
+        {"why": why + "the right leg under the wheel's rim", "from": start, "to": end, "parts": ["Right Leg"], "groups": ["wheel"], "depth": 0.1601},
+        {"why": why + "the torso into the backrest's wing", "from": start, "to": end, "parts": ["Torso"], "groups": ["seat"], "depth": 0.3049},
+    ]
+
+
 def exit_contacts():
     """The exit's named contacts and held limbs: GetIn's between the stance and the seat at their
     mirrored GetOut frames (the same depths; the door ride has no counterpart, the door stays open),
@@ -746,12 +794,20 @@ def exit_contacts():
         {"why": "DECIDED (coordinator): the left palm on the door card's insert pushing the door from shut to 12 %, the arm along the card (boss_hold.py: 0.30-0.37)", "from": PUSH - 2, "to": PUSH_END, "parts": ["Left Arm"], "groups": ["door"], "depth": 0.37},
         {"why": "DECIDED (coordinator): the torso's side deeper into the backrest's inboard wing than seated, as the body eases inboard for the push (boss_hold.py)", "from": PUSH - 6, "to": SEATED_AGAIN, "parts": ["Torso"], "groups": ["seat"], "depth": 0.31},
         {"why": "DECIDED (coordinator): the right palm flat on the door's skin near its rear edge, pushing the door shut from its outer side", "from": CLOSE_PULL - 2, "to": CLOSE_RELEASE + 2, "parts": ["Right Arm"], "groups": ["door"], "depth": 0.13},
-    ] + seated_contacts_from(0, GO_SEATED) + mirrored + [
+    ] + seated_contacts_from(0, GO_SEATED) + mirrored + inside_open_start() + [
+        {"why": "DECIDED (coordinator): the entry's settle, mirrored as the body rises, the left arm by the wheel's rim", "from": exit_frame(SETTLE[1]), "to": exit_frame(SETTLE[0]), "parts": ["Left Arm"], "groups": ["wheel"], "depth": 0.0501},
+        # Getting out, the hands come down onto the bolsters as the body drops off the seat's edge.
+        {"why": "DECIDED (coordinator, option A): the left arm into the backrest's wing as the hand comes down onto it in the drop", "from": GO_HOP_TOP - 3, "to": GO_HOP0 - 4, "parts": ["Left Arm"], "groups": ["seat"], "depth": 0.3969},
+        {"why": "DECIDED (coordinator, option A): the right arm against the lower dash and the body as the hand comes down onto the cushion's bolster in the drop", "from": GO_HOP_TOP - 3, "to": GO_HOP0 - 4, "parts": ["Right Arm"], "groups": ["cabin", "body"], "depth": 0.0564},
+    ] + [
         {"why": "the left palm on the door card's insert, pushing: must touch", "from": PUSH, "to": PUSH_END, "parts": ["Left Arm"], "groups": ["door"], "touch": 0.1},
         {"why": "the right palm on the door's skin near its rear edge, pushing: must touch", "from": CLOSE_PULL, "to": CLOSE_RELEASE, "parts": ["Right Arm"], "groups": ["door"], "touch": 0.1},
     ]
     holds = [
         {"from": PUSH, "to": PUSH_END, "limb": "left_arm"},
+        # Held from four frames before the feet land, so the rigid arms are on the bolsters as they do.
+        {"from": GO_HOP0 - 4, "to": GO_LEAN_BACK, "limb": "right_arm"},
+        {"from": GO_HOP0 - 4, "to": GO_LEAN_BACK, "limb": "left_arm"},
         {"from": GO_HOP0, "to": OC_END, "limb": "right_leg"},
         {"from": GO_HOP0, "to": OC_END, "limb": "left_leg"},
         {"from": 0, "to": 6, "limb": "right_arm"},

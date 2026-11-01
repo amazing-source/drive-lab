@@ -1,0 +1,13 @@
+# boss_palm_check.py: every held palm against its own target (limit 0.1 stud)
+## on the GetIn Blender bake
+PASS Right Arm on the pull bar f38-f42: worst palm gap 0.006 studs at f38 (limit 0.1)
+PASS Right Arm on the cushion's front bolster f162-f166: worst palm gap 0.023 studs at f162 (limit 0.1)
+PASS Left Arm on the backrest's wing f162-f166: worst palm gap 0.058 studs at f162 (limit 0.1)
+PASS Left Arm on the door's pull f203-f209: worst palm gap 0.019 studs at f207 (limit 0.1)
+exit code 0
+## on table v5 (the limb plans made while CLOSE_PULL was clobbered): must FAIL
+FAIL Right Arm on the pull bar f38-f42: worst palm gap 0.161 studs at f42 (limit 0.1)
+FAIL Right Arm on the cushion's front bolster f162-f166: worst palm gap 0.483 studs at f166 (limit 0.1)
+FAIL Left Arm on the backrest's wing f162-f166: worst palm gap 0.673 studs at f166 (limit 0.1)
+FAIL Left Arm on the door's pull f203-f209: worst palm gap 2.194 studs at f209 (limit 0.1)
+exit code 1
