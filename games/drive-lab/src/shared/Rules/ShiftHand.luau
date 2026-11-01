@@ -187,6 +187,21 @@ function ShiftHand.knobWrist(knob: Pose, grip: Config.Key): Pose
 	}
 end
 
+-- The right hand with the lever at (`column`, `row`, `knob`) and the hand `share` of the way from
+-- the live steering grip `grip` (0) to the knob (1), and the mesh it shows.
+function ShiftHand.wrist(
+	shift: Config.Shift,
+	lever: Lever,
+	share: number,
+	column: number,
+	row: number,
+	knob: number,
+	grip: Pose
+): (Pose, string)
+	local knobWrist = ShiftHand.knobWrist(ShiftHand.lever(lever, column, row, knob), shift.grip)
+	return ShiftHand.pose(shift, share, grip, knobWrist)
+end
+
 -- The right hand `share` of the way from the wheel (0) to the knob (1), and the mesh it shows. The
 -- keyed way keeps its shape; its start is carried onto `grip` (the live steering grip) and its end
 -- onto `knobWrist` (the hand on the knob where the lever is now), the end's share growing along it.
