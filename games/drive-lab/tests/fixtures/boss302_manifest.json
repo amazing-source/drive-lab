@@ -2,6 +2,300 @@
   "parts": [
     {
       "axis": {
+        "forward": -0.0,
+        "right": -1,
+        "up": 0
+      },
+      "group": "Wheel_FL",
+      "motion": "spin",
+      "name": "Wheel_FL",
+      "pivot": {
+        "forward": 2.721,
+        "right": -0.7865,
+        "up": 0.342
+      },
+      "positive": "rolls forward (top of the wheel moves toward the nose)"
+    },
+    {
+      "group": "Wheel_FL",
+      "motion": "static",
+      "name": "Wheel_FL_Tyre"
+    },
+    {
+      "group": "Caliper_FL",
+      "motion": "static",
+      "name": "Caliper_FL"
+    },
+    {
+      "axis": {
+        "forward": -0.0,
+        "right": -1,
+        "up": 0
+      },
+      "group": "Wheel_FR",
+      "motion": "spin",
+      "name": "Wheel_FR",
+      "pivot": {
+        "forward": 2.721,
+        "right": 0.7865,
+        "up": 0.342
+      },
+      "positive": "rolls forward (top of the wheel moves toward the nose)"
+    },
+    {
+      "group": "Wheel_FR",
+      "motion": "static",
+      "name": "Wheel_FR_Tyre"
+    },
+    {
+      "group": "Caliper_FR",
+      "motion": "static",
+      "name": "Caliper_FR"
+    },
+    {
+      "axis": {
+        "forward": -0.0,
+        "right": -1,
+        "up": 0
+      },
+      "group": "Wheel_RL",
+      "motion": "spin",
+      "name": "Wheel_RL",
+      "pivot": {
+        "forward": -0.0,
+        "right": -0.794,
+        "up": 0.3572
+      },
+      "positive": "rolls forward (top of the wheel moves toward the nose)"
+    },
+    {
+      "group": "Wheel_RL",
+      "motion": "static",
+      "name": "Wheel_RL_Tyre"
+    },
+    {
+      "group": "Caliper_RL",
+      "motion": "static",
+      "name": "Caliper_RL"
+    },
+    {
+      "axis": {
+        "forward": -0.0,
+        "right": -1,
+        "up": 0
+      },
+      "group": "Wheel_RR",
+      "motion": "spin",
+      "name": "Wheel_RR",
+      "pivot": {
+        "forward": -0.0,
+        "right": 0.794,
+        "up": 0.3572
+      },
+      "positive": "rolls forward (top of the wheel moves toward the nose)"
+    },
+    {
+      "group": "Wheel_RR",
+      "motion": "static",
+      "name": "Wheel_RR_Tyre"
+    },
+    {
+      "group": "Caliper_RR",
+      "motion": "static",
+      "name": "Caliper_RR"
+    },
+    {
+      "axis": {
+        "forward": 0,
+        "right": -0.0,
+        "up": -1
+      },
+      "group": "Door_L",
+      "motion": "hinge",
+      "name": "Door_L_Skin",
+      "pivot": {
+        "forward": 1.9481,
+        "right": -0.8797,
+        "up": 0.652
+      },
+      "positive": "opens: the door's rear edge swings out to the car's left",
+      "range": 1.0367
+    },
+    {
+      "group": "Door_L",
+      "motion": "static",
+      "name": "Door_L_Card"
+    },
+    {
+      "group": "Door_L",
+      "motion": "static",
+      "name": "Door_L_Glass"
+    },
+    {
+      "group": "Door_L",
+      "motion": "static",
+      "name": "Door_L_Mirror"
+    },
+    {
+      "group": "Door_R",
+      "motion": "static",
+      "name": "Door_R_Skin"
+    },
+    {
+      "group": "Door_R",
+      "motion": "static",
+      "name": "Door_R_Card"
+    },
+    {
+      "group": "Door_R",
+      "motion": "static",
+      "name": "Door_R_Glass"
+    },
+    {
+      "group": "Door_R",
+      "motion": "static",
+      "name": "Door_R_Mirror"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Glass_Windscreen"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Glass_RearScreen"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Glass_Quarter_L"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Glass_Quarter_R"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Exhaust_Outlet_L",
+      "outlet": {
+        "axis": {
+          "forward": -1,
+          "right": -0.0,
+          "up": 0
+        },
+        "centre": {
+          "forward": -1.0633,
+          "right": -0.5867,
+          "up": 0.3206
+        },
+        "diameter_m": 0.1077
+      }
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Exhaust_Outlet_R",
+      "outlet": {
+        "axis": {
+          "forward": -1,
+          "right": -0.0,
+          "up": 0
+        },
+        "centre": {
+          "forward": -1.0633,
+          "right": 0.5867,
+          "up": 0.3206
+        },
+        "diameter_m": 0.1077
+      }
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_FrontLeft_Headlamp"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_FrontRight_Headlamp"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearLeft_Brake"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearRight_Brake"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearLeft_HighStop"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearRight_HighStop"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearLeft_Tail"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearRight_Tail"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_FrontLeft_ParkTurn"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_FrontRight_ParkTurn"
+    },
+    {
+      "axis": {
+        "forward": -0.91122,
+        "right": 0,
+        "up": 0.41192
+      },
+      "group": "Chassis",
+      "mesh": false,
+      "motion": "hinge",
+      "name": "SteeringWheel",
+      "pivot": {
+        "forward": 1.5139,
+        "right": -0.3713,
+        "up": 0.8749
+      },
+      "positive": "right-hand rule about the axis, which points to the driver: a positive turn is anticlockwise as the driver sees it"
+    },
+    {
+      "group": "SteeringWheel",
+      "motion": "static",
+      "name": "SteeringWheel_Rim"
+    },
+    {
+      "group": "SteeringWheel",
+      "motion": "static",
+      "name": "SteeringWheel_Hub"
+    },
+    {
+      "group": "SteeringWheel",
+      "motion": "static",
+      "name": "SteeringWheel_Spokes"
+    },
+    {
+      "axis": {
         "forward": 0,
         "right": 1,
         "up": 0
@@ -222,70 +516,6 @@
         0,
         3.14159
       ]
-    },
-    {
-      "axis": {
-        "forward": 0.94463,
-        "right": 0,
-        "up": -0.32813
-      },
-      "group": "Chassis",
-      "motion": "rotary",
-      "name": "Needle_Fuel",
-      "pivot": {
-        "forward": 1.7938,
-        "right": -0.3507,
-        "up": 0.9083
-      },
-      "positive": "clockwise as the driver sees it (the value rising)"
-    },
-    {
-      "axis": {
-        "forward": 0.94463,
-        "right": 0,
-        "up": -0.32813
-      },
-      "group": "Chassis",
-      "motion": "rotary",
-      "name": "Needle_Temp",
-      "pivot": {
-        "forward": 1.7938,
-        "right": -0.3838,
-        "up": 0.9083
-      },
-      "positive": "clockwise as the driver sees it (the value rising)"
-    },
-    {
-      "axis": {
-        "forward": 1,
-        "right": 0,
-        "up": -0.0
-      },
-      "group": "Chassis",
-      "motion": "rotary",
-      "name": "Needle_Oil",
-      "pivot": {
-        "forward": 1.7969,
-        "right": -0.0548,
-        "up": 1.023
-      },
-      "positive": "clockwise as the driver sees it (the value rising)"
-    },
-    {
-      "axis": {
-        "forward": 1,
-        "right": 0,
-        "up": -0.0
-      },
-      "group": "Chassis",
-      "motion": "rotary",
-      "name": "Needle_Water",
-      "pivot": {
-        "forward": 1.7969,
-        "right": 0.0553,
-        "up": 1.023
-      },
-      "positive": "clockwise as the driver sees it (the value rising)"
     }
   ],
   "points": {
@@ -293,6 +523,26 @@
       "forward": 1.1562,
       "right": -0.3746,
       "up": 0.5757
+    },
+    "Windshield_BottomLeft": {
+      "forward": 1.9695,
+      "right": -0.636,
+      "up": 0.9809
+    },
+    "Windshield_BottomRight": {
+      "forward": 1.9695,
+      "right": 0.636,
+      "up": 0.9809
+    },
+    "Windshield_TopLeft": {
+      "forward": 1.4858,
+      "right": -0.5863,
+      "up": 1.2528
+    },
+    "Windshield_TopRight": {
+      "forward": 1.4858,
+      "right": 0.5863,
+      "up": 1.2528
     }
   }
 }
