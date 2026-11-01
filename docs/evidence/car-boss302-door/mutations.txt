@@ -1,0 +1,10 @@
+Deliberate break for agent/car-boss302-door, applied to the committed tree (728200a), run against
+the spec that owns the rule (the repo's spec runner limited to games/drive-lab/tests/Boss302Entry.spec.luau),
+then restored with git checkout.
+
+== BREAK: GetIn plays the DR458's clip (rbxassetid://140113757542647) instead of the Boss's
+   file: games/drive-lab/src/shared/Config/Cars/Boss302/Door.luau
+   exit: 1
+   FAIL Boss 302 entry > gets the driver in and out through its own clips, from its own mark: games/drive-lab/tests/Boss302Entry.spec:53: expected true, got false
+   5 passed, 1 failed
+   (restored: 6 passed, 0 failed)
