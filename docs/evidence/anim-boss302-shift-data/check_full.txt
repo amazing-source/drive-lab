@@ -1,0 +1,11 @@
+10376 cabin and 2055 lever triangles of 237311; 173338 + 3548 samples
+1784 places checked, 0 failing, 1 with named contacts
+  worst reach: 0.8678 at R-5 #24 (Knob) {'hand': {np.str_('GEO_INT_shifter_01'): 0.00119}}
+  worst upper: 0.0 at R-N #0 (Knob) {'hand': {np.str_('GEO_INT_shifter_01'): 0.00119}}
+  worst lower: 0.0 at R-N #0 (Knob) {'hand': {np.str_('GEO_INT_shifter_01'): 0.00119}}
+  worst hand: 0.003 at reach to R 0.175 (Rest) {'hand': {np.str_('GEO_INT_STwheel_00'): 0.00303}}
+  worst ballGap: 0.0 at R-N #0 (Knob) {'hand': {np.str_('GEO_INT_shifter_01'): 0.00119}}
+  worst ballInside: 0.001 at R-N #0 (Knob) {'hand': {np.str_('GEO_INT_shifter_01'): 0.00119}}
+  deepest hand into GEO_INT_STwheel_00: 3.03 mm at reach to R 0.175
+  deepest hand into GEO_INT_STwheel_05: 2.00 mm at reach to R 0.000
+  deepest hand into GEO_INT_shifter_01: 1.79 mm at reach to 1 0.975
