@@ -15,6 +15,8 @@ What a touch does, by its "grab":
   face of the blade the thumb takes instead of the forearm's direction; "gripBand" (metres) how much of
   the grip's end the pinch takes (TOP_GRIP by default; less holds it nearer its end); "turns" names every cabin
   object the control turns (a key's head, blade and ring), "part" the one whose top is held;
+  "approachVia" / "returnVia" ([{at, wheel: [metres from the column's axis, degrees from 3 o'clock,
+  metres toward the driver], turn}]) key the wrist round the wheel's rim to the hold and back to the grip;
 - "edge": the Point hand's index end rides FINGER_UNDER (or the touch's "under") behind the free edge (the vertices
   farthest from the hinge line) while the control opens: a guard;
 - "tip": the same at the vertices farthest from the pivot: a toggle's lever;
@@ -307,6 +309,17 @@ def pinch_frame(touch, pinch, arm, angle):
     return m
 
 
+def via_frame(via, start, end, wheel):
+    """A key on the way between two frames: the wrist at via["wheel"] (metres from the column's
+    axis, degrees from 3 o'clock toward 12, metres toward the driver: the wheel frame), turned
+    via["turn"] of the way from `start`'s rotation to `end`'s."""
+    radius, degrees, axial = via["wheel"]
+    angle = math.radians(degrees)
+    m = start.to_quaternion().slerp(end.to_quaternion(), via.get("turn", 0.0)).to_matrix().to_4x4()
+    m.translation = wheel @ (Vector((radius * math.cos(angle), radius * math.sin(angle), axial)) * STUDS)
+    return m
+
+
 def approach_frame(grip_frame, wheel, side_sign, offset=RIM_APPROACH):
     m = grip_frame.copy()
     x, y, z = offset
@@ -344,6 +357,10 @@ def right_keys(sequence, touches, rest, grip_frame, wheel, tips, arm, config):
             shapes.append((previous_end + transit * 0.5, touch.shape))
         if touch.grab == "pinch":
             first = pinch_frame(touch, tips["pinch"], arm, 0.0)
+            # "approachVia": keys round the wheel on the way in, the hand turning toward its hold.
+            origin = keys[-1][1]
+            for via in touch.item.get("approachVia", ()):
+                keys.append((via["at"], via_frame(via, origin, first, wheel)))
             above = first.copy()
             above.translation = first.translation + touch.out * touch.item.get("above", 0.04) * STUDS
             keys.append((touch.start - 0.15, above))
@@ -358,6 +375,10 @@ def right_keys(sequence, touches, rest, grip_frame, wheel, tips, arm, config):
             leave = touch.item.get("leave", 0.18)
             keys.append((touch.release + leave, off))
             previous_end = touch.release + leave
+            # "returnVia": the same on the way back, turning toward the grip.
+            for via in touch.item.get("returnVia", ()):
+                keys.append((via["at"], via_frame(via, off, grip_frame, wheel)))
+                previous_end = via["at"]
         elif touch.grab == "press":
             face = touch.point
             press_at = config["pressAt"]

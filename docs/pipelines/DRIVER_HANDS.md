@@ -235,7 +235,10 @@ of touches by the same script, so a moved control or a changed time is a re-run:
   numpy file the entry tools use), measures each control's contact on its own mesh and keys:
   - `pinch` (a key): the Pinch hand on the top of the grip, its open side down the key's axis,
     turning with the key about the binding's hinge; the turn is centred on the hand's natural
-    roll, so the wrist turns a quarter each way;
+    roll, so the wrist turns a quarter each way; a key behind the rim takes `approachVia` /
+    `returnVia` keys (the wrist in the wheel frame: metres from the column's axis, degrees from
+    3 o'clock, metres toward the driver; `turn`, the share of the way to the hold's or the grip's
+    rotation) so the hand goes round the rim's outside instead of through the wheel (the Boss 302);
   - `edge` (a guard) and `tip` (a toggle's lever): the Point hand's index end riding just behind
     the free edge or the lever's end while the game turns it;
   - `press` (ENGINE START): onto the face along the press axis from the manifest, held while the

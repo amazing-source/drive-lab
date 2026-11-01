@@ -1,0 +1,9 @@
+DR458 start-up unchanged by this branch's tools (A/B bake, renders off, same inputs: <assets>/dr458/anim/startup/inputs_v13r.json with flags --no-render)
+
+main's tools/blender/startup_paths.py + startup_sequence.py (git show origin/main) vs this branch's:
+  StartupPaths.luau sha256 main   aaf82bd9a9d8c6d9918b27c7437fe8b854d85df15a42356ba19f93ae86f7e112
+  StartupPaths.luau sha256 branch aaf82bd9a9d8c6d9918b27c7437fe8b854d85df15a42356ba19f93ae86f7e112
+  byte-identical: True
+  baked right/left tracks identical: True
+  the branch output after stylua equals the committed games/drive-lab/src/shared/Config/Cars/DR458/StartupPaths.luau (cmp: identical)
+  (same sha256 as #247's dr458_unchanged.txt)

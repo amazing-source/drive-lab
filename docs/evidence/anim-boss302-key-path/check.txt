@@ -1,0 +1,36 @@
+startup_check on the Boss bake v6 (tools/anim/startup_check.py, 3 mm fixed samples, the game's key sampling), named contacts allow_v5.json
+paths sha256 439be4b191f89a5216defc6749ccee224cc83c7f465f9af803c5fb47df905971, cabin sha256 a3a08642d2e21b3c299d42c26f5158b9a1c67384e3d3c1968f1893ac241b87d0
+result: PASS, failing samples: 0, touch gap on the key: {'Key_Ignition': 0.6} mm, first keys vs the shared rest pose: {'right': {'mm': 0.0, 'deg': 0.0}, 'left': {'mm': 0.0, 'deg': 0.0}}
+
+right side contacts deeper than 2 mm (kind, object, worst, at, limit, how it is judged):
+  upper arm Seat_Driver           45.91 mm at 0.242 s  limit 1000.0 mm  listed, not failed (arm on a non-strict object)
+  upper arm GEO_INT_01            41.50 mm at 0.292 s  limit 1000.0 mm  listed, not failed (arm on a non-strict object)
+  forearm   Seat_Driver           28.95 mm at 0.258 s  limit 1000.0 mm  listed, not failed (arm on a non-strict object)
+  forearm   GEO_INT_STwheel_06    28.92 mm at 1.717 s  limit   29.0 mm  named
+  forearm   GEO_INT_STwheel_01    28.76 mm at 1.725 s  limit   29.0 mm  named
+  forearm   GEO_INT_STwheel_00    28.71 mm at 0.775 s  limit   29.0 mm  named
+  forearm   GEO_INT_STwheel_05    28.70 mm at 1.708 s  limit   29.0 mm  named
+  upper arm GEO_INT_06            26.87 mm at 0.350 s  limit 1000.0 mm  listed, not failed (arm on a non-strict object)
+  forearm   GEO_INT_01            24.50 mm at 0.292 s  limit 1000.0 mm  listed, not failed (arm on a non-strict object)
+  upper arm GEO_INT_21            21.85 mm at 0.358 s  limit 1000.0 mm  listed, not failed (arm on a non-strict object)
+  hand      GEO_INT_STwheel_05    19.98 mm at 0.792 s  limit   20.0 mm  named
+  hand      GEO_INT_01            19.95 mm at 2.200 s  limit   20.0 mm  named
+  hand      GEO_INT_STwheel_06    19.82 mm at 0.842 s  limit   20.0 mm  named
+  hand      GEO_INT_STwheel_01    19.74 mm at 0.767 s  limit   20.0 mm  named
+  upper arm GEO_INT_20            13.36 mm at 0.367 s  limit 1000.0 mm  listed, not failed (arm on a non-strict object)
+  hand      GEO_INT_STwheel_00    13.22 mm at 0.567 s  limit   13.3 mm  named
+  forearm   GEO_INT_06            11.04 mm at 0.333 s  limit 1000.0 mm  listed, not failed (arm on a non-strict object)
+  forearm   GEO_INT_STwheel_02    10.35 mm at 0.942 s  limit   29.0 mm  named
+  hand      GEO_INT_07             7.32 mm at 1.767 s  limit    7.4 mm  named
+  forearm   GEO_INT_21             7.24 mm at 0.325 s  limit 1000.0 mm  listed, not failed (arm on a non-strict object)
+  hand      GEO_INT_05             3.16 mm at 1.850 s  limit   10.1 mm  named
+  hand      GEO_INT_04             2.55 mm at 1.875 s  limit    2.6 mm  named
+
+left side contacts deeper than 2 mm on strict objects:
+  hand      GEO_INT_STwheel_00     5.87 mm at 0.975 s  limit    6.0 mm  named
+  hand      GEO_INT_STwheel_05     2.03 mm at 0.983 s  limit    6.0 mm  named
+
+Known issue (listed by the check, not failed): the arm entries above on GEO_INT_01 / 06 / 20 / 21 are the drawn right
+arm's elbow swinging out over the lower dash and the console while the hand goes round the rim (0.25-0.37 s). Main's path
+has none of them. STRICT_ARM does not cover the Boss dump's dash and console names, so they are judged as cloth. Sleeves
+are hidden in the local cockpit view. Follow-up issue: an elbow-raising key on the way out, and those pieces made strict.
