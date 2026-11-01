@@ -41,15 +41,27 @@ describe("Boss 302 entry", function()
 		end
 	end)
 
-	it("seats the driver directly from its own mark until its clips exist", function()
-		expect(Door.direct).toBe(true)
+	it("gets the driver in and out through its own clips, from its own mark", function()
+		expect(Door.direct).toBe(nil)
 		expect(Door.mark.right).toBe(-1)
 		expect(Door.mark.forward).toBe(-0.8)
-		-- Getting out stands the driver clear outboard of the mark.
 		expect(Door.exitEnd.right < Door.mark.right).toBe(true)
+		local DR458Door = require("../src/shared/Config/Cars/DR458/Door")
 		for _, name in { "OutsideOpen", "GetIn", "InsideClose", "InsideOpen", "GetOut", "OutsideClose" } do
-			expect(Door.clips[name] ~= nil).toBe(true)
+			local clip = assert(Door.clips[name], name)
+			-- The Boss's own upload, not the DR458's stand-in.
+			expect(clip.seated ~= DR458Door.clips[name].seated).toBe(true)
+			expect(clip.duration > 0).toBe(true)
 		end
+		expect(Door.seatedPose ~= DR458Door.seatedPose).toBe(true)
+		-- Opening from outside ends open, getting in ends shut, the stance is reached inside OutsideClose.
+		local function last(curve: { values: { number } }?): number
+			local values = assert(curve, "a door curve").values
+			return values[#values]
+		end
+		expect(last(Door.clips.OutsideOpen.door)).toBe(1)
+		expect(last(Door.clips.GetIn.door)).toBe(0)
+		expect(Door.exitEnd.at <= Door.clips.OutsideClose.duration).toBe(true)
 	end)
 
 	it("waits only on the gauges' parts the binding lacks, and lists them", function()
