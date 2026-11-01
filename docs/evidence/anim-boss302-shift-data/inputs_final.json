@@ -1,0 +1,86 @@
+{
+ "about": [
+  "The Boss 302's gear-lever hand: the right hand's grip on the knob and its way between the wheel",
+  "and the knob, written by tools/anim/shift_paths.py against the car's cockpit dump (v3) and its",
+  "model binding's lever (Binding.Shifter), with the DriverSeat at Driver_HPoint (manifest forward",
+  "1.1562, right -0.3746, up 0.5757). Do not edit by hand: re-run the tool. Durations: the human",
+  "pace, as the gearbox's timing (Physics gearbox.manual.timing); quick: the game-quick preset. EST",
+  "until checked against footage."
+ ],
+ "cabin": "<assets>/boss302/work/boss302_cockpit_v3.npz",
+ "seat": [
+  0.3746,
+  -1.1562,
+  0.5757
+ ],
+ "seatCar": [
+  -0.3398000000000001,
+  -0.3746,
+  0.06569999999999998
+ ],
+ "driver": {
+  "shoulders": {
+   "R": [
+    0.92,
+    1.7218,
+    0.4613
+   ],
+   "L": [
+    -0.92,
+    1.7218,
+    0.4613
+   ]
+  },
+  "upper": 1.4375,
+  "lower": 1.2994999999999999,
+  "elbowBias": [
+   0.3,
+   -0.28978,
+   -0.07765
+  ],
+  "about": "rest/car_rest.json shoulders (studs, seat frame), the DR458's arms 1.25 + 1.13 at scale 1.15; ELBOW_BIAS (0.3 out, 0.3 down) turned by the torso's 15 degree lean"
+ },
+ "grip": "<assets>/boss302/anim/grip/v1_a13_t18/hands.json",
+ "wheel": {
+  "pivot": [
+   0.0033,
+   0.2992,
+   -0.3578
+  ],
+  "axis": [
+   0.0,
+   0.4119,
+   0.9112
+  ],
+  "lift": 0
+ },
+ "poses": "<assets>/boss302/anim/poses/v2/poses.json",
+ "shiftConfig": "<assets>/boss302/anim/shift/in/shift_config.json",
+ "knobRadius": 0.0246,
+ "knobGrip": {
+  "pitch": -10,
+  "yaw": 65,
+  "roll": 10,
+  "palmGap": 0.002
+ },
+ "reach": {
+  "duration": 0.3,
+  "over": 0.12,
+  "openAt": 0.05,
+  "closeAt": 0.29,
+  "offRim": [
+   0.06,
+   0.08,
+   0.01
+  ],
+  "turnFrom": 0.35
+ },
+ "release": 0.35,
+ "foot": 0.2,
+ "quick": {
+  "reach": 0.15,
+  "release": 0.18,
+  "foot": 0.1
+ },
+ "manifest": "<assets>/boss302/work/manifest/boss302_cockpit_parts.json"
+}
