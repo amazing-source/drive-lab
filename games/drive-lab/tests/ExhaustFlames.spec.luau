@@ -1,4 +1,6 @@
 --!strict
+local Boss302Model = require("../src/shared/Config/Cars/Boss302/Model")
+local Boss302Physics = require("../src/shared/Config/Cars/Boss302/Physics")
 local Catalog = require("../src/shared/Config/Cars/Catalog")
 local DR458Model = require("../src/shared/Config/Cars/DR458/Model")
 local DR458Physics = require("../src/shared/Config/Cars/DR458/Physics")
@@ -114,6 +116,34 @@ describe("ExhaustFlames on the DR458", function()
 		local length = math.sqrt(1 + SHARED_RISE ^ 2)
 		local svj = { x = 0, y = SHARED_RISE / length, z = 1 / length }
 		for _, outlet in outlets do
+			expect(angleBetween(ExhaustFlames.direction(outlet.axis, SHARED_RISE), svj) < 1).toBe(true)
+		end
+	end)
+end)
+
+describe("ExhaustFlames on the Boss 302", function()
+	it("throws them as the SVJ does: a jet and a fireball with every pop, in every mode", function()
+		local flames = Catalog.cars.Boss302.flames
+		expect(flames).toBe(Catalog.cars.SVJ.flames)
+		local kinds: { ExhaustPops.Kind } = { "Lift", "Downshift", "Upshift" }
+		for _, mode in Boss302Physics.modeOrder do
+			for _, kind in kinds do
+				expect(ExhaustFlames.share(flames, mode, kind, 0, never)).toBe(0)
+				expect(ExhaustFlames.share(flames, mode, kind, 1, never)).toBe(1)
+			end
+		end
+	end)
+
+	it("throws them out of its two tail pipes, back and a little up as the SVJ's", function()
+		local outlets = Boss302Model.exhaustOutlets
+		assert(outlets and #outlets == 2, "the Boss has its two outlets")
+		local left, right = outlets[1].centre, outlets[2].centre
+		expect(left.right < 0 and right.right > 0).toBe(true)
+		expect(left.right).toBeNear(-right.right, 0.01)
+		local length = math.sqrt(1 + SHARED_RISE ^ 2)
+		local svj = { x = 0, y = SHARED_RISE / length, z = 1 / length }
+		for _, outlet in outlets do
+			expect(outlet.centre.forward < -2).toBe(true)
 			expect(angleBetween(ExhaustFlames.direction(outlet.axis, SHARED_RISE), svj) < 1).toBe(true)
 		end
 	end)
