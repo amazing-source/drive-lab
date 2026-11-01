@@ -1,4 +1,7 @@
 --!strict
+local Boss302 = require("../src/shared/Config/Cars/Boss302/Audio")
+local Boss302Physics = require("../src/shared/Config/Cars/Boss302/Physics")
+local Boss302Startup = require("../src/shared/Config/Cars/Boss302/Startup")
 local CarAudio = require("../src/shared/Config/CarAudio")
 local Catalog = require("../src/shared/Config/Cars/Catalog")
 local DR458 = require("../src/shared/Config/Cars/DR458/Audio")
@@ -21,11 +24,14 @@ local FILE_LENGTHS: { [string]: number } = {
 	[SVJ.eventsSoundId] = 18.6001,
 	[DR458.eventsSoundId] = 14.6917,
 	[DR458.limiter.soundId] = 108.333,
+	[Boss302.eventsSoundId] = 16.29229,
+	[Boss302.limiter.soundId] = 26.349728,
 }
 
 local PACKS: { { name: string, pack: CarAudio.Pack } } = {
 	{ name = "SVJ", pack = SVJ },
 	{ name = "DR458", pack = DR458 },
+	{ name = "Boss302", pack = Boss302 },
 }
 
 local function uploaded(soundId: string): boolean
@@ -73,7 +79,14 @@ describe("CarAudio config", function()
 			local popsFile = CarAudio.popsSoundId(Pack)
 			local popsLength = FILE_LENGTHS[popsFile]
 			assert(eventsLength and popsLength, "the length of every file its one-shots are cut from")
-			local eventsEnd = inOrder({ Pack.startup.region, Pack.gear.region }, 0, eventsLength)
+			local oneShots = { Pack.startup.region, Pack.gear.region }
+			if Pack.gear.downRegion then
+				table.insert(oneShots, Pack.gear.downRegion)
+			end
+			if Pack.grind then
+				table.insert(oneShots, Pack.grind.region)
+			end
+			local eventsEnd = inOrder(oneShots, 0, eventsLength)
 			inOrder(Pack.pops.regions, if popsFile == Pack.eventsSoundId then eventsEnd else 0, popsLength)
 			expect(Pack.startup.handOver < Pack.startup.region.to - Pack.startup.region.from).toBeTruthy()
 		end)
@@ -184,6 +197,9 @@ describe("CarAudio config", function()
 				pack.gear.volume * CarAudio.carGain(pack),
 				if own then idle * own.volume else idle * 10 ^ (pack.startup.boostDb / 20),
 			}
+			if pack.grind then
+				table.insert(volumes, pack.grind.volume * CarAudio.carGain(pack))
+			end
 			local controls = pack.controls
 			if controls then
 				local sounds: { CarAudio.ControlSound } = {}
@@ -282,6 +298,98 @@ describe("CarAudio config", function()
 	it("DR458: settles the start-up's revs at the car's idle", function()
 		local values = DR458Startup.rpm.values
 		expect(values[#values]).toBe(DR458Physics.engine.idleRpm)
+	end)
+
+	it("Boss302: keys every pop chance by exactly the car's own modes", function()
+		local triggers = Boss302.popTriggers
+		for _, chances in { triggers.liftChance, triggers.upshiftChance, triggers.downshiftChance } do
+			local count = 0
+			for mode in chances do
+				expect(table.find(Boss302Physics.modeOrder, mode) ~= nil).toBeTruthy()
+				count += 1
+			end
+			expect(count).toBe(#Boss302Physics.modeOrder)
+		end
+	end)
+
+	it("Boss302: pops on the SVJ's timing, Normal as Strada, Sport as Sport, TracKey as Corsa", function()
+		local mine, svj = Boss302.popTriggers, SVJ.popTriggers
+		local mapping = { Normal = "Strada", Sport = "Sport", TracKey = "Corsa" }
+		for mode, svjMode in mapping do
+			expect(mine.liftChance[mode]).toBe(svj.liftChance[svjMode])
+			expect(mine.upshiftChance[mode]).toBe(svj.upshiftChance[svjMode])
+			expect(mine.downshiftChance[mode]).toBe(svj.downshiftChance[svjMode])
+		end
+		-- The car starts in its first mode (Services/Cars), its road calibration.
+		expect(Boss302Physics.modeOrder[1]).toBe("Normal")
+		expect(mine.minRpm).toBe(svj.minRpm)
+		expect(mine.closedThrottle).toBe(svj.closedThrottle)
+	end)
+
+	it("Boss302: cuts its pops, gear sounds and grind from its own events file", function()
+		expect(Boss302.pops.soundId).toBe(nil)
+		expect(CarAudio.popsSoundId(Boss302)).toBe(Boss302.eventsSoundId)
+		expect(Boss302.gear.downRegion ~= nil).toBeTruthy()
+		expect(Boss302.grind ~= nil).toBeTruthy()
+	end)
+
+	it("Boss302: fades its grind inside its region", function()
+		local grind = Boss302.grind
+		assert(grind, "the Boss has a grind")
+		expect(grind.fadeOut > 0 and grind.fadeOut < grind.region.to - grind.region.from).toBeTruthy()
+	end)
+
+	it("Boss302: loops every engine layer, its limiter and its far loop inside its packed bank", function()
+		local length = FILE_LENGTHS[Boss302.limiter.soundId]
+		local regions = { Boss302.limiter.region, Boss302.far.region }
+		expect(Boss302.far.soundId).toBe(Boss302.limiter.soundId)
+		for _, layer in Boss302.engineLayers do
+			expect(layer.soundId).toBe(Boss302.limiter.soundId)
+			table.insert(regions, layer.region)
+		end
+		for _, region in regions do
+			assert(region, "every loop of the packed bank has its region")
+			expect(region.from >= 0 and region.to <= length).toBeTruthy()
+		end
+	end)
+
+	it("Boss302: plays at the DR458's level, 8 dB over its loops", function()
+		expect(Boss302.engineVolume).toBeNear(DR458.engineVolume, 1e-12)
+	end)
+
+	it(
+		"Boss302: plays its start-up from its own events file, 7.9 dB over its idle (its measured match)",
+		function()
+			expect(Boss302.startup.sound).toBe(nil)
+			expect(Boss302.startup.region.from).toBe(0)
+			expect(Boss302.startup.boostDb).toBe(7.9)
+		end
+	)
+
+	it(
+		"Boss302: holds the starter's revs until its start-up catches, and ends its revs by the hand-over",
+		function()
+			local times, values = Boss302Startup.rpm.times, Boss302Startup.rpm.values
+			local cranking = 1
+			while values[cranking + 1] == values[1] do
+				cranking += 1
+			end
+			expect(times[cranking] <= Boss302Startup.catchAfter).toBeTruthy()
+			expect(times[cranking + 1] >= Boss302Startup.catchAfter).toBeTruthy()
+			expect(times[#times] <= Boss302.startup.handOver).toBeTruthy()
+		end
+	)
+
+	it("Boss302: settles the start-up's revs at or over every mode's idle, and under its abort", function()
+		local values = Boss302Startup.rpm.values
+		local highestIdle = Boss302Physics.engine.idleRpm
+		for _, mode in Boss302Physics.modes do
+			highestIdle = math.max(highestIdle, mode.idleRpm or 0)
+		end
+		expect(values[#values] >= highestIdle).toBeTruthy()
+		for _, value in values do
+			expect(value < Boss302.startup.abortRpm).toBeTruthy()
+		end
 	end)
 
 	-- A car's control sounds, each with its name, for the checks below.
