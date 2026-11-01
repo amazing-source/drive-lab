@@ -12,6 +12,7 @@
 ]]
 export type Key = { number }
 export type ShapeChange = { at: number, shape: string }
+export type Point = { x: number, y: number, z: number }
 
 export type Shift = {
 	-- The knob ball's radius (metres), for the fingers' wrap.
@@ -30,6 +31,9 @@ export type Shift = {
 	-- The same durations for the game-quick pace (the keyed way is played by share, so only these
 	-- change).
 	quick: { reach: number, release: number, foot: number }?,
+	-- The Knob hand mesh's centre in the wrist frame, metres (the right hand; the left mirrors x), as
+	-- Config/DriverStartup's MESHES give the start-up hands.
+	mesh: Point?,
 }
 
 return table.freeze({})
