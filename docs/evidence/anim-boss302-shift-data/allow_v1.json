@@ -1,0 +1,13 @@
+{
+ "about": "Named contacts for the Boss 302 shift hand (tools/anim/shift_check.py --allow), each at its measured depth rounded up at the fourth decimal.",
+ "contacts": [
+  {
+   "part": "hand",
+   "object": "GEO_INT_STwheel_00",
+   "shape": "Rest",
+   "when": "any",
+   "limitMm": 3.1,
+   "why": "the open hand just after the grip-to-open swap, leaving the rim on the way to R: a discrete swap with no half-open mesh (playbook P26); measured 3.03 mm at share 0.175"
+  }
+ ]
+}

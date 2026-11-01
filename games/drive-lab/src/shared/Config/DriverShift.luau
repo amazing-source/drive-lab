@@ -27,6 +27,9 @@ export type Shift = {
 	reach: number,
 	release: number,
 	foot: number,
+	-- The same durations for the game-quick pace (the keyed way is played by share, so only these
+	-- change).
+	quick: { reach: number, release: number, foot: number }?,
 }
 
 return table.freeze({})

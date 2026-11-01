@@ -8,7 +8,13 @@ changed time is a re-run, never a re-author. startup_paths.py hands an inputs fi
 What a touch does, by its "grab":
 - "pinch": the Pinch hand holds the control's grip (its top TOP_GRIP of mesh) between thumb and
   index, with the blade's out side down the control's axis, and turns with it about its hinge as
-  the game turns it: a key;
+  the game turns it: a key. "gripAlong": -1 when the grip sticks out against the axis (a key in a
+  column whose turn axis points into the cylinder). A control turned by several moves (a key to ON,
+  then on to START) is held through all of them, and let go RELEASE_LEAD before the last move's
+  "back" (the spring brings the key back as the fingers leave). "bladeSide" (1 or -1) picks which
+  face of the blade the thumb takes instead of the forearm's direction; "gripBand" (metres) how much of
+  the grip's end the pinch takes (TOP_GRIP by default; less holds it nearer its end); "turns" names every cabin
+  object the control turns (a key's head, blade and ring), "part" the one whose top is held;
 - "edge": the Point hand's index end rides FINGER_UNDER (or the touch's "under") behind the free edge (the vertices
   farthest from the hinge line) while the control opens: a guard;
 - "tip": the same at the vertices farthest from the pivot: a toggle's lever;
@@ -19,6 +25,11 @@ Each touch is keyed every RIDE_STEP along the control's arc from just before it 
 stops, so the bake cannot cut a corner; between touches the hand travels through a key clear of
 both controls. The left hand goes to the wheel as the SVJ's does. Keys are a Blender Empty's,
 Bezier eased and baked every BAKE_STEP seconds, as for the SVJ.
+
+An inputs "lean" ({pivot: seat metres, keys: [[seconds, degrees forward], ...]}) leans the torso
+about the seat's x axis through the pivot while the hands work (a control the arm reaches only so):
+the shoulders the arms are drawn from turn with it, sampled as lean_at samples it, and the lean is
+written to StartupPaths.LEAN for the game's seated root layer.
 
 Writes the car's StartupPaths.luau (typed by Config/DriverStartup, with TOUCHES for the specs),
 paths.json (the bake, the touches and the measured contact for tools/anim/startup_check.py) and
@@ -63,6 +74,8 @@ PRESS_FROM = 0.003
 # The open hand comes onto the rim from this offset off the grip (wheel frame, metres: out from
 # the hub, toward the driver), then closes.
 RIM_APPROACH = (0.04, 0.0, 0.03)
+# A key that springs back: the pinch starts away this long before the spring does, seconds.
+RELEASE_LEAD = 0.06
 
 
 def vec(v):
@@ -83,6 +96,30 @@ def bake_at(empty, finish, step, extra):
     return samples
 
 
+def lean_at(lean, t):
+    """Degrees forward at `t`: smoothstep between keys (no overshoot), held past the ends."""
+    if not lean:
+        return 0.0
+    keys = lean["keys"]
+    if t <= keys[0][0]:
+        return keys[0][1]
+    for (t0, d0), (t1, d1) in zip(keys, keys[1:]):
+        if t <= t1:
+            u = (t - t0) / (t1 - t0)
+            return d0 + (d1 - d0) * u * u * (3 - 2 * u)
+    return keys[-1][1]
+
+
+def leaned(point, lean, t, studs=True):
+    """`point` (seat frame) turned with the torso leaning lean_at(t) degrees forward about the seat's
+    x axis through the lean's pivot: positive brings the top toward the nose."""
+    degrees = lean_at(lean, t)
+    if degrees == 0.0:
+        return Vector(point)
+    pivot = Vector(lean["pivot"]) * (STUDS if studs else 1.0)
+    return pivot + Matrix.Rotation(-math.radians(degrees), 3, "X") @ (Vector(point) - pivot)
+
+
 def turned(point, pivot, axis, angle):
     """`point` turned about the line through `pivot` along `axis`, as Rules/Hinge.rotate."""
     return pivot + Matrix.Rotation(angle, 3, axis) @ (point - pivot)
@@ -97,12 +134,25 @@ def control_openness(t, move):
 
 
 class Arm:
-    def __init__(self, driver, sign):
+    def __init__(self, driver, sign, lean=None):
         side = "R" if sign > 0 else "L"
         self.sign = sign
-        self.shoulder = vec(driver["shoulders"][side])
-        self.lengths = (driver["upper"], driver["lower"], vec(driver["elbowBias"]))
+        self.rest_shoulder = vec(driver["shoulders"][side])
+        self.shoulder = self.rest_shoulder
+        self.bias = vec(driver["elbowBias"])
+        self.lengths = (driver["upper"], driver["lower"], self.bias)
         self.reach = driver["upper"] + driver["lower"]
+        self.lean = lean
+
+    def shoulder_at(self, t):
+        return leaned(self.rest_shoulder, self.lean, t)
+
+    def at(self, t):
+        """This arm with the torso leaned as at `t`: its shoulder and its elbow's bias turned."""
+        self.shoulder = self.shoulder_at(t)
+        bias = Matrix.Rotation(-math.radians(lean_at(self.lean, t)), 3, "X") @ self.bias
+        self.lengths = (self.lengths[0], self.lengths[1], bias)
+        return self
 
 
 def load_cabin(path, seat):
@@ -173,12 +223,18 @@ class Touch:
         hinge = config["controls"][name]
         self.pivot = vec(hinge["pivot"]) * STUDS
         self.axis = vec(hinge["axis"]).normalized()
-        self.move = next(m for m in config["moves"] if m["control"] == name)
+        # Out of the control along its grip: the axis, or against it.
+        self.out = self.axis * item.get("gripAlong", 1)
+        self.moves = [m for m in config["moves"] if m["control"] == name]
+        self.move = self.moves[0]
         self.start = self.move["at"] - self.move["move"]
-        self.end = self.move["at"]
+        self.end = self.moves[-1]["at"]
+        back = self.moves[-1].get("back")
+        self.release = back - RELEASE_LEAD if back is not None and len(self.moves) > 1 else self.end
         if self.grab == "pinch":
-            top = max(p.dot(self.axis) for p in points)
-            grip = [p for p in points if p.dot(self.axis) > top - TOP_GRIP * STUDS]
+            top = max(p.dot(self.out) for p in points)
+            band = item.get("gripBand", TOP_GRIP)
+            grip = [p for p in points if p.dot(self.out) > top - band * STUDS]
             self.point = mean(grip)
             spread = principal_axes(grip)
             thin = spread[2] - self.axis * spread[2].dot(self.axis)
@@ -198,7 +254,7 @@ class Touch:
             self.point = self.edge + off * item.get("under", FINGER_UNDER) * STUDS
 
     def angle(self, t):
-        return self.move["angle"] * control_openness(t, self.move)
+        return sum(m["angle"] * control_openness(t, m) for m in self.moves)
 
     def contact(self, t):
         if self.move is None:
@@ -209,23 +265,42 @@ class Touch:
 def pinch_frame(touch, pinch, arm, angle):
     """The Pinch hand's wrist frame on a turned grip: its thumb-to-index axis across the blade, the
     open side of the pinch down the control's axis, the side of the blade chosen so the forearm
-    runs toward the shoulder at mid-turn."""
+    runs toward the shoulder at mid-turn. A touch's "tiltDeg" turns that hold about the thumb-to-index
+    axis (the pinch point fixed); "tiltDeg": "reach" takes the tilt, every 5 degrees, whose wrist stays
+    nearest the shoulder over the whole turn (a key the arm reaches only with the fingers toward it)."""
     point_h, across_h, out_h = pinch
-    a1 = across_h.normalized()
-    a2 = (out_h - a1 * out_h.dot(a1)).normalized()
-    hand_axes = Matrix((a1, a2, a1.cross(a2))).transposed()
-    mid = touch.move["angle"] / 2
-    best = None
-    for side in (1, -1):
-        b1 = Matrix.Rotation(mid, 3, touch.axis) @ (touch.blade * side)
-        b2 = -touch.axis
-        b2 = (b2 - b1 * b2.dot(b1)).normalized()
-        rot = Matrix((b1, b2, b1.cross(b2))).transposed() @ hand_axes.transposed()
-        wrist = touch.contact(touch.start) - rot @ point_h
-        toward = (arm.shoulder - wrist).normalized().dot(rot.col[2])
-        if best is None or toward > best[0]:
-            best = (toward, rot)
-    rot = Matrix.Rotation(angle - mid, 3, touch.axis) @ best[1]
+    mid = sum(m["angle"] for m in touch.moves) / 2
+    if getattr(touch, "pinch_rot", None) is None:
+        # The arm as leaned while the key is held.
+        arm.at((touch.start + touch.release) / 2)
+        a1 = across_h.normalized()
+        a2 = (out_h - a1 * out_h.dot(a1)).normalized()
+        hand_axes = Matrix((a1, a2, a1.cross(a2))).transposed()
+        tilt = touch.item.get("tiltDeg", 0)
+        tilts = range(-90, 91, 5) if tilt == "reach" else (tilt,)
+        sides = (touch.item["bladeSide"],) if "bladeSide" in touch.item else (1, -1)
+        total = sum(m["angle"] for m in touch.moves)
+        best = None
+        for side in sides:
+            b1 = Matrix.Rotation(mid, 3, touch.axis) @ (touch.blade * side)
+            b2 = -touch.out
+            b2 = (b2 - b1 * b2.dot(b1)).normalized()
+            held = Matrix((b1, b2, b1.cross(b2))).transposed() @ hand_axes.transposed()
+            for degrees in tilts:
+                rot = Matrix.Rotation(math.radians(degrees), 3, b1) @ held
+                wrist = touch.contact(touch.start) - rot @ point_h
+                toward = (arm.shoulder - wrist).normalized().dot(rot.col[2])
+                far = 0.0
+                for a in (0.0, mid, total):
+                    turn = Matrix.Rotation(a - mid, 3, touch.axis) @ rot
+                    centre = turned(touch.point, touch.pivot, touch.axis, a)
+                    far = max(far, (centre - turn @ point_h - arm.shoulder).length)
+                score = (far, -toward) if tilt == "reach" else (-toward,)
+                if best is None or score < best[0]:
+                    best = (score, rot, degrees, far / arm.reach)
+        touch.pinch_rot = best[1]
+        touch.pinch_tilt = (best[2], round(best[3], 4))
+    rot = Matrix.Rotation(angle - mid, 3, touch.axis) @ touch.pinch_rot
     m = rot.to_4x4()
     centre = turned(touch.point, touch.pivot, touch.axis, angle)
     m.translation = centre - rot @ point_h
@@ -270,17 +345,19 @@ def right_keys(sequence, touches, rest, grip_frame, wheel, tips, arm, config):
         if touch.grab == "pinch":
             first = pinch_frame(touch, tips["pinch"], arm, 0.0)
             above = first.copy()
-            above.translation = first.translation + touch.axis * touch.item.get("above", 0.04) * STUDS
+            above.translation = first.translation + touch.out * touch.item.get("above", 0.04) * STUDS
             keys.append((touch.start - 0.15, above))
             t = touch.start - 0.03
-            while t < touch.end + 0.05 + 1e-9:
-                keys.append((round(t, 4), pinch_frame(touch, tips["pinch"], arm, touch.angle(t))))
+            held = max(touch.end + 0.05, touch.release)
+            while t < held + 1e-9:
+                keys.append((round(t, 4), pinch_frame(touch, tips["pinch"], arm, touch.angle(min(t, touch.release)))))
                 t += RIDE_STEP
-            last = pinch_frame(touch, tips["pinch"], arm, touch.angle(touch.end))
+            last = pinch_frame(touch, tips["pinch"], arm, touch.angle(touch.release))
             off = last.copy()
-            off.translation = last.translation + touch.axis * 0.05 * STUDS
-            keys.append((touch.end + 0.18, off))
-            previous_end = touch.end + 0.18
+            off.translation = last.translation + touch.out * touch.item.get("off", 0.05) * STUDS
+            leave = touch.item.get("leave", 0.18)
+            keys.append((touch.release + leave, off))
+            previous_end = touch.release + leave
         elif touch.grab == "press":
             face = touch.point
             press_at = config["pressAt"]
@@ -380,7 +457,7 @@ def grip_wrist(grip, side, wheel):
     return wheel @ frame(Vector(g["wrist"]), y.cross(z), y, z)
 
 
-def write_paths(path, car, tracks, meshes, cuff, fingertip, button, touches, about):
+def write_paths(path, car, tracks, meshes, cuff, fingertip, button, touches, lean, about):
     def point(p):
         return f"table.freeze({{ x = {luau_number(p[0])}, y = {luau_number(p[1])}, z = {luau_number(p[2])} }})"
 
@@ -431,11 +508,24 @@ def write_paths(path, car, tracks, meshes, cuff, fingertip, button, touches, abo
         "\t}),",
         f"\tCUFF = {point(cuff)},",
         f"\tFINGERTIP = {point(fingertip)},",
-        "\tBUTTON = table.freeze({",
-        f"\t\ttop = {point(button['top'])},",
-        f"\t\tnormal = {point(button['normal'])},",
-        f"\t\tdepth = {luau_number(button['depth'])},",
-        "\t}),",
+    ]
+    if button:
+        lines += [
+            "\tBUTTON = table.freeze({",
+            f"\t\ttop = {point(button['top'])},",
+            f"\t\tnormal = {point(button['normal'])},",
+            f"\t\tdepth = {luau_number(button['depth'])},",
+            "\t}),",
+        ]
+    if lean:
+        keys = ", ".join(f"{{ {luau_number(t)}, {luau_number(d)} }}" for t, d in lean["keys"])
+        lines += [
+            "\tLEAN = table.freeze({",
+            f"\t\tpivot = {point(lean['pivot'])},",
+            f"\t\tkeys = {{ {keys} }},",
+            "\t}),",
+        ]
+    lines += [
         "\tTOUCHES = table.freeze(TOUCHES),",
         "})",
         "",
@@ -449,12 +539,16 @@ def write_paths(path, car, tracks, meshes, cuff, fingertip, button, touches, abo
 def main(inputs, config_path, out):
     seat = Seat(inputs["seat"])
     config = json.load(open(inputs["startupConfig"]))
+    # A binding with no steering hub yet (its wheel not imported): the inputs give the rim's fit.
+    if config.get("steeringHub") is None and "steeringHub" in inputs:
+        config["steeringHub"] = inputs["steeringHub"]
     manifest = json.load(open(inputs["manifest"]))
     rest = json.load(open(inputs["restPose"]))
     poses = json.load(open(inputs["poses"]))
     grip = json.load(open(inputs["grip"]))
     sequence = inputs["sequence"]
-    right_arm, left_arm = Arm(inputs["driver"], 1), Arm(inputs["driver"], -1)
+    lean = inputs.get("lean")
+    right_arm, left_arm = Arm(inputs["driver"], 1, lean), Arm(inputs["driver"], -1, lean)
     # Every mesh in the open file goes; the cabin comes from its dump, in the seat frame.
     for ob in list(bpy.data.objects):
         bpy.data.objects.remove(ob)
@@ -476,7 +570,9 @@ def main(inputs, config_path, out):
     l_keys, l_shapes, l_grip_from = left_keys(sequence, rest["left"], left_grip, wheel)
     bpy.context.scene.render.fps = FPS
     step = inputs.get("bakeStep", BAKE_STEP)
-    corners = [t for touch in touches for t in (touch.start, touch.end)]
+    corners = [t for touch in touches for m in (touch.moves if touch.move else []) for t in (m["at"] - m["move"], m["at"])] + [
+        t for touch in touches if not touch.move for t in (touch.start, touch.end)
+    ]
     right = bake_at(key_empty("RightWrist", r_keys), r_keys[-1][0], step, corners)
     left = bake_at(key_empty("LeftWrist", l_keys), l_keys[-1][0], step, [])
 
@@ -497,13 +593,18 @@ def main(inputs, config_path, out):
             if touch.start <= t <= touch.end:
                 tip = tip_of(from_quaternion(loc, rot), tip_offset(touch.shape))
                 worst = max(worst, (tip - touch.contact(t)).length)
-        report["touches"].append({"control": touch.name, "grab": touch.grab, "from": touch.start, "to": touch.end, "worstMm": round(worst / STUDS * 1000, 2)})
+        row = {"control": touch.name, "grab": touch.grab, "from": touch.start, "to": touch.end, "worstMm": round(worst / STUDS * 1000, 2)}
+        if getattr(touch, "pinch_tilt", None):
+            row["tiltDeg"], row["pinchReach"] = touch.pinch_tilt
+        report["touches"].append(row)
     for label, samples, arm in (("right", right, right_arm), ("left", left, left_arm)):
-        report["reach"][label] = round(max((loc - arm.shoulder).length for _, loc, _ in samples) / arm.reach, 4)
+        far_t, far_loc, _ = max(samples, key=lambda s: (s[1] - arm.shoulder_at(s[0])).length)
+        report["reach"][label] = round((far_loc - arm.shoulder_at(far_t)).length / arm.reach, 4)
+        report.setdefault("farthest", {})[label] = {"t": round(far_t, 4), "wrist": [round(c / STUDS, 4) for c in far_loc]}
     print(json.dumps(report, indent=1))
     assert max(report["reach"].values()) <= REACH_SHARE, report
 
-    press = next(t for t in touches if t.grab == "press")
+    press = next((t for t in touches if t.grab == "press"), None)
     meshes = {name: [c / STUDS for c in shape_r[name]["R"]["centre"]] for name in ("Rest", "Point", "Pinch")}
     luau_touches = [
         {"control": t.name, "shape": t.shape, "tip": [c / STUDS for c in tip_offset(t.shape)], "point": [c / STUDS for c in t.point]}
@@ -517,9 +618,12 @@ def main(inputs, config_path, out):
         meshes,
         [c / STUDS for c in poses["cuff"]["R"]],
         [c / STUDS for c in tips["Point"]],
-        {"top": [c / STUDS for c in press.point], "normal": list(press.normal), "depth": PRESS_FROM},
+        {"top": [c / STUDS for c in press.point], "normal": list(press.normal), "depth": PRESS_FROM} if press else None,
         luau_touches,
-        f"Baked every {step:.4f} s and where a control starts or stops; ENGINE START held {PRESS_HOLD:.1f} s from the press.",
+        lean,
+        f"Baked every {step:.4f} s and where a control starts or stops; ENGINE START held {PRESS_HOLD:.1f} s from the press."
+        if press
+        else f"Baked every {step:.4f} s and where a control starts or stops; no START button: the key turns to START.",
     )
 
     def track(samples, shapes):
@@ -530,12 +634,15 @@ def main(inputs, config_path, out):
         "studsPerMetre": STUDS,
         "inputs": inputs,
         "arm": {"shoulders": inputs["driver"]["shoulders"], "upper": right_arm.lengths[0], "lower": right_arm.lengths[1], "elbowBias": inputs["driver"]["elbowBias"]},
+        "lean": lean,
         "tips": {"Point": list(tips["Point"]), "Pinch": list(pinch_point)},
         "gripLocal": {side: [list(r) for r in grip_wrist(grip, side, Matrix.Identity(4))] for side in ("R", "L")},
         "wheel": [list(r) for r in wheel],
         "touches": [
             {
                 "control": t.name,
+                "part": t.item.get("part", t.name),
+                "turns": t.item.get("turns", [t.item.get("part", t.name)]),
                 "grab": t.grab,
                 "shape": t.shape,
                 "from": t.start,
@@ -544,6 +651,7 @@ def main(inputs, config_path, out):
                 "pivot": list(t.pivot) if t.move else None,
                 "axis": list(t.axis) if t.move else None,
                 "move": t.move,
+                "moves": t.moves if t.move else None,
                 "normal": list(t.normal) if t.move is None else None,
             }
             for t in touches
@@ -593,12 +701,14 @@ def render_frames(inputs, out, cabin, touches, record, poses, grip, seat):
     scene.collection.objects.link(camera)
     scene.camera = camera
     camera.data.clip_start = 0.02
-    views = {name: (vec(v["eye"]), vec(v["target"]), v["lens"], v.get("hideHead", False)) for name, v in inputs["views"].items()}
+    # "glovesOnly": the local driver's cockpit view draws no sleeves (DriverArms.COCKPIT_GLOVES_ONLY).
+    views = {name: (vec(v["eye"]), vec(v["target"]), v["lens"], v.get("hideHead", False), v.get("glovesOnly", False)) for name, v in inputs["views"].items()}
     arm = record["arm"]
     lengths = (arm["upper"], arm["lower"], vec(arm["elbowBias"]))
     grip_local = {side: Matrix(rows) for side, rows in record["gripLocal"].items()}
     moving = [t for t in touches if t.move is not None]
-    rests = {t.name: cabin[t.item.get("part", t.name)].matrix_world.copy() for t in moving}
+    turned_by = {name: t for t in moving for name in t.item.get("turns", [t.item.get("part", t.name)])}
+    rests = {name: cabin[name].matrix_world.copy() for name in turned_by}
 
     def tube(name, a, b, radius):
         mesh = bpy.data.meshes.new(name)
@@ -626,10 +736,9 @@ def render_frames(inputs, out, cabin, touches, record, poses, grip, seat):
         for obj in sleeves:
             bpy.data.objects.remove(obj)
         sleeves.clear()
-        for touch in moving:
-            obj = cabin[touch.item.get("part", touch.name)]
+        for name, touch in turned_by.items():
             angle = touch.angle(t)
-            obj.matrix_world = Matrix.Translation(touch.pivot) @ Matrix.Rotation(angle, 4, touch.axis) @ Matrix.Translation(-touch.pivot) @ rests[touch.name]
+            cabin[name].matrix_world = Matrix.Translation(touch.pivot) @ Matrix.Rotation(angle, 4, touch.axis) @ Matrix.Translation(-touch.pivot) @ rests[name]
         for side, sign in (("R", 1), ("L", -1)):
             samples = record["right" if side == "R" else "left"]
             sample = min(samples, key=lambda s: abs(s["t"] - min(t, samples[-1]["t"])))
@@ -644,14 +753,16 @@ def render_frames(inputs, out, cabin, touches, record, poses, grip, seat):
                 if name == shape:
                     obj.data = base[(name, s)].copy()
                     obj.data.transform(m @ grip_local[side].inverted() if name == "Grip" else m)
-            shoulder = vec(arm["shoulders"][side])
+            shoulder = leaned(vec(arm["shoulders"][side]), record.get("lean"), t)
             joint, _ = elbow(shoulder, m.translation, m.col[2].xyz, sign, lengths)
             tube(f"Upper{side}", shoulder, joint, 0.26)
             tube(f"Lower{side}", joint, m.translation, 0.2)
             ball[side].location = joint
-        for name, (eye, target, lens, hide_head) in views.items():
+        for name, (eye, target, lens, hide_head, gloves_only) in views.items():
             for obj in body:
                 obj.hide_render = hide_head and obj.name in ("Torso", "Head")
+            for obj in sleeves + list(ball.values()):
+                obj.hide_render = gloves_only
             forward = (target - eye).normalized()
             right_axis = forward.cross(Vector((0, 1, 0))).normalized()
             up = right_axis.cross(forward)
@@ -687,9 +798,10 @@ def seated_body(inputs):
         obj.matrix_world = frame(vec(box["centre_seat_studs"]), axes[0] * half[0], axes[1] * half[1], axes[2] * half[2])
         obj.color = colour
         objects.append(obj)
-    legs = json.load(open(inputs["footwell"]))["poses_blender"]
+    leg_poses = inputs.get("legPoses", [])
+    legs = json.load(open(inputs["footwell"]))["poses_blender"] if leg_poses else {}
     origin = vec(inputs["seat"])
-    for pose_name in inputs.get("legPoses", []):
+    for pose_name in leg_poses:
         points = legs[pose_name]
         chain = [Vector((-(p[0] - origin.x), p[2] - origin.z, p[1] - origin.y)) * STUDS for p in (points["hip"], points["knee"], points["ankle"], points["ball"])]
         for a, b in zip(chain, chain[1:]):

@@ -4,6 +4,9 @@ local Units = require("../Units")
 export type Driving = {
 	-- A model tagged with this and carrying a "Car" attribute is rigged when the server starts.
 	SPAWN_TAG: string,
+	-- The road starts at this car's spawn (its "Car" attribute, a Catalog name), whatever other cars
+	-- the place holds (Rules/TrackPath.startIndex).
+	ROAD_START_CAR: string,
 	-- How close a player must be to the driver's door to get in, studs.
 	ENTER_DISTANCE: number,
 	-- Above this a driven car is out of its envelope: the SVJ tops out near 355 km/h.
@@ -23,6 +26,7 @@ export type Driving = {
 
 local Driving: Driving = table.freeze({
 	SPAWN_TAG = "DriveLabCarSpawn",
+	ROAD_START_CAR = "SVJ",
 	ENTER_DISTANCE = 12,
 	MAX_SPEED = Units.metresToStuds(Units.kmhToMps(420)),
 	RECLAIM_SECONDS = 0.5,

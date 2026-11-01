@@ -1,0 +1,14 @@
+Boss 302 key: the pinch holds searched before naming contacts (scratch numpy sweep of startup_sequence's pinch
+frame: the Pinch hand mesh, the key's grip band, the static cabin around the key without the key's own pieces;
+reach of the right arm with the lean; depths by the nearest-sample vote at 3 mm samples).
+
+Holds: blade face +1 / -1, tilt about the pinch axis every 10 deg (72), key at OFF, 60 deg and 90 deg.
+  lean 7 deg (decided):  2 holds within reach 0.955: side -1 tilt -60 (reach 0.953, 19.7 mm, right spoke),
+                         tilt -70 (0.953, 19.8 mm, lower dash). Clearest holds: side +1 tilt 80 (8.4 mm) at reach 1.127.
+  lean 10 deg:           8 within reach; best 18.6 mm.
+  lean 13 / 16 / 20 deg: best 17.9 / 17.0 / 16.0 mm.
+  KeyPinch (fingers tucked, tried and dropped): no hold within reach at 7 deg (pinch point 9 mm nearer the
+  wrist); clearest 8.4 mm at reach 1.127.
+  Depth cap: the same values with the vote's 20 mm cap lifted to 80 mm (true depths, not capped).
+  Where the hand meets the cabin at the chosen hold: mostly the curled fingers (203 of 244 vertices at OFF).
+Chosen (coordinator): Pinch, lean 7 deg, blade side -1, tilt -60, reach 0.953.

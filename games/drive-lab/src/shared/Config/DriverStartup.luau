@@ -38,9 +38,10 @@ export type Paths = {
 	MESHES: { Rest: Point, Point: Point, Pinch: Point? },
 	CUFF: Point,
 	-- What the keys were made against, for the specs: the Point hand's index tip in its wrist
-	-- frame; START's top face, the console's normal there and the push (seat frame, metres).
+	-- frame; START's top face, the console's normal there and the push (seat frame, metres), in a
+	-- car with a START button.
 	FINGERTIP: Point,
-	BUTTON: { top: Point, normal: Point, depth: number },
+	BUTTON: { top: Point, normal: Point, depth: number }?,
 	-- The SVJ's START flap: its hinge line (along x) and the point under its free edge the index
 	-- rides.
 	FLAP: { hinge: Point, edge: Point }?,
