@@ -11,6 +11,7 @@ local EntryPending = require("../src/shared/Config/Cars/Boss302/EntryPending")
 local Gauges = require("../src/shared/Config/Cars/Boss302/Gauges")
 local Model = require("../src/shared/Config/Cars/Boss302/Model")
 local Physics = require("../src/shared/Config/Cars/Boss302/Physics")
+local Shift = require("../src/shared/Config/Cars/Boss302/Shift")
 local Startup = require("../src/shared/Config/Cars/Boss302/Startup")
 local T = require("../../../tools/test/T")
 
@@ -64,5 +65,14 @@ describe("Boss 302 entry", function()
 		expect(entry.gauges ~= nil and entry.cluster == nil and entry.binnacle == nil).toBe(true)
 		expect(entry.driver.shift ~= nil).toBe(true)
 		expect(#EntryPending).toBe(0)
+	end)
+
+	it("puts the Knob hand mesh at the centre the shift animator's poses give", function()
+		-- poses.json (v2), the Knob R hand's centre in its wrist frame, studs of the 1.5x world.
+		local studs, perMetre = { x = -0.0594, y = -0.1644, z = -0.3289 }, 5.357142857142857
+		local mesh = assert(Shift.mesh, "the shift data places the Knob mesh")
+		expect(mesh.x).toBeNear(studs.x / perMetre, 1e-6)
+		expect(mesh.y).toBeNear(studs.y / perMetre, 1e-6)
+		expect(mesh.z).toBeNear(studs.z / perMetre, 1e-6)
 	end)
 end)
