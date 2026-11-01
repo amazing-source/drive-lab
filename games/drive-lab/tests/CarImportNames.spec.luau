@@ -109,6 +109,15 @@ describe("CarImportNames", function()
 		expect(table.find(CarImportNames.of(later), "Needle_Speedo") ~= nil).toBe(true)
 	end)
 
+	it("reads the gauge config's needles and backlit parts", function()
+		local names = CarImportNames.of(model(), nil, {
+			dials = { { needle = "Needle_Fuel" }, {} },
+			backlight = { { parts = { "Cluster_Face_Speedo" } } },
+		})
+		expect(table.find(names, "Needle_Fuel") ~= nil).toBe(true)
+		expect(table.find(names, "Cluster_Face_Speedo") ~= nil).toBe(true)
+	end)
+
 	it("leaves out the display screens the rig builds itself", function()
 		local withDisplays = model() :: any
 		withDisplays.displays = { MessageCentre = { part = "DisplayMessageCentre" } }
