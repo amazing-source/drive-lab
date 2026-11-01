@@ -70,3 +70,11 @@ Fourth run, on 6a4f393 (the Knob mesh centre from the shift data, pinned to the 
    FAIL Boss 302 entry > puts the Knob hand mesh at the centre the shift animator's poses give: games/drive-lab/tests/Boss302Entry.spec:75: expected -0.030688 within 0.000001, got -0.030788
    5 passed, 1 failed
    (restored: 6 passed, 0 failed)
+
+Fifth run, on 83f94b4 (the Boss in the catalog):
+== BREAK: a pending item on the Boss's entry list while the Boss is in the catalog
+   file: games/drive-lab/src/shared/Config/Cars/Boss302/EntryPending.luau
+   exit: 1
+   FAIL Car catalog > admits a car only once its model binding, its start-up and its entry have nothing pending
+   48 passed, 1 failed
+   (restored: 49 passed, 0 failed)
