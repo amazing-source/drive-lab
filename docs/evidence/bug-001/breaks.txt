@@ -1,0 +1,14 @@
+Each guarded rule broken on purpose against DriftBound.spec, Selector.spec and Drift.spec (300 s timeout per run;
+none hung), then restored byte-exact.
+
+BREAK the handbrake held selects no gear (as on main) -> 33 passed, 1 failed
+    Selector: the automatic's reverse on the pedals > selects nothing with the handbrake held: the brake and handbrake at a stop only brake: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-drift-stuck\games\drive-lab\tests\Selector.spec:83: expected 1, got -1
+BREAK a drift exit that never fires -> 32 passed, 2 failed
+    Drift bound (BUG-001) > ends every drift within its fall and exit times once nothing is held, and the smoke with the slip: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-drift-stuck\games\drive-lab\tests\DriftBound.spec:91: DR458 sequence 11: drift ended after inf s (bound 2.0166666666666666), sm
+    Drift law > follows the player's own steering once released, and ends when the slip has closed: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-drift-stuck\games\drive-lab\tests\Drift.spec:80: expected false, got true
+BREAK a drift engagement that never falls -> 32 passed, 2 failed
+    Drift bound (BUG-001) > ends every drift within its fall and exit times once nothing is held, and the smoke with the slip: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-drift-stuck\games\drive-lab\tests\DriftBound.spec:91: DR458 sequence 1: drift ended after inf s (bound 2.0166666666666666), smo
+    Drift gate and engagement > rises to full in its rise time and falls to nothing in its fall time: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-drift-stuck\games\drive-lab\tests\Drift.spec:57: expected 0 within 1e-09, got 1
+BREAK smoke latched on the highest slip and slide seen -> 33 passed, 1 failed
+    Drift bound (BUG-001) > ends every drift within its fall and exit times once nothing is held, and the smoke with the slip: C:\Users\bfhdh\Downloads\drive-lab\.worktrees\car-drift-stuck\games\drive-lab\tests\DriftBound.spec:91: DR458 sequence 3: drift ended after 0.016666666666666607 s (bound 2.01666
+every file restored byte-exact

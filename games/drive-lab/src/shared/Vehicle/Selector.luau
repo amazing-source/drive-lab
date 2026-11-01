@@ -49,7 +49,9 @@ end
 
 -- One frame of the device's pedals (before any swap). Neutral is the paddles' and is left alone.
 -- While launch control can arm (`launchReady`), the brake is arming a launch and selects nothing;
--- reverse stays on the paddle there (#74).
+-- reverse stays on the paddle there (#74). With the handbrake held the pedals select nothing either:
+-- the driver is stopping the car, and the brake held with it must not turn into reverse's
+-- accelerator against the handbrake (BUG-001).
 function Selector.update(
 	help: InputHelp.InputHelp,
 	config: Types.GearboxConfig,
@@ -65,6 +67,7 @@ function Selector.update(
 			and input.gearboxMode == "auto"
 			and groundSpeed < config.selectorMaxSpeed
 			and not launchReady
+			and input.handbrake < HELD
 		then asked(gearbox.gear, input.throttle, input.brake)
 		else nil
 	if hold == nil or target == nil then

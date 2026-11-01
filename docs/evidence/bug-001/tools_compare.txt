@@ -1,0 +1,37 @@
+Every game tool on main 6890e5c and this branch, stdout compared line by line (side by side, so the wall-clock
+step cost lines differ). assists, drift_turn, drift_baseline, drift_candidate and calibrate are identical.
+
+SAME Boss302Binding.luau: exit 0/0, 0 lines
+SAME CarBindingTool.luau: exit 0/0, 0 lines
+SAME CarBindings.luau: exit 0/0, 0 lines
+SAME CarImportNames.luau: exit 0/0, 0 lines
+SAME DR458Binding.luau: exit 0/0, 0 lines
+SAME DriftTurn.luau: exit 0/0, 0 lines
+SAME DriveSim.luau: exit 0/0, 0 lines
+SAME ManifestBinding.luau: exit 0/0, 0 lines
+SAME assists.luau: exit 0/0, 31 lines
+SAME audio_sweep.luau: exit 0/0, 1 lines
+SAME audio_timeline.luau: exit 0/0, 1 lines
+DIFF boss302_calibrate.luau: exit 0/0, 25 lines, 1 differing lines
+    line 1:
+      base: Model.step cost: 234 us per frame at 60 FPS, 490 us at 30 FPS
+      head: Model.step cost: 258 us per frame at 60 FPS, 475 us at 30 FPS
+DIFF calibrate.luau: exit 0/0, 21 lines, 1 differing lines
+    line 1:
+      base: Model.step cost: 257 us per frame at 60 FPS, 466 us at 30 FPS
+      head: Model.step cost: 239 us per frame at 60 FPS, 496 us at 30 FPS
+SAME car_binding.luau: exit 0/0, 2 lines
+SAME car_import_names.luau: exit 0/0, 59 lines
+SAME chase_camera.luau: exit 0/0, 33 lines
+SAME control_sounds.luau: exit 0/0, 1 lines
+SAME downshift_pops.luau: exit 0/0, 1 lines
+SAME dr458_binding.luau: exit 0/0, 1 lines
+SAME dr458_review.luau: exit 0/0, 39 lines
+SAME drift_baseline.luau: exit 0/0, 25 lines
+SAME drift_candidate.luau: exit 0/0, 52 lines
+SAME drift_turn.luau: exit 0/0, 30 lines
+SAME gesture_config.luau: exit 0/0, 134 lines
+SAME road_timeline.luau: exit 0/0, 1 lines
+SAME shift_config.luau: exit 0/0, 122 lines
+SAME startup_config.luau: exit 0/0, 95 lines
+SAME weather_timeline.luau: exit 0/0, 1 lines
