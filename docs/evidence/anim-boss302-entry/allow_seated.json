@@ -1,0 +1,55 @@
+[
+ {
+  "why": "DECIDED (owner: torso 15 deg, scale 1.15, the seat moved 11 cm): the torso's side into the backrest's inboard wing, 5.85 cm seated",
+  "from": 0,
+  "to": 30,
+  "parts": [
+   "Torso"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.2727
+ },
+ {
+  "why": "DECIDED (coordinator, as the DR458's decision B): the right blocky arm at its hand-over pose against the seat's bolster",
+  "from": 0,
+  "to": 30,
+  "parts": [
+   "Right Arm"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.0977
+ },
+ {
+  "why": "DECIDED (coordinator, as the DR458's left arm): the left blocky arm at its hand-over pose between the seat's bolster and the door card",
+  "from": 0,
+  "to": 30,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "seat",
+   "door"
+  ],
+  "depth": 0.2996
+ },
+ {
+  "why": "DECIDED (coordinator, as the DR458's blocky legs): the blocky legs at their least-deep pose on the cushion, under the wheel's rim, the left one against the door card",
+  "from": 0,
+  "to": 30,
+  "parts": [
+   "Right Leg",
+   "Left Leg"
+  ],
+  "groups": [
+   "seat",
+   "wheel",
+   "door",
+   "cabin"
+  ],
+  "depth": 0.163
+ }
+]

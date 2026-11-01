@@ -1,0 +1,21 @@
+# car_entry_check.py on the GetIn Blender bake, per group, with allow_entry.json
+254 frames, cloud 1792158 points (+door 285523), tol 0.04
+contacts tested: every group a part touches
+  worst Torso       0.2726 at f253 (seat)
+  worst Head        0.0000 at f0 (None)
+  worst Right Arm   0.1965 at f166 (seat)
+  worst Left Arm    0.3470 at f175 (seat)
+  worst Right Leg   0.1972 at f193 (seat)
+  worst Left Leg    0.3077 at f220 (seat)
+FAILURES 0
+SPANS 0
+
+# the same bake with a deliberate break: --mutate pelvis_y=-0.6@157-223
+  worst Torso       0.4451 at f191 (seat)
+  worst Head        0.0000 at f0 (None)
+  worst Right Arm   0.3575 at f200 (seat)
+  worst Left Arm    0.4986 at f172 (seat)
+  worst Right Leg   0.5220 at f162 (ground)
+  worst Left Leg    0.6095 at f166 (ground)
+FAILURES 360
+exit 1

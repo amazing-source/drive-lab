@@ -1,0 +1,292 @@
+[
+ {
+  "why": "DECIDED (coordinator): the right hand on the door's pull bar, arriving in the pocket and pulling, the body leaning in so the rigid arm keeps the bar (its arm lies on the skin around the pocket)",
+  "from": 36,
+  "to": 42,
+  "parts": [
+   "Right Arm"
+  ],
+  "groups": [
+   "door"
+  ],
+  "depth": 0.1912
+ },
+ {
+  "why": "DECIDED (coordinator): the palms on the bolsters pushing up for the hop, the rigid arms' boxes into the bolsters' foam",
+  "from": 160,
+  "to": 179,
+  "parts": [
+   "Right Arm",
+   "Left Arm"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.3471
+ },
+ {
+  "why": "DECIDED (coordinator): leaning back to the seat's edge with the feet planted, the rigid right leg against the rocker (boss_lean_probe.py: the trade with the palms' reach)",
+  "from": 156,
+  "to": 168,
+  "parts": [
+   "Right Leg",
+   "Left Leg"
+  ],
+  "groups": [
+   "body",
+   "sill"
+  ],
+  "depth": 0.14
+ },
+ {
+  "why": "DECIDED (coordinator, rigid-thigh class): thighs over the sill while the legs lift in",
+  "from": 166,
+  "to": 203,
+  "parts": [
+   "Right Leg",
+   "Left Leg"
+  ],
+  "groups": [
+   "sill"
+  ],
+  "depth": 0.2345
+ },
+ {
+  "why": "DECIDED (coordinator, rigid-thigh class): thighs over the bolster and the cushion's edge while the body turns and slides across",
+  "from": 173,
+  "to": 215,
+  "parts": [
+   "Right Leg",
+   "Left Leg"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.1973
+ },
+ {
+  "why": "DECIDED (coordinator): the bottom landing on the cushion's outboard bolster and sliding across it",
+  "from": 173,
+  "to": 215,
+  "parts": [
+   "Torso"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.1569
+ },
+ {
+  "why": "DECIDED (coordinator, decision A): the left palm on the door's pull, drawing the door in",
+  "from": 203,
+  "to": 209,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "door"
+  ],
+  "depth": 0.3137
+ },
+ {
+  "why": "DECIDED (coordinator, option a): the settle into the hand-over pose as the body lands, the left leg into the cushion",
+  "from": 216,
+  "to": 222,
+  "parts": [
+   "Left Leg"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.3078
+ },
+ {
+  "why": "DECIDED (coordinator, option a): the settle into the hand-over pose as the body lands, the left leg against the lower dash",
+  "from": 216,
+  "to": 222,
+  "parts": [
+   "Left Leg"
+  ],
+  "groups": [
+   "cabin"
+  ],
+  "depth": 0.1215
+ },
+ {
+  "why": "DECIDED (coordinator, option a): the settle into the hand-over pose as the body lands, the left leg by the rim, the door card and the sill's body",
+  "from": 216,
+  "to": 222,
+  "parts": [
+   "Left Leg"
+  ],
+  "groups": [
+   "wheel",
+   "door",
+   "body"
+  ],
+  "depth": 0.0488
+ },
+ {
+  "why": "DECIDED (coordinator, option a): the settle into the hand-over pose as the body lands, the right leg into the cushion",
+  "from": 216,
+  "to": 222,
+  "parts": [
+   "Right Leg"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.186
+ },
+ {
+  "why": "DECIDED (coordinator, option a): the settle into the hand-over pose as the body lands, the right leg under the rim and the lower dash",
+  "from": 216,
+  "to": 222,
+  "parts": [
+   "Right Leg"
+  ],
+  "groups": [
+   "wheel",
+   "cabin"
+  ],
+  "depth": 0.0997
+ },
+ {
+  "why": "DECIDED (coordinator, option a): the settle into the hand-over pose as the body lands, the left arm against the door card",
+  "from": 216,
+  "to": 222,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "door"
+  ],
+  "depth": 0.1031
+ },
+ {
+  "why": "DECIDED (coordinator, option a): the settle into the hand-over pose as the body lands, the left arm into the bolster",
+  "from": 216,
+  "to": 222,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.279
+ },
+ {
+  "why": "DECIDED (coordinator, option a): the settle into the hand-over pose as the body lands, the right arm into the bolster",
+  "from": 216,
+  "to": 222,
+  "parts": [
+   "Right Arm"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.0909
+ },
+ {
+  "why": "DECIDED (coordinator, option a): the settle into the hand-over pose as the body lands, the torso into the cushion",
+  "from": 216,
+  "to": 222,
+  "parts": [
+   "Torso"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.2657
+ },
+ {
+  "why": "DECIDED (owner: torso 15 deg, scale 1.15, the seat moved 11 cm): the torso's side into the backrest's inboard wing, 5.85 cm seated",
+  "from": 221,
+  "to": 253,
+  "parts": [
+   "Torso"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.2727
+ },
+ {
+  "why": "DECIDED (coordinator, as the DR458's decision B): the right blocky arm at its hand-over pose against the seat's bolster",
+  "from": 221,
+  "to": 253,
+  "parts": [
+   "Right Arm"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "depth": 0.0977
+ },
+ {
+  "why": "DECIDED (coordinator, as the DR458's left arm): the left blocky arm at its hand-over pose between the seat's bolster and the door card",
+  "from": 221,
+  "to": 253,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "seat",
+   "door"
+  ],
+  "depth": 0.2996
+ },
+ {
+  "why": "DECIDED (coordinator, as the DR458's blocky legs): the blocky legs at their least-deep pose on the cushion, under the wheel's rim, the left one against the door card",
+  "from": 221,
+  "to": 253,
+  "parts": [
+   "Right Leg",
+   "Left Leg"
+  ],
+  "groups": [
+   "seat",
+   "wheel",
+   "door",
+   "cabin"
+  ],
+  "depth": 0.163
+ },
+ {
+  "why": "the right hand on the pull bar: must touch",
+  "from": 38,
+  "to": 42,
+  "parts": [
+   "Right Arm"
+  ],
+  "groups": [
+   "door"
+  ],
+  "touch": 0.1
+ },
+ {
+  "why": "the palms on the bolsters for the push: must touch",
+  "from": 162,
+  "to": 166,
+  "parts": [
+   "Right Arm",
+   "Left Arm"
+  ],
+  "groups": [
+   "seat"
+  ],
+  "touch": 0.1
+ },
+ {
+  "why": "the left palm on the door's pull: must touch",
+  "from": 203,
+  "to": 209,
+  "parts": [
+   "Left Arm"
+  ],
+  "groups": [
+   "door"
+  ],
+  "touch": 0.1
+ }
+]
