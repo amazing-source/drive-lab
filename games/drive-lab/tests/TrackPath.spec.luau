@@ -1,4 +1,6 @@
 --!strict
+local Catalog = require("../src/shared/Config/Cars/Catalog")
+local Driving = require("../src/shared/Config/Driving")
 local T = require("../../../tools/test/T")
 local Track = require("../src/shared/Config/Track")
 local TrackPath = require("../src/shared/Rules/TrackPath")
@@ -116,5 +118,24 @@ describe("TrackPath: the road's start among several car spawns", function()
 		expect(TrackPath.startIndex({ "Workspace.ZCar", "Workspace.SVJ" })).toBe(2)
 		expect(TrackPath.startIndex({ "Workspace.SVJ" })).toBe(1)
 		expect(TrackPath.startIndex({})).toBe(nil)
+	end)
+
+	it("starts at the preferred car's spawn even when another car's sorts first", function()
+		local names = { "Workspace.DR458", "Workspace.Boss302", "Workspace.CarImport" }
+		local cars = { "DR458", "Boss302", "SVJ" }
+		expect(TrackPath.startIndex(names, cars, Driving.ROAD_START_CAR)).toBe(3)
+		expect(TrackPath.startIndex({ "Workspace.CarImport", "Workspace.DR458" }, { "SVJ", "DR458" }, "SVJ")).toBe(
+			1
+		)
+	end)
+
+	it("falls back to the first spawn by name when no spawn is the preferred car's", function()
+		local names = { "Workspace.DR458", "Workspace.Boss302" }
+		expect(TrackPath.startIndex(names, { "DR458", "Boss302" }, "SVJ")).toBe(2)
+		expect(TrackPath.startIndex(names, nil, "SVJ")).toBe(2)
+	end)
+
+	it("prefers a car the catalog has", function()
+		expect(Catalog.cars[Driving.ROAD_START_CAR] ~= nil).toBe(true)
 	end)
 end)

@@ -266,11 +266,12 @@ end
 
 local function startFrame(): (Vector3, Vector3, number)
 	local spawns = CollectionService:GetTagged(Driving.SPAWN_TAG)
-	local names = table.create(#spawns)
+	local names, cars = table.create(#spawns), table.create(#spawns)
 	for index, candidate in spawns do
 		names[index] = candidate:GetFullName()
+		cars[index] = candidate:GetAttribute("Car")
 	end
-	local index = TrackPath.startIndex(names)
+	local index = TrackPath.startIndex(names, cars, Driving.ROAD_START_CAR)
 	local spawn = if index then spawns[index] else nil
 	local at = if spawn and spawn:IsA("Model") then spawn:GetPivot() else CFrame.new()
 	local params = RaycastParams.new()

@@ -9,20 +9,34 @@ inputs.json (seat frame, metres: x right, y up, z back, unless named):
                        gesture tools read them)
   driver               shoulders (studs), upper, lower (studs), elbowBias: the arm controller's
   grip, wheel          hands.json, and the steering hub (pivot, axis, lift) it was posed on
-  poses                hand_poses.py's poses.json (the open hand's palm places the knob grip)
-  shifter              pivot, knob (centre in neutral), right, back, knobRadius, columns
-                       [[column, degrees]...],
-                       forward, backward (degrees), push (metres)
-  gates                name -> [column, row] (as Vehicle/ShiftPlan's gates; N included)
-  knobGrip             palmGap (m), pitch (fingers forward and down, degrees), yaw (about the lever,
-                       positive turns the fingers toward the car's right), roll (about the fingers)
-  reach                duration, lift [toward the driver, up] off the rim, over (m above the knob grip
-                       at the way's middle), openAt, closeAt (seconds)
-  release, foot        seconds
+  poses                hand_poses.py's poses.json: the Knob hand's ball places the knob grip (the open
+                       hand's palm when the poses have no Knob)
+  shiftConfig          games/drive-lab/tools/shift_config.luau's print: the model binding's shifter and
+                       seat (car frame), the gearbox's gates; the lever is turned into the seat frame as
+                       Rules/ShiftHand.leverFromBinding does
+  seatCar              (forward, right, up) the DriverSeat's point the keys are made against, when the
+                       binding's seat is still pending (all zero); otherwise it must equal the binding's
+  knobRadius           the ball's radius
+  shifter, gates       instead of shiftConfig (the synthetic prototype): pivot, knob, right, back,
+                       knobRadius, columns [[column, degrees]...], forward, backward (degrees), push;
+                       gates name -> [column, row]
+  knobGrip             pitch (fingers forward and down, degrees), yaw (about the vertical, positive
+                       turns the fingers toward the car's right), roll (about the fingers); palmGap (m)
+                       only for the open-palm fallback
+  reach                duration, offRim [out from the hub, up the wheel's face, toward the driver] (the
+                       wheel's frame, m: the way's first pull, so the open fingers slide off the rim before
+                       the hand comes back; the older lift [toward the driver, up] in the seat frame),
+                       over (m above the knob grip at the way's middle), openAt, closeAt (seconds),
+                       turnFrom (share of the eased way the hand keeps the grip's turn, so the
+                       closed fingers leave the rim before the hand turns toward the knob)
+  release, foot        seconds (the human pace); quick: {reach, release, foot}, the game-quick preset
+  manifest             (optional) the 3D manifest: each gate's knob offset from neutral there
+                       (knob_offset_m, worked out in Blender by the modeller) must match this lever's
+                       to OFFSET_TOLERANCE, a check on the lever's turn that does not share its code
 
-The lever turns as Rules/ShiftHand.lever turns it (sideways for the column, then fore and aft about
-the leaned lever's cross axis); lever() here is that rule, and a spec-level parity check against the
-Luau is a follow-up.
+The lever turns as Rules/ShiftHand.lever turns it (sideways for the column, then fore and aft, about
+the pivot). paths.json carries the knob's frame at every gate and at mid-path places for the Luau
+parity spec.
 """
 import json
 import math
@@ -32,9 +46,11 @@ import sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from gesture_paths import STUDS, Frame, luau, matrix_quat, quat_matrix, rotation, sample, smooth, to_seat, unit, wheel_axes  # noqa: E402
+from gesture_paths import STUDS, Frame, luau, matrix_quat, quat_matrix, rotation, sample, smooth, to_seat, unit, wheel_axes  # noqa: E402,F401
 
 KEY_STEP = 1 / 60
+# The manifest's knob offsets are rounded to 0.1 mm.
+OFFSET_TOLERANCE = 0.0001
 GATE_ORDER = ["R", "N", "1", "2", "3", "4", "5", "6"]
 
 
@@ -49,6 +65,40 @@ class Shifter:
         self.radius = spec["knobRadius"]
         self.columns = sorted((float(c), float(d)) for c, d in spec["columns"])
         self.forward, self.backward, self.push = spec["forward"], spec["backward"], spec["push"]
+
+    @classmethod
+    def from_binding(cls, config, seat_car, knob_radius):
+        """Rules/ShiftHand.leverFromBinding: each column's angle is its gears' side angle, the rows'
+        angles their gears' fore angles, the points moved into the seat frame at `seat_car`."""
+        shifter = config["shifter"]
+        by_column, forward, backward = {}, None, None
+        for label, gate in config["gates"].items():
+            angles = shifter["gates"][label]
+            side = math.degrees(angles["side"])
+            known = by_column.get(gate["column"])
+            assert known is None or abs(known - side) < 1e-3, f"column {gate['column']}'s gears disagree"
+            by_column[gate["column"]] = side
+            fore = math.degrees(angles["fore"]) * gate["row"]
+            if gate["row"] > 0:
+                assert forward is None or abs(forward - fore) < 1e-3, "the forward gears disagree"
+                forward = fore
+            elif gate["row"] < 0:
+                assert backward is None or abs(backward - fore) < 1e-3, "the back gears disagree"
+                backward = fore
+        seat = chassis(seat_car)
+        return cls(
+            {
+                "pivot": (chassis(shifter["pivot"]) - seat).tolist(),
+                "knob": (chassis(shifter["knob"]) - seat).tolist(),
+                "right": (-chassis(shifter["axisFore"])).tolist(),
+                "back": (-chassis(shifter["axisSide"])).tolist(),
+                "knobRadius": knob_radius,
+                "columns": sorted([c, d] for c, d in by_column.items()),
+                "forward": forward,
+                "backward": backward,
+                "push": shifter["push"],
+            }
+        )
 
     def column_angle(self, column):
         cols = self.columns
@@ -82,6 +132,33 @@ class Shifter:
         }
 
 
+def portable(path):
+    """A path as a record or evidence may show it, with no machine's own folders: inside the working
+    assets as <assets>/..., inside the repo relative to it, else its file name."""
+    full = os.path.abspath(path).replace("\\", "/")
+    marker = "/drive-lab-assets/"
+    if marker in full:
+        return "<assets>/" + full.split(marker, 1)[1]
+    repo = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")).replace("\\", "/")
+    if full.startswith(repo + "/"):
+        return full[len(repo) + 1 :]
+    return os.path.basename(full)
+
+
+def inputs_of(paths_path, paths):
+    """The inputs file a paths.json was keyed from: stored relative to the paths.json's folder."""
+    stored = paths["inputs"]
+    return stored if os.path.isabs(stored) else os.path.join(os.path.dirname(os.path.abspath(paths_path)), stored)
+
+
+def chassis(point):
+    """Rules/Hinge.chassis: a car-frame point (forward, right, up) in the chassis's axes (x right, y
+    up, z back)."""
+    if isinstance(point, dict):
+        point = (point["forward"], point["right"], point["up"])
+    return np.array([point[1], point[2], -point[0]], float)
+
+
 def vec(v):
     return {"x": round(float(v[0]), 5), "y": round(float(v[1]), 5), "z": round(float(v[2]), 5)}
 
@@ -107,9 +184,10 @@ def path_states(gates, start, end, steps=24):
 
 
 def knob_grip(shifter, poses, spec):
-    """The wrist frame gripping the knob, in the knob's frame: the open hand's palm over the ball, the
-    fingers forward and down by `pitch`, turned about the lever by `yaw` and about the fingers by
-    `roll`, the palm `palmGap` off the ball."""
+    """The wrist frame gripping the knob, in the knob's frame: the fingers forward and down by
+    `pitch`, turned about the vertical by `yaw` and about the fingers by `roll`; the Knob hand's ball
+    (hand_poses.py, the ball it was closed round) on the knob's centre, or without a Knob hand the open
+    hand's palm `palmGap` off the ball."""
     p, yaw, roll = (math.radians(spec[k]) for k in ("pitch", "yaw", "roll"))
     fingers = np.array([0.0, -math.sin(p), -math.cos(p)])
     back_of_hand = np.array([0.0, math.cos(p), -math.sin(p)])
@@ -120,6 +198,12 @@ def knob_grip(shifter, poses, spec):
     z = -fingers
     y = unit(back_of_hand - z * (back_of_hand @ z))
     rot = np.stack([np.cross(y, z), y, z], 1)
+    knob = poses["shapes"].get("Knob", {}).get("R", {})
+    if "ball" in knob:
+        ball = np.array(knob["ball"], float) / poses["studsPerMetre"]
+        radius = knob["ballRadius"] / poses["studsPerMetre"]
+        assert abs(radius - shifter.radius) < 5e-4, f"the Knob hand was closed round a {radius:.4f} m ball, the knob is {shifter.radius:.4f}"
+        return Frame(rot, -(rot @ ball))
     palm = np.array(poses["shapes"]["Rest"]["R"]["palm"], float) / poses["studsPerMetre"]
     target = y * (shifter.radius + spec["palmGap"])
     return Frame(rot, target - rot @ palm)
@@ -133,6 +217,40 @@ def steering_grip(inputs):
     hands = json.load(open(inputs["grip"], encoding="utf-8"))["R"]
     axes, centre = wheel_axes({"steeringHub": inputs["wheel"], "steeringWheelLift": inputs["wheel"].get("lift", 0)})
     return to_seat(Frame.grip(hands["wrist"], hands["forearm"], hands["back"]), axes, centre)
+
+
+def key_frame(key):
+    return Frame(quat_matrix(key[4:8]), key[1:4])
+
+
+def retarget(frame, frm, to, share):
+    """Rules/StartupArms.retarget on frames."""
+    turn = to.rot @ frm.rot.T
+    angle = math.acos(max(-1.0, min(1.0, (np.trace(turn) - 1) / 2)))
+    if angle < 1e-9:
+        partial = np.eye(3)
+    else:
+        axis = np.array([turn[2, 1] - turn[1, 2], turn[0, 2] - turn[2, 0], turn[1, 0] - turn[0, 1]]) / (2 * math.sin(angle))
+        k = np.array([[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]])
+        a = angle * share
+        partial = np.eye(3) + math.sin(a) * k + (1 - math.cos(a)) * (k @ k)
+    return Frame(partial @ frame.rot, frame.pos + (to.pos - frm.pos) * share)
+
+
+def hand_on_way(keys, shapes, share, grip, knob_wrist):
+    """Rules/ShiftHand.pose: the keyed way by share, its start carried onto the live grip and its end
+    onto the live knob, and the shape shown at that share."""
+    first, last = key_frame(keys[0]), key_frame(keys[-1])
+    t = keys[0][0] + (keys[-1][0] - keys[0][0]) * share
+    to_end = share * share * (3 - 2 * share)
+    pos, q = sample(keys, t)
+    frame = Frame(quat_matrix(q), pos)
+    frame = retarget(frame, first, grip, 1 - to_end)
+    shape = shapes[0]["shape"]
+    for change in shapes:
+        if t >= change["at"]:
+            shape = change["shape"]
+    return retarget(frame, last, knob_wrist, to_end), shape
 
 
 def bezier(p0, p1, p2, p3, s):
@@ -153,17 +271,22 @@ def slerp_rot(a, b, s):
     return quat_matrix(q / np.linalg.norm(q))
 
 
-def reach_track(start, end, spec):
-    """From the steering grip to the knob grip: off the rim toward the driver, over the knob, down onto
-    it, on an eased cubic; the hand turns evenly on the same ease."""
+def reach_track(start, end, spec, wheel=None):
+    """From the steering grip to the knob grip: off the rim (out along the wheel's face with "offRim",
+    or toward the driver with "lift"), over the knob, down onto it, on an eased cubic; the hand turns
+    on the same ease from turnFrom of the way."""
     duration = spec["duration"]
-    lift = np.array([0.0, spec["lift"][1], spec["lift"][0]])
-    p1 = start.pos + lift
+    if "offRim" in spec:
+        p1 = start.pos + wheel @ np.array(spec["offRim"], float)
+    else:
+        p1 = start.pos + np.array([0.0, spec["lift"][1], spec["lift"][0]])
     p2 = end.pos + np.array([0.0, spec["over"], 0.0])
+    hold = spec.get("turnFrom", 0.0)
     keys, t = [], 0.0
     while t < duration - 1e-9:
         s = smooth(t / duration)
-        keys.append(Frame(slerp_rot(start.rot, end.rot, s), bezier(start.pos, p1, p2, end.pos, s)).key(t))
+        turn = smooth(max(0.0, (s - hold) / (1 - hold)))
+        keys.append(Frame(slerp_rot(start.rot, end.rot, turn), bezier(start.pos, p1, p2, end.pos, s)).key(t))
         t = round(t + KEY_STEP, 6)
     keys.append(end.key(duration))
     shapes = [{"at": 0, "shape": "Grip"}, {"at": spec["openAt"], "shape": "Rest"}, {"at": spec["closeAt"], "shape": "Knob"}]
@@ -181,28 +304,89 @@ def write_luau(path, data, about):
     open(path, "w", encoding="utf-8", newline="\n").write(text)
 
 
+# Places off the gates for the parity spec: (column, row, knob).
+PARITY_PLACES = [(0.5, 0.0, 0.0), (-1.0, 0.0, 1.0), (-0.5, 0.0, 0.5), (1.0, 0.5, 0.0), (2.0, -0.3, 0.0), (0.0, -0.6, 0.0)]
+
+
+def lever_inputs(inputs):
+    """The Shifter, the gates (name -> (column, row)) and the seat point used (car frame, or None for
+    the prototype's explicit lever)."""
+    if "shiftConfig" not in inputs:
+        return Shifter(inputs["shifter"]), {k: tuple(v) for k, v in inputs["gates"].items()}, None
+    config = json.load(open(inputs["shiftConfig"], encoding="utf-8"))
+    bound = config["seat"]
+    bound = (bound["forward"], bound["right"], bound["up"])
+    seat_car = tuple(inputs.get("seatCar", bound))
+    if any(abs(c) > 1e-9 for c in bound):
+        assert max(abs(a - b) for a, b in zip(seat_car, bound)) < 1e-4, f"keys made at seat {seat_car}, the binding's seat is {bound}"
+    else:
+        print(f"the binding's seat is pending (all zero): keys made at seatCar {seat_car}")
+    shifter = Shifter.from_binding(config, seat_car, inputs["knobRadius"])
+    gates = {k: (g["column"], g["row"]) for k, g in config["gates"].items()}
+    return shifter, gates, seat_car
+
+
+def offsets_against_manifest(shifter, gates, manifest_path, part="Shifter_Lever"):
+    """Each gate's knob offset from neutral against the manifest's knob_offset_m (forward, right, up).
+    Returns the worst difference, metres; raises when a gate is off by more than OFFSET_TOLERANCE."""
+    parts = json.load(open(manifest_path, encoding="utf-8"))["parts"]
+    offsets = next(p for p in parts if p["name"] == part)["knob_offset_m"]
+    neutral = shifter.lever(*gates["N"]).pos
+    worst = 0.0
+    for label, gate in gates.items():
+        o = offsets[label]
+        theirs = np.array([o["right"], o["up"], -o["forward"]])
+        mine = shifter.lever(*gate).pos - neutral
+        off = float(np.abs(mine - theirs).max())
+        assert off <= OFFSET_TOLERANCE, f"gate {label}: knob offset {np.round(mine, 4).tolist()} vs the manifest's {theirs.tolist()}"
+        worst = max(worst, off)
+    return worst
+
+
+def parity(shifter, gates):
+    rows = [{"at": g, "column": gates[g][0], "row": gates[g][1], "knob": 0.0} for g in GATE_ORDER if g in gates]
+    rows += [{"at": "path", "column": c, "row": r, "knob": k} for c, r, k in PARITY_PLACES]
+    for row in rows:
+        frame = shifter.lever(row["column"], row["row"], row["knob"])
+        row["position"] = [round(float(v), 6) for v in frame.pos]
+        row["rotation"] = [round(float(v), 7) for v in matrix_quat(frame.rot)]
+    return rows
+
+
 def main(argv):
     inputs_path, out_dir = argv[0], argv[1]
     write = argv[argv.index("--write") + 1] if "--write" in argv else None
     inputs = json.load(open(inputs_path, encoding="utf-8"))
     os.makedirs(out_dir, exist_ok=True)
-    shifter = Shifter(inputs["shifter"])
+    shifter, gates, seat_car = lever_inputs(inputs)
+    if "manifest" in inputs:
+        print(f"knob offsets match the manifest's to {offsets_against_manifest(shifter, gates, inputs['manifest']) * 1000:.3f} mm")
     poses = json.load(open(inputs["poses"], encoding="utf-8"))
     grip_local = knob_grip(shifter, poses, inputs["knobGrip"])
-    gates = {k: tuple(v) for k, v in inputs["gates"].items()}
     neutral = compose(shifter.lever(*gates["N"]), grip_local)
     start = steering_grip(inputs)
-    keys, shapes = reach_track(start, neutral, inputs["reach"])
+    wheel, _ = wheel_axes({"steeringHub": inputs["wheel"], "steeringWheelLift": inputs["wheel"].get("lift", 0)})
+    keys, shapes = reach_track(start, neutral, inputs["reach"], wheel)
     grip_key = grip_local.key(0)
     data = {
-        "shifter": shifter.as_luau(),
+        "knobRadius": shifter.radius,
         "grip": grip_key,
         "hand": {"keys": keys, "shapes": shapes},
         "reach": inputs["reach"]["duration"],
         "release": inputs["release"],
         "foot": inputs["foot"],
     }
-    paths = {"inputs": os.path.abspath(inputs_path), "gates": gates, "gateOrder": [g for g in GATE_ORDER if g in gates], **data}
+    if "quick" in inputs:
+        data["quick"] = {k: inputs["quick"][k] for k in ("reach", "release", "foot")}
+    paths = {
+        "inputs": os.path.relpath(os.path.abspath(inputs_path), os.path.abspath(out_dir)).replace("\\", "/"),
+        "gates": gates,
+        "gateOrder": [g for g in GATE_ORDER if g in gates],
+        "shifter": shifter.as_luau(),
+        "seatCar": seat_car,
+        "parity": parity(shifter, gates),
+        **data,
+    }
     json.dump(paths, open(os.path.join(out_dir, "paths.json"), "w", encoding="utf-8"), indent=1)
     if write:
         write_luau(write, data, inputs.get("about", ["A car's gear lever and the right hand's way to it."]))

@@ -61,6 +61,10 @@ export type Settings = {
 	glazing: { string },
 	-- The live display's screen part; nil on a car with none (its gauges are needles).
 	screen: string?,
+	-- An analog cluster's needle parts (rotary, each with its dial's sweep as its range), and its
+	-- small live screens by name, each a part carrying a `screen`.
+	needles: { string }?,
+	displays: { [string]: string }?,
 	exhaust: { string },
 	shiftLights: { string }?,
 	panelLamps: { [string]: string }?,
@@ -363,13 +367,9 @@ function ManifestBinding.binding(
 		modeKnob = { hinge = hinge(byName, knob.part, centre), positions = positions }
 	end
 
-	local cluster = { forward = 0, right = 0, up = 0, width = 0, height = 0, tilt = 0 }
-	local screenName = settings.screen
-	if screenName == nil then
-		table.insert(pending, "cluster: no live display screen named")
-	elseif has(screenName, "cluster") then
-		local screen: Screen = need(byName[screenName].screen, `{screenName} has no screen`)
-		cluster = {
+	local function screenOf(name: string): Binding.Screen
+		local screen: Screen = need(byName[name].screen, `{name} has no screen`)
+		return {
 			forward = round(screen.centre.forward - centre.forward),
 			right = round(screen.centre.right - centre.right),
 			up = round(screen.centre.up - centre.up),
@@ -377,6 +377,35 @@ function ManifestBinding.binding(
 			height = round(screen.height_m),
 			tilt = round(math.rad(screen.tilt_back_deg)),
 		}
+	end
+	local cluster = { forward = 0, right = 0, up = 0, width = 0, height = 0, tilt = 0 }
+	local screenName = settings.screen
+	local needleNames = settings.needles or {}
+	if screenName == nil then
+		if #needleNames == 0 then
+			table.insert(pending, "cluster: no live display screen named")
+		end
+	elseif has(screenName, "cluster") then
+		cluster = screenOf(screenName)
+	end
+
+	-- A needle's range runs from the dial's zero to its full scale, as angles from its modelled pose.
+	local needles: { [string]: Binding.Hinge } = {}
+	for _, name in needleNames do
+		if has(name, "needles") then
+			local range = byName[name].range
+			if type(range) == "table" and #range >= 2 then
+				needles[name] = hinge(byName, name, centre, { rest = range[1], other = range[#range] })
+			else
+				table.insert(pending, `needles: {name} has no measured sweep (its range)`)
+			end
+		end
+	end
+	local displays: { [string]: Binding.Screen } = {}
+	for display, name in settings.displays or {} do
+		if has(name, `displays ({display})`) then
+			displays[display] = screenOf(name)
+		end
 	end
 
 	local outlets = {}
@@ -498,6 +527,8 @@ function ManifestBinding.binding(
 		panelLamps = panelLamps,
 		wiper = wiper,
 		shifter = shifter,
+		needles = if next(needles) then needles else nil,
+		displays = if next(displays) then displays else nil,
 	}
 	return model, pending
 end
@@ -553,6 +584,8 @@ local ORDER = {
 	"panelLamps",
 	"wiper",
 	"shifter",
+	"needles",
+	"displays",
 }
 local RANK: { [string]: number } = {}
 for index, key in ORDER do
