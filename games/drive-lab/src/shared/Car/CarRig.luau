@@ -427,16 +427,17 @@ local function addSeat(model: Model, chassis: BasePart, binding: Binding.CarMode
 	return seat, prompt
 end
 
--- A screen for a live display (Controllers/Cluster, Binnacle, Gauges): a hair toward the driver so
--- it covers what is modelled there, its Back face toward the driver.
+-- A screen for a live display (Controllers/Cluster, Binnacle, Gauges), its Back face toward the
+-- driver, `toward` metres nearer the driver than the binding puts it.
 local function addScreen(
 	model: Model,
 	chassis: BasePart,
 	name: string,
 	rect: Binding.Screen,
-	bodyRaise: number
+	bodyRaise: number,
+	toward: number
 )
-	local offset = carSpace(rect, rect.up + bodyRaise) + Vector3.new(0, 0, Units.metresToStuds(0.003))
+	local offset = carSpace(rect, rect.up + bodyRaise) + Vector3.new(0, 0, Units.metresToStuds(toward))
 	local screen = newPart(
 		"Part",
 		name,
@@ -448,16 +449,17 @@ local function addScreen(
 	weld(chassis, screen)
 end
 
--- The cluster's screen, where the binding has one, and an analog cluster's small screens, each
--- named after its display.
+-- The cluster's screen, where the binding has one, a hair toward the driver so it covers the
+-- cluster's static image; and an analog cluster's small screens, each named after its display,
+-- exactly where the manifest puts them: under the needles that sweep across them.
 local function addScreens(model: Model, chassis: BasePart, binding: Binding.CarModel)
 	local cluster = binding.cluster
 	if cluster.width > 0 and cluster.height > 0 then
-		addScreen(model, chassis, "ClusterScreen", cluster, binding.bodyRaise)
+		addScreen(model, chassis, "ClusterScreen", cluster, binding.bodyRaise, 0.003)
 	end
 	local displays: { [string]: Binding.Screen } = binding.displays or {}
 	for name, rect in displays do
-		addScreen(model, chassis, CarRig.displayName(name), rect, binding.bodyRaise)
+		addScreen(model, chassis, CarRig.displayName(name), rect, binding.bodyRaise, 0)
 	end
 end
 

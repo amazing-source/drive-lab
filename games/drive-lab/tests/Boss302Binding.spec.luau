@@ -260,9 +260,14 @@ describe("Boss 302 binding", function()
 				expect(string.find(listed, name, 1, true) ~= nil and "pending").toBe("pending")
 			end
 		end
-		-- Today the full manifest measures the speedometer's and the tachometer's half turn.
-		expect((needles.Needle_Speedo :: Binding.Hinge).travel :: number).toBeNear(math.pi, 1e-4)
-		expect((needles.Needle_Tach :: Binding.Hinge).travel :: number).toBeNear(math.pi, 1e-4)
+		-- The speedometer's and the tachometer's sweeps and zero offsets are the manifest's measured
+		-- ones, not an assumed half turn from the modelled pose.
+		for _, name in { "Needle_Speedo", "Needle_Tach" } do
+			local range = part(name).range :: { number }
+			local needle = needles[name] :: Binding.Hinge
+			expect(needle.travel :: number).toBeNear(range[#range] - range[1], 1e-4)
+			expect(Hinge.restAngle(needle)).toBeNear(range[1], 1e-4)
+		end
 		for display, part in CAR.settings.displays or {} do
 			local bound = (Model.displays or {})[display]
 			local listed = table.concat(ModelPending, "\n")
