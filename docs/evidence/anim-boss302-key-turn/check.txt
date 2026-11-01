@@ -1,7 +1,8 @@
 startup_check on the Boss bake v3 (tools/anim/startup_check.py, 3 mm fixed samples, the game's key sampling), named contacts allow_v4.json
 result: PASS, failing samples: 0, touch gap on the key: {'Key_Ignition': 0.6} mm
+(every depth and time identical to the earlier run with allow_v3, whose entries and limits are the same and whose reasons v4 rewords: True)
 
-right/left contacts deeper than 2 mm (kind, side, object, worst mm, at s, limit mm, named or listed):
+contacts deeper than 2 mm on the right side and on the wheel (kind, side, object, worst mm, at s, limit mm, named or listed):
   upper arm R Seat_Driver             45.92 mm at 0.142s  limit 1000.0 mm  cloth, listed
   forearm   R Seat_Driver             28.95 mm at 0.142s  limit 1000.0 mm  cloth, listed
   forearm   R GEO_INT_STwheel_06      28.92 mm at 1.717s  limit 29.0 mm  named

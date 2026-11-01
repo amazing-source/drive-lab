@@ -3,6 +3,7 @@ local Model = require("../src/shared/Config/Cars/Boss302/Model")
 local Physics = require("../src/shared/Config/Cars/Boss302/Physics")
 local Shift = require("../src/shared/Config/Cars/Boss302/Shift")
 local ShiftHand = require("../src/shared/Rules/ShiftHand")
+local StartupArms = require("../src/shared/Rules/StartupArms")
 local T = require("../../../tools/test/T")
 local Types = require("../src/shared/Config/Cars/Types")
 
@@ -50,5 +51,18 @@ describe("Boss 302 shift hand data", function()
 		)
 		expect(off < 1e-4).toBe(true)
 		expect(Shift.knobRadius).toBeNear(0.0246, 1e-4)
+	end)
+
+	it("places the Knob hand's mesh round the ball it holds, in metres", function()
+		-- The hand wraps the ball, so its mesh centre lies within a few centimetres of the ball's
+		-- centre; a centre left in studs (5.36 times too far) or another shape's would not.
+		local mesh = assert(Shift.mesh, "the Boss gives the Knob hand's mesh centre")
+		local held = ShiftHand.knobWrist({
+			position = { x = 0, y = 0, z = 0 },
+			rotation = { w = 1, x = 0, y = 0, z = 0 },
+		}, Shift.grip)
+		local centre = StartupArms.apply(held, mesh)
+		local fromBall = math.sqrt(centre.x ^ 2 + centre.y ^ 2 + centre.z ^ 2)
+		expect(fromBall < 0.04).toBe(true)
 	end)
 end)
