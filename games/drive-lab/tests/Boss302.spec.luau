@@ -16,8 +16,10 @@ local ExhaustFlames = require("../src/shared/Rules/ExhaustFlames")
 local ExhaustPops = require("../src/shared/Rules/ExhaustPops")
 local InputHelp = require("../src/shared/Config/InputHelp")
 local Model = require("../src/shared/Vehicle/Model")
+local Steering = require("../src/shared/Vehicle/Steering")
 local T = require("../../../tools/test/T")
 local Types = require("../src/shared/Config/Cars/Types")
+local World = require("../src/shared/Config/World")
 
 local describe, it, expect = T.describe, T.it, T.expect
 
@@ -261,6 +263,37 @@ describe("Boss 302's H box in the car", function()
 		end
 		expect(settle(1) < 0.5).toBe(true)
 		expect(settle(0) < 1).toBe(true)
+	end)
+
+	it("leaves ESC alone turning in slowly to 0.45 g at 120 and 160 km/h, as the SVJ's does", function()
+		-- The lateral g at which ESC first acts, the wheel turned in at a neutral car's 1 g in 8 s
+		-- and the speed held on the throttle, in 6th, where Normal's automatic cruises at both.
+		local function onset(kmh: number): number
+			local speed = kmh * KMH
+			local sim = DriveSim.new(Boss302)
+			DriveSim.setSpeed(sim, speed, 6)
+			local perInput = Steering.maxWheelAngle(Boss302.steering)
+				/ Steering.ratio(Boss302.steering, speed)
+			local oneG = Boss302.wheelbase * World.GRAVITY_MPS2 / (speed * speed) / perInput
+			local throttle = 0.3
+			while sim.time < 8 do
+				throttle = math.clamp(throttle + (speed - DriveSim.forwardSpeed(sim)) * 5 * DT, 0, 1)
+				local vx, vy, heading = sim.body.vx, sim.body.vy, sim.body.heading
+				local frame = DriveSim.frame(
+					sim,
+					DriveSim.input(inputFor("Normal", { throttle = throttle, steer = oneG * sim.time / 8 })),
+					DT
+				)
+				if frame.telemetry.escActive then
+					local lateral = (sim.body.vy - vy) * math.cos(heading)
+						- (sim.body.vx - vx) * math.sin(heading)
+					return math.abs(lateral / DT) / World.GRAVITY_MPS2
+				end
+			end
+			return math.huge
+		end
+		expect(onset(120) > 0.45).toBe(true)
+		expect(onset(160) > 0.45).toBe(true)
 	end)
 
 	it("never stalls with the automatic clutch, braking to a stop in 6th or pulling away in it", function()

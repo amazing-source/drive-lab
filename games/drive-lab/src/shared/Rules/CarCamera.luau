@@ -46,6 +46,12 @@ function Rules.rearAxle(car: Types.CarConfig): (number, number)
 	return Geometry.frontAxleDistance(car) - car.wheelbase, car.rear.tyre.radius - car.cgHeight
 end
 
+-- The chase camera's distance behind and height above the rear axle for this car's views, metres.
+function Rules.chaseFraming(views: CarCamera.CarViews?): CarCamera.ChaseFraming
+	local own = views and views.chase
+	return own or { distance = CarCamera.CHASE.distance, height = CarCamera.CHASE.height }
+end
+
 -- Where the lean heads under these g: back while accelerating, forward braking, toward the
 -- outside of a turn (LateralG is positive toward the right, the inside of a right turn); none
 -- at rest, full from `fadeKmh`.

@@ -1,8 +1,11 @@
 --!strict
+local Boss302Camera = require("../src/shared/Config/Cars/Boss302/Camera")
 local CarCamera = require("../src/shared/Config/CarCamera")
+local DR458Camera = require("../src/shared/Config/Cars/DR458/Camera")
 local DriveSim = require("../tools/DriveSim")
 local Rules = require("../src/shared/Rules/CarCamera")
 local SVJ = require("../src/shared/Config/Cars/SVJ/Physics")
+local SVJCamera = require("../src/shared/Config/Cars/SVJ/Camera")
 local T = require("../../../tools/test/T")
 local Types = require("../src/shared/Config/Cars/Types")
 
@@ -85,6 +88,20 @@ describe("CarCamera", function()
 		local forward, up = Rules.rearAxle(SVJ)
 		expect(forward).toBeNear(-1.161, 1e-9)
 		expect(up).toBeNear(-0.098, 1e-9)
+	end)
+
+	it("frames the chase from a car's own distance and height, and the shared ones otherwise", function()
+		local shared = Rules.chaseFraming(nil)
+		expect(shared.distance).toBe(CarCamera.CHASE.distance)
+		expect(shared.height).toBe(CarCamera.CHASE.height)
+		for _, views in { SVJCamera, DR458Camera } do
+			local framing = Rules.chaseFraming(views)
+			expect(framing.distance).toBe(CarCamera.CHASE.distance)
+			expect(framing.height).toBe(CarCamera.CHASE.height)
+		end
+		local boss = Rules.chaseFraming(Boss302Camera)
+		expect(boss.distance > CarCamera.CHASE.distance).toBe(true)
+		expect(boss.height > CarCamera.CHASE.height).toBe(true)
 	end)
 
 	it("leans back under acceleration, forward braking and out of a turn, within its cap", function()

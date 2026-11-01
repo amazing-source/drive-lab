@@ -308,8 +308,9 @@ return Types.define({
 		tcSpeedFloor = 3.0,
 		escRate = 50,
 		escMinSpeed = 4.0,
-		-- EST: a nose-heavy car understeers more than the mid-engined two.
-		characteristicSpeed = 28,
+		-- EST, the SVJ's. The ESC's model of the yaw the driver asks for: below the car's own
+		-- (near-neutral in the linear range), it reads a brisk turn at speed as oversteer and brakes.
+		characteristicSpeed = 35,
 		escBrakeGain = 6000,
 		escMaxBrakeTorque = 2500,
 		escFullCutError = 0.6,
