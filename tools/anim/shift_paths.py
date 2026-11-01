@@ -378,6 +378,10 @@ def main(argv):
     }
     if "quick" in inputs:
         data["quick"] = {k: inputs["quick"][k] for k in ("reach", "release", "foot")}
+    knob_hand = poses["shapes"].get("Knob", {}).get("R")
+    if knob_hand:
+        # The Knob hand mesh's centre in its wrist frame, as DriverStartup's MESHES give the start-up hands.
+        data["mesh"] = {axis: round(c / poses["studsPerMetre"], 6) for axis, c in zip("xyz", knob_hand["centre"])}
     paths = {
         "inputs": os.path.relpath(os.path.abspath(inputs_path), os.path.abspath(out_dir)).replace("\\", "/"),
         "gates": gates,
