@@ -1,0 +1,19 @@
+K1 START moved off the keyed press (pressAt and the START move at 1.80): exit 0, PASSED (not caught)
+    104 spec files, 1097 passed, 0 failed
+K2 the key springs back while still held (back 2.15 -> 2.00): exit 1, FAILS as it must
+    FAIL Boss 302 start-up hands: the key > has let go of the key by the time it springs back from START: games/drive-lab/tests/StartupArmsBoss302.spec:97: expected t
+    104 spec files, 1096 passed, 1 failed
+K3 ON turned later than keyed (at 1.0 -> 1.1): exit 0, PASSED (not caught)
+    104 spec files, 1097 passed, 0 failed
+all files restored and compared
+--- with the rotation check (02:0x)
+K1 START moved off the keyed press (pressAt and the START move at 1.80): exit 1, FAILS as it must
+    FAIL Boss 302 start-up hands: the key > turns the hand with the key, to 3 degrees, through ON and START: games/drive-lab/tests/StartupArmsBoss302.spec:140: expect
+    104 spec files, 1097 passed, 1 failed
+K2 the key springs back while still held (back 2.15 -> 2.00): exit 1, FAILS as it must
+    FAIL Boss 302 start-up hands: the key > has let go of the key by the time it springs back from START: games/drive-lab/tests/StartupArmsBoss302.spec:150: expected 
+    104 spec files, 1097 passed, 1 failed
+K3 ON turned later than keyed (at 1.0 -> 1.1): exit 1, FAILS as it must
+    FAIL Boss 302 start-up hands: the key > turns the hand with the key, to 3 degrees, through ON and START: games/drive-lab/tests/StartupArmsBoss302.spec:140: expect
+    104 spec files, 1097 passed, 1 failed
+all files restored and compared

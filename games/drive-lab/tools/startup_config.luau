@@ -4,7 +4,7 @@
 	each control move, and the binding's hinge of every control it turns, in the driver's seat
 	frame (the DriverSeat part: x right, y up, z back; metres).
 
-	    lune run games/drive-lab/tools/startup_config [DR458|SVJ] [out.json]
+	    lune run games/drive-lab/tools/startup_config [DR458|SVJ|Boss302] [out.json]
 
 	Without an output path it prints the JSON. The path tool reads it, so a changed time in a car's
 	Startup.luau or a moved control in its binding is a re-run and a re-bake.
@@ -26,6 +26,10 @@ local CARS: { [string]: Car } = {
 	SVJ = {
 		startup = require("../src/shared/Config/Cars/SVJ/Startup"),
 		model = require("../src/shared/Config/Cars/SVJ/Model"),
+	},
+	Boss302 = {
+		startup = require("../src/shared/Config/Cars/Boss302/Startup"),
+		model = require("../src/shared/Config/Cars/Boss302/Model"),
 	},
 }
 

@@ -1,0 +1,21 @@
+startup_check on the Boss bake v3 (tools/anim/startup_check.py, 3 mm fixed samples, the game's key sampling), named contacts allow_v4.json
+result: PASS, failing samples: 0, touch gap on the key: {'Key_Ignition': 0.6} mm
+
+right/left contacts deeper than 2 mm (kind, side, object, worst mm, at s, limit mm, named or listed):
+  upper arm R Seat_Driver             45.92 mm at 0.142s  limit 1000.0 mm  cloth, listed
+  forearm   R Seat_Driver             28.95 mm at 0.142s  limit 1000.0 mm  cloth, listed
+  forearm   R GEO_INT_STwheel_06      28.92 mm at 1.717s  limit 29.0 mm  named
+  forearm   R GEO_INT_STwheel_01      28.76 mm at 1.725s  limit 29.0 mm  named
+  forearm   R GEO_INT_STwheel_00      28.71 mm at 0.775s  limit 29.0 mm  named
+  forearm   R GEO_INT_STwheel_05      28.70 mm at 1.708s  limit 29.0 mm  named
+  hand      R GEO_INT_STwheel_05      19.98 mm at 0.792s  limit 20.0 mm  named
+  hand      R GEO_INT_01              19.94 mm at 2.217s  limit 20.0 mm  named
+  hand      R GEO_INT_STwheel_06      19.82 mm at 0.842s  limit 20.0 mm  named
+  hand      R GEO_INT_STwheel_01      19.74 mm at 0.767s  limit 20.0 mm  named
+  hand      R GEO_INT_STwheel_00      14.36 mm at 2.525s  limit 20.0 mm  named
+  forearm   R GEO_INT_STwheel_02      10.35 mm at 0.942s  limit 29.0 mm  named
+  hand      R GEO_INT_05              10.02 mm at 2.183s  limit 10.1 mm  named
+  hand      R GEO_INT_07               7.32 mm at 1.767s  limit 7.4 mm  named
+  hand      L GEO_INT_STwheel_00       5.87 mm at 0.975s  limit 6.0 mm  named
+  hand      R GEO_INT_04               2.55 mm at 1.875s  limit 2.6 mm  named
+  hand      L GEO_INT_STwheel_05       2.03 mm at 0.983s  limit 6.0 mm  named
