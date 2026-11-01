@@ -1,0 +1,15 @@
+startup_check on the Boss bake v9 (KeyPinch hold), one pass for information (coordinator), named contacts allow_v9.json
+result: PASS, failing samples: 0, touch gap on the key: {'Key_Ignition': 0.48} mm, first keys vs the rest pose: {'right': {'mm': 0.0, 'deg': 0.0}, 'left': {'mm': 0.0, 'deg': 0.0}}
+
+right side contacts deeper than 2 mm on strict objects or hands (kind, object, worst, at, limit):
+  hand      GEO_INT_STwheel_00     4.95 mm at 3.275 s  limit    5.1 mm
+  forearm   GEO_INT_STwheel_00     4.56 mm at 1.875 s  limit    5.0 mm
+  hand      GEO_INT_01             3.85 mm at 0.692 s  limit    3.9 mm
+
+arm contacts listed (not failed, non-strict objects), right side, deeper than 10 mm:
+  upper arm Seat_Driver           45.96 mm at 0.342 s
+  upper arm GEO_INT_01            31.24 mm at 0.317 s
+  forearm   Seat_Driver           28.98 mm at 0.283 s
+  upper arm GEO_INT_21            25.80 mm at 0.342 s
+  upper arm GEO_INT_06            21.54 mm at 0.333 s
+  forearm   GEO_INT_01            14.24 mm at 0.317 s

@@ -1,0 +1,38 @@
+[
+ {
+  "kind": "hand",
+  "object": "GEO_INT_01",
+  "side": "R",
+  "shape": "*",
+  "from": 0.62,
+  "to": 0.76,
+  "limitMm": 3.9,
+  "measuredMm": 3.85,
+  "why": "the KeyPinch hand's back on the lower dash as it arrives at the key and holds it at OFF, before the turn (the old Pinch hold sat 20 mm in the right spoke's back)",
+  "decidedBy": "coordinator, 2026-11-01 (the 3.8 mm of the KeyPinch hold accepted)"
+ },
+ {
+  "kind": "hand",
+  "object": "GEO_INT_STwheel",
+  "side": "L",
+  "shape": "*",
+  "from": 0.85,
+  "to": 1.0,
+  "limitMm": 6.0,
+  "measuredMm": 5.97,
+  "why": "the left hand's open-to-grip swap arriving on the rim leather (playbook P26: no half-open mesh; the DR458 named the same at 1.5-3.6 mm)",
+  "decidedBy": "coordinator, 2026-11-01"
+ },
+ {
+  "kind": "hand",
+  "object": "GEO_INT_STwheel_00",
+  "side": "R",
+  "shape": "*",
+  "from": 3.2,
+  "to": 3.3,
+  "limitMm": 5.1,
+  "measuredMm": 5.03,
+  "why": "the right hand's open-to-grip swap arriving back on the rim leather (playbook P26: no half-open mesh; the DR458 named the same at 1.5-3.6 mm)",
+  "decidedBy": "coordinator, 2026-11-01 (the left hand's twin)"
+ }
+]

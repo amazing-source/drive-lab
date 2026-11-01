@@ -239,6 +239,9 @@ of touches by the same script, so a moved control or a changed time is a re-run:
     `returnVia` keys (the wrist in the wheel frame: metres from the column's axis, degrees from
     3 o'clock, metres toward the driver; `turn`, the share of the way to the hold's or the grip's
     rotation) so the hand goes round the rim's outside instead of through the wheel (the Boss 302);
+    a touch's `"shape": "KeyPinch"` holds the key with the lateral key pinch instead (`hand_poses.py`'s
+    KeyPinch: the index curled, the thumb's pad on the side of its middle bone, the key leaving the
+    pinch out of the palm, `keyAxis` in `poses.json`), so the palm faces the cylinder;
   - `edge` (a guard) and `tip` (a toggle's lever): the Point hand's index end riding just behind
     the free edge or the lever's end while the game turns it;
   - `press` (ENGINE START): onto the face along the press axis from the manifest, held while the

@@ -1,0 +1,82 @@
+hand_poses.py KeyPinch (studs in the hand frame; z up the forearm, y out of the back of the hand):
+{
+ "R": {
+  "centre": [
+   -0.0142,
+   -0.0971,
+   -0.377
+  ],
+  "fingertip": [
+   -0.223,
+   -0.3509,
+   -0.601
+  ],
+  "palm": [
+   0.0201,
+   -0.1683,
+   -0.4273
+  ],
+  "pinch": [
+   -0.2497,
+   -0.137,
+   -0.7194
+  ],
+  "pinchAxis": [
+   0.9618,
+   -0.1497,
+   0.2291
+  ],
+  "keyAxis": [
+   -0.1457,
+   -0.9887,
+   -0.0347
+  ]
+ },
+ "L": {
+  "centre": [
+   0.0142,
+   -0.0971,
+   -0.377
+  ],
+  "fingertip": [
+   0.223,
+   -0.3509,
+   -0.601
+  ],
+  "palm": [
+   -0.0201,
+   -0.1683,
+   -0.4273
+  ],
+  "pinch": [
+   0.2497,
+   -0.137,
+   -0.7194
+  ],
+  "pinchAxis": [
+   -0.9618,
+   -0.1497,
+   0.2291
+  ],
+  "keyAxis": [
+   0.1457,
+   -0.9887,
+   -0.0347
+  ]
+ },
+ "solve": {
+  "gap_mm": 0.59,
+  "along": 0.53,
+  "side": 0.962,
+  "metacarpal_deg": [
+   -50,
+   30,
+   -50
+  ],
+  "curl_deg": 60
+ }
+}
+
+The other shapes: main's hand_poses.py and this branch's, same source hand, write byte-identical
+hand_{Point,Rest,Pinch,Knob}_{R,L}.glb, cuff_{R,L}.glb and identical poses.json entries (cmp), and main's
+output equals <assets>/boss302/anim/poses/v2 (the meshes in the place).

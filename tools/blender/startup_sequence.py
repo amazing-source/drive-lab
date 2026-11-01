@@ -356,7 +356,7 @@ def right_keys(sequence, touches, rest, grip_frame, wheel, tips, arm, config):
         if touch.shape != shapes[-1][1]:
             shapes.append((previous_end + transit * 0.5, touch.shape))
         if touch.grab == "pinch":
-            first = pinch_frame(touch, tips["pinch"], arm, 0.0)
+            first = pinch_frame(touch, tips["pinch"][touch.shape], arm, 0.0)
             # "approachVia": keys round the wheel on the way in, the hand turning toward its hold.
             origin = keys[-1][1]
             for via in touch.item.get("approachVia", ()):
@@ -367,9 +367,9 @@ def right_keys(sequence, touches, rest, grip_frame, wheel, tips, arm, config):
             t = touch.start - 0.03
             held = max(touch.end + 0.05, touch.release)
             while t < held + 1e-9:
-                keys.append((round(t, 4), pinch_frame(touch, tips["pinch"], arm, touch.angle(min(t, touch.release)))))
+                keys.append((round(t, 4), pinch_frame(touch, tips["pinch"][touch.shape], arm, touch.angle(min(t, touch.release)))))
                 t += RIDE_STEP
-            last = pinch_frame(touch, tips["pinch"], arm, touch.angle(touch.release))
+            last = pinch_frame(touch, tips["pinch"][touch.shape], arm, touch.angle(touch.release))
             off = last.copy()
             off.translation = last.translation + touch.out * touch.item.get("off", 0.05) * STUDS
             leave = touch.item.get("leave", 0.18)
@@ -523,7 +523,7 @@ def write_paths(path, car, tracks, meshes, cuff, fingertip, button, touches, lea
         "\tLEFT = table.freeze(LEFT),",
         "\tMESHES = table.freeze({",
     ]
-    for name in ("Rest", "Point", "Pinch"):
+    for name in meshes:
         lines.append(f"\t\t{name} = {point(meshes[name])},")
     lines += [
         "\t}),",
@@ -578,13 +578,16 @@ def main(inputs, config_path, out):
     manifest_seat = manifest_points(manifest, presses)
     touches = [Touch(item, cabin, config, manifest_seat) for item in sequence["right"]]
     shape_r = poses["shapes"]
-    pinch = shape_r["Pinch"]["R"]
-    pinch_point = Vector(pinch["pinch"])
-    out_h = pinch_point - Vector(shape_r["Pinch"]["R"]["centre"])
-    tips = {
-        "Point": Vector(shape_r["Point"]["R"]["fingertip"]),
-        "pinch": (pinch_point, Vector(pinch["pinchAxis"]), out_h),
-    }
+    # Each pinch hand a touch holds with: its pinch point, the axis across the blade, and the way
+    # down the key into the cylinder (its keyAxis, else from the mesh's centre to the pinch).
+    extra = sorted({t.shape for t in touches if t.grab == "pinch"} - {"Pinch"})
+    pinches = {}
+    for name in ["Pinch"] + extra:
+        hand = shape_r[name]["R"]
+        held = Vector(hand["pinch"])
+        down = Vector(hand["keyAxis"]) if "keyAxis" in hand else held - Vector(hand["centre"])
+        pinches[name] = (held, Vector(hand["pinchAxis"]), down)
+    tips = {"Point": Vector(shape_r["Point"]["R"]["fingertip"]), "pinch": pinches}
     wheel = wheel_matrix(config)
     right_grip, left_grip = grip_wrist(grip, "R", wheel), grip_wrist(grip, "L", wheel)
     r_keys, r_shapes, r_grip_from = right_keys(sequence, touches, rest["right"], right_grip, wheel, tips, right_arm, config)
@@ -605,7 +608,7 @@ def main(inputs, config_path, out):
         return current
 
     def tip_offset(shape):
-        return pinch_point if shape == "Pinch" else tips["Point"]
+        return pinches[shape][0] if shape in pinches else tips["Point"]
 
     report = {"touches": [], "reach": {}}
     for touch in touches:
@@ -626,7 +629,7 @@ def main(inputs, config_path, out):
     assert max(report["reach"].values()) <= REACH_SHARE, report
 
     press = next((t for t in touches if t.grab == "press"), None)
-    meshes = {name: [c / STUDS for c in shape_r[name]["R"]["centre"]] for name in ("Rest", "Point", "Pinch")}
+    meshes = {name: [c / STUDS for c in shape_r[name]["R"]["centre"]] for name in ["Rest", "Point", "Pinch"] + extra}
     luau_touches = [
         {"control": t.name, "shape": t.shape, "tip": [c / STUDS for c in tip_offset(t.shape)], "point": [c / STUDS for c in t.point]}
         for t in touches
@@ -656,7 +659,7 @@ def main(inputs, config_path, out):
         "inputs": inputs,
         "arm": {"shoulders": inputs["driver"]["shoulders"], "upper": right_arm.lengths[0], "lower": right_arm.lengths[1], "elbowBias": inputs["driver"]["elbowBias"]},
         "lean": lean,
-        "tips": {"Point": list(tips["Point"]), "Pinch": list(pinch_point)},
+        "tips": {"Point": list(tips["Point"]), **{name: list(p[0]) for name, p in pinches.items()}},
         "gripLocal": {side: [list(r) for r in grip_wrist(grip, side, Matrix.Identity(4))] for side in ("R", "L")},
         "wheel": [list(r) for r in wheel],
         "touches": [
@@ -709,7 +712,7 @@ def render_frames(inputs, out, cabin, touches, record, poses, grip, seat):
     hands = {}
     glb = inputs["posesDir"]
     for side in ("R", "L"):
-        for shape in ("Rest", "Point", "Pinch"):
+        for shape in ["Rest", "Point", "Pinch"] + [n for n in record["tips"] if n not in ("Point", "Pinch")]:
             hands[(shape, side)] = import_glb(os.path.join(glb, f"hand_{shape}_{side}.glb"), f"{shape}_{side}")
         hands[("Grip", side)] = import_glb(os.path.join(inputs["gripDir"], f"hand_{side}.glb"), f"Grip_{side}")
     base = {}
