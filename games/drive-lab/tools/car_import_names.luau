@@ -17,11 +17,11 @@ local out = process.args[2]
 local folder = `games/drive-lab/src/shared/Config/Cars/{name}`
 assert(fs.isDir(folder), `no car config folder {folder}`)
 local model: Binding.CarModel = (require :: any)(`../src/shared/Config/Cars/{name}/Model`)
-local required: { string }? = nil
+local lamps: CarImportNames.Lamps? = nil
 if fs.isFile(`{folder}/Lights.luau`) then
-	required = ((require :: any)(`../src/shared/Config/Cars/{name}/Lights`) :: { required: { string } }).required
+	lamps = (require :: any)(`../src/shared/Config/Cars/{name}/Lights`)
 end
-local names = CarImportNames.of(model, required)
+local names = CarImportNames.of(model, lamps)
 local text = serde.encode("json", names, true)
 if out then
 	fs.writeFile(out, text)

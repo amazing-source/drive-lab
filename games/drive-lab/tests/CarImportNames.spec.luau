@@ -61,7 +61,14 @@ end
 
 describe("CarImportNames", function()
 	it("lists every part the binding looks up, sorted, once each", function()
-		local names = CarImportNames.of(model(), { "Light_FrontLeft_Headlamp", "Glass_Windscreen" })
+		local names = CarImportNames.of(model(), {
+			required = { "Light_FrontLeft_Headlamp", "Glass_Windscreen" },
+			pieces = {
+				tail = { { name = "Light_RearLeft_Tail", glow = "tail" } },
+				stop = { { name = "Light_RearLeft_Tail", glow = "stop" } },
+				sweepStep = 1 / 15,
+			},
+		})
 		expect(table.concat(names, ",")).toBe(table.concat({
 			"Caliper_FL",
 			"Caliper_FR",
@@ -73,6 +80,7 @@ describe("CarImportNames", function()
 			"Glass_Windscreen",
 			"Key_Ignition",
 			"Light_FrontLeft_Headlamp",
+			"Light_RearLeft_Tail",
 			"PanelLamp_Light",
 			"Pedal_Brake",
 			"ShiftLight_1",

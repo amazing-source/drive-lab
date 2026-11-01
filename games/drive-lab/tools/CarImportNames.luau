@@ -7,7 +7,7 @@
 	Read: the wheels, calipers, glazing, the door's parts and strap, the exhaust housings, shift lights,
 	panel lamps, every `part` of a hinge-like entry anywhere in the binding (controls, pedals, the mode
 	knob, the wiper, the shifter, and fields added later in the same form), both sides of `parents`,
-	and the lamp config's `required` pieces. Left out: the steering wheel when the binding gives a
+	and the lamp config's `required` pieces and every piece its `pieces` map names. Left out: the steering wheel when the binding gives a
 	steeringHub (the rig builds that part itself when the model has none), and the `displays` field
 	(the rig builds its screen parts).
 ]]
@@ -32,8 +32,11 @@ local function addPartKeys(value: unknown, add: (string) -> ())
 	end
 end
 
+-- The lamp config's part names (Config/CarLights Lights): its required pieces and its piece map.
+export type Lamps = { required: { string }, pieces: { [string]: any }? }
+
 -- Sorted, without repeats.
-function CarImportNames.of(model: Binding.CarModel, required: { string }?): { string }
+function CarImportNames.of(model: Binding.CarModel, lamps: Lamps?): { string }
 	local seen: { [string]: true } = {}
 	local function add(name: string)
 		seen[name] = true
@@ -79,8 +82,17 @@ function CarImportNames.of(model: Binding.CarModel, required: { string }?): { st
 			addPartKeys(value, add)
 		end
 	end
-	for _, name in required or {} do
-		add(name)
+	if lamps then
+		for _, name in lamps.required do
+			add(name)
+		end
+		for _, list in lamps.pieces or {} do
+			if type(list) == "table" then
+				for _, piece in list do
+					add(piece.name)
+				end
+			end
+		end
 	end
 	local names = {}
 	for name in seen do
