@@ -7,7 +7,8 @@
 	Read: the wheels, calipers, glazing, the door's parts and strap, the exhaust housings, shift lights,
 	panel lamps, every `part` of a hinge-like entry anywhere in the binding (controls, pedals, the mode
 	knob, the wiper, the shifter, and fields added later in the same form), both sides of `parents`,
-	and the lamp config's `required` pieces and every piece its `pieces` map names. Left out: the steering wheel when the binding gives a
+	the lamp config's `required` pieces and every piece its `pieces` map names, and the gauge config's
+	needles and backlit parts. Left out: the steering wheel when the binding gives a
 	steeringHub (the rig builds that part itself when the model has none), and the `displays` field
 	(the rig builds its screen parts).
 ]]
@@ -35,8 +36,11 @@ end
 -- The lamp config's part names (Config/CarLights Lights): its required pieces and its piece map.
 export type Lamps = { required: { string }, pieces: { [string]: any }? }
 
+-- The gauge config's part names (Config/Gauges Cluster): each dial's needle and the backlit parts.
+export type Gauges = { dials: { { needle: string? } }?, backlight: { { parts: { string } } }? }
+
 -- Sorted, without repeats.
-function CarImportNames.of(model: Binding.CarModel, lamps: Lamps?): { string }
+function CarImportNames.of(model: Binding.CarModel, lamps: Lamps?, gauges: Gauges?): { string }
 	local seen: { [string]: true } = {}
 	local function add(name: string)
 		seen[name] = true
@@ -91,6 +95,18 @@ function CarImportNames.of(model: Binding.CarModel, lamps: Lamps?): { string }
 				for _, piece in list do
 					add(piece.name)
 				end
+			end
+		end
+	end
+	if gauges then
+		for _, dial in gauges.dials or {} do
+			if dial.needle then
+				add(dial.needle)
+			end
+		end
+		for _, group in gauges.backlight or {} do
+			for _, name in group.parts do
+				add(name)
 			end
 		end
 	end

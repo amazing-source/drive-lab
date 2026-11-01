@@ -40,38 +40,6 @@
   "defaultArea": "Body",
   "extraParts": [
    {
-    "name": "Needle_Fuel",
-    "group": "Chassis",
-    "objects": [
-     "GEO_INT_needletemp_00.001",
-     "GEO_INT_needletemp_01.001"
-    ]
-   },
-   {
-    "name": "Needle_Temp",
-    "group": "Chassis",
-    "objects": [
-     "GEO_INT_needlefuel_002.001",
-     "GEO_INT_needlefuel_003.001"
-    ]
-   },
-   {
-    "name": "Needle_Oil",
-    "group": "Chassis",
-    "objects": [
-     "GEO_INT_needleoil_00.001",
-     "GEO_INT_needleoil_01.001"
-    ]
-   },
-   {
-    "name": "Needle_Water",
-    "group": "Chassis",
-    "objects": [
-     "GEO_INT_needlewater_003.001",
-     "GEO_INT_needlewaterl_002.001"
-    ]
-   },
-   {
     "name": "Cluster_Face_Speedo",
     "group": "Chassis",
     "objects": [
