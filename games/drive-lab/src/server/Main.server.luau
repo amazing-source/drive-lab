@@ -24,8 +24,15 @@ Workspace.Gravity = World.GRAVITY
 StarterPlayer.CharacterUseJumpPower = false
 StarterPlayer.CharacterJumpHeight = Movement.JUMP_HEIGHT
 
+-- A place that brings its own map (Workspace attribute DriveLabOwnMap) keeps it: no generated road.
+local ownMap = Workspace:GetAttribute("DriveLabOwnMap") == true
+
 -- Each service starts in isolation, so one that throws or yields cannot stop the others.
 for _, module in START_ORDER do
+	if ownMap and module == Services.Track then
+		log.info("Track skipped: this place brings its own map")
+		continue
+	end
 	local outcome, problem = Isolate.run(function()
 		local service = require(module) :: { start: () -> () }
 		service.start()
