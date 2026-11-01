@@ -1,0 +1,11 @@
+Each fix broken on purpose against HBox.spec and Boss302.spec (300 s timeout per run; none hung), then restored.
+
+BREAK the Boss's front roll share (back to 0.58) -> 38 passed, 1 failed
+    Boss 302's H box in the car > settles its yaw within 0.5 s when the steering is released at 160 km/h, ESC off  [Boss302.spec:260: expected true, got false]
+BREAK the automatic shifts at its quick pace -> 37 passed, 2 failed
+    H box shifts > shifts at the automatic's quick pace in auto and at the human pace by hand  [HBox.spec:179: expected true, got false]
+    Boss 302's H box in the car > breaks drive for under 0.2 s on each automatic upshift, as a modern automatic  [Boss302.spec:233: expected true, got false]
+BREAK manual keeps the human pace -> 37 passed, 2 failed
+    H box shifts > shifts at the automatic's quick pace in auto and at the human pace by hand  [HBox.spec:180: expected true, got false]
+    H box limbs > brings the hand to the knob by the end of the reach, holds it for the linger, then lets go  [HBox.spec:392: expected 1 within 0.006666666666666667, got 0.5000000000000012]
+every file restored byte-exact

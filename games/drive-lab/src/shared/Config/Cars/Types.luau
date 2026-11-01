@@ -121,6 +121,9 @@ export type ManualGearboxConfig = {
 	-- Whether the player may take the clutch ("manualClutch"); without it that mode drives as
 	-- "manual", with the automatic clutch and no stall.
 	playerClutch: boolean,
+	-- The automatic's own shift ("auto"), game-quick, in place of `timing`'s human pace; absent, the
+	-- automatic shifts at `timing` too.
+	autoTiming: ShiftTiming?,
 }
 
 export type GearboxConfig = {
@@ -362,11 +365,19 @@ local function checkManual(gearbox: GearboxConfig)
 	for gear = -1, #gearbox.ratios do
 		assert(manual.gates[gear], `the manual gearbox has no gate for gear {gear}`)
 	end
-	local timing = manual.timing
-	for name, value in timing :: { [string]: number } do
-		assert(value >= 0, `the manual gearbox's {name} time must not be negative`)
+	local function checkTiming(timing: ShiftTiming)
+		for name, value in timing :: { [string]: number } do
+			assert(value >= 0, `the manual gearbox's {name} time must not be negative`)
+		end
+		assert(
+			timing.push > 0 and timing.clutchOut > 0,
+			"a manual gearbox needs a push and a clutch-out time"
+		)
 	end
-	assert(timing.push > 0 and timing.clutchOut > 0, "a manual gearbox needs a push and a clutch-out time")
+	checkTiming(manual.timing)
+	if manual.autoTiming then
+		checkTiming(manual.autoTiming)
+	end
 	assert(
 		manual.biteWidth > 0 and manual.bitePoint <= 1 and manual.bitePoint - manual.biteWidth >= 0,
 		"a manual gearbox's clutch must bite inside the pedal's travel"

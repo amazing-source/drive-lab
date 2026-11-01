@@ -6,7 +6,10 @@
 	starting point for calibration and not data. The Laguna Seca's own parts are used where they
 	differ from the plain Boss: the Torsen, the R-compound tyres, the larger splitter and spoiler.
 ]]
+local Shift = require("./Shift")
 local Types = require("../Types")
+
+local QUICK = Shift.quick :: { reach: number, release: number, foot: number }
 
 -- Shift points of the automatic for the H box (`gearboxMode = "auto"`); the human shift itself
 -- comes from `gearbox.manual.timing`, so the ISR times below only fill the shared shape. At full
@@ -138,9 +141,11 @@ return Types.define({
 		damperFastRatio = 0.4,
 		damperReboundRatio = 1.5,
 		-- EST: softer in roll than the two supercars; the 34.6 mm front bar (documented) against a
-		-- 26 mm rear (documented, LS) puts most of the roll stiffness at the front.
+		-- 26 mm rear (documented, LS), about three times as stiff, puts most of the roll stiffness at
+		-- the front. At 0.58 the car oversteered: released after a turn at 160 km/h its yaw kept
+		-- growing, and ESC had to brake it (#209 follow-up).
 		rollGradient = math.rad(1.4),
-		frontRollShare = 0.58,
+		frontRollShare = 0.70,
 	},
 
 	engine = {
@@ -212,6 +217,21 @@ return Types.define({
 				crossPerColumn = 0.05,
 				enter = 0.08,
 				clutchOut = 0.15,
+				linger = 1.5,
+			},
+			-- The automatic's own shift: game-quick, as a modern automatic's, about 0.1 s without drive for
+			-- 1-2 and 0.15 s for 2-3; the hand and foot at the shift animation's quick preset (Shift).
+			autoTiming = {
+				reach = QUICK.reach,
+				release = QUICK.release,
+				footMove = QUICK.foot,
+				clutchIn = 0.03,
+				leave = 0.02,
+				push = 0.05,
+				crossBase = 0.02,
+				crossPerColumn = 0.02,
+				enter = 0.03,
+				clutchOut = 0.06,
 				linger = 1.5,
 			},
 			-- EST: the clutch bites from 0.6 of the pedal and holds fully from 0.3.

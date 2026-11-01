@@ -215,6 +215,54 @@ describe("Boss 302's H box in the car", function()
 		expect(worst > -0.3).toBe(true)
 	end)
 
+	it("breaks drive for under 0.2 s on each automatic upshift, as a modern automatic", function()
+		local dt = 1 / 240
+		local sim = DriveSim.new(Boss302)
+		local go = DriveSim.input(inputFor("Normal", { throttle = 1 }))
+		local started, longest, upshifts = nil :: number?, 0, 0
+		while sim.time < 9 do
+			local telemetry = DriveSim.frame(sim, go, dt).telemetry
+			local cut = telemetry.clutch < 0.9 or telemetry.throttle < 0.05
+			if telemetry.shifting and cut and started == nil then
+				started = sim.time
+			elseif started and not telemetry.shifting and not cut then
+				longest = math.max(longest, sim.time - started)
+				upshifts += 1
+				started = nil
+			end
+		end
+		expect(upshifts >= 3).toBe(true)
+		expect(longest < 0.2).toBe(true)
+	end)
+
+	it("settles its yaw within 0.5 s when the steering is released at 160 km/h, ESC off", function()
+		local function settle(throttle: number): number
+			local sim = DriveSim.new(Boss302, InputHelp.keyboard)
+			DriveSim.setSpeed(sim, 160 * KMH, 5)
+			local function input(steer: number): Model.DriverInput
+				return DriveSim.input(
+					inputFor("Normal", { throttle = throttle, steer = steer, esc = false, tc = false })
+				)
+			end
+			while sim.time < 1 do
+				DriveSim.frame(sim, input(0), DT)
+			end
+			local released = sim.time + 1
+			while sim.time < released do
+				DriveSim.frame(sim, input(1), DT)
+			end
+			while sim.time < released + 3 do
+				DriveSim.frame(sim, input(0), DT)
+				if math.abs(sim.body.yawRate) < 0.02 then
+					return sim.time - released
+				end
+			end
+			return math.huge
+		end
+		expect(settle(1) < 0.5).toBe(true)
+		expect(settle(0) < 1).toBe(true)
+	end)
+
 	it("never stalls with the automatic clutch, braking to a stop in 6th or pulling away in it", function()
 		local sim = DriveSim.new(Boss302)
 		DriveSim.setSpeed(sim, 40 * KMH, 6)

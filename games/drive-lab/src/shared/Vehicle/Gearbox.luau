@@ -191,11 +191,14 @@ local function manualAllows(
 	return true, nil
 end
 
-local function shiftManual(config: Types.GearboxConfig, state: GearboxState, to: number)
+-- The H box's shift to `to`, at the automatic's quick pace in "auto" and the human pace otherwise.
+local function shiftManual(config: Types.GearboxConfig, state: GearboxState, to: number, mode: GearboxMode)
 	if to > state.gear then
 		state.sinceUpshift = 0
 	end
-	HBox.shift(config.manual :: Types.ManualGearboxConfig, state.hbox, state.gear, to)
+	local manual = config.manual :: Types.ManualGearboxConfig
+	local timing = if mode == "auto" then manual.autoTiming or manual.timing else manual.timing
+	HBox.shift(manual, state.hbox, state.gear, to, timing)
 end
 
 -- The H box's E and Q: a step from the gear the lever is headed for, which retargets or queues a
@@ -212,7 +215,7 @@ local function requestManual(
 	local allowed: boolean, refusal: HBox.Refusal? = manualAllows(config, engine, from, to, context)
 	state.hbox.refusal = refusal
 	if allowed then
-		shiftManual(config, state, to)
+		shiftManual(config, state, to, boxMode(config, context))
 	end
 end
 
@@ -270,7 +273,7 @@ function Gearbox.select(
 		return false
 	end
 	if config.kind == "manual" then
-		shiftManual(config, state, gear)
+		shiftManual(config, state, gear, "auto")
 		return true
 	end
 	state.gear, state.target = gear, gear
@@ -456,13 +459,13 @@ local function advancePlan(
 	local plan = hbox.plan
 	if plan == nil then
 		hbox.sincePlan += dt
-		local mode = boxMode(config, context)
+		local mode: GearboxMode = boxMode(config, context)
 		local target = if mode == "auto"
 			then autoTarget(config, engine, state, context)
 			elseif mode == "manual" then droppedGear(config, engine, state, context)
 			else nil
 		if target then
-			shiftManual(config, state, target)
+			shiftManual(config, state, target, mode)
 		end
 	else
 		hbox.time += dt
@@ -478,7 +481,7 @@ local function advancePlan(
 					manualAllows(config, engine, state.gear, queued, context)
 				hbox.refusal = hbox.refusal or refusal
 				if allowed then
-					shiftManual(config, state, queued)
+					shiftManual(config, state, queued, boxMode(config, context))
 				end
 			end
 		end
