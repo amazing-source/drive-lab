@@ -142,14 +142,14 @@ end)
 
 describe("ExhaustFlames drawn on the Boss 302", function()
 	local entry = Catalog.cars.Boss302
-	local outlets = entry.model.exhaustOutlets
-	assert(outlets and #outlets == 2, "the Boss has its two outlets")
+	local outlets = entry.model.exhaustOutlets or {}
 
 	it("mounts a jet, a fireball and a flash at each of its two outlets, on the chassis", function()
 		local Effects = effect()
 		local model, chassis = standInBoss()
 		Effects.burst(model, entry.model, 1, entry.flames)
 		local mounted = outletsOn(chassis)
+		expect(#outlets).toBe(2)
 		expect(#mounted).toBe(2)
 		local studs = Units.metresToStuds(1)
 		for _, spec in outlets do
