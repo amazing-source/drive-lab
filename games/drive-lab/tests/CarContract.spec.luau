@@ -1,5 +1,7 @@
 --!strict
 local Catalog = require("../src/shared/Config/Cars/Catalog")
+local Boss302Model = require("../src/shared/Config/Cars/Boss302/Model")
+local Boss302Physics = require("../src/shared/Config/Cars/Boss302/Physics")
 local Contract = require("../src/shared/Config/Cars/Contract")
 local DriverArms = require("../src/shared/Config/DriverArms")
 local Driving = require("../src/shared/Config/Driving")
@@ -159,6 +161,50 @@ describe("Car contract", function()
 end)
 
 describe("Car contract: the driver", function()
+	-- A minimal shift hand: the contract checks what it holds, not its keys.
+	local shift = {
+		knobRadius = 0.025,
+		grip = { 0, 0, 0, 0, 1, 0, 0, 0 },
+		hand = {
+			keys = { { 0, 0, 0, 0, 1, 0, 0, 0 }, { 0.3, 0, 0, 0, 1, 0, 0, 0 } },
+			shapes = { { at = 0, shape = "Grip" } },
+		},
+		reach = 0.3,
+		release = 0.3,
+		foot = 0.2,
+	}
+
+	it(
+		"gives a shift hand only a lever the model binds, on a manual gearbox whose gates it covers",
+		function()
+			expect(function()
+				Contract.define(svjWith(function(entry)
+					entry.driver.shift = shift
+				end))
+			end).toThrow()
+			expect(function()
+				Contract.checkShift(svjWith(function(entry)
+					entry.driver.shift = shift
+					entry.model.shifter = Boss302Model.shifter
+				end))
+			end).toThrow()
+			local boss = svjWith(function(entry)
+				entry.driver.shift = shift
+				entry.model.shifter = Boss302Model.shifter
+				entry.model.seat = Boss302Model.seat
+				entry.physics = Boss302Physics
+			end)
+			Contract.checkShift(boss)
+			local skewed = table.clone(boss.model.shifter.gates)
+			skewed["4"] = { side = 0.05, fore = skewed["4"].fore }
+			boss.model.shifter = table.clone(boss.model.shifter)
+			boss.model.shifter.gates = skewed
+			expect(function()
+				Contract.checkShift(boss)
+			end).toThrow()
+		end
+	)
+
 	it("refuses a footwell pedal the model binding does not hinge", function()
 		expect(function()
 			Contract.define(svjWith(function(entry)

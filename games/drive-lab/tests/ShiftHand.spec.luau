@@ -1,4 +1,7 @@
 --!strict
+local fs = require("@lune/fs")
+local serde = require("@lune/serde")
+
 local Boss302Model = require("../src/shared/Config/Cars/Boss302/Model")
 local Boss302Physics = require("../src/shared/Config/Cars/Boss302/Physics")
 local Config = require("../src/shared/Config/DriverShift")
@@ -235,5 +238,46 @@ describe("Shift hand: between the wheel and the knob", function()
 		expect(atWheel).toBe("Grip")
 		expect(between).toBe("Rest")
 		expect(atKnob).toBe("Knob")
+	end)
+end)
+
+describe("Shift hand: the wrist from the lever's place", function()
+	local grip: Pose =
+		{ position = { x = 0.18, y = 0.27, z = -0.36 }, rotation = { w = 0.9962, x = 0, y = 0, z = 0.0872 } }
+
+	it("is the live grip at the wheel and the hand on the knob wherever the lever is", function()
+		for _, place in { { 1, 0, 0 }, { 0, 1, 0 }, { 2, -1, 0 }, { -1, 1, 1 }, { 0.5, 0, 0 } } do
+			local atWheel, shown = ShiftHand.wrist(SHIFT, SHIFTER, 0, place[1], place[2], place[3], grip)
+			expect(distance(atWheel.position, grip.position)).toBeNear(0, 1e-9)
+			expect(shown).toBe("Grip")
+			local onKnob, held = ShiftHand.wrist(SHIFT, SHIFTER, 1, place[1], place[2], place[3], grip)
+			local knob = ShiftHand.knobWrist(ShiftHand.lever(SHIFTER, place[1], place[2], place[3]), GRIP)
+			expect(distance(onKnob.position, knob.position)).toBeNear(0, 1e-9)
+			expect(turnBetween(onKnob.rotation, knob.rotation)).toBeNear(0, 1e-6)
+			expect(held).toBe("Knob")
+		end
+	end)
+
+	it("puts the Boss's knob where the shift-hand tool keyed it, at every gate and on the way", function()
+		local data =
+			serde.decode("json", fs.readFile("games/drive-lab/tests/fixtures/boss302_shift_parity.json"))
+		local shifter = assert(Boss302Model.shifter, "the Boss binds its lever")
+		local gates = (Boss302Physics.gearbox.manual :: Types.ManualGearboxConfig).gates
+		local lever = ShiftHand.leverFromBinding(shifter, gates, Boss302Model.seat)
+		local checked = 0
+		for _, place in data.parity do
+			local knob = ShiftHand.lever(lever, place.column, place.row, place.knob)
+			local p = place.position
+			expect(distance(knob.position, { x = p[1], y = p[2], z = p[3] })).toBeNear(0, 1e-5)
+			-- Component by component (the tool rounds to 7 decimals; an angle through acos near 1
+			-- would turn that rounding into about 5e-4 rad).
+			local q, r = place.rotation, knob.rotation
+			local sign = if r.w * q[1] + r.x * q[2] + r.y * q[3] + r.z * q[4] < 0 then -1 else 1
+			for index, component in { r.w, r.x, r.y, r.z } do
+				expect(component).toBeNear(sign * q[index], 1e-6)
+			end
+			checked += 1
+		end
+		expect(checked).toBe(14)
 	end)
 end)

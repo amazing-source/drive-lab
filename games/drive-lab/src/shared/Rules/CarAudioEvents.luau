@@ -4,7 +4,8 @@
 	throttle, after the gearbox's shift cut and the limiter's fuel cut, so a closed throttle is
 	not on its own a lift: a lift is a throttle that was open and closes at high rpm outside a
 	shift, the limiter and traction control. The limiter flag itself is only true during each
-	cut, so it is held across the bounce.
+	cut, so it is held across the bounce. A manual box counts its grinds (shifts refused with the
+	clutch up); each rise of the count is one grind, and a count that drops (a new drive) is none.
 ]]
 
 export type Readout = {
@@ -14,6 +15,8 @@ export type Readout = {
 	shifting: boolean,
 	limiter: boolean,
 	tcActive: boolean,
+	-- The manual box's grind count, when the car has one.
+	grinds: number?,
 }
 
 export type Tuning = {
@@ -34,6 +37,8 @@ export type Events = {
 	lift: boolean,
 	-- The limiter is bouncing.
 	limiter: boolean,
+	-- A shift was refused with the clutch up.
+	grind: boolean,
 }
 
 export type State = {
@@ -54,12 +59,14 @@ function CarAudioEvents.step(state: State, readout: Readout, dt: number): Events
 	local previous = state.previous
 	state.limiterAge = if readout.limiter then 0 else state.limiterAge + dt
 	local limiter = state.limiterAge <= tuning.limiterHold
-	local events: Events = { cut = false, gear = nil, lift = false, limiter = limiter }
+	local events: Events = { cut = false, gear = nil, lift = false, limiter = limiter, grind = false }
 	if previous then
 		events.cut = readout.shifting and not previous.shifting
 		if readout.gear ~= previous.gear then
 			events.gear = if readout.gear > previous.gear then "Up" else "Down"
 		end
+		local grinds, before = readout.grinds, previous.grinds
+		events.grind = grinds ~= nil and before ~= nil and grinds > before
 	end
 	local quiet = readout.shifting or limiter or readout.tcActive
 	if readout.throttle >= tuning.liftFrom and not quiet then
