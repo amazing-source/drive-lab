@@ -62,3 +62,11 @@ Third run, on 1527f49 (the Knob mesh wired):
    exit: 1
    FAIL Hand shapes: the shift hand's knob > draws the Knob mesh with the wrist cuff where the place and the car have it: games/drive-lab/tests/HandShapes.spec:103: expected HandKnob, got KnobHand
    4 passed, 1 failed
+
+Fourth run, on 6a4f393 (the Knob mesh centre from the shift data, pinned to the animator's poses):
+== BREAK: the Knob mesh centre's y moved by 0.1 mm (-0.030688 to -0.030788)
+   file: games/drive-lab/src/shared/Config/Cars/Boss302/Shift.luau
+   exit: 1
+   FAIL Boss 302 entry > puts the Knob hand mesh at the centre the shift animator's poses give: games/drive-lab/tests/Boss302Entry.spec:75: expected -0.030688 within 0.000001, got -0.030788
+   5 passed, 1 failed
+   (restored: 6 passed, 0 failed)
