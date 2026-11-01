@@ -9,6 +9,9 @@
 local ShiftPlan = require("./ShiftPlan")
 local Types = require("../Config/Cars/Types")
 
+-- Why a shift was refused: it would over-rev, or the player's clutch was up (a grind).
+export type Refusal = "overRev" | "clutchUp"
+
 export type State = {
 	plan: ShiftPlan.Plan?,
 	-- Seconds since the plan started.
@@ -22,8 +25,8 @@ export type State = {
 	-- The pedal in effect (0 up, 1 down): the plan's, the automatic clutch's or the player's.
 	pedal: number,
 	stalled: boolean,
-	-- The last shift asked for was refused: it would over-rev, or the player's clutch was up.
-	refused: boolean,
+	-- Why the shift asked for this frame was refused, if it was.
+	refusal: Refusal?,
 }
 
 local HBox = {}
@@ -38,7 +41,7 @@ function HBox.newState(): State
 		sincePlan = math.huge,
 		pedal = 0,
 		stalled = false,
-		refused = false,
+		refusal = nil,
 	}
 end
 

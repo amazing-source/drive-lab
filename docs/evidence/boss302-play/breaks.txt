@@ -1,0 +1,40 @@
+Every rule of this change broken on purpose, one at a time, against GearboxModes.spec, Stall.spec, CarEntry.spec,
+Hud.spec, InputFilter.spec, HBox.spec, Boss302.spec and ControlsHelp.spec (a 300 s timeout per run; none hung),
+then restored byte-exact.
+
+BREAK the clutch mode only on the keyboard -> 144 passed, 2 failed
+    Gearbox modes > adds the clutch mode on the Boss's H box, on the keyboard only  [GearboxModes.spec:45: expected manual auto manual auto, got manual manualClutch auto manual]
+    Gearbox modes > turns a clutch mode carried onto a car or device without it into manual  [GearboxModes.spec:54: expected manual, got manualClutch]
+BREAK the clutch mode only on a box that offers the player's clutch -> 145 passed, 1 failed
+    Gearbox modes > leaves the clutch mode out on an H box that does not offer the player's clutch  [GearboxModes.spec:49: expected manual auto manual auto, got manual manualClutch auto manual]
+BREAK a clutch mode carried where it is not offered becomes manual -> 145 passed, 1 failed
+    Gearbox modes > turns a clutch mode carried onto a car or device without it into manual  [GearboxModes.spec:53: expected manual, got manualClutch]
+BREAK only a clutch-up refusal counts as a grind -> 145 passed, 1 failed
+    Gearbox modes > counts a grind only for a shift refused with the clutch up  [GearboxModes.spec:72: expected 3, got 4]
+BREAK a stall is reported once -> 145 passed, 1 failed
+    Stall round trip > reports a stall while the engine runs once, however long the server takes  [Stall.spec:22: expected - Report - - -, got - Report Report Report -]
+BREAK the model restarts only as the engine starts -> 144 passed, 2 failed
+    Stall round trip > reports a stall while the engine runs once, however long the server takes  [Stall.spec:22: expected - Report - - -, got - Report Restart Restart -]
+    Stall round trip > never reports a model that stalled with the engine off, and starts it with the engine  [Stall.spec:39: expected - - - Restart -, got - - - Report -]
+BREAK a stalled car rolls with the driver's input -> 145 passed, 1 failed
+    Stall round trip > lets the driver's input through once drivable, or while the car rolls stalled  [Stall.spec:57: expected true, got false]
+BREAK the engine stops on a stall only while it runs -> 145 passed, 1 failed
+    Car entry requests > stops the engine on a stall only while it runs  [CarEntry.spec:264: expected false, got true]
+BREAK the server reads the Stall action -> 145 passed, 1 failed
+    Car entry requests > reads only the six actions  [CarEntry.spec:271: expected Stall, got nil]
+BREAK both manual modes count as changing gear by hand -> 145 passed, 1 failed
+    Hud > counts both manual gearbox modes as changing gear by hand  [Hud.spec:10: expected true, got false]
+BREAK the clutch key's pedal goes down fast and comes up slowly -> 144 passed, 2 failed
+    Input filter pedals > presses the clutch key's pedal quickly and lets it out slowly, as a foot does  [InputFilter.spec:171: expected 0.5 within 1e-09, got 0.049999999999999996]
+    Boss 302's H box in the car > works the clutch key's pedal as a foot does  [Boss302.spec:275: expected 0.5 within 0.041666666666666664, got 0]
+BREAK the model reads the ramped pedal, not the raw key -> 145 passed, 1 failed
+    Boss 302's H box in the car > works the clutch key's pedal as a foot does  [Boss302.spec:275: expected 0.5 within 0.041666666666666664, got 0]
+BREAK a refusal says why: over-rev -> 145 passed, 1 failed
+    H box shifts > refuses a downshift that would over-rev, and says so  [HBox.spec:182: expected overRev, got clutchUp]
+BREAK the clutch key's control only on cars that offer it -> 145 passed, 1 failed
+    Gearbox modes > gives the clutch key a control only on a car that offers the player's clutch  [GearboxModes.spec:60: expected playerClutch, got nil]
+BREAK the clutch row explains the key in one sentence -> 145 passed, 1 failed
+    ControlsHelp > explains the clutch key on a car that offers the player's clutch, which no car in the catalog does yet  [ControlsHelp.spec:134: the clutch row is not ready: Clutch (clutch mode): the explanation is more than one sen]
+BREAK a car's playerClutch feature -> 145 passed, 1 failed
+    Gearbox modes > gives the clutch key a control only on a car that offers the player's clutch  [GearboxModes.spec:62: expected false, got true]
+every file restored byte-exact

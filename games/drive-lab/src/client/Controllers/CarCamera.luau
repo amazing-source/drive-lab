@@ -29,6 +29,7 @@ local Rules = require(ReplicatedStorage.Shared.Rules.CarCamera)
 local Units = require(ReplicatedStorage.Shared.Units)
 
 local EntryView = require(script.Parent.EntryView)
+local StartupLean = require(script.Parent.Parent.Rig.StartupLean)
 
 type Drive = {
 	model: Model,
@@ -76,6 +77,15 @@ local function currentDrive(): Drive?
 		views = entry.camera,
 		modes = entry.physics.modeOrder,
 	}
+end
+
+local function anyHeld(keys: { Enum.KeyCode }): boolean
+	for _, key in keys do
+		if UserInputService:IsKeyDown(key) then
+			return true
+		end
+	end
+	return false
 end
 
 local function number(model: Model, name: string): number
@@ -145,7 +155,12 @@ local function cockpit(drive: Drive): CFrame
 	local frame = drive.chassis.CFrame
 	local character = localPlayer.Character
 	local headPart = character and character:FindFirstChild("Head")
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local base = if headPart and headPart:IsA("BasePart") then headPart.Position else frame.Position
+	-- The start-up's torso lean moves the head, not the eye.
+	if humanoid then
+		base = StartupLean.unlean(humanoid, base)
+	end
 	local at = drive.views.eye
 	local eye = base
 		+ frame.LookVector * studs(at.forward + eyeForward)
@@ -254,9 +269,15 @@ function Controller.start()
 		then
 			local range = CarCamera.EYE_RANGE
 			local notch = math.sign(input.Position.Z) * range.step
-			if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+			local drive = currentDrive()
+			local clutchMode = drive ~= nil and drive.model:GetAttribute("GearboxMode") == "manualClutch"
+			local move = Rules.eyeScroll(
+				UserInputService:IsKeyDown(Enum.KeyCode.LeftShift),
+				clutchMode and anyHeld(Controls.CLUTCH)
+			)
+			if move == "Height" then
 				eyeUp = math.clamp(eyeUp + notch, range.up[1], range.up[2])
-			else
+			elseif move == "Forward" then
 				eyeForward = math.clamp(eyeForward + notch, range.forward[1], range.forward[2])
 			end
 		end

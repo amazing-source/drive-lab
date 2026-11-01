@@ -5,6 +5,7 @@
 	left, front right, rear left, rear right (Vehicle/Geometry).
 ]]
 local Gearbox = require("./Gearbox")
+local HBox = require("./HBox")
 local Types = require("../Config/Cars/Types")
 
 export type Assists = { abs: boolean, tc: boolean, esc: boolean }
@@ -100,7 +101,8 @@ export type Telemetry = {
 	-- The H box (Vehicle/HBox), 0 or false on the ISR. The clutch pedal in effect (0 up, 1 down);
 	-- the driver's right hand from the wheel to the knob and left foot from the floor to the pedal
 	-- (0 to 1); the running shift's gears and seconds (Vehicle/ShiftPlan), the gear and 0 when none;
-	-- a stalled engine; and a shift refused this frame.
+	-- a stalled engine; and why a shift was refused this frame, if one was (Vehicle/HBox: "overRev",
+	-- or "clutchUp", the grind).
 	clutchPedal: number,
 	handAt: number,
 	footAt: number,
@@ -108,7 +110,7 @@ export type Telemetry = {
 	shiftTo: number,
 	shiftElapsed: number,
 	stalled: boolean,
-	shiftRefused: boolean,
+	shiftRefusal: HBox.Refusal?,
 }
 
 -- The drift's own force (N, car frame) and yaw torque (N·m, positive turning right), at the centre

@@ -159,33 +159,36 @@ local function boxMode(config: Types.GearboxConfig, context: Context): GearboxMo
 	return context.gearboxMode
 end
 
--- Whether the H box may go from `from` to `to`, and whether a refusal is the driver's to hear
--- about: reverse, neutral and first only near a standstill, as the ISR; a downshift that would
--- over-rev and a move with the player's clutch up are refused.
+local CLUTCH_UP: HBox.Refusal = "clutchUp"
+local OVER_REV: HBox.Refusal = "overRev"
+
+-- Whether the H box may go from `from` to `to`, and why not when the driver should hear of it:
+-- reverse, neutral and first only near a standstill, as the ISR; a downshift that would over-rev
+-- and a move with the player's clutch up are refused.
 local function manualAllows(
 	config: Types.GearboxConfig,
 	engine: Types.EngineConfig,
 	from: number,
 	to: number,
 	context: Context
-): (boolean, boolean)
+): (boolean, HBox.Refusal?)
 	local manual = config.manual :: Types.ManualGearboxConfig
 	if to > #config.ratios or to < -1 then
-		return false, false
+		return false, nil
 	end
 	if math.min(from, to) <= 0 and context.groundSpeed >= config.selectorMaxSpeed then
-		return false, false
+		return false, nil
 	end
 	if boxMode(config, context) == "manualClutch" and context.clutchPedal < manual.bitePoint then
-		return false, true
+		return false, CLUTCH_UP
 	end
 	if to >= 1 and to < from then
 		local lower = inputSpeed(config, to, context.outputSpeed)
 		if lower >= (engine.limiterRpm - engine.limiterHysteresis) * RAD_PER_RPM then
-			return false, true
+			return false, OVER_REV
 		end
 	end
-	return true, false
+	return true, nil
 end
 
 local function shiftManual(config: Types.GearboxConfig, state: GearboxState, to: number)
@@ -206,8 +209,8 @@ local function requestManual(
 )
 	local from = HBox.aimedGear(state.hbox, state.gear)
 	local to = if up then from + 1 else from - 1
-	local allowed, refused = manualAllows(config, engine, from, to, context)
-	state.hbox.refused = refused
+	local allowed: boolean, refusal: HBox.Refusal? = manualAllows(config, engine, from, to, context)
+	state.hbox.refusal = refusal
 	if allowed then
 		shiftManual(config, state, to)
 	end
@@ -224,7 +227,7 @@ function Gearbox.request(
 	context: Context
 )
 	if config.kind == "manual" then
-		state.hbox.refused = false
+		state.hbox.refusal = nil
 		if up ~= down then
 			requestManual(config, engine, state, up, context)
 		end
@@ -471,8 +474,9 @@ local function advancePlan(
 			local queued = hbox.queued
 			hbox.queued = nil
 			if queued then
-				local allowed, refused = manualAllows(config, engine, state.gear, queued, context)
-				hbox.refused = hbox.refused or refused
+				local allowed: boolean, refusal: HBox.Refusal? =
+					manualAllows(config, engine, state.gear, queued, context)
+				hbox.refusal = hbox.refusal or refusal
 				if allowed then
 					shiftManual(config, state, queued)
 				end
