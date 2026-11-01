@@ -20,6 +20,8 @@ local DriverGestures = require("../DriverGestures")
 local DriverStartup = require("../DriverStartup")
 local Driving = require("../Driving")
 local ExhaustFlames = require("../../Rules/ExhaustFlames")
+local GaugeRules = require("../../Rules/Gauges")
+local Gauges = require("../Gauges")
 local GearboxModes = require("../../Rules/GearboxModes")
 local HudDesign = require("../HudDesign")
 local RimBlur = require("../RimBlur")
@@ -59,9 +61,11 @@ export type Entry = {
 	-- Which of its pops throw flame; without it, every pop does.
 	flames: ExhaustFlames.CarFlames?,
 	lights: CarLights.Lights,
-	-- The car's display: a dial face, or a binnacle screen with pages and shift lights. One of them.
+	-- The car's display: a dial face, a binnacle screen with pages and shift lights, or an analog
+	-- cluster of needles. One of them.
 	cluster: Cluster.Face?,
 	binnacle: Binnacle.Screen?,
+	gauges: Gauges.Cluster?,
 	-- The car's own driving HUD; without it, Config/Hud's.
 	hud: HudDesign.Design?,
 	assists: DriverAssists.Tuning,
@@ -310,13 +314,100 @@ local function checkBinnacle(entry: Entry, screen: Binnacle.Screen)
 	)
 end
 
+-- What is wrong with a dial's scale: under two points, readings that do not rise, shares outside
+-- 0 to 1 or falling.
+local function scaleProblem(dial: Gauges.Dial): string?
+	local scale = dial.scale
+	if #scale < 2 then
+		return "has under two points on its scale"
+	end
+	for index, point in scale do
+		if point[2] < 0 or point[2] > 1 then
+			return "has a share off its needle's travel"
+		end
+		local before = scale[index - 1]
+		if before and (point[1] <= before[1] or point[2] < before[2]) then
+			return "has a scale whose readings do not rise or whose shares fall"
+		end
+	end
+	return nil
+end
+
+local function dialProblems(model: Binding.CarModel, cluster: Gauges.Cluster, problems: { string })
+	local needles = model.needles or {}
+	local used: { [string]: boolean } = {}
+	for _, dial in cluster.dials do
+		local what = `the {dial.needle} dial`
+		local needle = needles[dial.needle]
+		if needle == nil or needle.travel == nil or needle.travel <= 0 then
+			table.insert(problems, `{what} turns a needle the binding does not bind with a sweep`)
+		end
+		if used[dial.needle] then
+			table.insert(problems, `two dials turn {dial.needle}`)
+		end
+		used[dial.needle] = true
+		if not GaugeRules.unitFits(dial.reading, dial.unit) then
+			table.insert(problems, `{what} prints its {dial.reading} in {dial.unit}`)
+		end
+		local scale = scaleProblem(dial)
+		if scale then
+			table.insert(problems, `{what} {scale}`)
+		end
+		if not (dial.response > 0 and dial.catchUp > 0 and dial.maxRate > 0) then
+			table.insert(problems, `{what} needs a positive response, catch-up and top speed`)
+		end
+	end
+end
+
+--[[
+	Everything wrong with an analog cluster against the car's binding and start-up: each dial turns
+	a bound needle of its own, prints its reading in a unit it can be read in, on a usable scale,
+	with usable needle timings; the cluster lights with a control its start-up moves; its screens
+	are displays the binding has. Kept apart from `define` so a car still out of the catalog can be
+	checked.
+]]
+function Contract.gaugeProblems(
+	model: Binding.CarModel,
+	startup: CarEntry.Startup,
+	cluster: Gauges.Cluster
+): { string }
+	local problems: { string } = {}
+	dialProblems(model, cluster, problems)
+	if GaugeRules.lightAt(startup, cluster.lightsWith) == nil then
+		table.insert(problems, `the gauges light with "{cluster.lightsWith}", which the start-up never moves`)
+	end
+	if cluster.redlineRpm <= 0 then
+		table.insert(problems, "the gauges' redline is not a speed")
+	end
+	assert(cluster.sweep == nil or cluster.sweep > 0, "the gauges' sweep needs a duration")
+	local displays = model.displays or {}
+	local screens: { string } = {}
+	if cluster.readout then
+		table.insert(screens, cluster.readout.display)
+	end
+	if cluster.message then
+		table.insert(screens, cluster.message.display)
+	end
+	for _, display in screens do
+		if displays[display] == nil then
+			table.insert(problems, `the gauges draw on the {display} display, which the binding lacks`)
+		end
+	end
+	return problems
+end
+
 local function checkDisplay(entry: Entry)
-	local face, screen = entry.cluster, entry.binnacle
-	assert((face == nil) ~= (screen == nil), "a car has one display: a dial face or a binnacle screen")
+	local face, screen, gauges = entry.cluster, entry.binnacle, entry.gauges
+	local count = (if face then 1 else 0) + (if screen then 1 else 0) + (if gauges then 1 else 0)
+	assert(count == 1, "a car has one display: a dial face, a binnacle screen or analog gauges")
 	if face then
 		checkCluster(entry, face)
 	elseif screen then
 		checkBinnacle(entry, screen)
+	elseif gauges then
+		for _, problem in Contract.gaugeProblems(entry.model, entry.startup, gauges) do
+			error(problem)
+		end
 	end
 end
 
@@ -454,9 +545,11 @@ end
 
 -- Where the car's red zone starts, on its display and the HUD's rev segments.
 function Contract.redline(entry: Entry): number
-	local face, screen = entry.cluster, entry.binnacle
+	local face, screen, gauges = entry.cluster, entry.binnacle, entry.gauges
 	if face then
 		return face.redlineRpm
+	elseif gauges then
+		return gauges.redlineRpm
 	end
 	assert(screen, "a car has a display")
 	return screen.redlineRpm

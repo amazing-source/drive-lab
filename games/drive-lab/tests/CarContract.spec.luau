@@ -803,3 +803,73 @@ describe("Car contract: loop regions", function()
 		end).toThrow()
 	end)
 end)
+
+describe("Car contract: analog gauges", function()
+	local Boss302Gauges = require("../src/shared/Config/Cars/Boss302/Gauges")
+
+	local function copy(value: any): any
+		if type(value) ~= "table" then
+			return value
+		end
+		local out = {}
+		for key, child in value do
+			out[key] = copy(child)
+		end
+		return out
+	end
+
+	-- The SVJ with the Boss's analog cluster in place of its dial, on needles and screens bound
+	-- for it, lit by the first control the SVJ's start-up moves.
+	local function withGauges(change: ((any) -> ())?): Contract.Entry
+		return svjWith(function(entry)
+			local gauges = copy(Boss302Gauges)
+			gauges.lightsWith = entry.startup.moves[1].control
+			entry.cluster = nil
+			entry.gauges = gauges
+			entry.model.needles = {}
+			for _, dial in gauges.dials do
+				entry.model.needles[dial.needle] = {
+					part = dial.needle,
+					pivot = { forward = 0, right = 0, up = 0 },
+					axis = { forward = 1, right = 0, up = 0 },
+					travel = math.pi,
+				}
+			end
+			local screen =
+				{ forward = 0.3, right = -0.25, up = 0.33, width = 0.04, height = 0.02, tilt = 0.3 }
+			entry.model.displays = { PodReadout = screen, MessageCentre = table.clone(screen) }
+			if change then
+				change(entry)
+			end
+		end)
+	end
+
+	it("accepts analog gauges in place of the dial, and reads their redline", function()
+		local entry = Contract.define(withGauges())
+		expect(Contract.redline(entry)).toBe(Boss302Gauges.redlineRpm)
+		expect(function()
+			((entry.gauges :: any).dials[1] :: any).response = 1
+		end).toThrow()
+	end)
+
+	it("refuses gauges beside another display", function()
+		expect(function()
+			Contract.define(withGauges(function(entry)
+				entry.cluster = copy(Catalog.cars.SVJ.cluster)
+			end))
+		end).toThrow()
+	end)
+
+	it("refuses gauges with a problem", function()
+		expect(function()
+			Contract.define(withGauges(function(entry)
+				entry.gauges.lightsWith = "Nothing"
+			end))
+		end).toThrow()
+		expect(function()
+			Contract.define(withGauges(function(entry)
+				entry.model.needles.Needle_Speedo = nil
+			end))
+		end).toThrow()
+	end)
+end)
