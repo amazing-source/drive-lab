@@ -1,0 +1,172 @@
+--!strict
+local Binding = require("../src/shared/Config/Cars/Binding")
+local CarEntryRules = require("../src/shared/Rules/CarEntry")
+local Hinge = require("../src/shared/Rules/Hinge")
+local Model = require("../src/shared/Config/Cars/Boss302/Model")
+local Paths = require("../src/shared/Config/Cars/Boss302/StartupPaths")
+local Startup = require("../src/shared/Config/Cars/Boss302/Startup")
+local StartupArms = require("../src/shared/Rules/StartupArms")
+local T = require("../../../tools/test/T")
+
+local describe, it, expect = T.describe, T.it, T.expect
+
+type Vector = StartupArms.Vector
+
+-- How close the pinch stays to the key while the game turns it, metres (as the DR458's).
+local TOUCH_GAP = 0.002
+-- By the time the key springs back, the pinch has left its grip by at least this, metres.
+local LET_GO = 0.008
+local TOUCHES = assert(Paths.TOUCHES, "the Boss's paths list the controls the hand works")
+local CONTROLS = assert(Model.controls, "the Boss's binding hinges its key")
+
+local RUNNING: CarEntryRules.State = {
+	entry = "Enter",
+	entryAt = -100,
+	entryDoorOpen = false,
+	door = "Closed",
+	doorAt = 0,
+	engine = "On",
+	engineAt = 0,
+}
+
+local function gap(a: Vector, b: Vector): number
+	return math.sqrt((a.x - b.x) ^ 2 + (a.y - b.y) ^ 2 + (a.z - b.z) ^ 2)
+end
+
+local function inSeat(point: Binding.CarPoint): Vector
+	local p, s = Hinge.chassis(point), Hinge.chassis(Model.seat)
+	return { x = p.x - s.x, y = p.y - s.y, z = p.z - s.z }
+end
+
+local function movesOf(control: string)
+	local found = {}
+	for _, move in Startup.moves do
+		if move.control == control then
+			table.insert(found, move)
+		end
+	end
+	return found
+end
+
+-- Where a touched point of the key is at `t`: its moves add up, as Controllers/CarDoor turns it.
+local function controlPoint(touch, t: number): Vector
+	local hinge = CONTROLS[touch.control]
+	local angle = 0
+	for _, move in movesOf(touch.control) do
+		angle += Hinge.angle(CarEntryRules.controlOpenness(move, RUNNING, t), move.angle)
+	end
+	return Hinge.rotate(touch.point, inSeat(hinge.pivot), Hinge.chassis(hinge.axis), angle)
+end
+
+local function handPoint(offset: Vector, t: number): Vector
+	return StartupArms.apply(StartupArms.sample(Paths.RIGHT.keys, t), offset)
+end
+
+local KEY = TOUCHES[1]
+local MOVES = movesOf(KEY.control)
+local FIRST, LAST = MOVES[1], MOVES[#MOVES]
+local SPRING = assert(LAST.back, "the key springs back from START")
+
+describe("Boss 302 start-up hands: the key", function()
+	it("turns one key, to ON and then on to START, the START landing on the press", function()
+		expect(#TOUCHES).toBe(1)
+		expect(KEY.control).toBe("Key_Ignition")
+		expect(KEY.shape).toBe("Pinch")
+		expect(#MOVES).toBe(2)
+		expect(LAST.at).toBeNear(Startup.pressAt, 1e-9)
+		expect(Paths.BUTTON).toBe(nil)
+	end)
+
+	it("pinches the key, to 2 mm, from before it leaves OFF until the press and through the crank", function()
+		local from, to = FIRST.at - FIRST.move, SPRING - 0.07
+		local worst = 0
+		for step = 0, 60 do
+			local t = from + (to - from) * step / 60
+			worst = math.max(worst, gap(handPoint(KEY.tip, t), controlPoint(KEY, t)))
+		end
+		expect(worst < TOUCH_GAP).toBe(true)
+	end)
+
+	it("turns the hand with the key, to 3 degrees, through ON and START", function()
+		-- The pinch sits on the key's axis, so the turn is read from the hand's rotation about it.
+		local hinge = CONTROLS[KEY.control]
+		local axis = Hinge.chassis(hinge.axis)
+		local length = math.sqrt(axis.x ^ 2 + axis.y ^ 2 + axis.z ^ 2)
+		axis = { x = axis.x / length, y = axis.y / length, z = axis.z / length }
+		local function dot(a: Vector, b: Vector): number
+			return a.x * b.x + a.y * b.y + a.z * b.z
+		end
+		local function flat(v: Vector): Vector
+			local along = dot(v, axis)
+			return { x = v.x - axis.x * along, y = v.y - axis.y * along, z = v.z - axis.z * along }
+		end
+		local function keyAngle(t: number): number
+			local angle = 0
+			for _, move in MOVES do
+				angle += Hinge.angle(CarEntryRules.controlOpenness(move, RUNNING, t), move.angle)
+			end
+			return angle
+		end
+		local origin = { x = 0, y = 0, z = 0 }
+		local function handVector(t: number, local_: Vector): Vector
+			return StartupArms.apply(
+				{ position = origin, rotation = StartupArms.sample(Paths.RIGHT.keys, t).rotation },
+				local_
+			)
+		end
+		local from, to = FIRST.at - FIRST.move, SPRING - 0.07
+		-- The hand's own axis that lies most across the key's at OFF, so its turn is well defined.
+		local probe, best = { x = 1, y = 0, z = 0 }, -1
+		for _, candidate in { { x = 1, y = 0, z = 0 }, { x = 0, y = 1, z = 0 }, { x = 0, y = 0, z = 1 } } do
+			local across = flat(handVector(from, candidate))
+			local size = dot(across, across)
+			if size > best then
+				probe, best = candidate, size
+			end
+		end
+		local start = flat(handVector(from, probe))
+		local worst = 0
+		for step = 0, 60 do
+			local t = from + (to - from) * step / 60
+			local now = flat(handVector(t, probe))
+			local cross = {
+				x = start.y * now.z - start.z * now.y,
+				y = start.z * now.x - start.x * now.z,
+				z = start.x * now.y - start.y * now.x,
+			}
+			local turned = math.atan2(dot(cross, axis), dot(start, now))
+			worst = math.max(worst, math.abs(math.deg(turned - (keyAngle(t) - keyAngle(from)))))
+		end
+		expect(worst < 3).toBe(true)
+	end)
+
+	it("shows the Pinch hand while it holds the key", function()
+		for _, t in { FIRST.at - FIRST.move, FIRST.at, (FIRST.at + LAST.at) / 2, LAST.at, SPRING - 0.07 } do
+			expect(StartupArms.shape(Paths.RIGHT, t)).toBe("Pinch")
+		end
+	end)
+
+	it("has let go of the key by the time it springs back from START", function()
+		expect(gap(handPoint(KEY.tip, SPRING), controlPoint(KEY, SPRING)) > LET_GO).toBe(true)
+	end)
+end)
+
+describe("Boss 302 start-up hands: the keyed paths", function()
+	it("start resting, run in time order with unit rotations and end on the wheel when it says", function()
+		for _, keyed in { Paths.RIGHT, Paths.LEFT } do
+			local keys = keyed.keys
+			expect(keys[1][1]).toBe(0)
+			for index = 2, #keys do
+				expect(keys[index][1] > keys[index - 1][1]).toBe(true)
+			end
+			for _, key in keys do
+				expect(key[5] ^ 2 + key[6] ^ 2 + key[7] ^ 2 + key[8] ^ 2).toBeNear(1, 1e-3)
+			end
+			expect(keys[#keys][1] <= Startup.wheelAt + 1e-9).toBe(true)
+			expect(keyed.gripFrom < keys[#keys][1]).toBe(true)
+			expect(keyed.shapes[1].shape).toBe("Rest")
+			expect(StartupArms.shape(keyed, keys[#keys][1])).toBe("Grip")
+		end
+		expect(Paths.RIGHT.keys[#Paths.RIGHT.keys][1]).toBeNear(Startup.wheelAt, 1e-9)
+	end)
+end)
