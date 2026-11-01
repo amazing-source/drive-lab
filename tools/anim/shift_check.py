@@ -33,7 +33,7 @@ from scipy.spatial import cKDTree
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gesture_paths import Arm, Frame, cabin_in  # noqa: E402
-from shift_paths import compose, hand_on_way, key_frame, lever_inputs, path_states, steering_grip  # noqa: E402
+from shift_paths import compose, hand_on_way, inputs_of, key_frame, lever_inputs, path_states, portable, steering_grip  # noqa: E402
 from startup_check import inside_depth, read_glb, segment_depth, surface_samples  # noqa: E402
 
 REACH_SHARE = 0.96
@@ -72,7 +72,7 @@ def main(argv):
     reach_only = "--reach-only" in argv
     allow = json.load(open(argv[argv.index("--allow") + 1], encoding="utf-8"))["contacts"] if "--allow" in argv else []
     paths = json.load(open(paths_path, encoding="utf-8"))
-    inputs = json.load(open(paths["inputs"], encoding="utf-8"))
+    inputs = json.load(open(inputs_of(paths_path, paths), encoding="utf-8"))
     shifter, gates, _ = lever_inputs(inputs)
     if "--push" in argv:
         shifter.push = float(argv[argv.index("--push") + 1])
@@ -211,7 +211,7 @@ def main(argv):
         print("  FAIL", row["at"], row["shape"], "; ".join(row["fails"]))
     if out:
         json.dump(
-            {"paths": os.path.abspath(paths_path), "break": shift.tolist(), "push": shifter.push, "lever": lever_names, "allow": allow, "pass": not failing, "rows": rows},
+            {"paths": portable(paths_path), "break": shift.tolist(), "push": shifter.push, "lever": lever_names, "allow": allow, "pass": not failing, "rows": rows},
             open(out, "w", encoding="utf-8"),
             indent=1,
         )

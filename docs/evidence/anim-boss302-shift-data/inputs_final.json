@@ -7,7 +7,7 @@
   "pace, as the gearbox's timing (Physics gearbox.manual.timing); quick: the game-quick preset. EST",
   "until checked against footage."
  ],
- "cabin": "C:/Users/bfhdh/Downloads/drive-lab-assets/boss302/work/boss302_cockpit_v3.npz",
+ "cabin": "<assets>/boss302/work/boss302_cockpit_v3.npz",
  "seat": [
   0.3746,
   -1.1562,
@@ -40,7 +40,7 @@
   ],
   "about": "rest/car_rest.json shoulders (studs, seat frame), the DR458's arms 1.25 + 1.13 at scale 1.15; ELBOW_BIAS (0.3 out, 0.3 down) turned by the torso's 15 degree lean"
  },
- "grip": "C:/Users/bfhdh/Downloads/drive-lab-assets/boss302/anim/grip/v1_a13_t18/hands.json",
+ "grip": "<assets>/boss302/anim/grip/v1_a13_t18/hands.json",
  "wheel": {
   "pivot": [
    0.0033,
@@ -54,8 +54,8 @@
   ],
   "lift": 0
  },
- "poses": "C:/Users/bfhdh/Downloads/drive-lab-assets/boss302/anim/poses/v2/poses.json",
- "shiftConfig": "C:/Users/bfhdh/Downloads/drive-lab-assets/boss302/anim/shift/in/shift_config.json",
+ "poses": "<assets>/boss302/anim/poses/v2/poses.json",
+ "shiftConfig": "<assets>/boss302/anim/shift/in/shift_config.json",
  "knobRadius": 0.0246,
  "knobGrip": {
   "pitch": -10,
@@ -82,5 +82,5 @@
   "release": 0.18,
   "foot": 0.1
  },
- "manifest": "C:/Users/bfhdh/Downloads/drive-lab-assets/boss302/work/manifest/boss302_cockpit_parts.json"
+ "manifest": "<assets>/boss302/work/manifest/boss302_cockpit_parts.json"
 }

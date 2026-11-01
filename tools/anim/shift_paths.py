@@ -132,6 +132,25 @@ class Shifter:
         }
 
 
+def portable(path):
+    """A path as a record or evidence may show it, with no machine's own folders: inside the working
+    assets as <assets>/..., inside the repo relative to it, else its file name."""
+    full = os.path.abspath(path).replace("\\", "/")
+    marker = "/drive-lab-assets/"
+    if marker in full:
+        return "<assets>/" + full.split(marker, 1)[1]
+    repo = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")).replace("\\", "/")
+    if full.startswith(repo + "/"):
+        return full[len(repo) + 1 :]
+    return os.path.basename(full)
+
+
+def inputs_of(paths_path, paths):
+    """The inputs file a paths.json was keyed from: stored relative to the paths.json's folder."""
+    stored = paths["inputs"]
+    return stored if os.path.isabs(stored) else os.path.join(os.path.dirname(os.path.abspath(paths_path)), stored)
+
+
 def chassis(point):
     """Rules/Hinge.chassis: a car-frame point (forward, right, up) in the chassis's axes (x right, y
     up, z back)."""
@@ -360,7 +379,7 @@ def main(argv):
     if "quick" in inputs:
         data["quick"] = {k: inputs["quick"][k] for k in ("reach", "release", "foot")}
     paths = {
-        "inputs": os.path.abspath(inputs_path),
+        "inputs": os.path.relpath(os.path.abspath(inputs_path), os.path.abspath(out_dir)).replace("\\", "/"),
         "gates": gates,
         "gateOrder": [g for g in GATE_ORDER if g in gates],
         "shifter": shifter.as_luau(),

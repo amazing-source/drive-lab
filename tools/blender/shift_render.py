@@ -27,7 +27,7 @@ from mathutils import Matrix, Vector
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "anim"))
-from shift_paths import Frame, Shifter, compose, hand_on_way, key_frame  # noqa: E402
+from shift_paths import Frame, Shifter, compose, hand_on_way, inputs_of, key_frame  # noqa: E402
 from startup_paths import STUDS, Seat, import_glb  # noqa: E402
 from startup_sequence import load_cabin  # noqa: E402
 
@@ -145,7 +145,7 @@ def main(args):
     stretch = float(option(args, "--stretch", "4"))
     width, height = (int(v) for v in option(args, "--size", "640x360").split("x"))
     paths = json.load(open(paths_path, encoding="utf-8"))
-    inputs = json.load(open(paths["inputs"], encoding="utf-8"))
+    inputs = json.load(open(inputs_of(paths_path, paths), encoding="utf-8"))
     config = json.load(open(config_path, encoding="utf-8"))
     timing = dict(config["timing"])
     if "--quick" in args:
