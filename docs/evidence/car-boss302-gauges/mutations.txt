@@ -1,0 +1,203 @@
+Evidence for agent/car-boss302-gauges (#235). Lune on the owner's machine, no Studio.
+
+== Deliberate breaks
+Each break applied alone to the working tree, run against the spec files that own the rule (a
+one-file runner over games/drive-lab/tests/<Name>.spec.luau), then the file restored and checked
+byte for byte. 31 breaks, 31 failing (the 31st added with the self-review's fix, at the end). A first pass had 2 breaks that still passed: the needle's
+"stoppable speed" clamp (measured redundant: the needle arrives at 0.281 shares/s with it and 0.287
+without, so it was removed) and the engine's long-frame split (no spec used a frame over 0.1 s; a
+case was added). Both are reported in the PR.
+
+FAILED as it should: Rules/Gauges.share interpolates between scale points
+  break: games/drive-lab/src/shared/Rules/Gauges.luau: `return low[2] + (high[2] - low[2]) * (printed - low[1]) / (high[1] - low[1])` -> `return low[2]`
+  specs: Gauges.spec: 9 passed, 2 failed
+  first failure: FAIL Gauge needles > reads a linear dial in its printed unit, held at the dial's ends: games/drive-lab/tests/Gauges.spec:41: expected 0.5 within 1e-09, got 0
+
+FAILED as it should: Rules/Gauges.convert divides km/h into mph
+  break: games/drive-lab/src/shared/Rules/Gauges.luau: `return value / KMH_PER_MPH` -> `return value * KMH_PER_MPH`
+  specs: Gauges.spec: 10 passed, 1 failed
+  first failure: FAIL Gauge needles > reads a linear dial in its printed unit, held at the dial's ends: games/drive-lab/tests/Gauges.spec:41: expected 0.5 within 1e-09, got 1
+
+FAILED as it should: Rules/Gauges.unitFits checks the reading's units
+  break: games/drive-lab/src/shared/Rules/Gauges.luau: `return units ~= nil and units[unit] == true` -> `return true`
+  specs: Gauges.spec, Boss302Gauges.spec: 20 passed, 2 failed
+  first failure: FAIL Gauge needles > takes each reading only in a unit it can be printed in: games/drive-lab/tests/Gauges.spec:62: expected false, got true
+
+FAILED as it should: Rules/Gauges.step caps the needle at its top speed
+  break: games/drive-lab/src/shared/Rules/Gauges.luau: `local moved = math.clamp(share - needle.share, -maxRate * dt, maxRate * dt)` -> `local moved = share - needle.share`
+  specs: Gauges.spec: 9 passed, 2 failed
+  first failure: FAIL Gauge needles > follows a step without ever passing it, within the motor's top speed: games/drive-lab/tests/Gauges.spec:73: expected within its top speed, got false
+
+FAILED as it should: Rules/Gauges.step is critically damped at its time constant
+  break: games/drive-lab/src/shared/Rules/Gauges.luau: `local omega = 1 / response` -> `local omega = 2 / response`
+  specs: Gauges.spec: 9 passed, 2 failed
+  first failure: FAIL Gauge needles > settles like a critically damped needle when its top speed does not bind: games/drive-lab/tests/Gauges.spec:87: expected 0.19 within 0.002, got 0.19984281115723587
+
+FAILED as it should: Rules/Gauges.step stops on a reading it would pass (no overshoot)
+  break: games/drive-lab/src/shared/Rules/Gauges.luau: `if error0 ~= 0 and (error1 == 0 or (error1 > 0) ~= (error0 > 0)) then
+		share, velocity = target, 0
+` -> ``
+  specs: Gauges.spec: 10 passed, 1 failed
+  first failure: FAIL Gauge needles > follows a step without ever passing it, within the motor's top speed: games/drive-lab/tests/Gauges.spec:80: expected never past, got 0.5185158142497036
+
+FAILED as it should: Rules/Gauges.step slows into its reading (a spring, not a constant-rate motor)
+  break: games/drive-lab/src/shared/Rules/Gauges.luau: `local share = target + (error0 + carry * dt) * decay` -> `local share = target`
+  specs: Gauges.spec: 8 passed, 3 failed
+  first failure: FAIL Gauge needles > settles like a critically damped needle when its top speed does not bind: games/drive-lab/tests/Gauges.spec:87: expected 0.19 within 0.002, got 0.2
+
+FAILED as it should: Rules/Gauges.follow uses the catch-up until met
+  break: games/drive-lab/src/shared/Rules/Gauges.luau: `local response = if needle.met then dial.response else dial.catchUp` -> `local response = dial.response`
+  specs: Gauges.spec: 10 passed, 1 failed
+  first failure: FAIL Gauge needles > catches up fast at the ignition, then damps: games/drive-lab/tests/Gauges.spec:133: expected met within a second or two, got false
+
+FAILED as it should: Rules/Gauges.sinceLit is dark with the engine off
+  break: games/drive-lab/src/shared/Rules/Gauges.luau: `if state.engine == "Off" then
+		return nil
+	end
+	local since` -> `local since`
+  specs: Gauges.spec: 10 passed, 1 failed
+  first failure: FAIL Gauge needles > lights with the key reaching ON, dark before and with the engine off: games/drive-lab/tests/Gauges.spec:146: expected nil, got 99
+
+FAILED as it should: Rules/Gauges.sweepShare sweeps only with a sweep
+  break: games/drive-lab/src/shared/Rules/Gauges.luau: `if seconds == nil or sinceLit < 0 or sinceLit >= seconds then` -> `if seconds == nil then
+		return math.sin(sinceLit)
+	end
+	if sinceLit < 0 or sinceLit >= seconds then`
+  specs: Gauges.spec: 10 passed, 1 failed
+  first failure: FAIL Gauge needles > sweeps up and back only when the car has a sweep: games/drive-lab/tests/Gauges.spec:154: expected nil, got 0.29552020666133955
+
+FAILED as it should: EngineGauges.fuelFlow never under idle
+  break: games/drive-lab/src/shared/Rules/EngineGauges.luau: `return math.max(engine.idleFlow, engine.bsfc * math.max(power, 0))` -> `return engine.bsfc * math.max(power, 0)`
+  specs: EngineGauges.spec: 8 passed, 2 failed
+  first failure: FAIL Simulated engine readings > burns fuel for the engine's power, idle flow at least, none while off: games/drive-lab/tests/EngineGauges.spec:55: expected 0.0006, got 0
+
+FAILED as it should: EngineGauges keeps the reserve (never dry)
+  break: games/drive-lab/src/shared/Rules/EngineGauges.luau: `state.fuel = math.max(engine.reserveLitres, state.fuel - flow / engine.fuelDensity * dt)` -> `state.fuel = math.max(0, state.fuel - flow / engine.fuelDensity * dt)`
+  specs: EngineGauges.spec: 9 passed, 1 failed
+  first failure: FAIL Simulated engine readings > never runs dry: the fuel stops at its reserve: games/drive-lab/tests/EngineGauges.spec:69: expected 4, got 0
+
+FAILED as it should: EngineGauges thermostat holds the coolant warm
+  break: games/drive-lab/src/shared/Rules/EngineGauges.luau: `return engine.shellLoss + EngineGauges.thermostat(engine, temperature) * airflow + fan` -> `return engine.shellLoss + airflow + fan`
+  specs: EngineGauges.spec: 8 passed, 2 failed
+  first failure: FAIL Simulated engine readings > warms in minutes, slower at idle than on the move (EST bands): games/drive-lab/tests/EngineGauges.spec:76: warms at idle
+
+FAILED as it should: EngineGauges splits a long frame into steps
+  break: games/drive-lab/src/shared/Rules/EngineGauges.luau: `local steps = math.max(1, math.ceil(dt / Gauges.MAX_STEP))` -> `local steps = 1`
+  specs: EngineGauges.spec: 9 passed, 1 failed
+  first failure: FAIL Simulated engine readings > takes a long frame in short steps, as many short frames would: games/drive-lab/tests/EngineGauges.spec:117: expected 96.79554522737155 within 0.05, got 83.5275
+
+FAILED as it should: EngineGauges.oilPressure thickens cold
+  break: games/drive-lab/src/shared/Rules/EngineGauges.luau: `local warmth = math.clamp((oil - cold.temperature) / (hot.temperature - cold.temperature), 0, 1)` -> `local warmth = 1`
+  specs: EngineGauges.spec: 9 passed, 1 failed
+  first failure: FAIL Simulated engine readings > reads high oil pressure cold, lower warm, rising with the revs to its relief: games/drive-lab/tests/EngineGauges.spec:136: expected 80 to 110 psi, got false
+
+FAILED as it should: EngineGauges.coolOff relaxes toward the air at its time constant
+  break: games/drive-lab/src/shared/Rules/EngineGauges.luau: `state.coolant = relax(state.coolant, engine.ambient, seconds, engine.coolDown)` -> `state.coolant = relax(state.coolant, engine.ambient, seconds, engine.coolDown * 2)`
+  specs: EngineGauges.spec: 9 passed, 1 failed
+  first failure: FAIL Simulated engine readings > cools toward the air while off: games/drive-lab/tests/EngineGauges.spec:125: expected 28.91508832335538 within 0.000001, got 47.67292116288891
+
+FAILED as it should: SevenSegment glyph for 7
+  break: games/drive-lab/src/shared/Rules/SevenSegment.luau: `["7"] = "abc",` -> `["7"] = "abcf",`
+  specs: SevenSegment.spec: 5 passed, 1 failed
+  first failure: FAIL Seven-segment readout > lights each digit's datasheet segments: games/drive-lab/tests/SevenSegment.spec:36: expected abc, got abcf
+
+FAILED as it should: SevenSegment.cells puts a point on the digit before it
+  break: games/drive-lab/src/shared/Rules/SevenSegment.luau: `if character == "." and #found > 0 then` -> `if false then`
+  specs: SevenSegment.spec: 5 passed, 1 failed
+  first failure: FAIL Seven-segment readout > prints right-aligned, a point lighting the digit before it: games/drive-lab/tests/SevenSegment.spec:42: expected true, got false
+
+FAILED as it should: SevenSegment.number holds at the largest it can show
+  break: games/drive-lab/src/shared/Rules/SevenSegment.luau: `local shown = math.min(math.abs(value), largest)` -> `local shown = math.abs(value)`
+  specs: SevenSegment.spec: 5 passed, 1 failed
+  first failure: FAIL Seven-segment readout > prints a reading's magnitude to its decimals, held at what it can show: games/drive-lab/tests/SevenSegment.spec:57: expected 9.99, got 12.30
+
+FAILED as it should: SevenSegment.layout keeps the bars apart
+  break: games/drive-lab/src/shared/Rules/SevenSegment.luau: `local across = { x = barX + gap / aspect, width = 1 - 2 * (barX + gap / aspect) }` -> `local across = { x = barX * 0.5, width = 1 - barX }`
+  specs: SevenSegment.spec: 5 passed, 1 failed
+  first failure: FAIL Seven-segment readout > lays every segment inside its cell, none overlapping another: games/drive-lab/tests/SevenSegment.spec:77: expected apart, got a overlaps b
+
+FAILED as it should: MessageCentre shows the key's lines only until moved off
+  break: games/drive-lab/src/shared/Rules/MessageCentre.luau: `if key == message.key and not movedOff then` -> `if key == message.key then`
+  specs: SevenSegment.spec: 5 passed, 1 failed
+  first failure: FAIL Message centre > shows the TracKey's message after a TracKey start until the car moves off: games/drive-lab/tests/SevenSegment.spec:97: expected TRIP A 0.0, got TRACKEY ACTIVE
+
+FAILED as it should: Contract.gaugeProblems checks every dial's needle is bound
+  break: games/drive-lab/src/shared/Config/Cars/Contract.luau: `if needle == nil or needle.travel == nil or needle.travel <= 0 then` -> `if false then`
+  specs: Boss302Gauges.spec, CarContract.spec: 57 passed, 2 failed
+  first failure: FAIL Boss 302 gauges > refuses a dial on a needle the binding does not bind: games/drive-lab/tests/Boss302Gauges.spec:111: expected true, got false
+
+FAILED as it should: Contract.gaugeProblems checks the displays
+  break: games/drive-lab/src/shared/Config/Cars/Contract.luau: `if displays[display] == nil then` -> `if false then`
+  specs: Boss302Gauges.spec: 10 passed, 1 failed
+  first failure: FAIL Boss 302 gauges > refuses a screen the binding lacks: games/drive-lab/tests/Boss302Gauges.spec:159: expected true, got false
+
+FAILED as it should: Contract.gaugeProblems checks the lighting control
+  break: games/drive-lab/src/shared/Config/Cars/Contract.luau: `if GaugeRules.lightAt(startup, cluster.lightsWith) == nil then` -> `if false then`
+  specs: Boss302Gauges.spec, CarContract.spec: 57 passed, 2 failed
+  first failure: FAIL Boss 302 gauges > refuses lighting with a control its start-up never moves: games/drive-lab/tests/Boss302Gauges.spec:152: expected true, got false
+
+FAILED as it should: Contract keeps one display per car
+  break: games/drive-lab/src/shared/Config/Cars/Contract.luau: `assert(count == 1, "a car has one display: a dial face, a binnacle screen or analog gauges")` -> `assert(count >= 1, "a car has a display")`
+  specs: CarContract.spec: 46 passed, 2 failed
+  first failure: FAIL Car contract: a binnacle display > refuses a car with no display, or with both: games/drive-lab/tests/CarContract.spec:504: expected the function to throw
+
+FAILED as it should: Contract.redline reads the gauges' redline
+  break: games/drive-lab/src/shared/Config/Cars/Contract.luau: `return gauges.redlineRpm` -> `return 9000`
+  specs: CarContract.spec: 47 passed, 1 failed
+  first failure: FAIL Car contract: analog gauges > accepts analog gauges in place of the dial, and reads their redline: games/drive-lab/tests/CarContract.spec:849: expected 7500, got 9000
+
+FAILED as it should: ManifestBinding: a needle rests at its range's start
+  break: games/drive-lab/tools/ManifestBinding.luau: `needles[name] = hinge(byName, name, centre, { rest = range[1], other = range[#range] })` -> `needles[name] = hinge(byName, name, centre, { rest = 0, other = range[#range] })`
+  specs: Boss302Binding.spec: 10 passed, 1 failed
+  first failure: FAIL Boss 302 binding > binds a needle's sweep as its rest and travel, and a display as a screen: games/drive-lab/tests/Boss302Binding.spec:313: expected 4.75 within 0.00001, got 4.5
+
+FAILED as it should: ManifestBinding: a needle car wants no cluster screen
+  break: games/drive-lab/tools/ManifestBinding.luau: `if #needleNames == 0 then
+			table.insert(pending, "cluster: no live display screen named")
+		end` -> `table.insert(pending, "cluster: no live display screen named")`
+  specs: Boss302Binding.spec: 10 passed, 1 failed
+  first failure: FAIL Boss 302 binding > is the writer's output for the manifest and its notes, not a hand edit: games/drive-lab/tests/Boss302Binding.spec:66: expected cluster: no live display screen named; displays (MessageCentre): the manifest has no Screen_MessageCentr
+
+FAILED as it should: ManifestBinding: an unmeasured needle is pending
+  break: games/drive-lab/tools/ManifestBinding.luau: `table.insert(pending, `needles: {name} has no measured sweep (its range)`)` -> `local _ = 0`
+  specs: Boss302Binding.spec: 10 passed, 1 failed
+  first failure: FAIL Boss 302 binding > binds a needle's sweep as its rest and travel, and a display as a screen: games/drive-lab/tests/Boss302Binding.spec:323: expected Needle_B has no measured sweep, got calipers: the manifest has no Caliper_FL
+
+FAILED as it should: Boss config: cold idle oil pressure meets Ford's 80-100 psi
+  break: games/drive-lab/src/shared/Config/Cars/Boss302/Gauges.luau: `cold = { temperature = 20, relief = 758, rpmScale = 520 },` -> `cold = { temperature = 20, relief = 758, rpmScale = 540 },`
+  specs: EngineGauges.spec: 9 passed, 1 failed
+  first failure: FAIL Simulated engine readings > reads high oil pressure cold, lower warm, rising with the revs to its relief: games/drive-lab/tests/EngineGauges.spec:136: expected 80 to 110 psi, got false
+
+FAILED as it should: Contract.gaugeProblems lists a sweep that takes no time (self-review fix)
+  break: games/drive-lab/src/shared/Config/Cars/Contract.luau: `if cluster.sweep ~= nil and cluster.sweep <= 0 then` -> `if false then`
+  specs: Boss302Gauges.spec: 11 passed, 1 failed
+  first failure: FAIL Boss 302 gauges > refuses a sweep that takes no time: games/drive-lab/tests/Boss302Gauges.spec:159: expected true, got false
+
+== SVJ and DR458 unchanged
+A canonical dump of Catalog.cars (sorted keys, every number at %.17g: the SVJ's and the DR458's
+frozen entries, 12,204 lines), sha256:
+  origin/main 1d616e9, before any change:      fadc03e0f68e9379b215e4bb35c0542661eb6e903de2a7612f286096f305a458
+  after merging #237 (2eb0b1c):                 fadc03e0f68e9379b215e4bb35c0542661eb6e903de2a7612f286096f305a458
+  this branch, all changes:                     fadc03e0f68e9379b215e4bb35c0542661eb6e903de2a7612f286096f305a458
+  the dump can fail: SVJ limiterFlashHz 10->11: a658bd2e0ec52eda411b9413788b00d0cc965cbb9affd971716cc2da5b766fe6
+lune run games/drive-lab/tools/car_binding: "car_binding DR458: the binding matches" (the changed
+writer regenerates the DR458's Model.luau and ModelPending.luau byte for byte).
+git diff origin/main on Config/Cars/SVJ, Config/Cars/DR458, Controllers/Cluster, Controllers/Binnacle,
+Ui/BinnacleView, Config/Cluster, Rules/Cluster, Config/Binnacle, Rules/Binnacle: empty.
+
+== Simulated engine, calibration (Config/Cars/Boss302/Gauges engine, every value EST but the tank
+and the power; 1/60 s steps from 21 °C)
+  idle                     80 °C after 872 s; after 1 h coolant 200 °F
+  town 12 kW 40 km/h       80 °C after 467 s; after 1 h coolant 201 °F
+  cruise 100 km/h 20 kW    80 °C after 273 s; after 1 h coolant 202 °F, oil 205 °F
+  brisk 60 kW 120 km/h     80 °C after  89 s; after 1 h coolant 211 °F, oil 221 °F
+  track 130 kW 150 km/h    80 °C after  40 s; after 1 h coolant 217 °F, oil 238 °F
+  oil pressure, cold (20 °C): 700 rpm 81 psi (Ford: 80 to 100 and more), 3000 rpm 110 psi
+  oil pressure, warm (100 °C): 700 rpm 25 psi, 3000 rpm 62 psi, 7000 rpm 74 psi
+  a minute at full power burns 2.37 L, 3.9 % of the 60.5 L tank
+
+== Per-frame cost
+The rule work Controllers/Gauges does each frame for the Boss (engine step, oil pressure, six dials'
+share and needle step), Lune: median 0.99 us, best 0.91, worst 1.06 (7 runs of 100,000 frames).
+The controller's engine side (attribute reads, six Weld.C0 writes, twelve EmissiveStrength checks) is
+not measured: it needs Studio, and the Boss is not in the place yet.

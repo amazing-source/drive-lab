@@ -7,7 +7,9 @@
 local fs = require("@lune/fs")
 local serde = require("@lune/serde")
 
+local Binding = require("../src/shared/Config/Cars/Binding")
 local CarBindings = require("../tools/CarBindings")
+local Hinge = require("../src/shared/Rules/Hinge")
 local ManifestBinding = require("../tools/ManifestBinding")
 local Model = require("../src/shared/Config/Cars/Boss302/Model")
 local ModelPending = require("../src/shared/Config/Cars/Boss302/ModelPending")
@@ -227,8 +229,98 @@ describe("Boss 302 binding", function()
 		do
 			expect(if string.find(listed, part, 1, true) then part else "bound").toBe("bound")
 		end
-		for _, lacking in { "the 3D model", "shift animation", "the remaining car entry", "gauges" } do
+		for _, lacking in { "the 3D model", "shift animation", "the remaining car entry" } do
 			expect(string.find(listed, lacking, 1, true) ~= nil).toBe(true)
+		end
+		-- Its cluster is needles, so no live display screen is wanted.
+		expect(string.find(listed, "cluster:", 1, true)).toBe(nil)
+	end)
+
+	it("binds each needle the manifest measures, and lists the others and the screens as pending", function()
+		local needles = Model.needles or {}
+		for _, name in CAR.settings.needles or {} do
+			local fixture: ManifestBinding.Part? = nil
+			for _, entry in MANIFEST.parts do
+				if entry.name == name then
+					fixture = entry
+				end
+			end
+			local range = if fixture then fixture.range else nil
+			if type(range) == "table" and #range >= 2 then
+				local needle = needles[name]
+				expect(needle and needle.part).toBe(name)
+				local pivot = assert(assert(fixture).pivot, "a measured needle has a pivot")
+				expect(needle.pivot.forward).toBeNear(pivot.forward - CENTRE.forward, 1e-5)
+				expect(needle.pivot.up).toBeNear(pivot.up - CENTRE.up, 1e-5)
+				expect(needle.travel :: number).toBeNear(range[#range] - range[1], 1e-5)
+				expect(Hinge.restAngle(needle)).toBeNear(range[1], 1e-5)
+			else
+				expect(needles[name]).toBe(nil)
+				local listed = table.concat(ModelPending, "\n")
+				expect(string.find(listed, name, 1, true) ~= nil and "pending").toBe("pending")
+			end
+		end
+		-- Today the full manifest measures the speedometer's and the tachometer's half turn.
+		expect((needles.Needle_Speedo :: Binding.Hinge).travel :: number).toBeNear(math.pi, 1e-4)
+		expect((needles.Needle_Tach :: Binding.Hinge).travel :: number).toBeNear(math.pi, 1e-4)
+		for display, part in CAR.settings.displays or {} do
+			local bound = (Model.displays or {})[display]
+			local listed = table.concat(ModelPending, "\n")
+			expect(bound ~= nil or string.find(listed, part, 1, true) ~= nil).toBe(true)
+		end
+	end)
+
+	it("binds a needle's sweep as its rest and travel, and a display as a screen", function()
+		local manifest: ManifestBinding.Manifest = {
+			parts = {
+				{ name = "Gauge", group = "Chassis", motion = "static" },
+				{
+					name = "Needle_A",
+					group = "Gauge",
+					motion = "rotary",
+					pivot = { forward = 1, right = 0, up = 1 },
+					axis = { forward = 2, right = 0, up = 0 },
+					range = { -0.25, 4.5 },
+				},
+				{
+					name = "Needle_B",
+					group = "Chassis",
+					motion = "rotary",
+					pivot = { forward = 1, right = 0.1, up = 1 },
+					axis = { forward = 1, right = 0, up = 0 },
+				},
+				{
+					name = "Window",
+					group = "Chassis",
+					motion = "static",
+					mesh = false,
+					screen = {
+						centre = { forward = 1, right = 0, up = 1.2 },
+						width_m = 0.04,
+						height_m = 0.02,
+						normal = { forward = -1, right = 0, up = 0 },
+						tilt_back_deg = 10,
+					},
+				},
+			},
+			points = {},
+		}
+		local settings = table.clone(CAR.settings)
+		settings.needles = { "Needle_A", "Needle_B", "Needle_C" }
+		settings.displays = { Readout = "Window", Missing = "NoWindow" }
+		local model, pending = ManifestBinding.binding(manifest, CAR.physics, settings)
+		local needle = (model.needles or {}).Needle_A :: Binding.Hinge
+		expect(needle.travel :: number).toBeNear(4.75, 1e-5)
+		expect(needle.rest :: number).toBeNear(-0.25, 1e-5)
+		expect(needle.axis.forward).toBeNear(1, 1e-5)
+		expect((model.needles or {}).Needle_B).toBe(nil)
+		local screen = (model.displays or {}).Readout :: Binding.Screen
+		expect(screen.width).toBeNear(0.04, 1e-5)
+		expect(screen.tilt).toBeNear(math.rad(10), 1e-5)
+		expect(screen.up).toBeNear(1.2 - CENTRE.up, 1e-5)
+		local listed = table.concat(pending, "\n")
+		for _, expected in { "Needle_B has no measured sweep", "has no Needle_C", "has no NoWindow" } do
+			expect(if string.find(listed, expected, 1, true) then expected else listed).toBe(expected)
 		end
 	end)
 end)

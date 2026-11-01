@@ -104,6 +104,20 @@ local Model: Binding.CarModel = {
 		knob = { forward = -0.0652, right = 0.0076, up = 0.175 },
 		push = 0.008,
 	},
+	needles = {
+		Needle_Speedo = {
+			part = "Needle_Speedo",
+			pivot = { forward = 0.2979, right = -0.4783, up = 0.3559 },
+			axis = { forward = 0.94463, right = 0, up = -0.32813 },
+			travel = 3.14159,
+		},
+		Needle_Tach = {
+			part = "Needle_Tach",
+			pivot = { forward = 0.2971, right = -0.2583, up = 0.3555 },
+			axis = { forward = 0.94463, right = 0, up = -0.32813 },
+			travel = 3.14159,
+		},
+	},
 }
 
 return Model
