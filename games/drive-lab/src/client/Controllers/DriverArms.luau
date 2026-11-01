@@ -8,7 +8,9 @@
 	way (past that the wheel slides through them), and an upper arm and a forearm reaching each
 	wrist from the shoulder, the elbow bending down and out (Rules/ArmIK). In a car with hand
 	gestures, the local driver's hand works the wheel's buttons and the panel's switches as the
-	player presses them (Rig/WheelGestures).
+	player presses them (Rig/WheelGestures). In a car with an H-pattern lever, the right hand
+	leaves the wheel for the knob and rides the lever through each shift (Rules/ShiftHand), from
+	the driver's published shift readouts (Controllers/Driving).
 
 	The hands are meshes posed around each car's rim (tools/blender/hand_grip.py), gloved or in
 	the avatar's skin colour (Rig/Gloves). The sleeves are modelled tubes
@@ -37,7 +39,9 @@ local CarState = require(ReplicatedStorage.Shared.Car.CarState)
 local Catalog = require(ReplicatedStorage.Shared.Config.Cars.Catalog)
 local Contract = require(ReplicatedStorage.Shared.Config.Cars.Contract)
 local DriverArms = require(ReplicatedStorage.Shared.Config.DriverArms)
+local DriverShift = require(ReplicatedStorage.Shared.Config.DriverShift)
 local Gloves = require(script.Parent.Parent.Rig.Gloves)
+local ShiftHand = require(ReplicatedStorage.Shared.Rules.ShiftHand)
 local StartupArms = require(ReplicatedStorage.Shared.Rules.StartupArms)
 local StartupHands = require(script.Parent.Parent.Rig.StartupHands)
 local WheelGestures = require(script.Parent.Parent.Rig.WheelGestures)
@@ -77,6 +81,9 @@ type Driver = {
 	-- the wheel to make them.
 	gestures: WheelGestures.State?,
 	onWheel: { [number]: boolean },
+	-- The right hand's shift data and the lever it holds, on a car with an H-pattern lever.
+	shift: DriverShift.Shift?,
+	lever: ShiftHand.Lever?,
 }
 
 local LIMBS: { { sign: number, joint: string, arm: string } } = {
@@ -165,6 +172,21 @@ local function release(driver: Driver)
 	end
 end
 
+-- The lever the right hand holds on a car with an H-pattern lever and shift data (Contract checks
+-- that it builds).
+local function leverOf(entry: Catalog.Entry): ShiftHand.Lever?
+	local shifter, manual = entry.model.shifter, entry.physics.gearbox.manual
+	if entry.driver.shift == nil or shifter == nil or manual == nil then
+		return nil
+	end
+	return ShiftHand.leverFromBinding(shifter, manual.gates, entry.model.seat)
+end
+
+local function number(model: Model, name: string, fallback: number): number
+	local value = model:GetAttribute(name)
+	return if typeof(value) == "number" then value else fallback
+end
+
 local function build(model: Model, character: Model): Driver?
 	local torso = character:FindFirstChild("Torso")
 	local chassis = model:FindFirstChild("Chassis")
@@ -241,6 +263,8 @@ local function build(model: Model, character: Model): Driver?
 		})
 		arm.Transparency = 1
 	end
+	local lever = leverOf(entry)
+	local shift = if lever then entry.driver.shift else nil
 	return {
 		entry = entry,
 		character = character,
@@ -259,6 +283,8 @@ local function build(model: Model, character: Model): Driver?
 			then WheelGestures.new(entry, model, chassis)
 			else nil,
 		onWheel = {},
+		shift = shift,
+		lever = lever,
 	}
 end
 
@@ -322,9 +348,13 @@ local function pose(driver: Driver, state: CarEntry.State, now: number, share: n
 	local handOver = driver.entry.driver.handOver
 	local gestures = driver.gestures
 	local onWheel = driver.onWheel
+	-- How far the right hand is toward the knob (Controllers/Driving's ShiftHand readout).
+	local shift, lever = driver.shift, driver.lever
+	local toKnob = if shift and lever then math.clamp(number(driver.model, "ShiftHand", 0), 0, 1) else 0
 	if gestures then
 		for _, side in driver.sides do
 			onWheel[side.sign] = StartupArms.onWheel(side.hands.track, sinceKey, share)
+				and not (side.sign > 0 and toKnob > 0)
 		end
 		WheelGestures.step(gestures, onWheel, now, dt)
 		WheelGestures.turnControls(gestures)
@@ -342,7 +372,16 @@ local function pose(driver: Driver, state: CarEntry.State, now: number, share: n
 				WheelGestures.wrist(gestures, sign, wheel, driver.seat.CFrame, side.hands.gripWrist)
 		end
 		local wrist, hand, handFrame, cuff, cuffFrame
-		if gestureWrist then
+		if sign > 0 and shift and lever and toKnob > 0 then
+			local seat = driver.seat.CFrame
+			local column = number(driver.model, "LeverColumn", 1)
+			local row = number(driver.model, "LeverRow", 0)
+			local knob = number(driver.model, "KnobDown", 0)
+			local grip = StartupHands.gripPose(side.hands, wheel, seat)
+			local reached, knobShape = ShiftHand.wrist(shift, lever, toKnob, column, row, knob, grip)
+			wrist, hand, handFrame, cuff, cuffFrame =
+				StartupHands.drawPose(side.hands, seat, reached, knobShape)
+		elseif gestureWrist then
 			wrist, hand, handFrame, cuff, cuffFrame = StartupHands.draw(side.hands, gestureWrist, shape)
 		else
 			wrist, hand, handFrame, cuff, cuffFrame =
