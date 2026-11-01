@@ -8,7 +8,10 @@
 	each indicator, a reversing light, a red glow behind each rain light, and the cabin light in the
 	roof console. The cockpit's tell-tales glow with the switch they show. Each car names the pieces
 	it cannot do without (its lights' `required`); every other piece is lit when the model has it.
-	Only what changed is written.
+	Which pieces play which lamp is the car's (its lights' `pieces`, Config/CarLights.HOUSE_PIECES
+	otherwise); a piece in several shows the brightest, and only its indicator while that side's
+	indicator runs. A sequential turn lamp lights its pieces inner to outer on each flash of the
+	turn signal (Rules/CarLights.sweepBars). Only what changed is written.
 ]]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -18,6 +21,17 @@ local Rules = require(ReplicatedStorage.Shared.Rules.CarLights)
 local Units = require(ReplicatedStorage.Shared.Units)
 
 type Glow = { look: SurfaceAppearance, spec: Config.Glow, strength: number }
+-- One lamp piece's glow, shared by every role it plays: what it shows, and this frame's brightest
+-- request with its tint.
+type LookState = {
+	look: SurfaceAppearance,
+	strength: number,
+	tint: Config.Rgb,
+	want: number,
+	wantTint: Config.Rgb,
+}
+-- A piece in one role, with that role's glow.
+type RoleGlow = { state: LookState, spec: Config.Glow }
 -- A tell-tale LED with no SurfaceAppearance: lit, it is Neon in its tint, darker for a dimmer glow
 -- (Neon's glow follows its colour); unlit, plastic in the colour it came with.
 type Led = { part: BasePart, spec: Config.Glow, unlit: Color3, strength: number }
@@ -26,15 +40,22 @@ type Switch = { light: Light, base: number, on: boolean, brightness: number }
 
 export type Lamps = {
 	lights: Config.Lights,
-	drlLeft: { Glow },
-	drlRight: { Glow },
-	projector: { Glow },
-	left: { Glow },
-	right: { Glow },
-	position: { Glow },
-	tail: { Glow },
-	stop: { Glow },
-	reverse: { Glow },
+	pieces: Config.Pieces,
+	looks: { LookState },
+	drlLeft: { RoleGlow },
+	drlRight: { RoleGlow },
+	projector: { RoleGlow },
+	left: { RoleGlow },
+	right: { RoleGlow },
+	position: { RoleGlow },
+	tail: { RoleGlow },
+	stop: { RoleGlow },
+	reverse: { RoleGlow },
+	sweepLeft: { RoleGlow },
+	sweepRight: { RoleGlow },
+	-- Each side's indicator pieces, whose other roles give way while that indicator runs.
+	indicatorLeft: { [LookState]: true },
+	indicatorRight: { [LookState]: true },
 	rain: { Glow },
 	tellTales: { [string]: { Glow } },
 	leds: { [string]: { Led } },
@@ -125,24 +146,71 @@ local function glows(model: Model, names: { string }, spec: Config.Glow): { Glow
 	return found
 end
 
-local function concat(...: { Glow }): { Glow }
-	local list = {}
-	for index = 1, select("#", ...) do
-		for _, glow in (select(index, ...)) do
-			table.insert(list, glow)
+-- The role glows of the named pieces that are present, each sharing its piece's state with its
+-- other roles; a piece new to `states` starts dark in this role's tint.
+local function roleGlows(
+	model: Model,
+	pieces: { Config.Piece }?,
+	specs: { [string]: Config.Glow },
+	states: { [SurfaceAppearance]: LookState },
+	all: { LookState }
+): { RoleGlow }
+	local found: { RoleGlow } = {}
+	if pieces == nil then
+		return found
+	end
+	for _, item in pieces do
+		local part = piece(model, item.name)
+		local look = part and part:FindFirstChildOfClass("SurfaceAppearance")
+		local spec = specs[item.glow]
+		if look and spec then
+			local state = states[look]
+			if state == nil then
+				look.EmissiveTint = colour(spec.tint)
+				look.EmissiveStrength = 0
+				local filter = spec.filter
+				if filter then
+					look.Color = colour(filter)
+				end
+				state = { look = look, strength = 0, tint = spec.tint, want = 0, wantTint = spec.tint }
+				states[look] = state
+				table.insert(all, state)
+			end
+			table.insert(found, { state = state, spec = spec })
 		end
 	end
-	return list
+	return found
+end
+
+local function setOf(...: { RoleGlow }): { [LookState]: true }
+	local set: { [LookState]: true } = {}
+	for index = 1, select("#", ...) do
+		for _, glow in (select(index, ...)) do
+			set[glow.state] = true
+		end
+	end
+	return set
+end
+
+-- The parts of the named pieces that are present.
+local function parts(model: Model, pieces: { Config.Piece }?): { BasePart }
+	local found: { BasePart } = {}
+	if pieces == nil then
+		return found
+	end
+	for _, item in pieces do
+		local part = piece(model, item.name)
+		if part then
+			table.insert(found, part)
+		end
+	end
+	return found
 end
 
 local function joined(first: { string }, second: { string }): { string }
 	local list = table.clone(first)
 	table.move(second, 1, #second, #list + 1, list)
 	return list
-end
-
-local function sides(pattern: string): { string }
-	return { string.format(pattern, "Left"), string.format(pattern, "Right") }
 end
 
 local function switchFor(light: Light): Switch
@@ -189,6 +257,56 @@ local function set(switch: Switch?, on: boolean, night: number)
 	end
 end
 
+-- Asks each piece in `list` for `level` of its role's glow, unless it gives way (`skip`, `other`);
+-- the brightest request of the frame wins.
+local function want(
+	list: { RoleGlow },
+	level: number,
+	daylight: number,
+	skip: { [LookState]: true }?,
+	other: { [LookState]: true }?
+)
+	for _, glow in list do
+		local state = glow.state
+		if not ((skip and skip[state]) or (other and other[state])) then
+			local spec = glow.spec
+			local strength = Rules.strength(level, spec.night, spec.day, daylight)
+			if strength > state.want then
+				state.want, state.wantTint = strength, spec.tint
+			end
+		end
+	end
+end
+
+-- Writes each piece's winning request where it changed, and clears the requests for the next frame.
+local function flush(looks: { LookState })
+	for _, state in looks do
+		if math.abs(state.want - state.strength) > 1e-3 then
+			state.strength = state.want
+			state.look.EmissiveStrength = state.want
+		end
+		if state.want > 0 and state.wantTint ~= state.tint then
+			state.tint = state.wantTint
+			state.look.EmissiveTint = colour(state.wantTint)
+		end
+		state.want, state.wantTint = 0, state.tint
+	end
+end
+
+-- A sequential lamp's pieces: lit inner to outer on each flash of its turn signal (`turnFor`
+-- seconds in), or flashing together at `level` (the hazards).
+local function sweep(list: { RoleGlow }, turnFor: number?, level: number, step: number, daylight: number)
+	if turnFor == nil or step <= 0 then
+		want(list, level, daylight)
+		return
+	end
+	local tuning = Config.TUNING
+	local bars = Rules.sweepBars(turnFor, tuning.blinkHz, tuning.blinkOnShare, #list, step)
+	for index, glow in list do
+		want({ glow }, if index <= bars then 1 else 0, daylight)
+	end
+end
+
 local function show(list: { Glow }, level: number, daylight: number)
 	for _, glow in list do
 		local spec = glow.spec
@@ -232,20 +350,20 @@ end
 
 local function addSources(lamps: Lamps, model: Model)
 	local indicator = lamps.lights.indicator
+	local pieces = lamps.pieces
+	for _, projector in parts(model, pieces.projector) do
+		addBeams(lamps, projector)
+	end
+	for _, tailPiece in parts(model, pieces.tail) do
+		local tail = attach(tailPiece, "TailGlow", CFrame.identity)
+		table.insert(lamps.tailGlows, pointLight(tail, 0, 0, lamps.lights.tail.color))
+	end
 	for _, side in SIDES do
-		local projector = piece(model, `Light_Front{side}_Projector`)
-		if projector then
-			addBeams(lamps, projector)
-		end
-		local tailPiece = piece(model, `Light_Rear{side}_Tail`)
-		if tailPiece then
-			local tail = attach(tailPiece, "TailGlow", CFrame.identity)
-			table.insert(lamps.tailGlows, pointLight(tail, 0, 0, lamps.lights.tail.color))
-		end
 		local blinks = if side == "Left" then lamps.blinksLeft else lamps.blinksRight
-		for _, name in { `Light_Front{side}_Modules`, `Light_Rear{side}_Indicator` } do
-			local found = piece(model, name)
-			if found then
+		local flashing = if side == "Left" then pieces.left else pieces.right
+		local sweeping = if side == "Left" then pieces.sweepLeft else pieces.sweepRight
+		for _, list in { parts(model, flashing), parts(model, sweeping) } do
+			for _, found in list do
 				local glow = attach(found, "IndicatorGlow", CFrame.identity)
 				local light = pointLight(glow, indicator.brightness, indicator.range, indicator.color)
 				table.insert(blinks, switchFor(light))
@@ -268,14 +386,8 @@ local function addSources(lamps: Lamps, model: Model)
 end
 
 -- Between the reversing lamps the model has (or at its only one), facing back; nil without any.
-local function reversingLight(model: Model, lights: Config.Lights): Switch?
-	local found: { BasePart } = {}
-	for _, name in sides("Light_Rear%s_Reverse") do
-		local part = piece(model, name)
-		if part then
-			table.insert(found, part)
-		end
-	end
+local function reversingLight(model: Model, lights: Config.Lights, pieces: Config.Pieces): Switch?
+	local found = parts(model, pieces.reverse)
 	if #found == 0 then
 		return nil
 	end
@@ -350,27 +462,34 @@ function CarLamps.build(model: Model, entry: Catalog.Entry): Lamps?
 		end
 	end
 	local glow = entry.lights.glow
+	local specs: { [string]: Config.Glow } = glow :: any
+	local pieces = entry.lights.pieces or Config.HOUSE_PIECES
+	local states: { [SurfaceAppearance]: LookState } = {}
+	local looks: { LookState } = {}
+	local function role(list: { Config.Piece }?): { RoleGlow }
+		return roleGlows(model, list, specs, states, looks)
+	end
+	local drlLeft, drlRight, projector = role(pieces.drlLeft), role(pieces.drlRight), role(pieces.projector)
+	local left, right, position = role(pieces.left), role(pieces.right), role(pieces.position)
+	local tail, stop, reverse = role(pieces.tail), role(pieces.stop), role(pieces.reverse)
+	local sweepLeft, sweepRight = role(pieces.sweepLeft), role(pieces.sweepRight)
 	local lamps: Lamps = {
 		lights = entry.lights,
-		drlLeft = glows(model, { "Light_FrontLeft_Drl" }, glow.drl),
-		drlRight = glows(model, { "Light_FrontRight_Drl" }, glow.drl),
-		projector = glows(model, sides("Light_Front%s_Projector"), glow.projector),
-		left = concat(
-			glows(model, { "Light_FrontLeft_Modules" }, glow.frontIndicator),
-			glows(model, { "Light_RearLeft_Indicator" }, glow.rearIndicator)
-		),
-		right = concat(
-			glows(model, { "Light_FrontRight_Modules" }, glow.frontIndicator),
-			glows(model, { "Light_RearRight_Indicator" }, glow.rearIndicator)
-		),
-		position = concat(
-			glows(model, sides("Light_Front%s_Marker"), glow.frontMarker),
-			glows(model, sides("Light_Rear%s_Marker"), glow.rearMarker),
-			glows(model, sides("Light_Rear%s_Plate"), glow.plate)
-		),
-		tail = glows(model, sides("Light_Rear%s_Tail"), glow.tail),
-		stop = glows(model, sides("Light_Rear%s_Bar"), glow.stop),
-		reverse = glows(model, sides("Light_Rear%s_Reverse"), glow.reverse),
+		pieces = pieces,
+		looks = looks,
+		drlLeft = drlLeft,
+		drlRight = drlRight,
+		projector = projector,
+		left = left,
+		right = right,
+		position = position,
+		tail = tail,
+		stop = stop,
+		reverse = reverse,
+		sweepLeft = sweepLeft,
+		sweepRight = sweepRight,
+		indicatorLeft = setOf(left, sweepLeft),
+		indicatorRight = setOf(right, sweepRight),
 		rain = if hasRain then glows(model, FOG, glow.fog) else {},
 		tellTales = {},
 		leds = {},
@@ -380,7 +499,7 @@ function CarLamps.build(model: Model, entry: Catalog.Entry): Lamps?
 		blinksLeft = {},
 		blinksRight = {},
 		rainGlows = {},
-		reversing = reversingLight(model, entry.lights),
+		reversing = reversingLight(model, entry.lights, pieces),
 		cabin = cabinLight(model, entry),
 		tailShown = -1,
 		nightShown = -1,
@@ -395,15 +514,21 @@ end
 -- `shadows` lets the beams and the cabin light cast shadows (each shadowed light costs a pass).
 function CarLamps.apply(lamps: Lamps, lit: Rules.Lit, daylight: number, shadows: boolean)
 	local levels = Rules.levels(lit, Config.TAIL_SHARE, Config.TUNING.highBeamLevel)
-	show(lamps.drlLeft, levels.drlLeft, daylight)
-	show(lamps.drlRight, levels.drlRight, daylight)
-	show(lamps.projector, levels.projector, daylight)
-	show(lamps.left, levels.left, daylight)
-	show(lamps.right, levels.right, daylight)
-	show(lamps.position, levels.position, daylight)
-	show(lamps.tail, levels.tail, daylight)
-	show(lamps.stop, levels.stop, daylight)
-	show(lamps.reverse, levels.reverse, daylight)
+	local quietLeft = if lit.leftRunning then lamps.indicatorLeft else nil
+	local quietRight = if lit.rightRunning then lamps.indicatorRight else nil
+	want(lamps.drlLeft, levels.drlLeft, daylight)
+	want(lamps.drlRight, levels.drlRight, daylight)
+	want(lamps.projector, levels.projector, daylight)
+	want(lamps.left, levels.left, daylight)
+	want(lamps.right, levels.right, daylight)
+	want(lamps.position, levels.position, daylight, quietLeft, quietRight)
+	want(lamps.tail, levels.tail, daylight, quietLeft, quietRight)
+	want(lamps.stop, levels.stop, daylight, quietLeft, quietRight)
+	want(lamps.reverse, levels.reverse, daylight)
+	local step = lamps.pieces.sweepStep or 0
+	sweep(lamps.sweepLeft, lit.leftTurnFor, levels.left, step, daylight)
+	sweep(lamps.sweepRight, lit.rightTurnFor, levels.right, step, daylight)
+	flush(lamps.looks)
 	show(lamps.rain, levels.rain, daylight)
 	for switch, list in lamps.tellTales do
 		show(list, if Rules.tellTale(switch, lit) then 1 else 0, daylight)
