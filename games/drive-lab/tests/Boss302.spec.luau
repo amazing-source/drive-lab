@@ -7,8 +7,11 @@
 ]]
 local Assists = require("../src/shared/Config/Cars/Boss302/Assists")
 local Boss302 = require("../src/shared/Config/Cars/Boss302/Physics")
+local Boss302Audio = require("../src/shared/Config/Cars/Boss302/Audio")
+local CarAudioEvents = require("../src/shared/Rules/CarAudioEvents")
 local DriveSim = require("../tools/DriveSim")
 local DriverAssists = require("../src/shared/Rules/DriverAssists")
+local ExhaustPops = require("../src/shared/Rules/ExhaustPops")
 local InputHelp = require("../src/shared/Config/InputHelp")
 local Model = require("../src/shared/Vehicle/Model")
 local T = require("../../../tools/test/T")
@@ -333,6 +336,55 @@ describe("Boss 302's H box in the car", function()
 			expect(run.time100 / launch.time100).toBeNear(1, 0.02)
 			expect(run.time200 / launch.time200).toBeNear(1, 0.02)
 			expect(DriveSim.brake(Boss302, 100 * KMH, dt).distance / brake.distance).toBeNear(1, 0.02)
+		end
+	end)
+end)
+
+local function underEveryChance(): number
+	return 0
+end
+
+-- One downshift from second to first asked of the H box, coasting off the throttle at `rpm`, with
+-- every chance drawn as a pop: the Downshift pops it made and whether first engaged.
+local function askFirst(mode: Types.DrivingMode, rpm: number): (number, boolean)
+	local sim = DriveSim.new(Boss302)
+	local ratio = Boss302.gearbox.ratios[2] * Boss302.driveline.rearReduction
+	DriveSim.setSpeed(sim, rpm * 2 * math.pi / 60 / ratio * Boss302.rear.tyre.radius, 2)
+	local events = CarAudioEvents.new(Boss302Audio.events)
+	local pops = ExhaustPops.new(Boss302Audio.popTriggers)
+	local count, engaged = 0, false
+	for frame = 1, math.round(1.5 / DT) do
+		local options = inputFor(mode, { gearboxMode = "manual", shiftDown = frame == 1 })
+		local t = DriveSim.frame(sim, DriveSim.input(options), DT).telemetry
+		local readout = {
+			rpm = t.rpm,
+			throttle = t.throttle,
+			gear = t.gear,
+			shifting = t.shifting,
+			limiter = t.limiter,
+			tcActive = t.tcActive,
+		}
+		local happened = CarAudioEvents.step(events, readout, DT)
+		engaged = engaged or t.gear == 1
+		if
+			ExhaustPops.step(pops, happened, readout, mode, sim.time, underEveryChance)
+			and pops.kind == "Downshift"
+		then
+			count += 1
+		end
+	end
+	return count, engaged
+end
+
+describe("Boss 302's pops on the H box", function()
+	it("keeps a downshift refused for over-revving silent in every mode, and pops an engaged one", function()
+		for _, mode in Boss302.modeOrder do
+			local refused, intoFirst = askFirst(mode, 6000)
+			expect(intoFirst).toBe(false)
+			expect(refused).toBe(0)
+			local popped, engaged = askFirst(mode, 4000)
+			expect(engaged).toBe(true)
+			expect(popped > 0).toBe(true)
 		end
 	end)
 end)
