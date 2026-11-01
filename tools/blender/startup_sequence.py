@@ -12,7 +12,8 @@ What a touch does, by its "grab":
   column whose turn axis points into the cylinder). A control turned by several moves (a key to ON,
   then on to START) is held through all of them, and let go RELEASE_LEAD before the last move's
   "back" (the spring brings the key back as the fingers leave). "bladeSide" (1 or -1) picks which
-  face of the blade the thumb takes instead of the forearm's direction; "turns" names every cabin
+  face of the blade the thumb takes instead of the forearm's direction; "gripBand" (metres) how much of
+  the grip's end the pinch takes (TOP_GRIP by default; less holds it nearer its end); "turns" names every cabin
   object the control turns (a key's head, blade and ring), "part" the one whose top is held;
 - "edge": the Point hand's index end rides FINGER_UNDER (or the touch's "under") behind the free edge (the vertices
   farthest from the hinge line) while the control opens: a guard;
@@ -232,7 +233,8 @@ class Touch:
         self.release = back - RELEASE_LEAD if back is not None and len(self.moves) > 1 else self.end
         if self.grab == "pinch":
             top = max(p.dot(self.out) for p in points)
-            grip = [p for p in points if p.dot(self.out) > top - TOP_GRIP * STUDS]
+            band = item.get("gripBand", TOP_GRIP)
+            grip = [p for p in points if p.dot(self.out) > top - band * STUDS]
             self.point = mean(grip)
             spread = principal_axes(grip)
             thin = spread[2] - self.axis * spread[2].dot(self.axis)

@@ -30,8 +30,9 @@ touch the hand's contact point (the index's end, or the pinch) stays within TOUC
 control's point as the game turns it.
 
 A named contact goes in an allow list (`--allow`): [{"object": name prefix, "side": "R" or "L",
-"shape": the hand shown or "*", "from"/"to": seconds, "limitMm", "why", "decidedBy"}]; inside it a hand
-may go that deep. Every allowance is printed with its worst depth, and none is widened to pass.
+"shape": the hand shown or "*", "from"/"to": seconds, "limitMm", "why", "decidedBy", and "kind": "hand"
+(the default), "forearm" or "upper arm" for an arm on a strict object}]; inside it that part may go
+that deep. Every allowance is printed with its worst depth, and none is widened to pass.
 
 And the hand-over from getting in: with the start pose "rest", each track's first key must be the
 shared rest pose's wrist frame (the REST_POSE.json the entry's last frame aims its arms at), to
@@ -303,8 +304,11 @@ def main(argv):
     lo, hi = lo - REGION_MARGIN, hi + REGION_MARGIN
 
     touches = record["touches"]
-    # By the cabin object that stands for the control (a touch's "part", else its name).
+    # The cabin objects each turned control moves (a touch's "turns", else its "part" or its name), and the
+    # controls: a control's pieces are one rigid body, measured as one surface (a small piece measured on its
+    # own fools the nearest-sample vote).
     moving = {name: t for t in touches if t["move"] for name in (t.get("turns") or [t.get("part") or t["control"]])}
+    controls = {t["control"]: t for t in touches if t["move"]}
     # Static cabin in the region; each moving control on its own, at rest.
     tri_lo = verts[tris].min(1)
     tri_hi = verts[tris].max(1)
@@ -313,7 +317,7 @@ def main(argv):
     for name in set(names[i] for i in np.unique(owner[in_region])):
         index = names.index(name)
         mask = in_region & (owner == index)
-        key = name if name in moving else "static"
+        key = moving[name]["control"] if name in moving else "static"
         groups.setdefault(key, []).append(mask)
     surfaces = {}
     for key, masks in groups.items():
@@ -344,8 +348,10 @@ def main(argv):
     failures = []
     allowances = json.load(open(argv[argv.index("--allow") + 1])) if "--allow" in argv else []
 
-    def allowance(name, side, shape, t):
+    def allowance(name, side, shape, t, kind="hand"):
         for entry in allowances:
+            if entry.get("kind", "hand") != kind:
+                continue
             if name.startswith(entry["object"]) and entry["side"] == side and entry["shape"] in (shape, "*") and entry["from"] <= t <= entry["to"]:
                 return entry
         return None
@@ -394,22 +400,26 @@ def main(argv):
                         note("hand", name, d, t, side, "touch", TOUCH_LIMIT, where)
                     else:
                         note("hand", name, d, t, side, None, HAND_LIMIT, where)
-            for name, control in moving.items():
-                tree_c, cp, cn, _ = surfaces[name]
+            for cname, control in controls.items():
+                if cname not in surfaces:
+                    continue
+                tree_c, cp, cn, co = surfaces[cname]
                 # Moves on one control add up (a key to ON, then on to START).
                 angle = sum(m["angle"] * openness(t, m) for m in control.get("moves") or [control["move"]])
                 pivot = np.array(control["pivot"]) / studs
                 back = rotation(control["axis"], -angle)
                 local = (pts - pivot) @ back.T + pivot
-                d_c, _ = inside_depth(tree_c, cp, cn, local)
+                d_c, i_c = inside_depth(tree_c, cp, cn, local)
                 if d_c.max() > 0:
                     flagged = np.flatnonzero(d_c > 0)
-                    closed = object_triangles(names.index(name))
-                    if closed is not None:
-                        d_c[flagged[~parity_inside(local[flagged], closed)]] = 0.0
+                    parts = [names.index(n) for n, t2 in moving.items() if t2["control"] == cname]
+                    closed = [object_triangles(o) for o in parts]
+                    if all(c is not None for c in closed):
+                        d_c[flagged[~parity_inside(local[flagged], np.concatenate(closed))]] = 0.0
                 if d_c.max() > 0:
-                    allowed = touch is not None and name in (touch.get("turns") or [touch.get("part") or touch["control"]])
+                    allowed = touch is not None and touch["control"] == cname
                     k = int(np.argmax(d_c))
+                    name = names[co[i_c[k]]]
                     where = [round(c, 4) for c in r.T @ (pts[k] - p)]
                     note("hand", name, d_c.max(), t, side, "touch" if allowed else None, TOUCH_LIMIT if allowed else HAND_LIMIT, where)
             local = (pts - torso_centre) @ torso_axes
@@ -432,7 +442,11 @@ def main(argv):
                     name = names[obj]
                     dd = d[hit & (so[near] == obj)].max()
                     strict = any(name.startswith(k) for k in STRICT_ARM)
-                    note(bone, name, dd, t, side, None if strict else "cloth contact, listed", ARM_LIMIT if strict else 1.0)
+                    named = allowance(name, side, shape, t, bone) if strict else None
+                    if named:
+                        note(bone, name, dd, t, side, named["why"], named["limitMm"] / 1000)
+                    else:
+                        note(bone, name, dd, t, side, None if strict else "cloth contact, listed", ARM_LIMIT if strict else 1.0)
             if side == "R":
                 for touch in touches:
                     if touch["move"] and touch["from"] <= t <= touch["to"]:
