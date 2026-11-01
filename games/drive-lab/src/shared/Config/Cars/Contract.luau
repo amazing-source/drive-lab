@@ -17,11 +17,16 @@ local DriverArms = require("../DriverArms")
 local DriverLegs = require("../DriverLegs")
 local DriverAssists = require("../../Rules/DriverAssists")
 local DriverGestures = require("../DriverGestures")
+local DriverShift = require("../DriverShift")
 local DriverStartup = require("../DriverStartup")
 local Driving = require("../Driving")
 local ExhaustFlames = require("../../Rules/ExhaustFlames")
+local GaugeRules = require("../../Rules/Gauges")
+local Gauges = require("../Gauges")
+local GearboxModes = require("../../Rules/GearboxModes")
 local HudDesign = require("../HudDesign")
 local RimBlur = require("../RimBlur")
+local ShiftHand = require("../../Rules/ShiftHand")
 local StartupArms = require("../../Rules/StartupArms")
 local Types = require("./Types")
 
@@ -42,6 +47,9 @@ export type Driver = {
 	handOver: { seconds: number, right: StartupArms.Pose, left: StartupArms.Pose }?,
 	-- What the hands do on the wheel's buttons and the panel's switches; none on a car without.
 	gestures: DriverGestures.Gestures?,
+	-- The right hand's way to an H-pattern lever's knob and its grip there (Rules/ShiftHand); none
+	-- on a car without a lever.
+	shift: DriverShift.Shift?,
 }
 
 export type Entry = {
@@ -58,9 +66,11 @@ export type Entry = {
 	-- Which of its pops throw flame; without it, every pop does.
 	flames: ExhaustFlames.CarFlames?,
 	lights: CarLights.Lights,
-	-- The car's display: a dial face, or a binnacle screen with pages and shift lights. One of them.
+	-- The car's display: a dial face, a binnacle screen with pages and shift lights, or an analog
+	-- cluster of needles. One of them.
 	cluster: Cluster.Face?,
 	binnacle: Binnacle.Screen?,
+	gauges: Gauges.Cluster?,
 	-- The car's own driving HUD; without it, Config/Hud's.
 	hud: HudDesign.Design?,
 	assists: DriverAssists.Tuning,
@@ -127,12 +137,26 @@ local function checkFootwell(entry: Entry)
 		end
 	end
 	local footwell = entry.driver.footwell
-	for _, pedal in { footwell.throttle, footwell.brake } do
+	for _, pedal in Contract.footwellPedals(footwell) do
 		assert(hinged[pedal.part], `the footwell's "{pedal.part}" is not a pedal the model binding hinges`)
 	end
 	for _, problem in Contract.footwellMismatches(entry.model, footwell) do
 		error(problem)
 	end
+end
+
+-- A shift hand needs a lever to hold: one the model binds, on a manual gearbox whose every gate
+-- the binding turns the lever to (ShiftHand.leverFromBinding errors otherwise).
+function Contract.checkShift(entry: Entry)
+	if entry.driver.shift == nil then
+		return
+	end
+	local shifter = entry.model.shifter
+	assert(shifter, "the driver's shift hand needs a gear lever in the model binding")
+	local gearbox = entry.physics.gearbox
+	local manual = gearbox.manual
+	assert(gearbox.kind == "manual" and manual, "the driver's shift hand needs a manual gearbox")
+	ShiftHand.leverFromBinding(shifter, manual.gates, entry.model.seat)
 end
 
 -- The driver's scale and arm lengths need to be usable sizes.
@@ -309,13 +333,102 @@ local function checkBinnacle(entry: Entry, screen: Binnacle.Screen)
 	)
 end
 
+-- What is wrong with a dial's scale: under two points, readings that do not rise, shares outside
+-- 0 to 1 or falling.
+local function scaleProblem(dial: Gauges.Dial): string?
+	local scale = dial.scale
+	if #scale < 2 then
+		return "has under two points on its scale"
+	end
+	for index, point in scale do
+		if point[2] < 0 or point[2] > 1 then
+			return "has a share off its needle's travel"
+		end
+		local before = scale[index - 1]
+		if before and (point[1] <= before[1] or point[2] < before[2]) then
+			return "has a scale whose readings do not rise or whose shares fall"
+		end
+	end
+	return nil
+end
+
+local function dialProblems(model: Binding.CarModel, cluster: Gauges.Cluster, problems: { string })
+	local needles = model.needles or {}
+	local used: { [string]: boolean } = {}
+	for _, dial in cluster.dials do
+		local what = `the {dial.needle} dial`
+		local needle = needles[dial.needle]
+		if needle == nil or needle.travel == nil or needle.travel <= 0 then
+			table.insert(problems, `{what} turns a needle the binding does not bind with a sweep`)
+		end
+		if used[dial.needle] then
+			table.insert(problems, `two dials turn {dial.needle}`)
+		end
+		used[dial.needle] = true
+		if not GaugeRules.unitFits(dial.reading, dial.unit) then
+			table.insert(problems, `{what} prints its {dial.reading} in {dial.unit}`)
+		end
+		local scale = scaleProblem(dial)
+		if scale then
+			table.insert(problems, `{what} {scale}`)
+		end
+		if not (dial.response > 0 and dial.catchUp > 0 and dial.maxRate > 0) then
+			table.insert(problems, `{what} needs a positive response, catch-up and top speed`)
+		end
+	end
+end
+
+--[[
+	Everything wrong with an analog cluster against the car's binding and start-up: each dial turns
+	a bound needle of its own, prints its reading in a unit it can be read in, on a usable scale,
+	with usable needle timings; the cluster lights with a control its start-up moves; its screens
+	are displays the binding has. Kept apart from `define` so a car still out of the catalog can be
+	checked.
+]]
+function Contract.gaugeProblems(
+	model: Binding.CarModel,
+	startup: CarEntry.Startup,
+	cluster: Gauges.Cluster
+): { string }
+	local problems: { string } = {}
+	dialProblems(model, cluster, problems)
+	if GaugeRules.lightAt(startup, cluster.lightsWith) == nil then
+		table.insert(problems, `the gauges light with "{cluster.lightsWith}", which the start-up never moves`)
+	end
+	if cluster.redlineRpm <= 0 then
+		table.insert(problems, "the gauges' redline is not a speed")
+	end
+	if cluster.sweep ~= nil and cluster.sweep <= 0 then
+		table.insert(problems, "the gauges' sweep needs a duration")
+	end
+	local displays = model.displays or {}
+	local screens: { string } = {}
+	if cluster.readout then
+		table.insert(screens, cluster.readout.display)
+	end
+	if cluster.message then
+		table.insert(screens, cluster.message.display)
+	end
+	for _, display in screens do
+		if displays[display] == nil then
+			table.insert(problems, `the gauges draw on the {display} display, which the binding lacks`)
+		end
+	end
+	return problems
+end
+
 local function checkDisplay(entry: Entry)
-	local face, screen = entry.cluster, entry.binnacle
-	assert((face == nil) ~= (screen == nil), "a car has one display: a dial face or a binnacle screen")
+	local face, screen, gauges = entry.cluster, entry.binnacle, entry.gauges
+	local count = (if face then 1 else 0) + (if screen then 1 else 0) + (if gauges then 1 else 0)
+	assert(count == 1, "a car has one display: a dial face, a binnacle screen or analog gauges")
 	if face then
 		checkCluster(entry, face)
 	elseif screen then
 		checkBinnacle(entry, screen)
+	elseif gauges then
+		for _, problem in Contract.gaugeProblems(entry.model, entry.startup, gauges) do
+			error(problem)
+		end
 	end
 end
 
@@ -437,6 +550,7 @@ end
 function Contract.define(entry: Entry): Entry
 	checkStartup(entry)
 	checkFootwell(entry)
+	Contract.checkShift(entry)
 	checkDriverSize(entry)
 	checkModes(entry)
 	checkDisplay(entry)
@@ -453,9 +567,11 @@ end
 
 -- Where the car's red zone starts, on its display and the HUD's rev segments.
 function Contract.redline(entry: Entry): number
-	local face, screen = entry.cluster, entry.binnacle
+	local face, screen, gauges = entry.cluster, entry.binnacle, entry.gauges
 	if face then
 		return face.redlineRpm
+	elseif gauges then
+		return gauges.redlineRpm
 	end
 	assert(screen, "a car has a display")
 	return screen.redlineRpm
@@ -475,8 +591,19 @@ function Contract.armLengths(entry: Entry): (number, number)
 	return DriverArms.UPPER_LENGTH, DriverArms.LOWER_LENGTH
 end
 
+-- The pedals a footwell's feet work: the throttle and the brake, and the clutch in a car that has one.
+function Contract.footwellPedals(footwell: DriverLegs.Footwell): { DriverLegs.Pedal }
+	local pedals = { footwell.throttle, footwell.brake }
+	if footwell.clutch then
+		table.insert(pedals, footwell.clutch)
+	end
+	return pedals
+end
+
 -- Metres a footwell hinge may sit off the binding's pivot for the same pedal.
 local HINGE_TOLERANCE = 0.01
+-- Metres a throttle's or clutch's hinge sits above its ball when the pedal hangs from above.
+local HUNG_HINGE_RISE = 0.1
 
 -- Where the footwell disagrees with the binding: Rules/DriverLegs turns each pedal's sole points
 -- about the seat's x (the car's right) by the footwell's travel, while the rig turns the pedal's
@@ -484,6 +611,17 @@ local HINGE_TOLERANCE = 0.01
 -- travel have to be the same or the foot and the pedal move apart.
 function Contract.footwellMismatches(model: Binding.CarModel, footwell: DriverLegs.Footwell): { string }
 	local problems = {}
+	-- Unmarked, a hung throttle's heel would swing round its hinge, and a hung clutch's would stay
+	-- put while the ball rides its long travel.
+	local mustHang = { footwell.throttle }
+	if footwell.clutch then
+		table.insert(mustHang, footwell.clutch)
+	end
+	for _, pedal in mustHang do
+		if not pedal.hangs and pedal.hinge.y > pedal.ball.y + HUNG_HINGE_RISE then
+			table.insert(problems, `the footwell's {pedal.part} hangs from above but is not marked hangs`)
+		end
+	end
 	local seat = model.seat
 	local byPart: { [string]: Binding.Hinge } = {}
 	local pedals = model.pedals
@@ -492,7 +630,7 @@ function Contract.footwellMismatches(model: Binding.CarModel, footwell: DriverLe
 			byPart[pedal.part] = pedal
 		end
 	end
-	for _, pedal in { footwell.throttle, footwell.brake } do
+	for _, pedal in Contract.footwellPedals(footwell) do
 		local bound = byPart[pedal.part]
 		if bound then
 			local hinge = {
@@ -534,6 +672,7 @@ function Contract.features(entry: Entry): Features
 		escButton = entry.assists.escButton ~= nil,
 		launch = entry.physics.launch ~= nil,
 		cabinLight = entry.model.cabinLight ~= nil,
+		playerClutch = GearboxModes.offersClutch(entry.physics.gearbox, true),
 	}
 end
 

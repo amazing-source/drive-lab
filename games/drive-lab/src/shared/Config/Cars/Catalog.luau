@@ -3,6 +3,7 @@
 	Every car the place can rig, by the name a car model carries in its "Car" attribute. A new car
 	is a folder beside this module whose init returns its Contract entry, and one line here.
 ]]
+local Boss302 = require("./Boss302")
 local Contract = require("./Contract")
 local DR458 = require("./DR458")
 local SVJ = require("./SVJ")
@@ -14,6 +15,7 @@ local ATTRIBUTE = "Car"
 local cars: { [string]: Entry } = table.freeze({
 	SVJ = SVJ,
 	DR458 = DR458,
+	Boss302 = Boss302,
 })
 
 local Catalog = { cars = cars }

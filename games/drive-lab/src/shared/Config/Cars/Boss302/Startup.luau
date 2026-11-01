@@ -6,35 +6,36 @@
 	cranks (the computer keeps cranking until it catches). The starter needs the clutch fully down:
 	the left foot holds it from the key until driving unlocks, and a driver working the clutch by
 	hand holds it himself (Config/CarEntry.CLUTCH_INTERLOCK). The TracKey drive mode starts it with
-	the TracKey. Every value is an estimate until StartupPending is empty.
+	the TracKey.
 ]]
 local CarEntry = require("../../CarEntry")
 
--- The key cylinder's positions from OFF (Key_Ignition in the 3D artist's cockpit parts, draft):
--- EST, a typical Ford key's.
+-- The key cylinder's positions from OFF, clockwise looking into the cylinder. EST, a typical Ford
+-- key's: the bezel's marks are unreadable in all three photos of the cylinder, and the key head
+-- covers its face; the modelled key's place agrees with three solved views to about 10 mm.
 local KEY_ON = math.rad(60)
 local KEY_START = math.rad(90)
 
 local Startup: CarEntry.Startup = {
 	moves = {
-		-- EST, the animator's: the right hand comes from the thigh to the key (about 0.3 m) and turns
-		-- it to ON, then waits about 0.6 s for the gauges and the fuel pump.
+		-- The right hand comes from the thigh to the key and turns it to ON, then holds it about 0.6 s
+		-- for the gauges and the fuel pump (StartupPaths is keyed to these times; EST against footage).
 		{ control = "Key_Ignition", angle = KEY_ON, move = 0.25, at = 1.0 },
 		-- At the press: on to START. The guide has the driver let go as it cranks (the computer keeps
 		-- cranking until it catches), so the spring brings it back to ON at once.
 		{ control = "Key_Ignition", angle = KEY_START - KEY_ON, move = 0.15, at = 1.85, back = 2.15 },
 	},
-	-- EST, the animator's: START, then the hand back on the wheel (about 0.35 m) and driving
-	-- unlocked.
+	-- START, then the hand back on the wheel and driving unlocked (StartupPaths is keyed to these).
 	pressAt = 1.85,
 	wheelAt = 3.3,
 	drivableAt = 3.5,
-	-- Placeholders for the sound pack's measured start (the audio agent writes them): the 5.0's
-	-- recording catches about 0.67 s after the press and settles around 1,140 rpm.
-	catchAfter = 0.67,
+	-- Measured on the sound pack's start-up (its 4th-order line, from the press): the starter until
+	-- it catches, a flare, and a settle above both idles, which the engine leaves for the drive
+	-- mode's idle after the hand-over.
+	catchAfter = 0.54,
 	rpm = {
-		times = { 0, 0.6, 0.8, 4.5, 5.3 },
-		values = { 200, 200, 1140, 1140, 1140 },
+		times = { 0, 0.52, 0.7, 0.9, 1.3, 1.7, 2.1, 2.7, 4.1 },
+		values = { 200, 200, 1460, 1520, 1460, 1345, 1280, 1255, 1230 },
 	},
 	-- The order holds the car on the handbrake: the right foot stays off the brake.
 	brake = 0,

@@ -1,4 +1,5 @@
 --!strict
+local DriverShift = require("../src/shared/Config/DriverShift")
 local HandShapes = require("../src/shared/Rules/HandShapes")
 local SVJ = require("../src/shared/Config/Cars/SVJ")
 local T = require("../../../tools/test/T")
@@ -71,5 +72,34 @@ describe("Hand shapes: which hand mesh and cuff show", function()
 		local finger = HandShapes.shown("HandManettino_R", have)
 		expect(finger.shape).toBe("Point")
 		expect(finger.mesh).toBe("Point")
+	end)
+end)
+
+describe("Hand shapes: the shift hand's knob", function()
+	it(
+		"draws the open Rest hand on the knob, with the wrist cuff, while the place has no knob mesh",
+		function()
+			local have: HandShapes.Have = { startupShapes = true, pinch = true, gestures = {} }
+			local shown = HandShapes.shown("Knob", have)
+			expect(shown.shape).toBe("Rest")
+			expect(shown.mesh).toBe("Rest")
+			expect(shown.wristCuff).toBe(true)
+			expect(shown.grip).toBe(false)
+			-- A place without the posed meshes draws the grip, as for any posed shape.
+			local bare = HandShapes.shown("Knob", { startupShapes = false, pinch = false, gestures = {} })
+			expect(bare.shape).toBe("Rest")
+			expect(bare.grip).toBe(true)
+		end
+	)
+
+	it("draws the Knob mesh with the wrist cuff where the place and the car have it", function()
+		local have: HandShapes.Have = { startupShapes = true, pinch = true, knob = true, gestures = {} }
+		local shown = HandShapes.shown("Knob", have)
+		expect(shown.shape).toBe("Knob")
+		expect(shown.mesh).toBe("Knob")
+		expect(shown.wristCuff).toBe(true)
+		expect(shown.grip).toBe(false)
+		-- The uploaded meshes are HandKnob_R and HandKnob_L.
+		expect(DriverShift.KNOB_MESH).toBe("HandKnob")
 	end)
 end)

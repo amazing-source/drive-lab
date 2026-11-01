@@ -1,0 +1,700 @@
+{
+  "parts": [
+    {
+      "axis": {
+        "forward": -0.0,
+        "right": -1,
+        "up": 0
+      },
+      "group": "Wheel_FL",
+      "motion": "spin",
+      "name": "Wheel_FL",
+      "pivot": {
+        "forward": 2.721,
+        "right": -0.7865,
+        "up": 0.342
+      },
+      "positive": "rolls forward (top of the wheel moves toward the nose)"
+    },
+    {
+      "group": "Wheel_FL",
+      "motion": "static",
+      "name": "Wheel_FL_Tyre"
+    },
+    {
+      "group": "Caliper_FL",
+      "motion": "static",
+      "name": "Caliper_FL"
+    },
+    {
+      "axis": {
+        "forward": -0.0,
+        "right": -1,
+        "up": 0
+      },
+      "group": "Wheel_FR",
+      "motion": "spin",
+      "name": "Wheel_FR",
+      "pivot": {
+        "forward": 2.721,
+        "right": 0.7865,
+        "up": 0.342
+      },
+      "positive": "rolls forward (top of the wheel moves toward the nose)"
+    },
+    {
+      "group": "Wheel_FR",
+      "motion": "static",
+      "name": "Wheel_FR_Tyre"
+    },
+    {
+      "group": "Caliper_FR",
+      "motion": "static",
+      "name": "Caliper_FR"
+    },
+    {
+      "axis": {
+        "forward": -0.0,
+        "right": -1,
+        "up": 0
+      },
+      "group": "Wheel_RL",
+      "motion": "spin",
+      "name": "Wheel_RL",
+      "pivot": {
+        "forward": -0.0,
+        "right": -0.794,
+        "up": 0.3572
+      },
+      "positive": "rolls forward (top of the wheel moves toward the nose)"
+    },
+    {
+      "group": "Wheel_RL",
+      "motion": "static",
+      "name": "Wheel_RL_Tyre"
+    },
+    {
+      "group": "Caliper_RL",
+      "motion": "static",
+      "name": "Caliper_RL"
+    },
+    {
+      "axis": {
+        "forward": -0.0,
+        "right": -1,
+        "up": 0
+      },
+      "group": "Wheel_RR",
+      "motion": "spin",
+      "name": "Wheel_RR",
+      "pivot": {
+        "forward": -0.0,
+        "right": 0.794,
+        "up": 0.3572
+      },
+      "positive": "rolls forward (top of the wheel moves toward the nose)"
+    },
+    {
+      "group": "Wheel_RR",
+      "motion": "static",
+      "name": "Wheel_RR_Tyre"
+    },
+    {
+      "group": "Caliper_RR",
+      "motion": "static",
+      "name": "Caliper_RR"
+    },
+    {
+      "axis": {
+        "forward": 0,
+        "right": -0.0,
+        "up": -1
+      },
+      "group": "Door_L",
+      "motion": "hinge",
+      "name": "Door_L_Skin",
+      "pivot": {
+        "forward": 1.9481,
+        "right": -0.8797,
+        "up": 0.652
+      },
+      "positive": "opens: the door's rear edge swings out to the car's left",
+      "range": 1.0367
+    },
+    {
+      "group": "Door_L",
+      "motion": "static",
+      "name": "Door_L_Card"
+    },
+    {
+      "group": "Door_L",
+      "motion": "static",
+      "name": "Door_L_Glass"
+    },
+    {
+      "group": "Door_L",
+      "motion": "static",
+      "name": "Door_L_Mirror"
+    },
+    {
+      "group": "Door_R",
+      "motion": "static",
+      "name": "Door_R_Skin"
+    },
+    {
+      "group": "Door_R",
+      "motion": "static",
+      "name": "Door_R_Card"
+    },
+    {
+      "group": "Door_R",
+      "motion": "static",
+      "name": "Door_R_Glass"
+    },
+    {
+      "group": "Door_R",
+      "motion": "static",
+      "name": "Door_R_Mirror"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Glass_Windscreen"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Glass_RearScreen"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Glass_Quarter_L"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Glass_Quarter_R"
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Exhaust_Outlet_L",
+      "outlet": {
+        "axis": {
+          "forward": -1,
+          "right": -0.0,
+          "up": 0
+        },
+        "centre": {
+          "forward": -1.0633,
+          "right": -0.5867,
+          "up": 0.3206
+        },
+        "diameter_m": 0.1077
+      }
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Exhaust_Outlet_R",
+      "outlet": {
+        "axis": {
+          "forward": -1,
+          "right": -0.0,
+          "up": 0
+        },
+        "centre": {
+          "forward": -1.0633,
+          "right": 0.5867,
+          "up": 0.3206
+        },
+        "diameter_m": 0.1077
+      }
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_FrontLeft_Headlamp"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_FrontRight_Headlamp"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearLeft_HighStop"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearRight_HighStop"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearLeft_BarInner"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearLeft_BarMiddle"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearLeft_BarOuter"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearRight_BarInner"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearRight_BarMiddle"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearRight_BarOuter"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearLeft_Tail"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearRight_Tail"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_FrontLeft_ParkTurn"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_FrontRight_ParkTurn"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearLeft_Reverse"
+    },
+    {
+      "group": "Chassis",
+      "motion": "emissive",
+      "name": "Light_RearRight_Reverse"
+    },
+    {
+      "axis": {
+        "forward": -0.91122,
+        "right": 0,
+        "up": 0.41192
+      },
+      "group": "Chassis",
+      "mesh": false,
+      "motion": "hinge",
+      "name": "SteeringWheel",
+      "pivot": {
+        "forward": 1.5139,
+        "right": -0.3713,
+        "up": 0.8749
+      },
+      "positive": "right-hand rule about the axis, which points to the driver: a positive turn is anticlockwise as the driver sees it"
+    },
+    {
+      "group": "SteeringWheel",
+      "motion": "static",
+      "name": "SteeringWheel_Rim"
+    },
+    {
+      "group": "SteeringWheel",
+      "motion": "static",
+      "name": "SteeringWheel_Hub"
+    },
+    {
+      "group": "SteeringWheel",
+      "motion": "static",
+      "name": "SteeringWheel_Spokes"
+    },
+    {
+      "axis": {
+        "forward": 0,
+        "right": 1,
+        "up": 0
+      },
+      "group": "Chassis",
+      "motion": "hinge",
+      "name": "Pedal_Throttle",
+      "pivot": {
+        "forward": 2.1435,
+        "right": -0.2745,
+        "up": 0.649
+      },
+      "positive": "pressed: the pad moves forward (right-hand rule about the axis, Blender frame)",
+      "range": 0.205
+    },
+    {
+      "axis": {
+        "forward": -0.0,
+        "right": 1,
+        "up": 0
+      },
+      "group": "Chassis",
+      "motion": "hinge",
+      "name": "Pedal_Brake",
+      "pivot": {
+        "forward": 2.1952,
+        "right": -0.3986,
+        "up": 0.6156
+      },
+      "positive": "pressed: the pad moves forward (right-hand rule about the axis, Blender frame)",
+      "range": 0.21
+    },
+    {
+      "axis": {
+        "forward": -0.0,
+        "right": 1,
+        "up": 0
+      },
+      "group": "Chassis",
+      "motion": "hinge",
+      "name": "Pedal_Clutch",
+      "pivot": {
+        "forward": 2.1952,
+        "right": -0.5315,
+        "up": 0.6156
+      },
+      "positive": "pressed: the pad moves forward (right-hand rule about the axis, Blender frame)",
+      "range": 0.5
+    },
+    {
+      "axis_fore": {
+        "forward": -0.0,
+        "right": -1,
+        "up": 0
+      },
+      "axis_side": {
+        "forward": 1,
+        "right": -0.0,
+        "up": 0
+      },
+      "gates_rad": {
+        "1": [
+          -0.15707963267948966,
+          0.2181661564992912
+        ],
+        "2": [
+          -0.15707963267948966,
+          -0.2181661564992912
+        ],
+        "3": [
+          0,
+          0.2181661564992912
+        ],
+        "4": [
+          0,
+          -0.2181661564992912
+        ],
+        "5": [
+          0.15707963267948966,
+          0.2181661564992912
+        ],
+        "6": [
+          0.15707963267948966,
+          -0.2181661564992912
+        ],
+        "N": [
+          0,
+          0
+        ],
+        "R": [
+          -0.3141592653589793,
+          0.2181661564992912
+        ]
+      },
+      "group": "Chassis",
+      "knob": {
+        "centre": {
+          "forward": 1.4308,
+          "right": 0.0076,
+          "up": 0.685
+        },
+        "radius_m": 0.0246
+      },
+      "knob_offset_m": {
+        "1": {
+          "forward": 0.03,
+          "right": -0.0216,
+          "up": -0.0004
+        },
+        "2": {
+          "forward": -0.0293,
+          "right": -0.0216,
+          "up": -0.0071
+        },
+        "3": {
+          "forward": 0.0301,
+          "right": -0.0,
+          "up": 0.0001
+        },
+        "4": {
+          "forward": -0.0294,
+          "right": -0.0,
+          "up": -0.0066
+        },
+        "5": {
+          "forward": 0.0295,
+          "right": 0.0214,
+          "up": -0.0028
+        },
+        "6": {
+          "forward": -0.0287,
+          "right": 0.0214,
+          "up": -0.0094
+        },
+        "N": {
+          "forward": -0.0,
+          "right": -0.0,
+          "up": 0
+        },
+        "R": {
+          "forward": 0.0292,
+          "right": -0.0428,
+          "up": -0.0042
+        }
+      },
+      "motion": "gate",
+      "name": "Shifter_Lever",
+      "pivot": {
+        "forward": 1.4461,
+        "right": -0.0,
+        "up": 0.5476
+      },
+      "positive": "fore positive = the knob moves forward (R, 1, 3, 5 are forward); side positive = the knob moves to the car's right (R far left)",
+      "push_m": 0.008
+    },
+    {
+      "axis": {
+        "forward": 0.36012,
+        "right": -0.93167,
+        "up": 0.04797
+      },
+      "group": "SteeringColumn",
+      "motion": "rotary",
+      "name": "Key_Ignition",
+      "pivot": {
+        "forward": 1.6174,
+        "right": -0.2797,
+        "up": 0.7593
+      },
+      "positive": "clockwise looking into the cylinder (right-hand rule about the axis, Blender frame): OFF 0, ON, START",
+      "range": [
+        0,
+        1.0471975511965976,
+        1.5707963267948966
+      ]
+    },
+    {
+      "group": "Chassis",
+      "motion": "static",
+      "name": "Seat_Driver"
+    },
+    {
+      "axis": {
+        "forward": 0.94463,
+        "right": 0,
+        "up": -0.32813
+      },
+      "group": "Chassis",
+      "motion": "rotary",
+      "name": "Needle_Speedo",
+      "pivot": {
+        "forward": 1.7939,
+        "right": -0.4783,
+        "up": 0.8659
+      },
+      "positive": "clockwise as the driver sees it (the value rising)",
+      "range": [
+        0.0083,
+        3.1631
+      ]
+    },
+    {
+      "axis": {
+        "forward": 0.94463,
+        "right": 0,
+        "up": -0.32813
+      },
+      "group": "Chassis",
+      "motion": "rotary",
+      "name": "Needle_Tach",
+      "pivot": {
+        "forward": 1.7931,
+        "right": -0.2583,
+        "up": 0.8655
+      },
+      "positive": "clockwise as the driver sees it (the value rising)",
+      "range": [
+        0.02162,
+        3.16542
+      ]
+    },
+    {
+      "axis": {
+        "forward": 0.94463,
+        "right": 0,
+        "up": -0.32813
+      },
+      "group": "Chassis",
+      "motion": "rotary",
+      "name": "Needle_Fuel",
+      "pivot": {
+        "forward": 1.7938,
+        "right": -0.3838,
+        "up": 0.9083
+      },
+      "positive": "clockwise as the driver sees it (the value rising)",
+      "range": [
+        -0.01702,
+        1.43555
+      ]
+    },
+    {
+      "axis": {
+        "forward": 0.94463,
+        "right": 0,
+        "up": -0.32813
+      },
+      "group": "Chassis",
+      "motion": "rotary",
+      "name": "Needle_Temp",
+      "pivot": {
+        "forward": 1.7938,
+        "right": -0.3507,
+        "up": 0.9083
+      },
+      "positive": "clockwise as the driver sees it (the value rising)",
+      "range": [
+        0.0023,
+        1.42926
+      ]
+    },
+    {
+      "axis": {
+        "forward": 1,
+        "right": 0,
+        "up": -0.0
+      },
+      "group": "Chassis",
+      "motion": "rotary",
+      "name": "Needle_Oil",
+      "pivot": {
+        "forward": 1.7969,
+        "right": -0.0548,
+        "up": 1.023
+      },
+      "positive": "clockwise as the driver sees it (the value rising)",
+      "range": [
+        -0.043,
+        4.68909
+      ]
+    },
+    {
+      "axis": {
+        "forward": 1,
+        "right": 0,
+        "up": -0.0
+      },
+      "group": "Chassis",
+      "motion": "rotary",
+      "name": "Needle_Water",
+      "pivot": {
+        "forward": 1.7969,
+        "right": 0.0553,
+        "up": 1.023
+      },
+      "positive": "clockwise as the driver sees it (the value rising)",
+      "range": [
+        -0.01772,
+        4.71434
+      ]
+    },
+    {
+      "group": "Chassis",
+      "mesh": false,
+      "motion": "static",
+      "name": "Screen_PodReadout",
+      "screen": {
+        "centre": {
+          "forward": 1.7959,
+          "right": 0.0032,
+          "up": 1.0228
+        },
+        "height_m": 0.0086,
+        "normal": {
+          "forward": -1,
+          "right": -0.0,
+          "up": 0
+        },
+        "tilt_back_deg": 0,
+        "width_m": 0.0213
+      }
+    },
+    {
+      "group": "Chassis",
+      "mesh": false,
+      "motion": "static",
+      "name": "Screen_MessageCentre",
+      "screen": {
+        "centre": {
+          "forward": 1.7837,
+          "right": -0.2592,
+          "up": 0.8413
+        },
+        "height_m": 0.0171,
+        "normal": {
+          "forward": -0.94463,
+          "right": -0.0,
+          "up": 0.32813
+        },
+        "tilt_back_deg": 19.16,
+        "width_m": 0.0574
+      }
+    }
+  ],
+  "points": {
+    "Driver_HPoint": {
+      "forward": 1.1562,
+      "right": -0.3746,
+      "up": 0.5757
+    },
+    "Windshield_BottomLeft": {
+      "forward": 1.9695,
+      "right": -0.636,
+      "up": 0.9809
+    },
+    "Windshield_BottomRight": {
+      "forward": 1.9695,
+      "right": 0.636,
+      "up": 0.9809
+    },
+    "Windshield_TopLeft": {
+      "forward": 1.4858,
+      "right": -0.5863,
+      "up": 1.2528
+    },
+    "Windshield_TopRight": {
+      "forward": 1.4858,
+      "right": 0.5863,
+      "up": 1.2528
+    }
+  }
+}

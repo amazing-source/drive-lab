@@ -1,5 +1,6 @@
 --!strict
 local DR458 = require("../src/shared/Config/Cars/DR458/Physics")
+local Boss302Switches = require("../src/shared/Config/Cars/Boss302/Switches")
 local DR458Switches = require("../src/shared/Config/Cars/DR458/Switches")
 local DriveSim = require("../tools/DriveSim")
 local PitLimiter = require("../src/shared/Rules/PitLimiter")
@@ -82,6 +83,25 @@ describe("PitLimiter", function()
 			PitLimiter.update(state, tuning, releaseIn)
 			expect(state.armed).toBe(false)
 		end
+	end)
+
+	it("on the Boss 302, arms only in TracKey and releases when the drive mode leaves it", function()
+		local tuning = Boss302Switches.pitLimiter :: PitLimiter.Tuning
+		expect(tuning.limitKmh).toBeNear(70.8, 0.05)
+		for _, mode in { "Normal", "Sport" } do
+			expect(PitLimiter.press(PitLimiter.newState(), tuning, 2, 50, mode)).toBe(false)
+		end
+		expect(PitLimiter.press(PitLimiter.newState(), tuning, 2, 50, nil)).toBe(false)
+		local state = PitLimiter.newState()
+		expect(PitLimiter.press(state, tuning, 2, 50, "TracKey")).toBe(true)
+		PitLimiter.update(state, tuning, 2, "TracKey")
+		expect(state.armed).toBe(true)
+		PitLimiter.update(state, tuning, 2, "Normal")
+		expect(state.armed).toBe(false)
+		local any = PitLimiter.newState()
+		expect(PitLimiter.press(any, OPEN, 2, 50, "Normal")).toBe(true)
+		PitLimiter.update(any, OPEN, 2, "Sport")
+		expect(any.armed).toBe(true)
 	end)
 
 	it("leaves the pedal alone unless armed; armed, it takes the throttle away over the band", function()

@@ -1,0 +1,26 @@
+Deliberate breaks for agent/car-boss302-binding-refresh (#225), each applied alone to the
+committed tree (080694f), run against the spec that owns the rule, then restored with git checkout.
+Runner: the repo's spec runner limited to one spec file (games/drive-lab/tests/<Name>.spec.luau).
+Every break failed; the tree was clean after the run.
+
+How strongly the per-gate spec separates the turn order (break 2), computed offline from the
+lever's geometry: reversing the order moves the knob by R 0.947 mm, 1 0.109 mm, 2 1.028 mm,
+3 and 4 0 mm, 5 0.623 mm, 6 1.028 mm, against the spec's 0.1 mm tolerance (the 3D owner's
+rounding). The failure printed below is gate 1, the first one checked and the closest call; gates
+R, 2, 5 and 6 fail it by a margin of 6 to 10 times.
+
+== BREAK: leverFromBinding keeps the binding's fore axis unflipped
+   file: games/drive-lab/src/shared/Rules/ShiftHand.luau
+   exit: 1
+   FAIL Boss 302 binding > moves its knob into each gate where the 3D model's own gate pose puts it (Blender): games/drive-lab/tests/Boss302Binding.spec:159: expected -0.0004 within 0.0001, got -0.0070594346216578535
+   7 passed, 1 failed
+== BREAK: ShiftHand.lever turns fore and aft first, then sideways (the binding's order reversed)
+   file: games/drive-lab/src/shared/Rules/ShiftHand.luau
+   exit: 1
+   FAIL Boss 302 binding > moves its knob into each gate where the 3D model's own gate pose puts it (Blender): games/drive-lab/tests/Boss302Binding.spec:160: expected 0.03 within 0.0001, got 0.030102002352893842
+   7 passed, 1 failed
+== BREAK: ManifestBinding leaves the seat at the centre of mass despite the hip point
+   file: games/drive-lab/tools/ManifestBinding.luau
+   exit: 1
+   FAIL Boss 302 binding > is the writer's output for the manifest and its notes, not a hand edit: games/drive-lab/tests/Boss302Binding.spec:63: expected true, got false
+   7 passed, 1 failed

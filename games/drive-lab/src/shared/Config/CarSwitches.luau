@@ -21,7 +21,7 @@ export type Switches = {
 }
 
 -- Config/Controls entries that only a car with a given feature has (Config/Cars/Contract.features:
--- pitLimiter, wiper, rainLight, displayPages, radio, escButton, launch, cabinLight). Every other
+-- pitLimiter, wiper, rainLight, displayPages, radio, escButton, launch, cabinLight, playerClutch). Every other
 -- control is on every car.
 local NEEDS: { [string]: string } = {
 	PIT_LIMITER = "pitLimiter",
@@ -32,6 +32,7 @@ local NEEDS: { [string]: string } = {
 	RADIO = "radio",
 	ESC_OFF = "escButton",
 	CABIN_LIGHT = "cabinLight",
+	CLUTCH = "playerClutch",
 }
 
 return table.freeze({ NEEDS = table.freeze(NEEDS) })

@@ -95,13 +95,21 @@ function TrackPath.blockLength(length: number, width: number, turn: number): num
 	return length + width * turn + 1
 end
 
--- Which of the place's car spawns the road starts at, by their names: the first by name, so every
--- server lays the same road whatever order it finds them in. Nil with no spawn.
-function TrackPath.startIndex(names: { string }): number?
+-- Which of the place's car spawns the road starts at, by their names and their "Car" attributes: the
+-- first by name among the spawns of the `preferred` car, else among them all, so every server lays the
+-- same road whatever order it finds them in and a new car's spawn never moves it. Nil with no spawn.
+function TrackPath.startIndex(names: { string }, cars: { unknown }?, preferred: string?): number?
 	local best: number? = nil
+	local bestPreferred = false
 	for index, name in names do
-		if best == nil or name < names[best] then
+		local isPreferred = preferred ~= nil and cars ~= nil and cars[index] == preferred
+		if
+			best == nil
+			or (isPreferred and not bestPreferred)
+			or (isPreferred == bestPreferred and name < names[best])
+		then
 			best = index
+			bestPreferred = isPreferred
 		end
 	end
 	return best

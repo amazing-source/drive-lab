@@ -1,4 +1,6 @@
 --!strict
+local Boss302 = require("../src/shared/Config/Cars/Boss302/Physics")
+local Boss302Audio = require("../src/shared/Config/Cars/Boss302/Audio")
 local CarAudio = require("../src/shared/Config/CarAudio")
 local Config = require("../src/shared/Config/RoadAudio")
 local DR458 = require("../src/shared/Config/Cars/DR458/Physics")
@@ -237,15 +239,21 @@ describe("RoadAudio", function()
 	end)
 end)
 
--- Every car, its sound pack and its top speed (km/h) flat out in DriveSim.
-type Car = { physics: Types.CarConfig, pack: CarAudio.Pack, topKmh: number }
+-- Every car, its sound pack, its top speed (km/h) flat out in DriveSim, and the least that top
+-- speed may be (its documented one, less a margin), so a DriveSim run that stops early fails.
+type Car = { physics: Types.CarConfig, pack: CarAudio.Pack, topKmh: number, leastTopKmh: number }
 
-local function car(physics: Types.CarConfig, pack: CarAudio.Pack): Car
+local function car(physics: Types.CarConfig, pack: CarAudio.Pack, leastTopKmh: number): Car
 	local speed = DriveSim.topSpeed(physics, 200 / 3.6, 1 / 60)
-	return { physics = physics, pack = pack, topKmh = speed * 3.6 }
+	return { physics = physics, pack = pack, topKmh = speed * 3.6, leastTopKmh = leastTopKmh }
 end
 
-local CARS: { [string]: Car } = { SVJ = car(SVJ, SVJAudio), DR458 = car(DR458, DR458Audio) }
+-- The Boss 302's top speed is a 155 mph (249 km/h) limit.
+local CARS: { [string]: Car } = {
+	SVJ = car(SVJ, SVJAudio, 250),
+	DR458 = car(DR458, DR458Audio, 250),
+	Boss302 = car(Boss302, Boss302Audio, 240),
+}
 
 -- The engine is quietest in its highest gear: its rpm at `kmh` there, idle at least.
 local function topGearRpm(physics: Types.CarConfig, kmh: number): number
@@ -320,7 +328,7 @@ describe("RoadAudio config", function()
 				end
 			end
 			for _, entry in CARS do
-				expect(entry.topKmh > 250).toBeTruthy()
+				expect(entry.topKmh > entry.leastTopKmh).toBeTruthy()
 				for _, onShare in { 1, 0 } do
 					for _, view in { tuning.outside, tuning.cockpit } do
 						for kmh = 1, math.floor(entry.topKmh) do

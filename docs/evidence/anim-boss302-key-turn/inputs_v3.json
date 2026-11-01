@@ -1,0 +1,212 @@
+{
+ "about": "Boss 302 start-up hands (key ON, then START, no button), sequence mode of tools/blender/startup_paths.py; angles 60 / 90 deg EST (3D draft)",
+ "seat": [
+  0.3746,
+  -1.1562,
+  0.5757
+ ],
+ "startupConfig": "<assets>/boss302/anim/startup/startup_config.json",
+ "manifest": "<assets>/boss302/work/manifest/boss302_cockpit_parts.json",
+ "cabin": "<assets>/boss302/work/boss302_cockpit_v3.npz",
+ "restPose": "<assets>/boss302/anim/rest/REST_POSE.json",
+ "poses": "<assets>/boss302/anim/poses/v2/poses.json",
+ "posesDir": "<assets>/boss302/anim/poses/v2",
+ "grip": "<assets>/boss302/anim/grip/v1_a13_t18/hands.json",
+ "gripDir": "<assets>/boss302/anim/grip/v1_a13_t18",
+ "seatedPose": "<assets>/boss302/anim/entry/inputs_v2/seated_pose.json",
+ "footwell": "<assets>/boss302/anim/footwell/footwell_config_v2.json",
+ "legPoses": [],
+ "steeringHub": {
+  "pivot": [
+   0.0033,
+   0.2992,
+   -0.3578
+  ],
+  "axis": [
+   0.0,
+   0.4119,
+   0.9112
+  ]
+ },
+ "driver": {
+  "shoulders": {
+   "R": [
+    0.92,
+    1.7218,
+    0.4613
+   ],
+   "L": [
+    -0.92,
+    1.7218,
+    0.4613
+   ]
+  },
+  "upper": 1.4375,
+  "lower": 1.2994999999999999,
+  "elbowBias": [
+   0.3,
+   -0.28978,
+   -0.07765
+  ],
+  "about": "rest/car_rest_v2.json shoulders (studs), the DR458's arms at 1.15; ELBOW_BIAS turned by the torso's 15 degree lean"
+ },
+ "sequence": {
+  "start": "rest",
+  "leftOnWheelAt": 1.0,
+  "right": [
+   {
+    "control": "Key_Ignition",
+    "part": "GEO_INT_Trackey_00",
+    "grab": "pinch",
+    "gripAlong": -1,
+    "above": 0.04,
+    "off": 0.04,
+    "leave": 0.18,
+    "tiltDeg": -60,
+    "bladeSide": -1,
+    "turns": [
+     "GEO_INT_Trackey_00",
+     "GEO_INT_Trackey_01",
+     "GEO_INT_Trackey_02"
+    ]
+   }
+  ],
+  "leftLiftOff": [
+   -0.02,
+   0.07,
+   0.01
+  ],
+  "rimApproach": {
+   "R": [
+    0.05,
+    0.02,
+    0.02
+   ],
+   "L": [
+    0.02,
+    -0.05,
+    0.02
+   ]
+  },
+  "liftOff": [
+   0.0,
+   0.06,
+   -0.03
+  ],
+  "behindRim": {
+   "R": [
+    0.0,
+    -0.02,
+    0.1
+   ],
+   "L": [
+    -0.03,
+    -0.03,
+    0.06
+   ]
+  }
+ },
+ "flags": [
+  "--no-render"
+ ],
+ "render": {
+  "size": [
+   640,
+   400
+  ],
+  "stretch": 4,
+  "step": 2
+ },
+ "views": {
+  "cockpit": {
+   "eye": [
+    0,
+    3.2759,
+    0.4291
+   ],
+   "target": [
+    0,
+    3.2759,
+    -4.5709
+   ],
+   "lens": 16.07,
+   "hideHead": true,
+   "glovesOnly": true
+  },
+  "lookdown": {
+   "eye": [
+    0,
+    3.2759,
+    0.4291
+   ],
+   "target": [
+    0.7299,
+    -0.0153,
+    -3.7343
+   ],
+   "lens": 16.07,
+   "hideHead": true,
+   "glovesOnly": true
+  },
+  "key": {
+   "eye": [
+    2.2,
+    2.0,
+    -1.0
+   ],
+   "target": [
+    0.508,
+    0.984,
+    -2.471
+   ],
+   "lens": 35
+  }
+ },
+ "colours": {
+  "GEO_INT_Trackey": [
+   0.8,
+   0.05,
+   0.05,
+   1
+  ],
+  "GEO_INT_STwheel": [
+   0.1,
+   0.1,
+   0.1,
+   1
+  ],
+  "Seat_Driver": [
+   0.15,
+   0.15,
+   0.16,
+   1
+  ]
+ },
+ "bakeStep": 0.016666666666666666,
+ "lean": {
+  "pivot": [
+   0.0,
+   -0.00278,
+   0.01037
+  ],
+  "keys": [
+   [
+    0.1,
+    0.0
+   ],
+   [
+    0.7,
+    7.0
+   ],
+   [
+    2.3,
+    7.0
+   ],
+   [
+    2.9,
+    0.0
+   ]
+  ],
+  "about": "torso lean for the key turn (coordinator's decision A, ~7 deg forward), about the drawn legs' hip axis"
+ }
+}

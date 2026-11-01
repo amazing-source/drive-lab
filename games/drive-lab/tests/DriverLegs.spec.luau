@@ -196,3 +196,156 @@ describe("Driver legs, per car", function()
 		end
 	end)
 end)
+
+-- A clutch for the specs: the SVJ's brake moved 13 cm toward the door and 6 cm toward the driver
+-- (the SVJ has no clutch; a car's real one comes from tools/blender/footwell.py).
+local function withClutch(): any
+	local footwell = copy(FOOTWELL)
+	local clutch = copy(FOOTWELL.brake)
+	clutch.part = "Pedal_Clutch"
+	for _, point in { clutch.hinge, clutch.heel, clutch.ball } do
+		point.x -= 0.13
+		point.z += 0.06
+	end
+	footwell.clutch = clutch
+	return footwell
+end
+
+describe("Driver legs: the left foot on a clutch", function()
+	it("keeps the left foot on its footrest in a car without a clutch, whatever the inputs", function()
+		local rest = Legs.left(FOOTWELL, LEFT_HIP)
+		local asked = Legs.left(FOOTWELL, LEFT_HIP, 1, 0.3)
+		expect(distance(asked.ankle, rest.ankle)).toBe(0)
+		expect(distance(asked.knee, rest.knee)).toBe(0)
+		expect(Legs.clutchAngle(FOOTWELL, 1, 1)).toBe(0)
+	end)
+
+	it("moves the sole from the footrest onto the clutch, rocking on its heel", function()
+		local footwell = withClutch()
+		local heel, ball = Legs.leftSole(footwell, 0, 0)
+		expect(distance(heel, footwell.footrest.heel)).toBeNear(0, 1e-9)
+		expect(distance(ball, footwell.footrest.ball)).toBeNear(0, 1e-9)
+		heel, ball = Legs.leftSole(footwell, 1, 0)
+		expect(distance(heel, footwell.clutch.heel)).toBeNear(0, 1e-9)
+		expect(distance(ball, footwell.clutch.ball)).toBeNear(0, 1e-9)
+		local midHeel, midBall = Legs.leftSole(footwell, 0.5, 0)
+		local straight = (footwell.footrest.ball.y + footwell.clutch.ball.y) / 2
+		expect(midBall.y > straight + Config.SWITCH_LIFT / 2).toBe(true)
+		expect(midHeel.y).toBeNear((footwell.footrest.heel.y + footwell.clutch.heel.y) / 2, 1e-9)
+	end)
+
+	it("presses the clutch only under the foot, by its value", function()
+		local footwell = withClutch()
+		local travel = footwell.clutch.travel
+		expect(Legs.clutchAngle(footwell, 0, 1)).toBe(0)
+		expect(Legs.clutchAngle(footwell, 1, 1)).toBeNear(travel, 1e-12)
+		expect(Legs.clutchAngle(footwell, 1, 0.5)).toBeNear(travel / 2, 1e-12)
+		expect(Legs.clutchAngle(footwell, 1, 0)).toBe(0)
+		local halfWay = Legs.clutchAngle(footwell, 0.5, 1)
+		expect(math.abs(halfWay) > 0 and math.abs(halfWay) < math.abs(travel)).toBe(true)
+		expect(Legs.clutchAngle(footwell, 2, 3)).toBeNear(travel, 1e-12)
+	end)
+
+	it("carries the ball down with the clutch, about the clutch's hinge", function()
+		local footwell = withClutch()
+		local pedal = footwell.clutch
+		local _, rest = Legs.leftSole(footwell, 1, 0)
+		local _, pressed = Legs.leftSole(footwell, 1, pedal.travel)
+		expect(pressed.z < rest.z - 0.02).toBe(true)
+		expect(distance(pressed, pedal.hinge)).toBeNear(distance(rest, pedal.hinge), 1e-9)
+	end)
+
+	it("reaches the pressed clutch from the seated hips with the knee bent toward its point", function()
+		local footwell = withClutch()
+		local leg = Legs.left(footwell, LEFT_HIP, 1, footwell.clutch.travel)
+		local asked = distance(leg.hip, leg.ankle)
+		expect(leg.reach).toBeNear(asked, 1e-9)
+		expect(asked < (Config.THIGH + Config.SHIN) * 0.985).toBe(true)
+		expect(distance(leg.knee, leg.hip)).toBeNear(Config.THIGH, 1e-9)
+		expect(leg.knee.y > leg.hip.y - Config.THIGH).toBe(true)
+	end)
+end)
+
+-- Every pedal of the footwell marked as hung from above (the Boss 302's are).
+local function hung(footwell: any): any
+	for _, name in { "throttle", "brake", "clutch" } do
+		if footwell[name] then
+			footwell[name].hangs = true
+		end
+	end
+	return footwell
+end
+
+-- A throttle hung from above for the specs: the SVJ's brake moved 15 cm toward the console.
+local function withHungThrottle(): any
+	local footwell = copy(FOOTWELL)
+	local throttle = copy(FOOTWELL.brake)
+	throttle.part = "Pedal_Throttle"
+	for _, point in { throttle.hinge, throttle.heel, throttle.ball } do
+		point.x += 0.15
+	end
+	footwell.throttle = throttle
+	return footwell
+end
+
+describe("Driver legs: pedals hung from above", function()
+	it("keeps the organ throttle's heel turning with its plate and the brake's heel put", function()
+		local throttle, brake = FOOTWELL.throttle, FOOTWELL.brake
+		local heel = Legs.rightSole(FOOTWELL, 0, throttle.travel, 0)
+		expect(distance(heel, Legs.turned(throttle, throttle.heel, throttle.travel))).toBeNear(0, 1e-12)
+		heel = Legs.rightSole(FOOTWELL, 1, 0, brake.travel)
+		expect(distance(heel, brake.heel)).toBeNear(0, 1e-12)
+	end)
+
+	it("keeps the sole's length on a hung clutch, the heel sliding along the floor", function()
+		local footwell = hung(withClutch())
+		local pedal = footwell.clutch
+		local length = distance(pedal.heel, pedal.ball)
+		local heel = Legs.leftSole(footwell, 1, 0)
+		expect(distance(heel, pedal.heel)).toBeNear(0, 1e-9)
+		local ball
+		heel, ball = Legs.leftSole(footwell, 1, pedal.travel)
+		expect(distance(heel, ball)).toBeNear(length, 1e-9)
+		expect(heel.y).toBeNear(pedal.heel.y, 1e-12)
+		expect(heel.x).toBeNear(pedal.heel.x, 1e-12)
+		-- which way it slides depends on how far the ball drops against how far it goes forward
+		expect(math.abs(heel.z - pedal.heel.z) > 0.002).toBe(true)
+	end)
+
+	it("keeps the right heel on the floor under hung pedals, the sole's length kept", function()
+		local footwell = hung(withHungThrottle())
+		for _, case in { { 0, "throttle" }, { 1, "brake" } } do
+			local pedal = footwell[case[2]]
+			local length = distance(pedal.heel, pedal.ball)
+			local throttleAngle = if case[1] == 0 then pedal.travel else 0
+			local brakeAngle = if case[1] == 1 then pedal.travel else 0
+			local heel, ball = Legs.rightSole(footwell, case[1], throttleAngle, brakeAngle)
+			expect(distance(heel, ball)).toBeNear(length, 1e-9)
+			expect(heel.y).toBeNear(pedal.heel.y, 1e-12)
+			expect(math.abs(heel.z - pedal.heel.z) > 0.002).toBe(true)
+		end
+		-- the same hung throttle read as an organ pedal swings its heel round the top hinge
+		local organ = withHungThrottle()
+		local swung = Legs.rightSole(organ, 0, organ.throttle.travel, 0)
+		expect(math.abs(swung.y - organ.throttle.heel.y) > 0.01).toBe(true)
+	end)
+
+	it("slides a hung heel along a floor that rises toward the nose, the sole's length kept", function()
+		local footwell = hung(withClutch())
+		local pedal = footwell.clutch
+		pedal.heelSlope = 0.15
+		local rest = Legs.leftSole(footwell, 1, 0)
+		expect(distance(rest, pedal.heel)).toBeNear(0, 1e-9)
+		local heel, ball = Legs.leftSole(footwell, 1, pedal.travel)
+		expect(distance(heel, ball)).toBeNear(distance(pedal.heel, pedal.ball), 1e-9)
+		expect(heel.y - pedal.heel.y).toBeNear(0.15 * (pedal.heel.z - heel.z), 1e-9)
+		expect(math.abs(heel.z - pedal.heel.z) > 0.002).toBe(true)
+	end)
+
+	it("reaches the hung clutch's full press from the seated hips with the knee bent", function()
+		local footwell = hung(withClutch())
+		local leg = Legs.left(footwell, LEFT_HIP, 1, footwell.clutch.travel)
+		expect(leg.reach).toBeNear(distance(leg.hip, leg.ankle), 1e-9)
+		expect(distance(leg.hip, leg.ankle) < (Config.THIGH + Config.SHIN) * 0.985).toBe(true)
+	end)
+end)

@@ -9,7 +9,9 @@ Shapes:
   lift the START flap by its edge and press the button;
 - Rest: a relaxed hand lying on the thigh, fingers a little curved and apart;
 - Pinch: a key pinch, the thumb's pad pressed against the side of the curled index with a key's
-  blade (PINCH_GAP) between them, the other fingers curled; to turn a key.
+  blade (PINCH_GAP) between them, the other fingers curled; to turn a key;
+- Knob: the palm over a ball (a gear lever's knob, --knob-radius, metres) and each finger closed
+  round it until it touches, as hand_grip.py closes them round a rim; to hold a gear lever.
 
 The hand's own frame (the frame the game moves): origin at the wrist joint, z from the wrist up
 the forearm, y out of the back of the hand, x = y cross z (toward the little finger on the
@@ -21,7 +23,7 @@ world scale (1 stud = 0.28 / 1.5 m), already in the hand frame; poses.json with,
 side, the mesh centre (where Roblox puts the imported MeshPart), the cuff's centre, the index
 fingertip (the skin's end of the index) and the middle of the palm, all studs in the hand frame;
 for Pinch also the point the blade is held at and the unit axis from the thumb's pad to the
-index across it; and check renders.
+index across it; for Knob the ball's centre; and check renders.
 """
 
 import json
@@ -33,7 +35,7 @@ import bpy
 from mathutils import Matrix, Quaternion, Vector
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from hand_grip import STUDS_PER_METRE, bounds_centre, cuff_mesh, export_studs, studs  # noqa: E402
+from hand_grip import FINGER_RADIUS, STUDS_PER_METRE, bounds_centre, cuff_mesh, export_studs, pose_bone_about_world_z, solve_finger, studs  # noqa: E402
 
 FINGERS = ("Index", "Middle", "Ring", "Little")
 # Flexion per joint (knuckle, middle, end), degrees; positive closes toward the palm.
@@ -64,7 +66,20 @@ SHAPES = {
         "spread": (0, 0, 0, 0),
         "pinch": True,
     },
+    "Knob": {
+        "ThumbBase": 30,
+        "Thumb": (30, 25),
+        "ball": True,
+    },
 }
+# The knob grip (metres): the ball under the middle of the palm, between the wrist and the
+# knuckles, the palm KNOB_GAP off its surface.
+KNOB_RADIUS = 0.0246
+KNOB_GAP = 0.002
+KNOB_BACK = 0.035
+# The finger pads' skin runs past the bone line plus FINGER_RADIUS; closing to it alone left the pads
+# 5.8 mm inside the ball (measured on the exported mesh), as hand_grip.py's SKIN_MARGIN fixes on a rim.
+KNOB_SKIN = 0.006
 # The key pinch (metres): the blade held between the thumb's pad and the side of the index's
 # middle bone. The pad is THUMB_PAD along the thumb's end bone, which runs about 2.5 cm past the
 # skin (DRIVER_HANDS.md 8a).
@@ -100,6 +115,8 @@ def posed(hand_path, shape):
     arm = next(o for o in added if o.type == "ARMATURE")
     hand = next(o for o in added if o.type == "MESH")
     pose = SHAPES[shape]
+    if pose.get("ball"):
+        return posed_on_ball(arm, hand, added)
     for finger, fan in zip(FINGERS, pose["spread"]):
         spread(arm, f"{finger}_Proximal_R", fan)
         for part, angle in zip(("Proximal", "Intermediate", "Distal"), pose[finger]):
@@ -137,6 +154,48 @@ def posed(hand_path, shape):
         across = (side - pad).normalized()
         pinch = {"point": side - across * (INDEX_RADIUS + PINCH_GAP / 2), "axis": across, "report": pinch[2]}
     return hand, fingertip, pinch
+
+
+def posed_on_ball(arm, hand, added):
+    """The Knob shape: in the source's rest space (fingers along +y, palm facing -x, index on +z) the
+    ball sits against the palm's middle; each finger closes in its own plane round the circle that
+    plane cuts from the ball (hand_grip.solve_finger), the thumb set by angles."""
+    bones = arm.data.bones
+    knuckles = [bones[f"{f}_Proximal_R"].head_local for f in FINGERS]
+    ball_y = sum(k.y for k in knuckles) / 4 - KNOB_BACK
+    ball_z = (knuckles[1].z + knuckles[2].z) / 2
+    palm = [hand.matrix_world @ v.co for v in hand.data.vertices]
+    palm_x = min(p.x for p in palm if abs(p.y - ball_y) < 0.006 and abs(p.z - ball_z) < 0.02)
+    centre = Vector((palm_x - KNOB_GAP - KNOB_RADIUS, ball_y, ball_z))
+    for finger in FINGERS:
+        names = [f"{finger}_{part}_R" for part in ("Proximal", "Intermediate", "Distal", "Tip")]
+        heads = [bones[n].head_local.xy.copy() for n in names] + [bones[names[-1]].tail_local.xy.copy()]
+        across = abs(bones[names[0]].head_local.z - centre.z)
+        circle = math.sqrt(max(KNOB_RADIUS**2 - across**2, 0.0))
+        angles = solve_finger(heads, centre.xy, circle + FINGER_RADIUS[finger] + KNOB_SKIN)
+        for name, angle in zip(names[:3], angles):
+            pose_bone_about_world_z(arm, name, angle)
+    pose = SHAPES["Knob"]
+    flex(arm, "Thumb_Metacarpal_R", pose["ThumbBase"])
+    flex(arm, "Thumb_Proximal_R", pose["Thumb"][0])
+    flex(arm, "Thumb_Distal_R", pose["Thumb"][1])
+    bpy.context.view_layer.update()
+    tip = arm.matrix_world @ arm.pose.bones["Index_Tip_R"].tail
+    wrist = bones["Wrist_R"].head_local.copy()
+    bpy.context.view_layer.objects.active = hand
+    for modifier in hand.modifiers:
+        if modifier.type == "ARMATURE":
+            bpy.ops.object.modifier_apply(modifier=modifier.name)
+    for obj in added:
+        if obj is not hand:
+            bpy.data.objects.remove(obj)
+    place = TO_FRAME @ Matrix.Translation(-wrist)
+    hand.data.transform(place @ hand.matrix_world)
+    hand.matrix_world = Matrix.Identity(4)
+    hand.name = "Hand_Knob"
+    tail = place @ tip
+    fingertip = min((v.co.copy() for v in hand.data.vertices), key=lambda co: (co - tail).length)
+    return hand, fingertip, {"ball": place @ centre, "radius": KNOB_RADIUS}
 
 
 def thumb_chain(bones, turn, proximal, distal):
@@ -278,12 +337,15 @@ def main(args):
                 "fingertip": studs(tip * flip),
                 "palm": studs(palm * flip),
             }
-            if pinch is not None:
+            if pinch is not None and "ball" in pinch:
+                sides[side]["ball"] = studs(pinch["ball"] * flip)
+                sides[side]["ballRadius"] = round(pinch["radius"] * STUDS_PER_METRE, 4)
+            elif pinch is not None:
                 sides[side]["pinch"] = studs(pinch["point"] * flip)
                 sides[side]["pinchAxis"] = [round(c, 4) for c in pinch["axis"] * flip]
             if mirror < 0:
                 bpy.data.objects.remove(piece)
-        if pinch is not None:
+        if pinch is not None and "report" in pinch:
             sides["solve"] = pinch["report"]
         report["shapes"][shape] = sides
         checks.append(hand)
@@ -295,10 +357,10 @@ def main(args):
     json.dump(report, open(os.path.join(out, "poses.json"), "w"), indent=1)
     print(json.dumps(report, indent=1))
     # Side by side for the renders: Point at the origin, Rest beside it, then Pinch.
-    checks[1].location = (0.14, 0, 0)
-    checks[2].location = (0.28, 0, 0)
+    for index, piece in enumerate(checks[1:], 1):
+        piece.location = (0.14 * index, 0, 0)
     skin, cloth = (0.85, 0.62, 0.5, 1), (0.08, 0.08, 0.09, 1)
-    render_checks(out, [(checks[0], skin), (checks[1], skin), (checks[2], skin), (cuff, cloth)])
+    render_checks(out, [(piece, skin) for piece in checks] + [(cuff, cloth)])
 
 
 if __name__ == "__main__":

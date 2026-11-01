@@ -8,6 +8,7 @@ export type Controls = {
 	SHIFT_UP: { Enum.KeyCode },
 	SHIFT_DOWN: { Enum.KeyCode },
 	GEARBOX_MODE: { Enum.KeyCode },
+	CLUTCH: { Enum.KeyCode },
 	DRIVING_MODE: { Enum.KeyCode },
 	ESC_OFF: { Enum.KeyCode },
 	CAMERA_VIEW: { Enum.KeyCode },
@@ -50,6 +51,9 @@ local Controls: Controls = table.freeze({
 	SHIFT_UP = { Enum.KeyCode.E, Enum.KeyCode.ButtonR1 },
 	SHIFT_DOWN = { Enum.KeyCode.Q, Enum.KeyCode.ButtonL1 },
 	GEARBOX_MODE = { Enum.KeyCode.T, Enum.KeyCode.ButtonY },
+	-- Held, the clutch pedal in the clutch mode of a car that offers it (Config/CarSwitches); a pad
+	-- has no free button for it (Rules/GearboxModes).
+	CLUTCH = { Enum.KeyCode.LeftShift },
 	-- M on QWERTY, and the key AZERTY prints M (QWERTY's semicolon), so the key marked M works on
 	-- both.
 	DRIVING_MODE = { Enum.KeyCode.M, Enum.KeyCode.Semicolon, Enum.KeyCode.DPadUp },

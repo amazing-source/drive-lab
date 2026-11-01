@@ -1,0 +1,38 @@
+B1 the lever 1 cm lower (shift_check --break): exit 1, FAILS as it must
+      deepest hand into GEO_INT_STwheel_00: 3.61 mm at reach to R 0.175
+      deepest hand into GEO_INT_STwheel_05: 2.00 mm at reach to R 0.000
+      deepest hand into GEO_INT_shifter_01: 1.79 mm at reach to 1 0.975
+      FAIL reach to R 0.175 Rest hand 3.6 mm into GEO_INT_STwheel_00
+B2 the named rim contact's limit under its measured depth (2.9 mm): exit 1, FAILS as it must
+      deepest hand into GEO_INT_STwheel_00: 3.03 mm at reach to R 0.175
+      deepest hand into GEO_INT_STwheel_05: 2.00 mm at reach to R 0.000
+      deepest hand into GEO_INT_shifter_01: 1.79 mm at reach to 1 0.975
+      FAIL reach to R 0.175 Rest hand 3.0 mm into GEO_INT_STwheel_00
+B3 no named contacts at all: exit 1, FAILS as it must
+      deepest hand into GEO_INT_STwheel_00: 3.03 mm at reach to R 0.175
+      deepest hand into GEO_INT_STwheel_05: 2.00 mm at reach to R 0.000
+      deepest hand into GEO_INT_shifter_01: 1.79 mm at reach to 1 0.975
+      FAIL reach to R 0.175 Rest hand 3.0 mm into GEO_INT_STwheel_00
+B4 the lever's own parts not turned with it (shift_check measures them where neutral models them): exit 1, FAILS as it must
+      FAIL R-1 #0 Knob hand 11.7 mm into GEO_INT_shifter_01
+      FAIL R-1 #1 Knob hand 15.2 mm into GEO_INT_shifter_01; hand 2.3 mm into GEO_INT_shifter_decal; hand 8.2 mm into GEO_INT_shifter_00
+      FAIL R-1 #2 Knob hand 18.3 mm into GEO_INT_shifter_01; hand 6.8 mm into GEO_INT_shifter_00
+      FAIL R-1 #3 Knob hand 19.9 mm into GEO_INT_shifter_01; hand 8.1 mm into GEO_INT_shifter_00
+B5 the lever's fore-aft axis sign flipped in shift_paths' port (the manifest's Blender offsets must catch it): exit 1, FAILS as it must
+      File "tools/anim/shift_paths.py", line 322, in offsets_against_manifest
+        assert off <= OFFSET_TOLERANCE, f"gate {label}: knob offset {np.round(mine, 4).tolist()} vs the manifest's {theirs.tolist()}"
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    AssertionError: gate 1: knob offset [-0.0216, -0.0071, 0.0293] vs the manifest's [-0.0216, -0.0004, -0.03]
+B6 Shift.luau's reach off the gearbox timing (0.30 -> 0.31): exit 1, FAILS as it must
+    FAIL Boss 302 shift hand data > times the hand and the foot as the gearbox plans them: one clock: games/drive-lab/tests/Boss302Shift.spec:17: expected
+    103 spec files, 1085 passed, 1 failed
+B7 Shift.luau without the quick preset: exit 1, FAILS as it must
+    FAIL Boss 302 shift hand data > offers a quicker pace on the same way: games/drive-lab/tests/Boss302Shift.spec:23: the Boss keys a game-quick pace
+    103 spec files, 1085 passed, 1 failed
+all files restored and compared
+B1b the lever 3 cm lower (shift_check --break): exit 1, FAILS as it must
+      FAIL R-1 #2 Knob hand 11.3 mm into GEO_INT_shifter_04
+      FAIL R-1 #3 Knob hand 13.2 mm into GEO_INT_shifter_04
+      FAIL R-1 #4 Knob hand 13.0 mm into GEO_INT_shifter_04
+      FAIL R-1 #5 Knob hand 12.8 mm into GEO_INT_shifter_04
+all files restored and compared

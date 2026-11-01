@@ -15,6 +15,8 @@ local Binding = require("../Config/Cars/Binding")
 local CarParts = require("../Rules/CarParts")
 local Geometry = require("../Vehicle/Geometry")
 local Hinge = require("../Rules/Hinge")
+local ShiftHand = require("../Rules/ShiftHand")
+local ShiftSync = require("../Rules/ShiftSync")
 local Types = require("../Config/Cars/Types")
 local Units = require("../Units")
 
@@ -45,10 +47,17 @@ export type Rig = {
 	-- The wiper's arm, turned about its C0's X from parked; nil on a model without one or before
 	-- it has streamed in.
 	wiper: Hinged?,
+	-- The gear lever: its weld's C0 at rest is its pivot with the chassis's axes, which
+	-- Controllers/CarShifter turns and slides; nil on a model without one or before it has
+	-- streamed in.
+	shifter: Hinged?,
 	-- The door's pull strap (Rules/DoorStrap) on its own weld from the chassis, posed by its C0
 	-- (the strap's centre, its -Y down the strap) and its part's Size.Y; nil on a model without
 	-- one or before it has streamed in.
 	strap: Weld?,
+	-- An analog cluster's needles by part name, each turned about its C0's X from the dial's zero;
+	-- one whose part has not streamed in is missing.
+	needles: { [string]: Hinged },
 	seat: Seat,
 	prompt: ProximityPrompt,
 }
@@ -222,7 +231,7 @@ local function hingeFrame(pivot: Hinge.CarPoint, axis: Hinge.CarPoint, bodyRaise
 end
 
 -- `rest` turns the part from its modelled pose to where it rests (Rules/Hinge.restAngle).
-local function hingeWeld(name: string, chassis: BasePart, part: BasePart, frame: CFrame, rest: number)
+local function hingeWeld(name: string, chassis: BasePart, part: BasePart, frame: CFrame, rest: number): Weld
 	local joint = Instance.new("Weld")
 	joint.Name = name
 	joint.Part0 = chassis
@@ -231,6 +240,7 @@ local function hingeWeld(name: string, chassis: BasePart, part: BasePart, frame:
 	joint.C1 = part.CFrame:ToObjectSpace(chassis.CFrame * frame)
 	joint:SetAttribute("RestC0", joint.C0)
 	joint.Parent = chassis
+	return joint
 end
 
 -- The drive-mode knob rides the steering wheel on its own Weld from the wheel's part, named after
@@ -417,21 +427,45 @@ local function addSeat(model: Model, chassis: BasePart, binding: Binding.CarMode
 	return seat, prompt
 end
 
--- A screen over the cluster's static image, for the live display (Controllers/Cluster): a hair
--- toward the driver so it covers the image, its Back face toward the driver.
-local function addClusterScreen(model: Model, chassis: BasePart, binding: Binding.CarModel)
-	local cluster = binding.cluster
-	local offset = carSpace(cluster, cluster.up + binding.bodyRaise)
-		+ Vector3.new(0, 0, Units.metresToStuds(0.003))
+-- A screen for a live display (Controllers/Cluster, Binnacle, Gauges), its Back face toward the
+-- driver, `toward` metres nearer the driver than the binding puts it.
+local function addScreen(
+	model: Model,
+	chassis: BasePart,
+	name: string,
+	rect: Binding.Screen,
+	bodyRaise: number,
+	toward: number
+)
+	local offset = carSpace(rect, rect.up + bodyRaise) + Vector3.new(0, 0, Units.metresToStuds(toward))
 	local screen = newPart(
 		"Part",
-		"ClusterScreen",
-		Vector3.new(Units.metresToStuds(cluster.width), Units.metresToStuds(cluster.height), 0.05),
-		chassis.CFrame * CFrame.new(offset) * CFrame.Angles(-cluster.tilt, 0, 0)
+		name,
+		Vector3.new(Units.metresToStuds(rect.width), Units.metresToStuds(rect.height), 0.05),
+		chassis.CFrame * CFrame.new(offset) * CFrame.Angles(-rect.tilt, 0, 0)
 	)
 	screen.Massless = true
 	screen.Parent = model
 	weld(chassis, screen)
+end
+
+-- The cluster's screen, where the binding has one, a hair toward the driver so it covers the
+-- cluster's static image; and an analog cluster's small screens, each named after its display,
+-- exactly where the manifest puts them: under the needles that sweep across them.
+local function addScreens(model: Model, chassis: BasePart, binding: Binding.CarModel)
+	local cluster = binding.cluster
+	if cluster.width > 0 and cluster.height > 0 then
+		addScreen(model, chassis, "ClusterScreen", cluster, binding.bodyRaise, 0.003)
+	end
+	local displays: { [string]: Binding.Screen } = binding.displays or {}
+	for name, rect in displays do
+		addScreen(model, chassis, CarRig.displayName(name), rect, binding.bodyRaise, 0)
+	end
+end
+
+-- The part a binding's display is drawn on.
+function CarRig.displayName(display: string): string
+	return `Display{display}`
 end
 
 -- Server, once per car: builds the rig in place. Returns the rig.
@@ -490,10 +524,16 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: Binding.CarMo
 	local pedals = hingeParts(model, binding.pedals, binding.bodyRaise)
 	local controls = hingeParts(model, binding.controls, binding.bodyRaise)
 	local wiper = hingeParts(model, if binding.wiper then { binding.wiper.hinge } else nil, binding.bodyRaise)
-	for _, set in { pedals, controls, wiper } do
+	local needles = hingeParts(model, binding.needles, binding.bodyRaise)
+	for _, set in { pedals, controls, wiper, needles } do
 		for part in set do
 			hinged[part] = true
 		end
+	end
+	local lever = binding.shifter and model:FindFirstChild(binding.shifter.part, true)
+	local leverPart = if lever and lever:IsA("BasePart") then lever else nil
+	if leverPart then
+		hinged[leverPart] = true
 	end
 	local wheelPart = if steeringWheel and steeringWheel:IsA("BasePart") then steeringWheel else nil
 	local knob = knobPart(model, binding, wheelPart)
@@ -520,7 +560,7 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: Binding.CarMo
 		end
 	end
 	hang(model, chassis, binding, door, strapPart)
-	for _, set in { pedals, controls, wiper } do
+	for _, set in { pedals, controls, wiper, needles } do
 		for part, hinge in set do
 			hingeWeld(part.Name, chassis, part, hinge.frame, hinge.rest)
 		end
@@ -528,9 +568,20 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: Binding.CarMo
 	if knob and wheelPart then
 		knobWeld(chassis, wheelPart, knob.part, knob.frame, knob.rest)
 	end
+	local shifter = binding.shifter
+	local manual = if car.gearbox.kind == "manual" then car.gearbox.manual else nil
+	if shifter and leverPart then
+		local pivot = carSpace(shifter.pivot, shifter.pivot.up + binding.bodyRaise)
+		local joint = hingeWeld(leverPart.Name, chassis, leverPart, CFrame.new(pivot), 0)
+		if manual then
+			local column, row, down = ShiftSync.parked(manual.gates)
+			local seated = ShiftHand.leverFromBinding(shifter, manual.gates, binding.seat)
+			joint.C0 = CarRig.leverC0(joint.C0, seated, column, row, down)
+		end
+	end
 	addHull(model, chassis, ground, binding.hullClearance)
 	addSeat(model, chassis, binding)
-	addClusterScreen(model, chassis, binding)
+	addScreens(model, chassis, binding)
 
 	model:SetAttribute("DriverUserId", 0)
 	CollectionService:AddTag(model, TAG)
@@ -540,6 +591,21 @@ function CarRig.build(model: Model, car: Types.CarConfig, binding: Binding.CarMo
 		end
 	end
 	return CarRig.find(model, binding) :: Rig
+end
+
+-- The gear lever's weld C0 from its rest (the pivot with the seat's axes) with the lever at
+-- (`column`, `row`) and the knob pushed down by `knob` (Rules/ShiftHand).
+function CarRig.leverC0(
+	rest: CFrame,
+	lever: ShiftHand.Lever,
+	column: number,
+	row: number,
+	knob: number
+): CFrame
+	local turn, slide = ShiftHand.joint(lever, column, row, knob)
+	return rest
+		* CFrame.new(Vector3.new(slide.x, slide.y, slide.z) * Units.metresToStuds(1))
+		* CFrame.new(0, 0, 0, turn.x, turn.y, turn.z, turn.w)
 end
 
 -- A hinge weld and its rest C0, or nil while it or its part has not streamed in.
@@ -607,6 +673,18 @@ function CarRig.find(model: Model, binding: Binding.CarModel): Rig?
 	if binding.wiper then
 		wiperWeld, wiperRest = hingeOf(chassis, binding.wiper.hinge.part)
 	end
+	local shifterWeld, shifterRest = nil, CFrame.identity
+	if binding.shifter then
+		shifterWeld, shifterRest = hingeOf(chassis, binding.shifter.part)
+	end
+	local needles: { [string]: Hinged } = {}
+	local boundNeedles: { [string]: Binding.Hinge } = binding.needles or {}
+	for name, needle in boundNeedles do
+		local joint, rest = hingeOf(chassis, needle.part)
+		if joint then
+			needles[name] = { weld = joint, rest = rest }
+		end
+	end
 	local strap = hingeOf(chassis, DOOR_STRAP)
 	local steeringWeld = chassis:FindFirstChild(binding.steeringWheel)
 	local steeringRest = steeringWeld and steeringWeld:GetAttribute("RestC0")
@@ -630,7 +708,9 @@ function CarRig.find(model: Model, binding: Binding.CarModel): Rig?
 		doorRest = doorRest,
 		controls = controls,
 		wiper = if wiperWeld then { weld = wiperWeld, rest = wiperRest } else nil,
+		shifter = if shifterWeld then { weld = shifterWeld, rest = shifterRest } else nil,
 		strap = strap,
+		needles = needles,
 		seat = seat,
 		prompt = prompt,
 	}

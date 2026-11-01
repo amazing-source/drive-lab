@@ -1,0 +1,334 @@
+{
+ "car": "Boss302",
+ "about": "Boss 302 Laguna Seca import settings: what differs from the shared export and import tools (tools/blender/car_export.py, tools/assets/car_import_data.py, tools/studio/car_import.luau).",
+ "export": {
+  "limit": 10000,
+  "hide": {
+   "about": "Assetto Corsa run-time alternates, the same rules as the 3D artist's manifest build: low-detail cockpit and wheel, belts-on set, rim blur, damage glass, glow cards.",
+   "chainExact": [
+    "COCKPIT_LR",
+    "STEER_LR",
+    "CINTURE_ON",
+    "GEO_Cinture_ON"
+   ],
+   "chainContains": [
+    "BLUR",
+    "DMG",
+    "DAMAGE",
+    "GLOW",
+    "FLYCAM"
+   ]
+  },
+  "areas": [
+   {
+    "collection": "Boss302_CockpitParts",
+    "area": "Cabin"
+   },
+   {
+    "collection": "Boss302_Decals",
+    "area": "Cabin"
+   },
+   {
+    "chainContains": "COCKPIT_HR",
+    "area": "Cabin"
+   },
+   {
+    "chainContains": "GEO_INT",
+    "area": "Cabin"
+   }
+  ],
+  "defaultArea": "Body",
+  "extraParts": [
+   {
+    "name": "Cluster_Face_Speedo",
+    "group": "Chassis",
+    "objects": [
+     "Cluster_Face_Speedo"
+    ]
+   },
+   {
+    "name": "Cluster_Face_Tach",
+    "group": "Chassis",
+    "objects": [
+     "Cluster_Face_Tach"
+    ]
+   },
+   {
+    "name": "Cluster_Face_FuelTemp",
+    "group": "Chassis",
+    "objects": [
+     "Cluster_Face_FuelTemp"
+    ]
+   },
+   {
+    "name": "Pod_Face_Oil",
+    "group": "Chassis",
+    "objects": [
+     "Pod_Face_Oil"
+    ]
+   },
+   {
+    "name": "Pod_Face_Digital",
+    "group": "Chassis",
+    "objects": [
+     "Pod_Face_Digital"
+    ]
+   },
+   {
+    "name": "Pod_Face_Water",
+    "group": "Chassis",
+    "objects": [
+     "Pod_Face_Water"
+    ]
+   },
+   {
+    "name": "Cluster_Ring_Speedo",
+    "group": "Chassis",
+    "objects": [
+     "Cluster_Ring_Speedo"
+    ]
+   },
+   {
+    "name": "Cluster_Ring_Tach",
+    "group": "Chassis",
+    "objects": [
+     "Cluster_Ring_Tach"
+    ]
+   },
+   {
+    "name": "Pod_Ring_Oil",
+    "group": "Chassis",
+    "objects": [
+     "Pod_Ring_Oil"
+    ]
+   },
+   {
+    "name": "Pod_Ring_Digital",
+    "group": "Chassis",
+    "objects": [
+     "Pod_Ring_Digital"
+    ]
+   },
+   {
+    "name": "Pod_Ring_Water",
+    "group": "Chassis",
+    "objects": [
+     "Pod_Ring_Water"
+    ]
+   },
+   {
+    "name": "Cluster_Glass_Speedo",
+    "group": "Chassis",
+    "objects": [
+     "Cluster_Glass_Speedo"
+    ]
+   },
+   {
+    "name": "Cluster_Glass_Tach",
+    "group": "Chassis",
+    "objects": [
+     "Cluster_Glass_Tach"
+    ]
+   },
+   {
+    "name": "Pod_Glass_Oil",
+    "group": "Chassis",
+    "objects": [
+     "Pod_Glass_Oil"
+    ]
+   },
+   {
+    "name": "Pod_Glass_Digital",
+    "group": "Chassis",
+    "objects": [
+     "Pod_Glass_Digital"
+    ]
+   },
+   {
+    "name": "Pod_Glass_Water",
+    "group": "Chassis",
+    "objects": [
+     "Pod_Glass_Water"
+    ]
+   }
+  ]
+ },
+ "import": {
+  "car": "Boss302",
+  "detailColours": {
+   "about": "01_black livery (coordinator, 2026-11-01): black body lifted to the library's paint_black_gloss albedo; the 02_silver skin is [151, 151, 151] (touches EXT_paint_primary's ColorMap only)",
+   "metal_detail.dds": [
+    34,
+    34,
+    34
+   ]
+  },
+  "kept": {
+   "EXT_paint_primary": {
+    "roughness": 0.133,
+    "metalness": 0
+   },
+   "EXT_paint_secondary": {
+    "roughness": 0.133,
+    "metalness": 0
+   },
+   "EXT_paint_decals": {
+    "roughness": 0.133,
+    "metalness": 0
+   },
+   "EXT_glass": {
+    "flat": {
+     "Material": "Glass",
+     "Color": [
+      16,
+      20,
+      24
+     ],
+     "Transparency": 0.55
+    }
+   },
+   "EXT_glass_headlamps": {
+    "flat": {
+     "Material": "Glass",
+     "Color": [
+      222,
+      228,
+      234
+     ],
+     "Transparency": 0.85
+    }
+   },
+   "EXT_glass_tails": {
+    "flat": {
+     "Material": "Glass",
+     "Color": [
+      222,
+      228,
+      234
+     ],
+     "Transparency": 0.85
+    }
+   },
+   "EXT_chrome": {
+    "flat": {
+     "Material": "Metal",
+     "Color": [
+      250,
+      250,
+      252
+     ]
+    }
+   },
+   "blackout": {
+    "flat": {
+     "Material": "SmoothPlastic",
+     "Color": [
+      10,
+      10,
+      11
+     ]
+    }
+   },
+   "01 - Default": {
+    "flat": {
+     "Material": "SmoothPlastic",
+     "Color": [
+      34,
+      37,
+      41
+     ]
+    }
+   },
+   "EXT_headlightglow": {
+    "flat": {
+     "Material": "SmoothPlastic",
+     "Color": [
+      255,
+      255,
+      255
+     ],
+     "Transparency": 1
+    }
+   },
+   "INT_windshield": {
+    "flat": {
+     "Material": "SmoothPlastic",
+     "Color": [
+      255,
+      255,
+      255
+     ],
+     "Transparency": 1
+    }
+   },
+   "needle_red_lit": {
+    "flat": {
+     "Material": "SmoothPlastic",
+     "Color": [
+      243,
+      79,
+      48
+     ]
+    }
+   },
+   "cluster_face_us": {
+    "image": "materials/cluster/int_gauges_us.png",
+    "roughness": 0.4,
+    "metalness": 0
+   }
+  },
+  "emissive": [
+   {
+    "pattern": "^(Cluster|Pod)_Face_",
+    "image": "materials/cluster/int_gauges_us_emissive.png"
+   },
+   {
+    "pattern": "^Needle_[A-Za-z]+$",
+    "image": "materials/cluster/needle_emissive.png"
+   }
+  ],
+  "primary": [
+   {
+    "parts": [
+     "Glass_Windscreen",
+     "Glass_RearScreen",
+     "Glass_Quarter_L",
+     "Glass_Quarter_R",
+     "Door_L_Glass",
+     "Door_R_Glass"
+    ],
+    "materials": [
+     "EXT_glass"
+    ],
+    "why": "the cockpit glazing swap finds the window by its part name"
+   },
+   {
+    "pattern": "^Needle_",
+    "materials": [
+     "needle_red_lit"
+    ],
+    "why": "the live cluster lights the needle's pointer"
+   }
+  ],
+  "overrides": [
+   {
+    "pattern": "^(Cluster|Pod)_Glass_",
+    "MeshPart": {
+     "Material": "SmoothPlastic",
+     "Color": [
+      188,
+      198,
+      206
+     ],
+     "Transparency": 0.88
+    },
+    "why": "Glass hides what is behind it in some views; the cockpit glazing's see-through plastic"
+   }
+  ],
+  "lamps": {
+   "prefix": "Light_",
+   "whiteColourMap": "^Light_Front",
+   "why": "headlamps and front park/turn sit on a dark atlas; the rear lamps keep their red texture (coordinator, 2026-11-01)"
+  }
+ }
+}

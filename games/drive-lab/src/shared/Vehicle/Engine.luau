@@ -97,10 +97,12 @@ function Engine.dragTorque(engine: Engine, speed: number): number
 	return engine.dragTorque + engine.dragSlope * (speed - engine.dragSpeed)
 end
 
--- Throttle the idle governor adds below idle.
-function Engine.idleThrottle(engine: Engine, speed: number): number
-	local aim = engine.idleSpeed * IDLE_AIM
-	return math.clamp((aim - speed) / (engine.idleSpeed * IDLE_BAND), 0, 1)
+-- Throttle the idle governor adds below idle: the engine's, or `idleSpeed` (rad/s) when a drive
+-- mode sets its own.
+function Engine.idleThrottle(engine: Engine, speed: number, idleSpeed: number?): number
+	local idle = idleSpeed or engine.idleSpeed
+	local aim = idle * IDLE_AIM
+	return math.clamp((aim - speed) / (idle * IDLE_BAND), 0, 1)
 end
 
 -- Fuel cut with hysteresis against `limit` (rad/s): cut at the limit, resume once speed has

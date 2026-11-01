@@ -1,5 +1,7 @@
 --!strict
 local Catalog = require("../src/shared/Config/Cars/Catalog")
+local Boss302Model = require("../src/shared/Config/Cars/Boss302/Model")
+local Boss302Physics = require("../src/shared/Config/Cars/Boss302/Physics")
 local Contract = require("../src/shared/Config/Cars/Contract")
 local DriverArms = require("../src/shared/Config/DriverArms")
 local Driving = require("../src/shared/Config/Driving")
@@ -26,10 +28,10 @@ describe("Car catalog", function()
 		expect(Catalog.of(modelNamed(1))).toBe(nil)
 	end)
 
-	it("admits a car only once its model binding and its start-up have nothing pending", function()
+	it("admits a car only once its model binding, its start-up and its entry have nothing pending", function()
 		local fs = require("@lune/fs")
 		for name in Catalog.cars do
-			for _, list in { "ModelPending", "StartupPending" } do
+			for _, list in { "ModelPending", "StartupPending", "EntryPending" } do
 				local path = `games/drive-lab/src/shared/Config/Cars/{name}/{list}.luau`
 				if fs.isFile(path) then
 					local pending = (require :: any)(`../src/shared/Config/Cars/{name}/{list}`)
@@ -159,6 +161,50 @@ describe("Car contract", function()
 end)
 
 describe("Car contract: the driver", function()
+	-- A minimal shift hand: the contract checks what it holds, not its keys.
+	local shift = {
+		knobRadius = 0.025,
+		grip = { 0, 0, 0, 0, 1, 0, 0, 0 },
+		hand = {
+			keys = { { 0, 0, 0, 0, 1, 0, 0, 0 }, { 0.3, 0, 0, 0, 1, 0, 0, 0 } },
+			shapes = { { at = 0, shape = "Grip" } },
+		},
+		reach = 0.3,
+		release = 0.3,
+		foot = 0.2,
+	}
+
+	it(
+		"gives a shift hand only a lever the model binds, on a manual gearbox whose gates it covers",
+		function()
+			expect(function()
+				Contract.define(svjWith(function(entry)
+					entry.driver.shift = shift
+				end))
+			end).toThrow()
+			expect(function()
+				Contract.checkShift(svjWith(function(entry)
+					entry.driver.shift = shift
+					entry.model.shifter = Boss302Model.shifter
+				end))
+			end).toThrow()
+			local boss = svjWith(function(entry)
+				entry.driver.shift = shift
+				entry.model.shifter = Boss302Model.shifter
+				entry.model.seat = Boss302Model.seat
+				entry.physics = Boss302Physics
+			end)
+			Contract.checkShift(boss)
+			local skewed = table.clone(boss.model.shifter.gates)
+			skewed["4"] = { side = 0.05, fore = skewed["4"].fore }
+			boss.model.shifter = table.clone(boss.model.shifter)
+			boss.model.shifter.gates = skewed
+			expect(function()
+				Contract.checkShift(boss)
+			end).toThrow()
+		end
+	)
+
 	it("refuses a footwell pedal the model binding does not hinge", function()
 		expect(function()
 			Contract.define(svjWith(function(entry)
@@ -230,6 +276,65 @@ describe("Car contract: the driver", function()
 			entry.model.pedals[1].travel = entry.driver.footwell.throttle.travel
 		end))
 		expect(#Contract.footwellMismatches(same.model, same.driver.footwell)).toBe(0)
+	end)
+	it("checks a footwell's clutch as it checks the throttle and the brake", function()
+		-- A clutch on the brake's hinge, which the binding also has to hinge.
+		local function withClutch(entry: any, bound: boolean)
+			local clutch = table.clone(entry.driver.footwell.brake)
+			clutch.part = "Pedal_Clutch"
+			clutch.hangs = true
+			entry.driver.footwell.clutch = clutch
+			if bound then
+				local pedal = table.clone(entry.model.pedals[2])
+				pedal.part = "Pedal_Clutch"
+				table.insert(entry.model.pedals, pedal)
+			end
+			return clutch
+		end
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				withClutch(entry, false)
+			end))
+		end).toThrow()
+		local accepted = Contract.define(svjWith(function(entry)
+			withClutch(entry, true)
+		end))
+		expect(accepted.driver.footwell.clutch ~= nil).toBe(true)
+		expect(#Contract.footwellMismatches(accepted.model, accepted.driver.footwell)).toBe(0)
+		expect(#Contract.footwellPedals(accepted.driver.footwell)).toBe(3)
+		expect(function()
+			Contract.define(svjWith(function(entry)
+				local clutch = withClutch(entry, true)
+				clutch.hinge = { x = clutch.hinge.x, y = clutch.hinge.y, z = clutch.hinge.z + 0.03 }
+			end))
+		end).toThrow()
+		expect(#Contract.footwellPedals(Catalog.cars.SVJ.driver.footwell)).toBe(2)
+	end)
+
+	it("asks a throttle or a clutch hung from above to be marked hangs", function()
+		local function flagged(footwell: any, part: string): boolean
+			for _, problem in Contract.footwellMismatches(Catalog.cars.SVJ.model, footwell) do
+				if string.find(problem, `{part} hangs from above`, 1, true) then
+					return true
+				end
+			end
+			return false
+		end
+		local svj = Catalog.cars.SVJ.driver.footwell
+		expect(flagged(svj, "Pedal_Throttle")).toBe(false)
+		local footwell = table.clone(svj)
+		local hungThrottle = table.clone(svj.brake)
+		hungThrottle.part = "Pedal_Throttle"
+		footwell.throttle = hungThrottle
+		expect(flagged(footwell, "Pedal_Throttle")).toBe(true)
+		hungThrottle.hangs = true
+		expect(flagged(footwell, "Pedal_Throttle")).toBe(false)
+		local clutch = table.clone(svj.brake)
+		clutch.part = "Pedal_Clutch"
+		footwell.clutch = clutch
+		expect(flagged(footwell, "Pedal_Clutch")).toBe(true)
+		clutch.hangs = true
+		expect(flagged(footwell, "Pedal_Clutch")).toBe(false)
 	end)
 end)
 
@@ -740,6 +845,76 @@ describe("Car contract: loop regions", function()
 		expect(function()
 			Contract.define(svjWith(function(entry)
 				entry.audio.far.region = { from = -1, to = 2 }
+			end))
+		end).toThrow()
+	end)
+end)
+
+describe("Car contract: analog gauges", function()
+	local Boss302Gauges = require("../src/shared/Config/Cars/Boss302/Gauges")
+
+	local function copy(value: any): any
+		if type(value) ~= "table" then
+			return value
+		end
+		local out = {}
+		for key, child in value do
+			out[key] = copy(child)
+		end
+		return out
+	end
+
+	-- The SVJ with the Boss's analog cluster in place of its dial, on needles and screens bound
+	-- for it, lit by the first control the SVJ's start-up moves.
+	local function withGauges(change: ((any) -> ())?): Contract.Entry
+		return svjWith(function(entry)
+			local gauges = copy(Boss302Gauges)
+			gauges.lightsWith = entry.startup.moves[1].control
+			entry.cluster = nil
+			entry.gauges = gauges
+			entry.model.needles = {}
+			for _, dial in gauges.dials do
+				entry.model.needles[dial.needle] = {
+					part = dial.needle,
+					pivot = { forward = 0, right = 0, up = 0 },
+					axis = { forward = 1, right = 0, up = 0 },
+					travel = math.pi,
+				}
+			end
+			local screen =
+				{ forward = 0.3, right = -0.25, up = 0.33, width = 0.04, height = 0.02, tilt = 0.3 }
+			entry.model.displays = { PodReadout = screen, MessageCentre = table.clone(screen) }
+			if change then
+				change(entry)
+			end
+		end)
+	end
+
+	it("accepts analog gauges in place of the dial, and reads their redline", function()
+		local entry = Contract.define(withGauges())
+		expect(Contract.redline(entry)).toBe(Boss302Gauges.redlineRpm)
+		expect(function()
+			((entry.gauges :: any).dials[1] :: any).response = 1
+		end).toThrow()
+	end)
+
+	it("refuses gauges beside another display", function()
+		expect(function()
+			Contract.define(withGauges(function(entry)
+				entry.cluster = copy(Catalog.cars.SVJ.cluster)
+			end))
+		end).toThrow()
+	end)
+
+	it("refuses gauges with a problem", function()
+		expect(function()
+			Contract.define(withGauges(function(entry)
+				entry.gauges.lightsWith = "Nothing"
+			end))
+		end).toThrow()
+		expect(function()
+			Contract.define(withGauges(function(entry)
+				entry.model.needles.Needle_Speedo = nil
 			end))
 		end).toThrow()
 	end)

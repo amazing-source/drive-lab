@@ -11,7 +11,7 @@ local describe, it, expect = T.describe, T.it, T.expect
 local keyboard = InputHelp.keyboard
 
 local function raw(steer: number, throttle: number?, brake: number?): InputFilter.RawControls
-	return { steer = steer, throttle = throttle or 0, brake = brake or 0, handbrake = 0 }
+	return { steer = steer, throttle = throttle or 0, brake = brake or 0, handbrake = 0, clutch = 0 }
 end
 
 -- Seconds of steady `steer` input until the filtered value reaches `target`.
@@ -161,6 +161,18 @@ describe("Input filter pedals", function()
 		end
 		expect(coarse.throttle).toBeNear(0.1 / keyboard.throttleRiseTime, 1e-9)
 		expect(fine.throttle).toBeNear(coarse.throttle, 1e-9)
+	end)
+
+	it("presses the clutch key's pedal quickly and lets it out slowly, as a foot does", function()
+		local state = InputFilter.newState()
+		local down = raw(0)
+		down.clutch = 1
+		InputFilter.update(keyboard, SVJ, state, down, 0, 0, 0, keyboard.clutchPressTime / 2)
+		expect(state.clutch).toBeNear(0.5, 1e-9)
+		state.clutch = 1
+		InputFilter.update(keyboard, SVJ, state, raw(0), 0, 0, 0, keyboard.clutchReleaseTime / 2)
+		expect(state.clutch).toBeNear(0.5, 1e-9)
+		expect(keyboard.clutchReleaseTime > 5 * keyboard.clutchPressTime).toBeTruthy()
 	end)
 
 	it("releases faster than it presses", function()
