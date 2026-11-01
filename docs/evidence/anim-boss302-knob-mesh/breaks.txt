@@ -1,0 +1,10 @@
+M1 the centre left in studs (poses.json's numbers, not divided): exit 1, FAILS as it must
+    FAIL Boss 302 shift hand data > places the Knob hand's mesh round the ball it holds, in metres: games/drive-lab/tests/Boss302Shift.
+    111 spec files, 1179 passed, 1 failed
+M2 the Rest hand's centre instead of the Knob hand's: exit 1, FAILS as it must
+    FAIL Boss 302 shift hand data > places the Knob hand's mesh round the ball it holds, in metres: games/drive-lab/tests/Boss302Shift.
+    111 spec files, 1179 passed, 1 failed
+M3 no mesh centre at all: exit 1, FAILS as it must
+    FAIL Boss 302 shift hand data > places the Knob hand's mesh round the ball it holds, in metres: games/drive-lab/tests/Boss302Shift.
+    111 spec files, 1179 passed, 1 failed
+Shift.luau restored and compared byte for byte
