@@ -74,28 +74,31 @@ describe("Lamp pieces", function()
 		end
 	end)
 
-	it(
-		"gives the Boss's rear compartments tail, brake and turn, red, and no fog, rain or running light",
-		function()
-			local pieces = assert(Boss302Lights.pieces, "the Boss names its pieces")
-			for _, side in { "Left", "Right" } do
-				local bars = `Light_Rear{side}_Brake=`
-				local indicators = listed(if side == "Left" then pieces.left else pieces.right)
-				expect(string.find(listed(pieces.tail), bars .. "tail", 1, true) ~= nil).toBe(true)
-				expect(string.find(listed(pieces.stop), bars .. "stop", 1, true) ~= nil).toBe(true)
-				expect(string.find(indicators, bars .. "rearIndicator", 1, true) ~= nil).toBe(true)
+	it("gives each of the Boss's rear compartments tail, brake and its place in the sweep, red", function()
+		local pieces = assert(Boss302Lights.pieces, "the Boss names its pieces")
+		for _, side in { "Left", "Right" } do
+			local sweep = assert(if side == "Left" then pieces.sweepLeft else pieces.sweepRight, "a sweep")
+			local inner, middle, outer =
+				`Light_Rear{side}_BarInner`, `Light_Rear{side}_BarMiddle`, `Light_Rear{side}_BarOuter`
+			expect(listed(sweep)).toBe(`{inner}=rearIndicator {middle}=rearIndicator {outer}=rearIndicator`)
+			for _, name in { inner, middle, outer } do
+				expect(string.find(listed(pieces.tail), name .. "=tail", 1, true) ~= nil).toBe(true)
+				expect(string.find(listed(pieces.stop), name .. "=stop", 1, true) ~= nil).toBe(true)
 			end
-			local red = Boss302Lights.glow.rearIndicator.tint
-			expect(red.r > 200 and red.g < 60 and red.b < 60).toBe(true)
-			local rear = assert(Boss302Lights.indicator.rearColor, "US rear turn lamps are red")
-			expect(rear.r > 200 and rear.g < 60).toBe(true)
-			expect(Boss302Lights.rain).toBe(nil)
-			expect(#pieces.drlLeft + #pieces.drlRight + #pieces.reverse).toBe(0)
-			-- A halogen white is warm: more red than green than blue.
-			local halogen = Boss302Lights.glow.projector.tint
-			expect(halogen.r >= halogen.g and halogen.g > halogen.b).toBe(true)
+			-- They sweep, so they are not among the lamps that flash together.
+			local flashing = listed(if side == "Left" then pieces.left else pieces.right)
+			expect(string.find(flashing, "_Bar", 1, true)).toBe(nil)
 		end
-	)
+		local red = Boss302Lights.glow.rearIndicator.tint
+		expect(red.r > 200 and red.g < 60 and red.b < 60).toBe(true)
+		local rear = assert(Boss302Lights.indicator.rearColor, "US rear turn lamps are red")
+		expect(rear.r > 200 and rear.g < 60).toBe(true)
+		expect(Boss302Lights.rain).toBe(nil)
+		expect(#pieces.drlLeft + #pieces.drlRight).toBe(0)
+		-- A halogen white is warm: more red than green than blue.
+		local halogen = Boss302Lights.glow.projector.tint
+		expect(halogen.r >= halogen.g and halogen.g > halogen.b).toBe(true)
+	end)
 
 	it("finishes the Boss's sweep within UN R6's 200 ms of each flash's start", function()
 		local step =

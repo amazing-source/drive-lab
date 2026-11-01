@@ -48,11 +48,7 @@ local Cars: { [string]: Car } = {
 		settings = Boss302Binding,
 		physics = Boss302,
 		-- What the Boss's entry still needs beyond the parts the manifest lacks (#209).
-		notes = {
-			"the 3D model: its upload and the Studio import (this binding is from the promoted full manifest)",
-			"the driver's shift animation (Shift.luau: the reach, release and foot timings)",
-			"the remaining car entry: audio, camera, HUD, lights and the start-up",
-		},
+		notes = {},
 		model = `{FOLDER}/Boss302/Model.luau`,
 		pending = `{FOLDER}/Boss302/ModelPending.luau`,
 		fixture = "games/drive-lab/tests/fixtures/boss302_manifest.json",

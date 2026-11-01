@@ -93,9 +93,10 @@ describe("Startup lean: the turn about the hips", function()
 		expect(math.abs(offset.x) + math.abs(offset.y) + math.abs(offset.z)).toBe(0)
 	end)
 
-	it("leaves the cars without a lean as they were", function()
+	it("leans only the Boss, whose key is out of the arm's reach; the other cars as they were", function()
 		for name, entry in Catalog.cars do
-			expect(if entry.driver.startupPaths.LEAN == nil then name else `{name} has a lean`).toBe(name)
+			local leans = entry.driver.startupPaths.LEAN ~= nil
+			expect(if leans == (name == "Boss302") then name else `{name}: lean {leans}`).toBe(name)
 		end
 	end)
 end)

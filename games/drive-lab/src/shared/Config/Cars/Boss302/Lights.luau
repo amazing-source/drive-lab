@@ -11,10 +11,8 @@
 	LED strip; the Boss's fog lamp openings are blocked (Ford Racing); the reversing lamps are in
 	the tail lamp assemblies.
 
-	The model's lamp pieces are not the house split, so they are named here (`pieces`): the three
-	compartments are one piece per side for now, flashing together on the turn signal too; the
-	sequence needs them as three pieces. The model has no reversing lamp piece yet, so nothing
-	shows reverse.
+	The model's lamp pieces are not the house split, so they are named here (`pieces`): each side's
+	three compartments, inner to outer, are tail, brake and the sweep.
 ]]
 local CarLights = require("../../CarLights")
 
@@ -30,6 +28,18 @@ local RED = rgb(255, 10, 0)
 -- A halogen bulb's warm white (about 3200 K), against the DR458's bluish xenon.
 local HALOGEN = rgb(255, 228, 190)
 
+-- Each side's compartments inner to outer, the turn signal's sweep.
+local SWEEP_LEFT: { CarLights.Piece } = {
+	{ name = "Light_RearLeft_BarInner", glow = "rearIndicator" },
+	{ name = "Light_RearLeft_BarMiddle", glow = "rearIndicator" },
+	{ name = "Light_RearLeft_BarOuter", glow = "rearIndicator" },
+}
+local SWEEP_RIGHT: { CarLights.Piece } = {
+	{ name = "Light_RearRight_BarInner", glow = "rearIndicator" },
+	{ name = "Light_RearRight_BarMiddle", glow = "rearIndicator" },
+	{ name = "Light_RearRight_BarOuter", glow = "rearIndicator" },
+}
+
 -- The three compartments play tail, brake and turn; the park and turn lamp plays park and turn.
 local PIECES: CarLights.Pieces = {
 	drlLeft = {},
@@ -40,11 +50,9 @@ local PIECES: CarLights.Pieces = {
 	},
 	left = {
 		{ name = "Light_FrontLeft_ParkTurn", glow = "frontIndicator" },
-		{ name = "Light_RearLeft_Brake", glow = "rearIndicator" },
 	},
 	right = {
 		{ name = "Light_FrontRight_ParkTurn", glow = "frontIndicator" },
-		{ name = "Light_RearRight_Brake", glow = "rearIndicator" },
 	},
 	position = {
 		{ name = "Light_FrontLeft_ParkTurn", glow = "frontMarker" },
@@ -53,16 +61,29 @@ local PIECES: CarLights.Pieces = {
 	tail = {
 		{ name = "Light_RearLeft_Tail", glow = "tail" },
 		{ name = "Light_RearRight_Tail", glow = "tail" },
-		{ name = "Light_RearLeft_Brake", glow = "tail" },
-		{ name = "Light_RearRight_Brake", glow = "tail" },
+		{ name = "Light_RearLeft_BarInner", glow = "tail" },
+		{ name = "Light_RearLeft_BarMiddle", glow = "tail" },
+		{ name = "Light_RearLeft_BarOuter", glow = "tail" },
+		{ name = "Light_RearRight_BarInner", glow = "tail" },
+		{ name = "Light_RearRight_BarMiddle", glow = "tail" },
+		{ name = "Light_RearRight_BarOuter", glow = "tail" },
 	},
 	stop = {
-		{ name = "Light_RearLeft_Brake", glow = "stop" },
-		{ name = "Light_RearRight_Brake", glow = "stop" },
+		{ name = "Light_RearLeft_BarInner", glow = "stop" },
+		{ name = "Light_RearLeft_BarMiddle", glow = "stop" },
+		{ name = "Light_RearLeft_BarOuter", glow = "stop" },
+		{ name = "Light_RearRight_BarInner", glow = "stop" },
+		{ name = "Light_RearRight_BarMiddle", glow = "stop" },
+		{ name = "Light_RearRight_BarOuter", glow = "stop" },
 		{ name = "Light_RearLeft_HighStop", glow = "stop" },
 		{ name = "Light_RearRight_HighStop", glow = "stop" },
 	},
-	reverse = {},
+	reverse = {
+		{ name = "Light_RearLeft_Reverse", glow = "reverse" },
+		{ name = "Light_RearRight_Reverse", glow = "reverse" },
+	},
+	sweepLeft = SWEEP_LEFT,
+	sweepRight = SWEEP_RIGHT,
 	-- No source gives the delay between compartments; UN R6 5.6(d) bounds the sweep to finish within
 	-- 200 ms of the flash's start. EST: 1/15 s, so the third lights at 133 ms.
 	sweepStep = 1 / 15,

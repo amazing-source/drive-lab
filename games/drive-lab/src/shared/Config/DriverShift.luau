@@ -36,4 +36,7 @@ export type Shift = {
 	mesh: Point?,
 }
 
-return table.freeze({})
+return table.freeze({
+	-- The Knob hand meshes in ReplicatedStorage.DriveLabAssets.Hands, named this with _R and _L.
+	KNOB_MESH = "HandKnob",
+})

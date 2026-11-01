@@ -6,12 +6,13 @@
 	cranks (the computer keeps cranking until it catches). The starter needs the clutch fully down:
 	the left foot holds it from the key until driving unlocks, and a driver working the clutch by
 	hand holds it himself (Config/CarEntry.CLUTCH_INTERLOCK). The TracKey drive mode starts it with
-	the TracKey. Every value is an estimate until StartupPending is empty.
+	the TracKey.
 ]]
 local CarEntry = require("../../CarEntry")
 
--- The key cylinder's positions from OFF (Key_Ignition in the 3D artist's cockpit parts, draft):
--- EST, a typical Ford key's.
+-- The key cylinder's positions from OFF, clockwise looking into the cylinder. EST, a typical Ford
+-- key's: the bezel's marks are unreadable in all three photos of the cylinder, and the key head
+-- covers its face; the modelled key's place agrees with three solved views to about 10 mm.
 local KEY_ON = math.rad(60)
 local KEY_START = math.rad(90)
 

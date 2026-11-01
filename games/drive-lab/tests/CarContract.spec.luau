@@ -28,10 +28,10 @@ describe("Car catalog", function()
 		expect(Catalog.of(modelNamed(1))).toBe(nil)
 	end)
 
-	it("admits a car only once its model binding and its start-up have nothing pending", function()
+	it("admits a car only once its model binding, its start-up and its entry have nothing pending", function()
 		local fs = require("@lune/fs")
 		for name in Catalog.cars do
-			for _, list in { "ModelPending", "StartupPending" } do
+			for _, list in { "ModelPending", "StartupPending", "EntryPending" } do
 				local path = `games/drive-lab/src/shared/Config/Cars/{name}/{list}.luau`
 				if fs.isFile(path) then
 					local pending = (require :: any)(`../src/shared/Config/Cars/{name}/{list}`)
