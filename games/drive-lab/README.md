@@ -61,7 +61,7 @@ The physics core, offline at 60 FPS (`lune run games/drive-lab/tools/calibrate`)
 |---|---|---|
 | 0–100 km/h | 2.8 s | 2.88 s |
 | 0–200 km/h | 8.6 s | 8.49 s |
-| 100–0 km/h | 30 m | 30.8 m |
+| 100–0 km/h | 30 m | 31.8 m (outside the 30 ± 1.5 m band, #128) |
 | Top speed | over 350 km/h | 354 km/h |
 | Skidpad | 1.10 g | 1.09 g |
 
