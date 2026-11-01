@@ -50,3 +50,15 @@ Second run, on edfcbc4 (after the re-merge: the lamps on the split bars, define 
    exit: 1
    FAIL Boss 302 entry > defines the whole entry: every rule of the car contract holds: runtime error: games/drive-lab/src/shared/Config/Cars/Contract:167: the driver's arms need positive lengths
    4 passed, 1 failed
+
+Third run, on 1527f49 (the Knob mesh wired):
+== BREAK: the Knob shape always falls back to Rest
+   file: games/drive-lab/src/shared/Rules/HandShapes.luau
+   exit: 1
+   FAIL Hand shapes: the shift hand's knob > draws the Knob mesh with the wrist cuff where the place and the car have it: games/drive-lab/tests/HandShapes.spec:98: expected Knob, got Rest
+   4 passed, 1 failed
+== BREAK: the knob mesh's asset name not the uploaded one
+   file: games/drive-lab/src/shared/Config/DriverShift.luau
+   exit: 1
+   FAIL Hand shapes: the shift hand's knob > draws the Knob mesh with the wrist cuff where the place and the car have it: games/drive-lab/tests/HandShapes.spec:103: expected HandKnob, got KnobHand
+   4 passed, 1 failed
