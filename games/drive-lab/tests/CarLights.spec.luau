@@ -328,9 +328,12 @@ describe("CarLights: a sequential turn lamp", function()
 			expect(hazards.leftRunning and hazards.rightRunning).toBe(true)
 			expect(hazards.leftTurnFor).toBe(nil)
 			expect(hazards.rightTurnFor).toBe(nil)
-			local off = decide({ running = false, indicator = "Right", indicating = 0.1 })
-			expect(off.rightRunning).toBe(false)
-			expect(off.rightTurnFor).toBe(nil)
+			-- With the ignition off nothing runs, on either side, turn signal or hazards.
+			for _, side in { "Left", "Right" } do
+				local off = decide({ running = false, indicator = side, indicating = 0.1, hazards = true })
+				expect(off.leftRunning or off.rightRunning).toBe(false)
+				expect(off.leftTurnFor == nil and off.rightTurnFor == nil).toBe(true)
+			end
 		end
 	)
 end)
