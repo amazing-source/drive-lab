@@ -379,7 +379,9 @@ function Contract.gaugeProblems(
 	if cluster.redlineRpm <= 0 then
 		table.insert(problems, "the gauges' redline is not a speed")
 	end
-	assert(cluster.sweep == nil or cluster.sweep > 0, "the gauges' sweep needs a duration")
+	if cluster.sweep ~= nil and cluster.sweep <= 0 then
+		table.insert(problems, "the gauges' sweep needs a duration")
+	end
 	local displays = model.displays or {}
 	local screens: { string } = {}
 	if cluster.readout then

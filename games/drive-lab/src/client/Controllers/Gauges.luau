@@ -160,8 +160,9 @@ local function release(current: Drive)
 	end
 end
 
--- This car's simulated engine, cooled for the time nobody simulated it.
-local function engineOf(model: Model, cluster: Gauges.Cluster): EngineGauges.State
+-- This car's simulated engine, cooled for the time nobody simulated it: the time since it was
+-- last simulated, less the `covered` seconds this frame's step simulates.
+local function engineOf(model: Model, cluster: Gauges.Cluster, covered: number): EngineGauges.State
 	local now = os.clock()
 	local record = simulated[model]
 	if record == nil then
@@ -169,7 +170,7 @@ local function engineOf(model: Model, cluster: Gauges.Cluster): EngineGauges.Sta
 		record = { state = EngineGauges.new(cluster.engine, odometer), at = now }
 		simulated[model] = record
 	end
-	EngineGauges.coolOff(record.state, cluster.engine, now - record.at - Gauges.MAX_STEP)
+	EngineGauges.coolOff(record.state, cluster.engine, now - record.at - covered)
 	record.at = now
 	return record.state
 end
@@ -221,7 +222,7 @@ local function refresh(current: Drive, dt: number)
 	local power = if running
 		then math.clamp(number(model, "Throttle"), 0, 1) * Engine.fullTorque(current.engine, speed) * speed
 		else 0
-	local state = engineOf(model, cluster)
+	local state = engineOf(model, cluster, dt)
 	EngineGauges.step(state, cluster.engine, { running = running, power = power, speedKmh = speedKmh }, dt)
 	if carState.engine == "Off" then
 		current.movedOff = false
@@ -286,7 +287,7 @@ local function update(dt: number)
 		current = build(model, entry, cluster)
 		drive = current
 		-- TRIP A counts this drive.
-		engineOf(model, cluster).trip = 0
+		engineOf(model, cluster, 0).trip = 0
 	end
 	local active = current :: Drive
 	active.sinceScan += dt

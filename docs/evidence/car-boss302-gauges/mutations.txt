@@ -3,7 +3,7 @@ Evidence for agent/car-boss302-gauges (#235). Lune on the owner's machine, no St
 == Deliberate breaks
 Each break applied alone to the working tree, run against the spec files that own the rule (a
 one-file runner over games/drive-lab/tests/<Name>.spec.luau), then the file restored and checked
-byte for byte. 30 breaks, 30 failing. A first pass had 2 breaks that still passed: the needle's
+byte for byte. 31 breaks, 31 failing (the 31st added with the self-review's fix, at the end). A first pass had 2 breaks that still passed: the needle's
 "stoppable speed" clamp (measured redundant: the needle arrives at 0.281 shares/s with it and 0.287
 without, so it was removed) and the engine's long-frame split (no spec used a frame over 0.1 s; a
 case was added). Both are reported in the PR.
@@ -167,6 +167,11 @@ FAILED as it should: Boss config: cold idle oil pressure meets Ford's 80-100 psi
   break: games/drive-lab/src/shared/Config/Cars/Boss302/Gauges.luau: `cold = { temperature = 20, relief = 758, rpmScale = 520 },` -> `cold = { temperature = 20, relief = 758, rpmScale = 540 },`
   specs: EngineGauges.spec: 9 passed, 1 failed
   first failure: FAIL Simulated engine readings > reads high oil pressure cold, lower warm, rising with the revs to its relief: games/drive-lab/tests/EngineGauges.spec:136: expected 80 to 110 psi, got false
+
+FAILED as it should: Contract.gaugeProblems lists a sweep that takes no time (self-review fix)
+  break: games/drive-lab/src/shared/Config/Cars/Contract.luau: `if cluster.sweep ~= nil and cluster.sweep <= 0 then` -> `if false then`
+  specs: Boss302Gauges.spec: 11 passed, 1 failed
+  first failure: FAIL Boss 302 gauges > refuses a sweep that takes no time: games/drive-lab/tests/Boss302Gauges.spec:159: expected true, got false
 
 == SVJ and DR458 unchanged
 A canonical dump of Catalog.cars (sorted keys, every number at %.17g: the SVJ's and the DR458's

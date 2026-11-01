@@ -152,6 +152,16 @@ describe("Boss 302 gauges", function()
 		expect(mentions(problems, '"MasterSwitch", which the start-up never moves')).toBe(true)
 	end)
 
+	it("refuses a sweep that takes no time", function()
+		local problems = problemsWith(function(_, gauges)
+			gauges.sweep = 0
+		end)
+		expect(mentions(problems, "the gauges' sweep needs a duration")).toBe(true)
+		expect(#problemsWith(function(_, gauges)
+			gauges.sweep = 1.2
+		end)).toBe(0)
+	end)
+
 	it("refuses a screen the binding lacks", function()
 		local problems = problemsWith(function(model)
 			model.displays.PodReadout = nil
