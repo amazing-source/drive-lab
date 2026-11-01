@@ -17,12 +17,14 @@ local DriverArms = require("../DriverArms")
 local DriverLegs = require("../DriverLegs")
 local DriverAssists = require("../../Rules/DriverAssists")
 local DriverGestures = require("../DriverGestures")
+local DriverShift = require("../DriverShift")
 local DriverStartup = require("../DriverStartup")
 local Driving = require("../Driving")
 local ExhaustFlames = require("../../Rules/ExhaustFlames")
 local GearboxModes = require("../../Rules/GearboxModes")
 local HudDesign = require("../HudDesign")
 local RimBlur = require("../RimBlur")
+local ShiftHand = require("../../Rules/ShiftHand")
 local StartupArms = require("../../Rules/StartupArms")
 local Types = require("./Types")
 
@@ -43,6 +45,9 @@ export type Driver = {
 	handOver: { seconds: number, right: StartupArms.Pose, left: StartupArms.Pose }?,
 	-- What the hands do on the wheel's buttons and the panel's switches; none on a car without.
 	gestures: DriverGestures.Gestures?,
+	-- The right hand's way to an H-pattern lever's knob and its grip there (Rules/ShiftHand); none
+	-- on a car without a lever.
+	shift: DriverShift.Shift?,
 }
 
 export type Entry = {
@@ -134,6 +139,20 @@ local function checkFootwell(entry: Entry)
 	for _, problem in Contract.footwellMismatches(entry.model, footwell) do
 		error(problem)
 	end
+end
+
+-- A shift hand needs a lever to hold: one the model binds, on a manual gearbox whose every gate
+-- the binding turns the lever to (ShiftHand.leverFromBinding errors otherwise).
+function Contract.checkShift(entry: Entry)
+	if entry.driver.shift == nil then
+		return
+	end
+	local shifter = entry.model.shifter
+	assert(shifter, "the driver's shift hand needs a gear lever in the model binding")
+	local gearbox = entry.physics.gearbox
+	local manual = gearbox.manual
+	assert(gearbox.kind == "manual" and manual, "the driver's shift hand needs a manual gearbox")
+	ShiftHand.leverFromBinding(shifter, manual.gates, entry.model.seat)
 end
 
 -- The driver's scale and arm lengths need to be usable sizes.
@@ -438,6 +457,7 @@ end
 function Contract.define(entry: Entry): Entry
 	checkStartup(entry)
 	checkFootwell(entry)
+	Contract.checkShift(entry)
 	checkDriverSize(entry)
 	checkModes(entry)
 	checkDisplay(entry)

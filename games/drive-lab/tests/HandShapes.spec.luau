@@ -73,3 +73,21 @@ describe("Hand shapes: which hand mesh and cuff show", function()
 		expect(finger.mesh).toBe("Point")
 	end)
 end)
+
+describe("Hand shapes: the shift hand's knob", function()
+	it(
+		"draws the open Rest hand on the knob, with the wrist cuff, while the place has no knob mesh",
+		function()
+			local have: HandShapes.Have = { startupShapes = true, pinch = true, gestures = {} }
+			local shown = HandShapes.shown("Knob", have)
+			expect(shown.shape).toBe("Rest")
+			expect(shown.mesh).toBe("Rest")
+			expect(shown.wristCuff).toBe(true)
+			expect(shown.grip).toBe(false)
+			-- A place without the posed meshes draws the grip, as for any posed shape.
+			local bare = HandShapes.shown("Knob", { startupShapes = false, pinch = false, gestures = {} })
+			expect(bare.shape).toBe("Rest")
+			expect(bare.grip).toBe(true)
+		end
+	)
+end)
