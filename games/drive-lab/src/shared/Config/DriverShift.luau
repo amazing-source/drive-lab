@@ -11,6 +11,7 @@
 	hand.
 ]]
 export type Key = { number }
+export type Point = { x: number, y: number, z: number }
 export type ShapeChange = { at: number, shape: string }
 
 export type Shift = {
@@ -30,6 +31,13 @@ export type Shift = {
 	-- The same durations for the game-quick pace (the keyed way is played by share, so only these
 	-- change).
 	quick: { reach: number, release: number, foot: number }?,
+	-- The Knob hand mesh's centre in the wrist frame (metres; the right hand's, the left mirrors x),
+	-- as Config/DriverStartup's MESHES. Without it, or without the mesh in the place, the Rest hand
+	-- stands in on the knob.
+	mesh: Point?,
 }
 
-return table.freeze({})
+return table.freeze({
+	-- The Knob hand meshes in ReplicatedStorage.DriveLabAssets.Hands, named this with _R and _L.
+	KNOB_MESH = "HandKnob",
+})

@@ -1,4 +1,5 @@
 --!strict
+local DriverShift = require("../src/shared/Config/DriverShift")
 local HandShapes = require("../src/shared/Rules/HandShapes")
 local SVJ = require("../src/shared/Config/Cars/SVJ")
 local T = require("../../../tools/test/T")
@@ -90,4 +91,15 @@ describe("Hand shapes: the shift hand's knob", function()
 			expect(bare.grip).toBe(true)
 		end
 	)
+
+	it("draws the Knob mesh with the wrist cuff where the place and the car have it", function()
+		local have: HandShapes.Have = { startupShapes = true, pinch = true, knob = true, gestures = {} }
+		local shown = HandShapes.shown("Knob", have)
+		expect(shown.shape).toBe("Knob")
+		expect(shown.mesh).toBe("Knob")
+		expect(shown.wristCuff).toBe(true)
+		expect(shown.grip).toBe(false)
+		-- The uploaded meshes are HandKnob_R and HandKnob_L.
+		expect(DriverShift.KNOB_MESH).toBe("HandKnob")
+	end)
 end)

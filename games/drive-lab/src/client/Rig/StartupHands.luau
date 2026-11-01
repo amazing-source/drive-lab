@@ -17,6 +17,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Contract = require(ReplicatedStorage.Shared.Config.Cars.Contract)
 local DriverArms = require(ReplicatedStorage.Shared.Config.DriverArms)
 local DriverGestures = require(ReplicatedStorage.Shared.Config.DriverGestures)
+local DriverShift = require(ReplicatedStorage.Shared.Config.DriverShift)
 local DriverStartup = require(ReplicatedStorage.Shared.Config.DriverStartup)
 local Gloves = require(script.Parent.Gloves)
 local HandShapes = require(ReplicatedStorage.Shared.Rules.HandShapes)
@@ -31,6 +32,8 @@ export type Hands = {
 	-- nil when the place lacks the posed meshes: the grip hand then stands in for them.
 	shapes: { [DriverStartup.Shape]: BasePart }?,
 	cuff: BasePart?,
+	-- The shift hand's Knob mesh, on a car with a gear lever whose shift data places it.
+	knob: BasePart?,
 	-- The car's gesture meshes for this side, by name, each with its frame in its wrist frame.
 	posed: { [string]: { part: BasePart, offset: CFrame, cuff: "Grip" | "Wrist" } },
 	-- What the place has of all these, for Rules/HandShapes; fixed once built.
@@ -44,6 +47,7 @@ export type Hands = {
 	restOffset: CFrame,
 	pointOffset: CFrame,
 	pinchOffset: CFrame,
+	knobOffset: CFrame,
 	cuffOffset: CFrame,
 }
 
@@ -130,7 +134,12 @@ local function have(hands: Hands): HandShapes.Have
 		gestures[name] = mesh.cuff
 	end
 	local pinch: BasePart? = if shapes then shapes[PINCH] else nil
-	return { startupShapes = shapes ~= nil, pinch = pinch ~= nil, gestures = gestures }
+	return {
+		startupShapes = shapes ~= nil,
+		pinch = pinch ~= nil,
+		knob = hands.knob ~= nil,
+		gestures = gestures,
+	}
 end
 
 function StartupHands.build(
@@ -145,7 +154,10 @@ function StartupHands.build(
 	local rest, point, cuff =
 		asset("HandRest_" .. letter), asset("HandPoint_" .. letter), asset("WristCuff_" .. letter)
 	local pinch = asset("HandPinch_" .. letter)
+	local knob = asset(`{DriverShift.KNOB_MESH}_{letter}`)
 	local paths = driver.startupPaths
+	local shift = driver.shift
+	local knobMesh = if shift then shift.mesh else nil
 	local gripWrist = StartupHands.gripWrist(driver.grip, sign)
 	local fromWrist = gripWrist:Inverse()
 	local centre, cuffCentre = driver.grip.centre, driver.grip.cuff
@@ -168,6 +180,7 @@ function StartupHands.build(
 		restOffset = offset(paths.MESHES.Rest),
 		pointOffset = offset(paths.MESHES.Point),
 		pinchOffset = offset(paths.MESHES.Pinch or paths.MESHES.Point),
+		knobOffset = offset(knobMesh or paths.MESHES.Rest),
 		cuffOffset = offset(paths.CUFF),
 	}
 	if rest and point and cuff then
@@ -176,6 +189,9 @@ function StartupHands.build(
 		shapes[POINT] = hidden(Gloves.hand(point, color), folder)
 		if pinch and paths.MESHES.Pinch then
 			shapes[PINCH] = hidden(Gloves.hand(pinch, color), folder)
+		end
+		if knob and knobMesh then
+			hands.knob = hidden(Gloves.hand(knob, color), folder)
 		end
 		hands.shapes = shapes
 		hands.cuff = hidden(Gloves.cuff(cuff), folder)
@@ -192,6 +208,9 @@ function StartupHands.release(hands: Hands)
 	end
 	if hands.cuff then
 		hands.cuff:Destroy()
+	end
+	if hands.knob then
+		hands.knob:Destroy()
 	end
 	for _, mesh in hands.posed do
 		mesh.part:Destroy()
@@ -214,6 +233,10 @@ local function show(hands: Hands, shown: HandShapes.Shown)
 	if cuff then
 		cuff.Transparency = if shown.wristCuff then 0 else 1
 	end
+	local knob = hands.knob
+	if knob then
+		knob.Transparency = if shown.mesh == "Knob" then 0 else 1
+	end
 	for name, mesh in hands.posed do
 		mesh.part.Transparency = if name == shown.mesh then 0 else 1
 	end
@@ -230,8 +253,11 @@ function StartupHands.draw(
 	local hand, handFrame = hands.grip, wrist * hands.gripOffset
 	local gesture = hands.posed[shown.shape]
 	local shapes = hands.shapes
+	local knob = hands.knob
 	if gesture then
 		hand, handFrame = gesture.part, wrist * gesture.offset
+	elseif shown.mesh == "Knob" and knob then
+		hand, handFrame = knob, wrist * hands.knobOffset
 	elseif shown.mesh and shapes then
 		local offset = if shown.shape == REST
 			then hands.restOffset
