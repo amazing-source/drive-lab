@@ -1,0 +1,36 @@
+Deliberate breaks for agent/car-boss302-full-manifest (#234), each applied alone to the committed
+tree (caa05c0), run against the spec that owns the rule, then restored with git checkout. The breaks
+edit the generated binding as a wrong manifest would; each fails the new full-model case as well
+as the writer-output case.
+Runner: the repo's spec runner limited to one spec file (games/drive-lab/tests/<Name>.spec.luau).
+
+== BREAK: the binding puts an exhaust tip at the front of the car
+   file: games/drive-lab/src/shared/Config/Cars/Boss302/Model.luau
+   exit: 1
+   FAIL Boss 302 binding > is the writer's output for the manifest and its notes, not a hand edit: games/drive-lab/tests/Boss302Binding.spec:63: expected true, got false
+   FAIL Boss 302 binding > binds the full model's wheels, door, steering hub, exhaust tips and windscreen: games/drive-lab/tests/Boss302Binding.spec:203: expected true, got false
+   7 passed, 2 failed
+== BREAK: the binding loses a wheel's spinning mesh from its tyre
+   file: games/drive-lab/src/shared/Config/Cars/Boss302/Model.luau
+   exit: 1
+   FAIL Boss 302 binding > is the writer's output for the manifest and its notes, not a hand edit: games/drive-lab/tests/Boss302Binding.spec:63: expected true, got false
+   FAIL Boss 302 binding > binds the full model's wheels, door, steering hub, exhaust tips and windscreen: games/drive-lab/tests/Boss302Binding.spec:187: expected Wheel_FL_Tyre, got nil
+   7 passed, 2 failed
+== BREAK: the binding's windscreen corners start at the bottom
+   file: games/drive-lab/src/shared/Config/Cars/Boss302/Model.luau
+   exit: 1
+   FAIL Boss 302 binding > is the writer's output for the manifest and its notes, not a hand edit: games/drive-lab/tests/Boss302Binding.spec:63: expected true, got false
+   FAIL Boss 302 binding > binds the full model's wheels, door, steering hub, exhaust tips and windscreen: games/drive-lab/tests/Boss302Binding.spec:209: expected true, got false
+   7 passed, 2 failed
+== BREAK: the binding hangs the door on the passenger's side
+   file: games/drive-lab/src/shared/Config/Cars/Boss302/Model.luau
+   exit: 1
+   FAIL Boss 302 binding > is the writer's output for the manifest and its notes, not a hand edit: games/drive-lab/tests/Boss302Binding.spec:63: expected true, got false
+   FAIL Boss 302 binding > binds the full model's wheels, door, steering hub, exhaust tips and windscreen: games/drive-lab/tests/Boss302Binding.spec:193: expected true, got false
+   7 passed, 2 failed
+== BREAK: the pending list still names a model part
+   file: games/drive-lab/src/shared/Config/Cars/Boss302/ModelPending.luau
+   exit: 1
+   FAIL Boss 302 binding > is the writer's output for the manifest and its notes, not a hand edit: games/drive-lab/tests/Boss302Binding.spec:64: expected cluster: no live display screen named; gauges: the six Needle_* dials are not
+   FAIL Boss 302 binding > lists only what is not the model's, so the car stays out of the catalog until it lands: games/drive-lab/tests/Boss302Binding.spec:228: expected bound, got wheels:
+   7 passed, 2 failed

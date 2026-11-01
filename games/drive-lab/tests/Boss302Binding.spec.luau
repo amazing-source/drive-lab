@@ -1,8 +1,8 @@
 --!strict
 --[[
 	The Boss 302's model binding against the redacted copy of its 3D manifest that tools/car_binding
-	writes beside it (tests/fixtures/boss302_manifest.json): the 3D artist's cockpit parts draft until
-	the full manifest is promoted.
+	writes beside it (tests/fixtures/boss302_manifest.json), from the 3D artist's promoted full
+	manifest.
 ]]
 local fs = require("@lune/fs")
 local serde = require("@lune/serde")
@@ -177,11 +177,57 @@ describe("Boss 302 binding", function()
 		expect(string.find(table.concat(ModelPending, "\n"), "seat:", 1, true)).toBe(nil)
 	end)
 
-	it("lists what the draft lacks, so the car stays out of the catalog until it has it", function()
+	it("binds the full model's wheels, door, steering hub, exhaust tips and windscreen", function()
+		expect(table.concat(Model.wheels, ",")).toBe(
+			"Wheel_FL_Tyre,Wheel_FR_Tyre,Wheel_RL_Tyre,Wheel_RR_Tyre"
+		)
+		local parents = assert(Model.parents, "riders are bound")
+		for _, corner in { "FL", "FR", "RL", "RR" } do
+			-- The corner's spinning mesh rides its tyre, which the rig turns.
+			expect(parents[`Wheel_{corner}`]).toBe(`Wheel_{corner}_Tyre`)
+		end
+		local door = assert(Model.door, "the driver's door is bound")
+		expect(table.find(door.parts, "Door_L_Skin") ~= nil and table.find(door.parts, "Door_L_Glass") ~= nil).toBe(
+			true
+		)
+		expect(door.pivot.right < 0 and door.openAngle > 0).toBe(true)
+		local hub = assert(Model.steeringHub, "the wheel turns on a hub from the rim's fit")
+		-- The column points back toward the driver and up.
+		expect(hub.axis.forward < 0 and hub.axis.up > 0).toBe(true)
+		expect(parents.SteeringWheel_Rim).toBe("SteeringWheel")
+		local outlets = assert(Model.exhaustOutlets, "the exhaust tips are bound")
+		expect(#outlets).toBe(2)
+		for _, outlet in outlets do
+			-- The rear tips (the model has no side pipes), pointing out behind the car.
+			expect(outlet.axis.forward).toBeNear(-1, 1e-6)
+			expect(outlet.centre.forward < -2).toBe(true)
+		end
+		expect(outlets[1].centre.right).toBeNear(-outlets[2].centre.right, 1e-4)
+		local glass = Model.windshield
+		expect(#glass).toBe(4)
+		-- Top left, top right, bottom right, bottom left: the top higher and further back.
+		expect(glass[1].up > glass[4].up and glass[1].forward < glass[4].forward).toBe(true)
+		expect(glass[1].right < 0 and glass[2].right > 0).toBe(true)
+	end)
+
+	it("lists only what is not the model's, so the car stays out of the catalog until it lands", function()
 		local listed = table.concat(ModelPending, "\n")
-		for _, lacking in
-			{ "wheels", "door", "steering wheel", "windshield", "the 3D model", "shift animation" }
+		for _, part in
+			{
+				"wheels:",
+				"door:",
+				"glazing:",
+				"lamps:",
+				"exhaust:",
+				"steering wheel:",
+				"windshield:",
+				"calipers:",
+				"seat:",
+			}
 		do
+			expect(if string.find(listed, part, 1, true) then part else "bound").toBe("bound")
+		end
+		for _, lacking in { "the 3D model", "shift animation", "the remaining car entry", "gauges" } do
 			expect(string.find(listed, lacking, 1, true) ~= nil).toBe(true)
 		end
 	end)
